@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dynasty Tool — Mockup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #faf8f4;
+    --surface: #ffffff;
+    --border: #e5e1d8;
+    --border-soft: #eeece5;
+    --ink: #14141a;
+    --muted: #6b6b74;
+    --faint: #9a988f;
+    --red: #c8102e;
+    --navy: #1a3a6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Source Sans 3', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ---------- Top-level site nav ---------- */
+  .site-nav {
+    height: 48px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 32px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 8px;
+  }
+  .brand-mark { width: 5px; height: 20px; background: var(--red); border-radius: 1px; }
+  .brand-name {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.2px;
+  }
+  .site-links { display: flex; gap: 26px; margin-left: 4px; }
+  .site-link {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: var(--faint);
+    padding: 6px 2px;
+    border-bottom: 2px solid transparent;
+  }
+  .site-link.active { color: var(--ink); border-bottom-color: var(--red); }
+  .site-link:hover:not(.active) { color: var(--ink); }
+
+  /* ---------- Section tab nav (was sidebar) ---------- */
+  .section-nav {
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+  }
+  .section-tab {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 2.5px solid transparent;
+    white-space: nowrap;
+  }
+  .section-tab:hover:not(.active) { color: var(--ink); }
+  .section-tab.active { color: var(--ink); border-bottom-color: var(--red); }
+
+  /* ---------- Utility bar ---------- */
+  .utility-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .chip {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .chip.user { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .search-box {
+    height: 32px;
+    flex: 1;
+    max-width: 320px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--faint);
+    font-size: 12.5px;
+  }
+  .search-box input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--ink);
+    width: 100%;
+  }
+  .search-box input::placeholder { color: var(--faint); }
+  .sync-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #2f9e56; }
+
+  /* ---------- Content shell ---------- */
+  .content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+  }
+  .panel-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1.1fr 1.3fr;
+    gap: 20px;
+  }
+  @media (max-width: 980px) {
+    .panel-grid { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px 20px 20px;
+  }
+  .panel h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Portfolio health tracks */
+  .track { margin-bottom: 18px; }
+  .track:last-child { margin-bottom: 0; }
+  .track-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: var(--faint);
+    margin-bottom: 8px;
+  }
+  .track-bar-row { position: relative; height: 12px; }
+  .track-bar-bg {
+    position: absolute; inset: 4px 0;
+    background: var(--border-soft);
+    border-radius: 2px;
+  }
+  .track-bar-fill {
+    position: absolute; top: 4px; bottom: 4px; left: 0;
+    background: var(--red);
+    border-radius: 2px;
+  }
+  .track-marker {
+    position: absolute; top: 0;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--red);
+    transform: translateX(-50%);
+  }
+  .track-ends {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9.5px;
+    color: var(--faint);
+    margin-top: 4px;
+  }
+
+  /* Team strength scatter */
+  .scatter-wrap { position: relative; width: 100%; aspect-ratio: 1 / 0.78; }
+  .scatter-quads {
+    position: absolute; inset: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    border: 1px solid var(--border);
+  }
+  .scatter-quads div { border: 1px dashed var(--border-soft); font-size: 8.5px; color: var(--faint); font-weight: 600; padding: 4px 6px; }
+  .scatter-dot {
+    position: absolute;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .scatter-axis-label {
+    font-size: 9px;
+    color: var(--faint);
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  /* Exposures */
+  .exposure-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .exposure-card {
+    border: 1px solid var(--border);
+    padding: 12px;
+    position: relative;
+  }
+  .exposure-card .pos-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .exposure-pos { font-size: 8px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 10px; }
+  .exposure-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+  .exposure-pct { font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 700; color: var(--red); }
+  .exposure-sub { font-size: 10px; color: var(--faint); margin-top: 2px; }
+
+  /* Placeholder tab */
+  .placeholder {
+    margin-top: 40px;
+    padding: 60px 20px;
+    text-align: center;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+  }
+  .placeholder h3 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 18px;
+    margin: 0 0 6px;
+  }
+  .placeholder p { color: var(--muted); font-size: 13px; margin: 0; }
+
+  .page-title { padding: 20px 0 4px; }
+  .page-title h1 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 20px;
+    margin: 0 0 2px;
+  }
+  .page-title p { margin: 0; color: var(--muted); font-size: 12.5px; }
+
+  [data-view] { display: none; }
+  [data-view].is-active { display: block; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="brand"><span class="brand-mark"></span><span class="brand-name">Dynasty Tool</span></div>
+  <div class="site-links">
+    <a class="site-link active" data-site="launchpad">Launchpad</a>
+    <a class="site-link" data-site="reviews">Team Reviews</a>
+    <a class="site-link" data-site="account">Account</a>
+  </div>
+</nav>
+
+<nav class="section-nav" id="sectionNav">
+  <a class="section-tab active" data-section="dashboard">Dashboard</a>
+  <a class="section-tab" data-section="leagues">Leagues</a>
+  <a class="section-tab" data-section="lineups">Lineups</a>
+  <a class="section-tab" data-section="waiver">Waiver Wire</a>
+  <a class="section-tab" data-section="draft">Draft Room</a>
+  <a class="section-tab" data-section="exposures">Exposures</a>
+  <a class="section-tab" data-section="trades">Trade History</a>
+  <a class="section-tab" data-section="records">Record Book</a>
+  <a class="section-tab" data-section="calculator">Trade Calculator</a>
+  <a class="section-tab" data-section="database">Trade Database</a>
+</nav>
+
+<div class="utility-bar">
+  <div class="chip user">AusJ2</div>
+  <div class="search-box">
+    <input type="text" placeholder="Search Username / League">
+  </div>
+  <div class="chip">18 Leagues</div>
+  <div class="sync-status"><span class="sync-dot"></span>Synced 2m ago</div>
+</div>
+
+<div class="content">
+
+  <div data-view="dashboard" class="is-active">
+    <div class="page-title">
+      <h1>Dashboard</h1>
+      <p>Portfolio-wide summary across all connected leagues.</p>
+    </div>
+
+    <div class="panel-grid">
+
+      <div class="panel">
+        <h2>Portfolio Health</h2>
+
+        <div class="track">
+          <div class="track-label">ROSTER VALUE</div>
+          <div class="track-bar-row">
+            <div class="track-bar-bg"></div>
+            <div class="track-bar-fill" style="width:78%"></div>
+            <div class="track-marker" style="left:78%"></div>
+          </div>
+          <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
+        </div>
+
+        <div class="track">
+          <div class="track-label">CONTENDING RANK</div>
+          <div class="track-bar-row">
+            <div class="track-bar-bg"></div>
+            <div class="track-bar-fill" style="width:56%"></div>
+            <div class="track-marker" style="left:56%"></div>
+          </div>
+          <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
+        </div>
+
+        <div class="track">
+          <div class="track-label">LAST SEASON</div>
+          <div class="track-bar-row">
+            <div class="track-bar-bg"></div>
+            <div class="track-bar-fill" style="width:83%"></div>
+            <div class="track-marker" style="left:83%"></div>
+          </div>
+          <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Team Strength</h2>
+        <div class="scatter-wrap">
+          <div class="scatter-quads">
+            <div style="display:flex;align-items:flex-start">Fragile</div>
+            <div style="display:flex;align-items:flex-start;justify-content:flex-end;text-align:right">Favorite</div>
+            <div style="display:flex;align-items:flex-end">Rebuild</div>
+            <div style="display:flex;align-items:flex-end;justify-content:flex-end;text-align:right">Upside</div>
+          </div>
+          <div class="scatter-dot" style="left:78%;top:22%;background:var(--red)"></div>
+          <div class="scatter-dot" style="left:85%;top:14%;background:var(--red)"></div>
+          <div class="scatter-dot" style="left:62%;top:34%;background:var(--navy)"></div>
+          <div class="scatter-dot" style="left:38%;top:44%;background:var(--navy)"></div>
+          <div class="scatter-dot" style="left:74%;top:70%;background:var(--faint)"></div>
+          <div class="scatter-dot" style="left:42%;top:82%;background:#c9c6ba"></div>
+        </div>
+        <div class="scatter-axis-label">Value Rank (x) vs. Contending Rank (y) — all connected teams</div>
+      </div>
+
+      <div class="panel">
+        <h2>Highest Exposures</h2>
+        <div class="exposure-grid">
+          <div class="exposure-card">
+            <div class="pos-bar" style="background:var(--red)"></div>
+            <div class="exposure-pos">QB</div>
+            <div class="exposure-name">Player Name</div>
+            <div class="exposure-pct">22%</div>
+            <div class="exposure-sub">4 of 18 leagues</div>
+          </div>
+          <div class="exposure-card">
+            <div class="pos-bar" style="background:var(--navy)"></div>
+            <div class="exposure-pos">RB</div>
+            <div class="exposure-name">Player Name</div>
+            <div class="exposure-pct">33%</div>
+            <div class="exposure-sub">6 of 18 leagues</div>
+          </div>
+          <div class="exposure-card">
+            <div class="pos-bar" style="background:var(--red)"></div>
+            <div class="exposure-pos">WR</div>
+            <div class="exposure-name">Player Name</div>
+            <div class="exposure-pct">28%</div>
+            <div class="exposure-sub">5 of 18 leagues</div>
+          </div>
+          <div class="exposure-card">
+            <div class="pos-bar" style="background:var(--navy)"></div>
+            <div class="exposure-pos">TE</div>
+            <div class="exposure-name">Player Name</div>
+            <div class="exposure-pct">19%</div>
+            <div class="exposure-sub">3 of 18 leagues</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div data-view="leagues"><div class="placeholder"><h3>Leagues</h3><p>This section is being built.</p></div></div>
+  <div data-view="lineups"><div class="placeholder"><h3>Lineups</h3><p>This section is being built.</p></div></div>
+  <div data-view="waiver"><div class="placeholder"><h3>Waiver Wire</h3><p>This section is being built.</p></div></div>
+  <div data-view="draft"><div class="placeholder"><h3>Draft Room</h3><p>This section is being built.</p></div></div>
+  <div data-view="exposures"><div class="placeholder"><h3>Exposures</h3><p>This section is being built.</p></div></div>
+  <div data-view="trades"><div class="placeholder"><h3>Trade History</h3><p>This section is being built.</p></div></div>
+  <div data-view="records"><div class="placeholder"><h3>Record Book</h3><p>This section is being built.</p></div></div>
+  <div data-view="calculator"><div class="placeholder"><h3>Trade Calculator</h3><p>This section is being built.</p></div></div>
+  <div data-view="database"><div class="placeholder"><h3>Trade Database</h3><p>This section is being built.</p></div></div>
+
+</div>
+
+<script>
+  const sectionTabs = document.querySelectorAll('.section-tab');
+  const views = document.querySelectorAll('[data-view]');
+  sectionTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      sectionTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.section;
+      views.forEach(v => v.classList.toggle('is-active', v.dataset.view === target));
+    });
+  });
+
+  const siteLinks = document.querySelectorAll('.site-link');
+  siteLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      siteLinks.forEach(l => l.classList.remove('active'));
+      link.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
