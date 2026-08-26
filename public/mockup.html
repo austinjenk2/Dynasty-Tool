@@ -444,6 +444,9 @@
   .league-head-row span { text-align: center; }
   .league-head-row span:first-child,
   .league-head-row span:nth-child(2) { text-align: left; }
+  .sortable-head { cursor: pointer; user-select: none; }
+  .sortable-head:hover { color: var(--ink); }
+  .sortable-head.active { color: var(--green); }
   .week-dropdown { position: relative; display: inline-block; }
   .week-select {
     cursor: pointer;
@@ -933,11 +936,11 @@
         <span class="week-select" id="weekSelect">MATCHUP PROJECTIONS &middot; WEEK <span id="weekSelectLabel">1</span> <span>&#9662;</span></span>
         <span class="week-menu" id="weekMenu" hidden></span>
       </span>
-      <span>ROSTER TYPE</span>
-      <span>RECORD</span>
-      <span>ROSTER VALUE</span>
-      <span>WEEKLY PROJ.</span>
-      <span>PLAYOFF ODDS</span>
+      <span class="sortable-head" data-sort="roster">ROSTER TYPE</span>
+      <span class="sortable-head" data-sort="record">RECORD</span>
+      <span class="sortable-head" data-sort="value">ROSTER VALUE</span>
+      <span class="sortable-head" data-sort="weekly">WEEKLY PROJ.</span>
+      <span class="sortable-head" data-sort="playoffs">PLAYOFF ODDS</span>
       <span></span>
     </div>
 
@@ -1852,17 +1855,32 @@
     rows.forEach(row => leagueList.appendChild(row));
   }
 
-  sortMenu.querySelectorAll('.sort-option').forEach(option => {
-    option.addEventListener('click', () => {
-      sortMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+  const sortableHeads = document.querySelectorAll('.sortable-head');
+
+  function selectSort(criterion) {
+    const option = sortMenu.querySelector(`.sort-option[data-sort="${criterion}"]`);
+    sortMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+    if (option) {
       option.classList.add('active');
       sortSelectLabel.textContent = option.textContent;
+    }
+    sortableHeads.forEach(h => h.classList.toggle('active', h.dataset.sort === criterion));
+    sortLeagues(criterion);
+  }
+
+  sortMenu.querySelectorAll('.sort-option').forEach(option => {
+    option.addEventListener('click', () => {
       sortMenu.hidden = true;
-      sortLeagues(option.dataset.sort);
+      selectSort(option.dataset.sort);
     });
   });
   document.addEventListener('click', () => { sortMenu.hidden = true; });
-  sortLeagues('weekly');
+
+  sortableHeads.forEach(head => {
+    head.addEventListener('click', () => selectSort(head.dataset.sort));
+  });
+
+  selectSort('weekly');
 
   const weekSelect = document.getElementById('weekSelect');
   const weekMenu = document.getElementById('weekMenu');
