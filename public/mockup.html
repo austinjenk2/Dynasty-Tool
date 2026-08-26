@@ -350,6 +350,42 @@
   .league-head-row span { text-align: center; }
   .league-head-row span:first-child,
   .league-head-row span:nth-child(2) { text-align: left; }
+  .week-dropdown { position: relative; display: inline-block; }
+  .week-select {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .week-select:hover { color: var(--ink); }
+  .week-select span { font-size: 9.5px; }
+  .week-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    min-width: 110px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 10px 28px -10px rgba(0,0,0,0.25);
+    padding: 6px;
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+  }
+  .week-option {
+    padding: 7px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--muted);
+  }
+  .week-option:hover { background: var(--bg); color: var(--ink); }
+  .week-option.active { color: var(--green); }
   .league-list { display: flex; flex-direction: column; gap: 8px; }
   .league-row {
     display: grid;
@@ -716,10 +752,10 @@
         <div class="sort-menu" id="sortMenu" hidden>
           <div class="sort-option">Sleeper</div>
           <div class="sort-option">A&ndash;Z</div>
-          <div class="sort-option">Value</div>
+          <div class="sort-option">Roster Value</div>
           <div class="sort-option active">Weekly Points</div>
           <div class="sort-option">Record</div>
-          <div class="sort-option">Playoffs</div>
+          <div class="sort-option">Playoff Odds</div>
           <div class="sort-option">Newest</div>
           <div class="sort-option">Oldest</div>
         </div>
@@ -729,7 +765,10 @@
 
     <div class="league-head-row">
       <span>LEAGUE</span>
-      <span>MATCHUP PROJECTIONS &middot; WEEK 1</span>
+      <span class="week-dropdown" id="weekDropdown">
+        <span class="week-select" id="weekSelect">MATCHUP PROJECTIONS &middot; WEEK <span id="weekSelectLabel">1</span> <span>&#9662;</span></span>
+        <span class="week-menu" id="weekMenu" hidden></span>
+      </span>
       <span>ROSTER TYPE</span>
       <span>RECORD</span>
       <span>VALUE</span>
@@ -1627,6 +1666,30 @@
     });
   });
   document.addEventListener('click', () => { sortMenu.hidden = true; });
+
+  const weekSelect = document.getElementById('weekSelect');
+  const weekMenu = document.getElementById('weekMenu');
+  const weekSelectLabel = document.getElementById('weekSelectLabel');
+  for (let w = 1; w <= 17; w++) {
+    const opt = document.createElement('span');
+    opt.className = 'week-option' + (w === 1 ? ' active' : '');
+    opt.textContent = 'Week ' + w;
+    opt.dataset.week = w;
+    weekMenu.appendChild(opt);
+  }
+  weekSelect.addEventListener('click', (e) => {
+    e.stopPropagation();
+    weekMenu.hidden = !weekMenu.hidden;
+  });
+  weekMenu.querySelectorAll('.week-option').forEach(option => {
+    option.addEventListener('click', () => {
+      weekMenu.querySelectorAll('.week-option').forEach(o => o.classList.remove('active'));
+      option.classList.add('active');
+      weekSelectLabel.textContent = option.dataset.week;
+      weekMenu.hidden = true;
+    });
+  });
+  document.addEventListener('click', () => { weekMenu.hidden = true; });
 </script>
 
 </body>
