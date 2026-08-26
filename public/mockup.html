@@ -312,6 +312,31 @@
     color: var(--ink);
   }
   .notebook-btn { margin-left: auto; }
+  .sort-dropdown { position: relative; }
+  .sort-select { cursor: pointer; }
+  .sort-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 150px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 10px 28px -10px rgba(0,0,0,0.25);
+    padding: 6px;
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+  }
+  .sort-option {
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .sort-option:hover { background: var(--bg); color: var(--ink); }
+  .sort-option.active { color: var(--green); }
   .league-head-row {
     display: grid;
     grid-template-columns: 2.3fr 2fr 1fr 0.85fr 0.7fr 0.9fr 0.8fr 24px;
@@ -686,7 +711,19 @@
         <span>&#128269;</span>
         <input type="text" placeholder="Search leagues...">
       </div>
-      <div class="sort-select">Weekly Projection <span>&#9662;</span></div>
+      <div class="sort-dropdown" id="sortDropdown">
+        <div class="sort-select" id="sortSelect"><span id="sortSelectLabel">Weekly Points</span> <span>&#9662;</span></div>
+        <div class="sort-menu" id="sortMenu" hidden>
+          <div class="sort-option">Sleeper</div>
+          <div class="sort-option">A&ndash;Z</div>
+          <div class="sort-option">Value</div>
+          <div class="sort-option active">Weekly Points</div>
+          <div class="sort-option">Record</div>
+          <div class="sort-option">Playoffs</div>
+          <div class="sort-option">Newest</div>
+          <div class="sort-option">Oldest</div>
+        </div>
+      </div>
       <div class="notebook-btn" id="notebookBtn">&#128221; Notebook</div>
     </div>
 
@@ -1573,6 +1610,23 @@
       head.parentElement.classList.toggle('expanded');
     });
   });
+
+  const sortSelect = document.getElementById('sortSelect');
+  const sortMenu = document.getElementById('sortMenu');
+  const sortSelectLabel = document.getElementById('sortSelectLabel');
+  sortSelect.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sortMenu.hidden = !sortMenu.hidden;
+  });
+  sortMenu.querySelectorAll('.sort-option').forEach(option => {
+    option.addEventListener('click', () => {
+      sortMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+      option.classList.add('active');
+      sortSelectLabel.textContent = option.textContent;
+      sortMenu.hidden = true;
+    });
+  });
+  document.addEventListener('click', () => { sortMenu.hidden = true; });
 </script>
 
 </body>
