@@ -396,6 +396,141 @@
   .rank-bad { color: var(--red); }
   .row-chevron { text-align: center; color: var(--faint); font-size: 12px; }
 
+  /* Notebook panel */
+  .notebook-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20,20,26,0.35);
+    z-index: 20;
+  }
+  .notebook-panel {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 380px;
+    max-width: 92vw;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: -12px 0 32px -12px rgba(0,0,0,0.25);
+    z-index: 21;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 20px 0;
+  }
+  .notebook-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  .notebook-title {
+    font-family: 'Source Serif 4', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .notebook-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .notebook-close {
+    font-size: 16px;
+    color: var(--faint);
+    line-height: 1;
+    padding: 2px;
+  }
+  .notebook-close:hover { color: var(--ink); }
+  .notebook-toolbar {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0 14px;
+  }
+  .notebook-search {
+    flex: 1;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--faint);
+    font-size: 11.5px;
+  }
+  .notebook-search input {
+    border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 11.5px; color: var(--ink); width: 100%;
+  }
+  .notebook-search input::placeholder { color: var(--faint); }
+  .notebook-filter {
+    height: 32px;
+    padding: 0 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .notebook-list {
+    overflow-y: auto;
+    padding-bottom: 20px;
+    margin: 0 -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .notebook-item {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+  }
+  .notebook-item.expanded { border-color: var(--green); }
+  .notebook-item-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+  .notebook-logo {
+    width: 32px; height: 32px;
+    border-radius: 7px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Source Serif 4', serif;
+    font-weight: 700;
+    font-size: 11px;
+    color: #fff;
+  }
+  .notebook-name { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+  .notebook-meta { font-size: 10px; color: var(--faint); margin-top: 1px; }
+  .notebook-chevron { margin-left: auto; color: var(--faint); font-size: 11px; transition: transform 0.15s ease; }
+  .notebook-item.expanded .notebook-chevron { transform: rotate(180deg); }
+  .notebook-body { display: none; padding: 0 12px 14px; }
+  .notebook-item.expanded .notebook-body { display: block; }
+  .notebook-textarea {
+    width: 100%;
+    min-height: 64px;
+    border: 1.5px solid var(--green);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--ink);
+    resize: vertical;
+    background: var(--bg);
+  }
+  .notebook-textarea::placeholder { color: var(--faint); }
+  .notebook-roster-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .notebook-roster-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
+  .notebook-auto { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-left: auto; }
+
   .page-title { padding: 20px 0 4px; }
   .page-title h1 {
     font-family: 'Source Serif 4', serif;
@@ -565,7 +700,7 @@
         <input type="text" placeholder="Search leagues...">
       </div>
       <div class="sort-select">Weekly Projection <span>&#9662;</span></div>
-      <div class="notebook-btn">&#128221; Notebook</div>
+      <div class="notebook-btn" id="notebookBtn">&#128221; Notebook</div>
     </div>
 
     <div class="league-head-row">
@@ -738,6 +873,143 @@
 
 </div>
 
+<div class="notebook-overlay" id="notebookOverlay" hidden></div>
+<div class="notebook-panel" id="notebookPanel" hidden>
+  <div class="notebook-head">
+    <div>
+      <div class="notebook-title">Notebook</div>
+      <div class="notebook-sub">0 of 6 leagues annotated</div>
+    </div>
+    <div class="notebook-close" id="notebookClose">&#10005;</div>
+  </div>
+
+  <div class="notebook-toolbar">
+    <div class="notebook-search">
+      <span>&#128269;</span>
+      <input type="text" placeholder="Search leagues...">
+    </div>
+    <div class="notebook-filter">With Notes</div>
+  </div>
+
+  <div class="notebook-list">
+
+    <div class="notebook-item expanded">
+      <div class="notebook-item-head">
+        <div class="notebook-logo" style="background:#1d3557">BD</div>
+        <div>
+          <div class="notebook-name">Blitz Dynasty Football</div>
+          <div class="notebook-meta">12x10 &middot; SF &middot; PPR &middot; 0.5 TEP</div>
+        </div>
+        <div class="notebook-chevron">&#9662;</div>
+      </div>
+      <div class="notebook-body">
+        <textarea class="notebook-textarea" placeholder="Reminders, league quirks, trade partners, what you're doing with this roster..."></textarea>
+        <div class="notebook-roster-row">
+          <span class="notebook-roster-label">ROSTER TYPE</span>
+          <span class="roster-pill">FAVORITE</span>
+          <span class="notebook-auto">Auto &#9662;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notebook-item">
+      <div class="notebook-item-head">
+        <div class="notebook-logo" style="background:var(--navy)">EE</div>
+        <div>
+          <div class="notebook-name">Empire Entertainment</div>
+          <div class="notebook-meta">12x11 &middot; SF &middot; PPR &middot; Non-TEP</div>
+        </div>
+        <div class="notebook-chevron">&#9662;</div>
+      </div>
+      <div class="notebook-body">
+        <textarea class="notebook-textarea" placeholder="Reminders, league quirks, trade partners, what you're doing with this roster..."></textarea>
+        <div class="notebook-roster-row">
+          <span class="notebook-roster-label">ROSTER TYPE</span>
+          <span class="roster-pill">FAVORITE</span>
+          <span class="notebook-auto">Auto &#9662;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notebook-item">
+      <div class="notebook-item-head">
+        <div class="notebook-logo" style="background:var(--red)">OT</div>
+        <div>
+          <div class="notebook-name">OTTOMAN</div>
+          <div class="notebook-meta">12x11 &middot; SF &middot; PPR &middot; 0.5 TEP</div>
+        </div>
+        <div class="notebook-chevron">&#9662;</div>
+      </div>
+      <div class="notebook-body">
+        <textarea class="notebook-textarea" placeholder="Reminders, league quirks, trade partners, what you're doing with this roster..."></textarea>
+        <div class="notebook-roster-row">
+          <span class="notebook-roster-label">ROSTER TYPE</span>
+          <span class="roster-pill">FAVORITE</span>
+          <span class="notebook-auto">Auto &#9662;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notebook-item">
+      <div class="notebook-item-head">
+        <div class="notebook-logo" style="background:#3f6b4a">SC</div>
+        <div>
+          <div class="notebook-name">StatChasers BestBall &amp; Chill 5.0</div>
+          <div class="notebook-meta">12x10 &middot; SF &middot; PPR &middot; 0.75 TEP</div>
+        </div>
+        <div class="notebook-chevron">&#9662;</div>
+      </div>
+      <div class="notebook-body">
+        <textarea class="notebook-textarea" placeholder="Reminders, league quirks, trade partners, what you're doing with this roster..."></textarea>
+        <div class="notebook-roster-row">
+          <span class="notebook-roster-label">ROSTER TYPE</span>
+          <span class="roster-pill">FAVORITE</span>
+          <span class="notebook-auto">Auto &#9662;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notebook-item">
+      <div class="notebook-item-head">
+        <div class="notebook-logo" style="background:#8a5a2b">DL</div>
+        <div>
+          <div class="notebook-name">Dynasty Is Life</div>
+          <div class="notebook-meta">12x10 &middot; 0.5 PPR &middot; 0.5 TEP</div>
+        </div>
+        <div class="notebook-chevron">&#9662;</div>
+      </div>
+      <div class="notebook-body">
+        <textarea class="notebook-textarea" placeholder="Reminders, league quirks, trade partners, what you're doing with this roster..."></textarea>
+        <div class="notebook-roster-row">
+          <span class="notebook-roster-label">ROSTER TYPE</span>
+          <span class="roster-pill">FAVORITE</span>
+          <span class="notebook-auto">Auto &#9662;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="notebook-item">
+      <div class="notebook-item-head">
+        <div class="notebook-logo" style="background:#5b6f5b">TD</div>
+        <div>
+          <div class="notebook-name">The Doctor's</div>
+          <div class="notebook-meta">12x10 &middot; SF &middot; PPR &middot; 0.5 TEP</div>
+        </div>
+        <div class="notebook-chevron">&#9662;</div>
+      </div>
+      <div class="notebook-body">
+        <textarea class="notebook-textarea" placeholder="Reminders, league quirks, trade partners, what you're doing with this roster..."></textarea>
+        <div class="notebook-roster-row">
+          <span class="notebook-roster-label">ROSTER TYPE</span>
+          <span class="roster-pill">FAVORITE</span>
+          <span class="notebook-auto">Auto &#9662;</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <script>
   const sectionTabs = document.querySelectorAll('.section-tab');
   const views = document.querySelectorAll('[data-view]');
@@ -782,6 +1054,29 @@
   document.addEventListener('click', () => {
     scatterDots.forEach(d => d.classList.remove('is-active'));
     scatterTooltip.hidden = true;
+  });
+
+  const notebookBtn = document.getElementById('notebookBtn');
+  const notebookOverlay = document.getElementById('notebookOverlay');
+  const notebookPanel = document.getElementById('notebookPanel');
+  const notebookClose = document.getElementById('notebookClose');
+
+  function openNotebook() {
+    notebookOverlay.hidden = false;
+    notebookPanel.hidden = false;
+  }
+  function closeNotebook() {
+    notebookOverlay.hidden = true;
+    notebookPanel.hidden = true;
+  }
+  notebookBtn.addEventListener('click', openNotebook);
+  notebookClose.addEventListener('click', closeNotebook);
+  notebookOverlay.addEventListener('click', closeNotebook);
+
+  document.querySelectorAll('.notebook-item-head').forEach(head => {
+    head.addEventListener('click', () => {
+      head.parentElement.classList.toggle('expanded');
+    });
   });
 </script>
 
