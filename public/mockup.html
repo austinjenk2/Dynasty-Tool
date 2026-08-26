@@ -16,6 +16,9 @@
     --faint: #9a988f;
     --red: #c8102e;
     --navy: #1a3a6b;
+    --green: #2f8a4e;
+    --green-bg: #eaf4ec;
+    --gold: #a3760a;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -278,6 +281,122 @@
   }
   .placeholder p { color: var(--muted); font-size: 13px; margin: 0; }
 
+  /* Leagues page */
+  .league-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .league-search {
+    height: 34px;
+    flex: 1;
+    max-width: 280px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--faint);
+    font-size: 12.5px;
+  }
+  .league-search input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--ink);
+    width: 100%;
+  }
+  .league-search input::placeholder { color: var(--faint); }
+  .sort-select, .notebook-btn {
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .notebook-btn { margin-left: auto; }
+  .league-head-row {
+    display: grid;
+    grid-template-columns: 2.3fr 2fr 1fr 0.85fr 0.7fr 0.9fr 0.8fr 24px;
+    gap: 10px;
+    padding: 0 18px 8px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: var(--faint);
+  }
+  .league-head-row span { text-align: center; }
+  .league-head-row span:first-child,
+  .league-head-row span:nth-child(2) { text-align: left; }
+  .league-list { display: flex; flex-direction: column; gap: 8px; }
+  .league-row {
+    display: grid;
+    grid-template-columns: 2.3fr 2fr 1fr 0.85fr 0.7fr 0.9fr 0.8fr 24px;
+    gap: 10px;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 18px;
+  }
+  .league-id { display: flex; align-items: center; gap: 12px; }
+  .league-logo {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Source Serif 4', serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: #fff;
+  }
+  .league-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .league-meta { font-size: 10.5px; color: var(--faint); margin-top: 2px; }
+  .matchup-col { display: flex; flex-direction: column; gap: 4px; }
+  .matchup-scores { display: flex; align-items: baseline; gap: 6px; font-family: 'Source Serif 4', serif; }
+  .proj-score { font-size: 16px; font-weight: 700; }
+  .proj-score.mine { color: var(--navy); }
+  .proj-score.theirs { color: var(--ink); }
+  .matchup-vs { font-family: 'Source Sans 3', sans-serif; font-size: 10px; color: var(--faint); font-weight: 600; }
+  .matchup-opp { font-family: 'Source Sans 3', sans-serif; font-size: 11px; color: var(--muted); }
+  .favored-tag {
+    align-self: flex-start;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--green);
+    background: var(--green-bg);
+    border-radius: 3px;
+    padding: 2px 7px;
+  }
+  .roster-pill {
+    justify-self: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--green);
+    border: 1.5px solid var(--green);
+    border-radius: 20px;
+    padding: 3px 10px;
+  }
+  .col-center { text-align: center; font-size: 13px; font-weight: 700; }
+  .rank-good { color: var(--green); }
+  .rank-mid { color: var(--gold); }
+  .rank-bad { color: var(--red); }
+  .row-chevron { text-align: center; color: var(--faint); font-size: 12px; }
+
   .page-title { padding: 20px 0 4px; }
   .page-title h1 {
     font-family: 'Source Serif 4', serif;
@@ -435,7 +554,186 @@
     </div>
   </div>
 
-  <div data-view="leagues"><div class="placeholder"><h3>Leagues</h3><p>This section is being built.</p></div></div>
+  <div data-view="leagues">
+    <div class="page-title">
+      <h1>Leagues</h1>
+      <p>Every connected league, with this week's projected matchup and where you stand.</p>
+    </div>
+
+    <div class="league-toolbar">
+      <div class="league-search">
+        <span>&#128269;</span>
+        <input type="text" placeholder="Search leagues...">
+      </div>
+      <div class="sort-select">Contending <span>&#9662;</span></div>
+      <div class="notebook-btn">&#128221; Notebook</div>
+    </div>
+
+    <div class="league-head-row">
+      <span>LEAGUE</span>
+      <span>MATCHUP PROJECTIONS &middot; WEEK 1</span>
+      <span>ROSTER TYPE</span>
+      <span>RECORD</span>
+      <span>VALUE</span>
+      <span>CONTENDING</span>
+      <span>PLAYOFFS</span>
+      <span></span>
+    </div>
+
+    <div class="league-list">
+
+      <div class="league-row">
+        <div class="league-id">
+          <div class="league-logo" style="background:var(--navy)">EE</div>
+          <div>
+            <div class="league-name">Empire Entertainment</div>
+            <div class="league-meta">2026 &middot; 12x11 &middot; SF &middot; PPR &middot; Non-TEP</div>
+          </div>
+        </div>
+        <div class="matchup-col">
+          <div class="matchup-scores">
+            <span class="proj-score mine">168.8</span>
+            <span class="matchup-vs">vs</span>
+            <span class="proj-score theirs">108.5</span>
+            <span class="matchup-opp">rival_mgr04</span>
+          </div>
+          <div class="favored-tag">Favored by 60.3</div>
+        </div>
+        <div class="roster-pill">FAVORITE</div>
+        <div class="col-center">0-0</div>
+        <div class="col-center rank-good">1st</div>
+        <div class="col-center rank-good">1st</div>
+        <div class="col-center rank-good">77%</div>
+        <div class="row-chevron">&#9662;</div>
+      </div>
+
+      <div class="league-row">
+        <div class="league-id">
+          <div class="league-logo" style="background:var(--red)">OT</div>
+          <div>
+            <div class="league-name">OTTOMAN</div>
+            <div class="league-meta">2026 &middot; 12x11 &middot; SF &middot; PPR &middot; 0.5 TEP</div>
+          </div>
+        </div>
+        <div class="matchup-col">
+          <div class="matchup-scores">
+            <span class="proj-score mine">163.7</span>
+            <span class="matchup-vs">vs</span>
+            <span class="proj-score theirs">141.9</span>
+            <span class="matchup-opp">gridiron_kc</span>
+          </div>
+          <div class="favored-tag">Favored by 21.8</div>
+        </div>
+        <div class="roster-pill">FAVORITE</div>
+        <div class="col-center">0-0</div>
+        <div class="col-center rank-good">1st</div>
+        <div class="col-center rank-good">1st</div>
+        <div class="col-center rank-mid">58%</div>
+        <div class="row-chevron">&#9662;</div>
+      </div>
+
+      <div class="league-row">
+        <div class="league-id">
+          <div class="league-logo" style="background:#3f6b4a">SC</div>
+          <div>
+            <div class="league-name">StatChasers BestBall &amp; Chill 5.0</div>
+            <div class="league-meta">2026 &middot; 12x10 &middot; SF &middot; PPR &middot; 0.75 TEP</div>
+          </div>
+        </div>
+        <div class="matchup-col">
+          <div class="matchup-scores">
+            <span class="proj-score mine">156.5</span>
+            <span class="matchup-vs">vs</span>
+            <span class="proj-score theirs">134.2</span>
+            <span class="matchup-opp">deep_threat</span>
+          </div>
+          <div class="favored-tag">Favored by 22.3</div>
+        </div>
+        <div class="roster-pill">FAVORITE</div>
+        <div class="col-center">0-0</div>
+        <div class="col-center rank-good">1st</div>
+        <div class="col-center rank-good">1st</div>
+        <div class="col-center rank-mid">66%</div>
+        <div class="row-chevron">&#9662;</div>
+      </div>
+
+      <div class="league-row">
+        <div class="league-id">
+          <div class="league-logo" style="background:#1d3557">BD</div>
+          <div>
+            <div class="league-name">Blitz Dynasty Football</div>
+            <div class="league-meta">2026 &middot; 12x10 &middot; SF &middot; PPR &middot; 0.5 TEP</div>
+          </div>
+        </div>
+        <div class="matchup-col">
+          <div class="matchup-scores">
+            <span class="proj-score mine">154.3</span>
+            <span class="matchup-vs">vs</span>
+            <span class="proj-score theirs">139.6</span>
+            <span class="matchup-opp">endzone_ed</span>
+          </div>
+          <div class="favored-tag">Favored by 14.8</div>
+        </div>
+        <div class="roster-pill">FAVORITE</div>
+        <div class="col-center">0-0</div>
+        <div class="col-center rank-good">1st</div>
+        <div class="col-center rank-mid">2nd</div>
+        <div class="col-center rank-mid">52%</div>
+        <div class="row-chevron">&#9662;</div>
+      </div>
+
+      <div class="league-row">
+        <div class="league-id">
+          <div class="league-logo" style="background:#8a5a2b">DL</div>
+          <div>
+            <div class="league-name">Dynasty Is Life</div>
+            <div class="league-meta">2026 &middot; 12x10 &middot; 0.5 PPR &middot; 0.5 TEP</div>
+          </div>
+        </div>
+        <div class="matchup-col">
+          <div class="matchup-scores">
+            <span class="proj-score mine">139.2</span>
+            <span class="matchup-vs">vs</span>
+            <span class="proj-score theirs">110.4</span>
+            <span class="matchup-opp">waiver_wiz</span>
+          </div>
+          <div class="favored-tag">Favored by 28.7</div>
+        </div>
+        <div class="roster-pill">FAVORITE</div>
+        <div class="col-center">0-0</div>
+        <div class="col-center rank-mid">4th</div>
+        <div class="col-center rank-mid">2nd</div>
+        <div class="col-center rank-mid">61%</div>
+        <div class="row-chevron">&#9662;</div>
+      </div>
+
+      <div class="league-row">
+        <div class="league-id">
+          <div class="league-logo" style="background:#5b6f5b">TD</div>
+          <div>
+            <div class="league-name">The Doctor's</div>
+            <div class="league-meta">2026 &middot; 12x10 &middot; SF &middot; PPR &middot; 0.5 TEP</div>
+          </div>
+        </div>
+        <div class="matchup-col">
+          <div class="matchup-scores">
+            <span class="proj-score mine">152.5</span>
+            <span class="matchup-vs">vs</span>
+            <span class="proj-score theirs">141.0</span>
+            <span class="matchup-opp">makeit_black</span>
+          </div>
+          <div class="favored-tag">Favored by 11.5</div>
+        </div>
+        <div class="roster-pill">FAVORITE</div>
+        <div class="col-center">0-0</div>
+        <div class="col-center rank-good">1st</div>
+        <div class="col-center rank-mid">2nd</div>
+        <div class="col-center rank-mid">58%</div>
+        <div class="row-chevron">&#9662;</div>
+      </div>
+
+    </div>
+  </div>
   <div data-view="lineups"><div class="placeholder"><h3>Lineups</h3><p>This section is being built.</p></div></div>
   <div data-view="waiver"><div class="placeholder"><h3>Waiver Wire</h3><p>This section is being built.</p></div></div>
   <div data-view="draft"><div class="placeholder"><h3>Draft Room</h3><p>This section is being built.</p></div></div>
