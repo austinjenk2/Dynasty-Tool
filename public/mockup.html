@@ -217,9 +217,20 @@
   .scatter-quads div { border: 1px dashed var(--border-soft); font-size: 11.5px; color: var(--faint); font-weight: 700; padding: 4px 6px; }
   .scatter-dot {
     position: absolute;
-    width: 9px; height: 9px;
+    width: 15px; height: 15px;
     border-radius: 50%;
     transform: translate(-50%, -50%);
+    cursor: pointer;
+    border: 2px solid var(--surface);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+    transition: transform 0.12s ease;
+  }
+  .scatter-dot:hover {
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+  .scatter-dot.is-active {
+    transform: translate(-50%, -50%) scale(1.25);
+    box-shadow: 0 0 0 3px rgba(200,16,46,0.25);
   }
   .scatter-axis-label {
     font-size: 11.5px;
@@ -227,6 +238,29 @@
     text-align: center;
     margin-top: 6px;
   }
+  .scatter-tooltip {
+    position: absolute;
+    z-index: 5;
+    min-width: 150px;
+    background: var(--ink);
+    color: #fff;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    box-shadow: 0 8px 20px -6px rgba(0,0,0,0.35);
+    pointer-events: none;
+    transform: translate(-50%, calc(-100% - 14px));
+  }
+  .scatter-tooltip .tt-title {
+    font-weight: 700;
+    font-size: 9.5px;
+    letter-spacing: 0.4px;
+    color: #c9c6ba;
+    margin-bottom: 4px;
+  }
+  .scatter-tooltip .tt-league { font-weight: 600; }
+  [hidden] { display: none !important; }
 
   /* Placeholder tab */
   .placeholder {
@@ -332,12 +366,13 @@
             <div style="display:flex;align-items:flex-end">Rebuild</div>
             <div style="display:flex;align-items:flex-end;justify-content:flex-end;text-align:right">Upside</div>
           </div>
-          <div class="scatter-dot" style="left:78%;top:22%;background:var(--red)"></div>
-          <div class="scatter-dot" style="left:85%;top:14%;background:var(--red)"></div>
-          <div class="scatter-dot" style="left:62%;top:34%;background:var(--navy)"></div>
-          <div class="scatter-dot" style="left:38%;top:44%;background:var(--navy)"></div>
-          <div class="scatter-dot" style="left:74%;top:70%;background:var(--faint)"></div>
-          <div class="scatter-dot" style="left:42%;top:82%;background:#c9c6ba"></div>
+          <div class="scatter-dot" style="left:78%;top:22%;background:var(--red)" data-leagues="Redraft Rumble"></div>
+          <div class="scatter-dot" style="left:85%;top:14%;background:var(--red)" data-leagues="The Gridiron Guild"></div>
+          <div class="scatter-dot" style="left:62%;top:34%;background:var(--navy)" data-leagues="Sunday Scorchers"></div>
+          <div class="scatter-dot" style="left:38%;top:44%;background:var(--navy)" data-leagues="End Zone Elites"></div>
+          <div class="scatter-dot" style="left:74%;top:70%;background:var(--faint)" data-leagues="Field Goal Fanatics"></div>
+          <div class="scatter-dot" style="left:42%;top:82%;background:#c9c6ba" data-leagues="Rebuild Nation, Waiver Warriors"></div>
+          <div class="scatter-tooltip" id="scatterTooltip" hidden></div>
         </div>
         <div class="scatter-axis-label">Value Rank (x) vs. Weekly Projection (y) — all connected teams</div>
       </div>
@@ -375,6 +410,32 @@
       siteLinks.forEach(l => l.classList.remove('active'));
       link.classList.add('active');
     });
+  });
+
+  const scatterDots = document.querySelectorAll('.scatter-dot');
+  const scatterTooltip = document.getElementById('scatterTooltip');
+  scatterDots.forEach(dot => {
+    dot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const alreadyActive = dot.classList.contains('is-active');
+      scatterDots.forEach(d => d.classList.remove('is-active'));
+      if (alreadyActive) {
+        scatterTooltip.hidden = true;
+        return;
+      }
+      dot.classList.add('is-active');
+      const leagues = dot.dataset.leagues.split(',').map(s => s.trim());
+      const label = leagues.length > 1 ? 'LEAGUES IN THIS SPOT' : 'LEAGUE';
+      scatterTooltip.innerHTML = `<div class="tt-title">${label}</div>` +
+        leagues.map(name => `<div class="tt-league">${name}</div>`).join('');
+      scatterTooltip.style.left = dot.style.left;
+      scatterTooltip.style.top = dot.style.top;
+      scatterTooltip.hidden = false;
+    });
+  });
+  document.addEventListener('click', () => {
+    scatterDots.forEach(d => d.classList.remove('is-active'));
+    scatterTooltip.hidden = true;
   });
 </script>
 
