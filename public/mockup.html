@@ -35,19 +35,21 @@
 
   /* ---------- Top-level site nav ---------- */
   .site-nav {
-    height: 48px;
+    height: 54px;
     background: #ffffff;
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     padding: 0 24px;
     gap: 32px;
+    overflow-x: auto;
   }
   .brand {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-right: 8px;
+    flex-shrink: 0;
   }
   .brand-mark { width: 5px; height: 20px; background: var(--red); border-radius: 1px; }
   .brand-name {
@@ -56,32 +58,14 @@
     font-size: 16px;
     letter-spacing: -0.2px;
   }
-  .site-links { display: flex; gap: 26px; margin-left: 4px; }
-  .site-link {
-    font-size: 12.5px;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    color: var(--faint);
-    padding: 6px 2px;
-    border-bottom: 2px solid transparent;
-  }
-  .site-link.active { color: var(--ink); border-bottom-color: var(--red); }
-  .site-link:hover:not(.active) { color: var(--ink); }
 
-  /* ---------- Section tab nav (was sidebar) ---------- */
-  .section-nav {
-    background: #ffffff;
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
-    display: flex;
-    gap: 4px;
-    overflow-x: auto;
-  }
+  /* ---------- Section tabs (moved up next to brand) ---------- */
+  .section-tabs { display: flex; gap: 6px; }
   .section-tab {
     display: inline-flex;
     align-items: center;
     padding: 12px 14px;
-    font-size: 13px;
+    font-size: 14.5px;
     font-weight: 600;
     color: var(--muted);
     border-bottom: 2.5px solid transparent;
@@ -594,24 +578,18 @@
 
 <nav class="site-nav">
   <div class="brand"><span class="brand-mark"></span><span class="brand-name">Fantasy Tool</span></div>
-  <div class="site-links">
-    <a class="site-link active" data-site="launchpad">Launchpad</a>
-    <a class="site-link" data-site="reviews">Team Reviews</a>
-    <a class="site-link" data-site="account">Account</a>
+  <div class="section-tabs" id="sectionNav">
+    <a class="section-tab active" data-section="dashboard">Dashboard</a>
+    <a class="section-tab" data-section="leagues">Leagues</a>
+    <a class="section-tab" data-section="lineups">Lineups</a>
+    <a class="section-tab" data-section="waiver">Waiver Wire</a>
+    <a class="section-tab" data-section="draft">Draft Room</a>
+    <a class="section-tab" data-section="exposures">Exposures</a>
+    <a class="section-tab" data-section="trades">Trade History</a>
+    <a class="section-tab" data-section="records">Record Book</a>
+    <a class="section-tab" data-section="calculator">Trade Calculator</a>
+    <a class="section-tab" data-section="database">Trade Database</a>
   </div>
-</nav>
-
-<nav class="section-nav" id="sectionNav">
-  <a class="section-tab active" data-section="dashboard">Dashboard</a>
-  <a class="section-tab" data-section="leagues">Leagues</a>
-  <a class="section-tab" data-section="lineups">Lineups</a>
-  <a class="section-tab" data-section="waiver">Waiver Wire</a>
-  <a class="section-tab" data-section="draft">Draft Room</a>
-  <a class="section-tab" data-section="exposures">Exposures</a>
-  <a class="section-tab" data-section="trades">Trade History</a>
-  <a class="section-tab" data-section="records">Record Book</a>
-  <a class="section-tab" data-section="calculator">Trade Calculator</a>
-  <a class="section-tab" data-section="database">Trade Database</a>
 </nav>
 
 <div class="utility-bar">
@@ -1544,14 +1522,6 @@
       tab.classList.add('active');
       const target = tab.dataset.section;
       views.forEach(v => v.classList.toggle('is-active', v.dataset.view === target));
-    });
-  });
-
-  const siteLinks = document.querySelectorAll('.site-link');
-  siteLinks.forEach(link => {
-    link.addEventListener('click', () => {
-      siteLinks.forEach(l => l.classList.remove('active'));
-      link.classList.add('active');
     });
   });
 
