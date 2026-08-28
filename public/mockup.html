@@ -1827,37 +1827,67 @@
   const rosterOrder = { favorite: 0, upside: 1, fragile: 2, rebuild: 3 };
   const leagueList = document.querySelector('.league-list');
 
-  function sortLeagues(criterion) {
+  function sortLeagues(criterion, dir) {
     const rows = Array.from(leagueList.querySelectorAll('.league-row'));
     rows.sort((a, b) => {
       const idxA = Number(a.dataset.index), idxB = Number(b.dataset.index);
+      let primary;
       switch (criterion) {
         case 'az':
-          return a.dataset.name.localeCompare(b.dataset.name);
+          primary = a.dataset.name.localeCompare(b.dataset.name);
+          break;
         case 'value':
-          return Number(a.dataset.value) - Number(b.dataset.value) || idxA - idxB;
+          primary = Number(a.dataset.value) - Number(b.dataset.value);
+          break;
         case 'weekly':
-          return Number(a.dataset.weekly) - Number(b.dataset.weekly) || idxA - idxB;
+          primary = Number(a.dataset.weekly) - Number(b.dataset.weekly);
+          break;
         case 'roster':
-          return rosterOrder[a.dataset.roster] - rosterOrder[b.dataset.roster] || idxA - idxB;
+          primary = rosterOrder[a.dataset.roster] - rosterOrder[b.dataset.roster];
+          break;
         case 'record':
-          return Number(b.dataset.wins) - Number(a.dataset.wins) || idxA - idxB;
+          primary = Number(b.dataset.wins) - Number(a.dataset.wins);
+          break;
         case 'playoffs':
-          return Number(b.dataset.playoff) - Number(a.dataset.playoff) || idxA - idxB;
+          primary = Number(b.dataset.playoff) - Number(a.dataset.playoff);
+          break;
         case 'oldest':
-          return idxB - idxA;
+          primary = idxB - idxA;
+          break;
         case 'newest':
         case 'sleeper':
         default:
-          return idxA - idxB;
+          primary = idxA - idxB;
       }
+      return (primary * dir) || (idxA - idxB);
     });
     rows.forEach(row => leagueList.appendChild(row));
   }
 
   const sortableHeads = document.querySelectorAll('.sortable-head');
+  let currentSortCriterion = null;
+  let currentSortDir = 1;
+
+  function updateSortArrows() {
+    sortableHeads.forEach(h => {
+      const arrow = h.querySelector('.sort-arrow');
+      if (arrow) arrow.remove();
+      if (h.dataset.sort === currentSortCriterion) {
+        const span = document.createElement('span');
+        span.className = 'sort-arrow';
+        span.textContent = currentSortDir === 1 ? ' ▲' : ' ▼';
+        h.appendChild(span);
+      }
+    });
+  }
 
   function selectSort(criterion) {
+    if (criterion === currentSortCriterion) {
+      currentSortDir *= -1;
+    } else {
+      currentSortCriterion = criterion;
+      currentSortDir = 1;
+    }
     const option = sortMenu.querySelector(`.sort-option[data-sort="${criterion}"]`);
     sortMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
     if (option) {
@@ -1865,7 +1895,8 @@
       sortSelectLabel.textContent = option.textContent;
     }
     sortableHeads.forEach(h => h.classList.toggle('active', h.dataset.sort === criterion));
-    sortLeagues(criterion);
+    updateSortArrows();
+    sortLeagues(criterion, currentSortDir);
   }
 
   sortMenu.querySelectorAll('.sort-option').forEach(option => {
