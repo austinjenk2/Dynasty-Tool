@@ -137,11 +137,16 @@
   .panel-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    align-items: start;
+    align-items: stretch;
     gap: 20px;
   }
   @media (max-width: 980px) {
     .panel-grid { grid-template-columns: 1fr; }
+  }
+  .left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
   }
   .panel {
     background: var(--surface);
@@ -160,11 +165,13 @@
 
   /* Weekly Schedule */
   .schedule-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 4px;
     padding: 18px 20px 20px;
-    margin-top: 20px;
   }
   .schedule-head {
     display: flex;
@@ -179,13 +186,9 @@
   }
   .schedule-groups {
     display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
+    flex-direction: column;
+    gap: 14px;
     margin-top: 14px;
-  }
-  .schedule-group {
-    flex: 1 1 200px;
-    min-width: 180px;
   }
   .schedule-group-label {
     font-size: 9.5px;
@@ -341,7 +344,7 @@
   }
 
   /* Team strength scatter */
-  .scatter-wrap { position: relative; width: 100%; aspect-ratio: 1 / 0.78; }
+  .scatter-wrap { position: relative; width: 100%; aspect-ratio: 1 / 0.52; }
   .scatter-quads {
     position: absolute; inset: 0;
     display: grid;
@@ -838,28 +841,107 @@
 
     <div class="panel-grid">
 
-      <div class="panel">
-        <h2>Portfolio Health</h2>
+      <div class="left-col">
 
-        <div class="track">
-          <div class="track-label">ROSTER VALUE</div>
-          <div class="track-bar-row">
-            <div class="track-bar-bg"></div>
-            <div class="track-bar-fill" style="width:78%"></div>
-            <div class="track-marker" style="left:78%"></div>
+        <div class="panel">
+          <h2>Portfolio Health</h2>
+
+          <div class="track">
+            <div class="track-label">ROSTER VALUE</div>
+            <div class="track-bar-row">
+              <div class="track-bar-bg"></div>
+              <div class="track-bar-fill" style="width:78%"></div>
+              <div class="track-marker" style="left:78%"></div>
+            </div>
+            <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
           </div>
-          <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
+
+          <div class="track">
+            <div class="track-label">POINT PROJECTION</div>
+            <div class="track-bar-row">
+              <div class="track-bar-bg"></div>
+              <div class="track-bar-fill" style="width:56%"></div>
+              <div class="track-marker" style="left:56%"></div>
+            </div>
+            <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
+          </div>
         </div>
 
-        <div class="track">
-          <div class="track-label">POINT PROJECTION</div>
-          <div class="track-bar-row">
-            <div class="track-bar-bg"></div>
-            <div class="track-bar-fill" style="width:56%"></div>
-            <div class="track-marker" style="left:56%"></div>
+        <div class="schedule-panel">
+          <div class="schedule-head">
+            <h2>Weekly Schedule</h2>
+            <div class="week-dropdown" id="scheduleWeekDropdown">
+              <div class="week-select" id="scheduleWeekSelect">Week <span id="scheduleWeekLabel">1</span> <span>&#9662;</span></div>
+              <div class="week-menu" id="scheduleWeekMenu" hidden></div>
+            </div>
           </div>
-          <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
+          <p class="sweats-sub">Every game this week, in kickoff order.</p>
+
+          <div class="schedule-groups">
+
+            <div class="schedule-group">
+              <div class="schedule-group-label">THURSDAY NIGHT &middot; 8:15 PM ET</div>
+              <div class="schedule-row">
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/kc.png" alt="KC" onerror="this.style.display='none'"><span>KC</span></div>
+                <span class="schedule-at">@</span>
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/bal.png" alt="BAL" onerror="this.style.display='none'"><span>BAL</span></div>
+              </div>
+            </div>
+
+            <div class="schedule-group">
+              <div class="schedule-group-label">SUNDAY 1:00 PM ET</div>
+              <div class="schedule-row">
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/nyj.png" alt="NYJ" onerror="this.style.display='none'"><span>NYJ</span></div>
+                <span class="schedule-at">@</span>
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/buf.png" alt="BUF" onerror="this.style.display='none'"><span>BUF</span></div>
+              </div>
+              <div class="schedule-row">
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/mia.png" alt="MIA" onerror="this.style.display='none'"><span>MIA</span></div>
+                <span class="schedule-at">@</span>
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/ne.png" alt="NE" onerror="this.style.display='none'"><span>NE</span></div>
+              </div>
+              <div class="schedule-row">
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/cin.png" alt="CIN" onerror="this.style.display='none'"><span>CIN</span></div>
+                <span class="schedule-at">@</span>
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/cle.png" alt="CLE" onerror="this.style.display='none'"><span>CLE</span></div>
+              </div>
+            </div>
+
+            <div class="schedule-group">
+              <div class="schedule-group-label">SUNDAY 4:05 / 4:25 PM ET</div>
+              <div class="schedule-row">
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/dal.png" alt="DAL" onerror="this.style.display='none'"><span>DAL</span></div>
+                <span class="schedule-at">@</span>
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/sf.png" alt="SF" onerror="this.style.display='none'"><span>SF</span></div>
+              </div>
+              <div class="schedule-row">
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/gb.png" alt="GB" onerror="this.style.display='none'"><span>GB</span></div>
+                <span class="schedule-at">@</span>
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/chi.png" alt="CHI" onerror="this.style.display='none'"><span>CHI</span></div>
+              </div>
+            </div>
+
+            <div class="schedule-group">
+              <div class="schedule-group-label">SUNDAY NIGHT &middot; 8:20 PM ET</div>
+              <div class="schedule-row">
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/phi.png" alt="PHI" onerror="this.style.display='none'"><span>PHI</span></div>
+                <span class="schedule-at">@</span>
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/gb.png" alt="GB" onerror="this.style.display='none'"><span>GB</span></div>
+              </div>
+            </div>
+
+            <div class="schedule-group">
+              <div class="schedule-group-label">MONDAY NIGHT &middot; 8:15 PM ET</div>
+              <div class="schedule-row">
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/nyg.png" alt="NYG" onerror="this.style.display='none'"><span>NYG</span></div>
+                <span class="schedule-at">@</span>
+                <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/was.png" alt="WAS" onerror="this.style.display='none'"><span>WAS</span></div>
+              </div>
+            </div>
+
+          </div>
         </div>
+
       </div>
 
       <div class="panel">
@@ -882,81 +964,6 @@
         <div class="scatter-axis-label">Scoring (x) vs. Depth (y) &mdash; all connected teams</div>
       </div>
 
-    </div>
-
-    <div class="schedule-panel">
-      <div class="schedule-head">
-        <h2>Weekly Schedule</h2>
-        <div class="week-dropdown" id="scheduleWeekDropdown">
-          <div class="week-select" id="scheduleWeekSelect">Week <span id="scheduleWeekLabel">1</span> <span>&#9662;</span></div>
-          <div class="week-menu" id="scheduleWeekMenu" hidden></div>
-        </div>
-      </div>
-      <p class="sweats-sub">Every game this week, in kickoff order.</p>
-
-      <div class="schedule-groups">
-
-        <div class="schedule-group">
-          <div class="schedule-group-label">THURSDAY NIGHT &middot; 8:15 PM ET</div>
-          <div class="schedule-row">
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/kc.png" alt="KC" onerror="this.style.display='none'"><span>KC</span></div>
-            <span class="schedule-at">@</span>
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/bal.png" alt="BAL" onerror="this.style.display='none'"><span>BAL</span></div>
-          </div>
-        </div>
-
-        <div class="schedule-group">
-          <div class="schedule-group-label">SUNDAY 1:00 PM ET</div>
-          <div class="schedule-row">
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/nyj.png" alt="NYJ" onerror="this.style.display='none'"><span>NYJ</span></div>
-            <span class="schedule-at">@</span>
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/buf.png" alt="BUF" onerror="this.style.display='none'"><span>BUF</span></div>
-          </div>
-          <div class="schedule-row">
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/mia.png" alt="MIA" onerror="this.style.display='none'"><span>MIA</span></div>
-            <span class="schedule-at">@</span>
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/ne.png" alt="NE" onerror="this.style.display='none'"><span>NE</span></div>
-          </div>
-          <div class="schedule-row">
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/cin.png" alt="CIN" onerror="this.style.display='none'"><span>CIN</span></div>
-            <span class="schedule-at">@</span>
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/cle.png" alt="CLE" onerror="this.style.display='none'"><span>CLE</span></div>
-          </div>
-        </div>
-
-        <div class="schedule-group">
-          <div class="schedule-group-label">SUNDAY 4:05 / 4:25 PM ET</div>
-          <div class="schedule-row">
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/dal.png" alt="DAL" onerror="this.style.display='none'"><span>DAL</span></div>
-            <span class="schedule-at">@</span>
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/sf.png" alt="SF" onerror="this.style.display='none'"><span>SF</span></div>
-          </div>
-          <div class="schedule-row">
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/gb.png" alt="GB" onerror="this.style.display='none'"><span>GB</span></div>
-            <span class="schedule-at">@</span>
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/chi.png" alt="CHI" onerror="this.style.display='none'"><span>CHI</span></div>
-          </div>
-        </div>
-
-        <div class="schedule-group">
-          <div class="schedule-group-label">SUNDAY NIGHT &middot; 8:20 PM ET</div>
-          <div class="schedule-row">
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/phi.png" alt="PHI" onerror="this.style.display='none'"><span>PHI</span></div>
-            <span class="schedule-at">@</span>
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/gb.png" alt="GB" onerror="this.style.display='none'"><span>GB</span></div>
-          </div>
-        </div>
-
-        <div class="schedule-group">
-          <div class="schedule-group-label">MONDAY NIGHT &middot; 8:15 PM ET</div>
-          <div class="schedule-row">
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/nyg.png" alt="NYG" onerror="this.style.display='none'"><span>NYG</span></div>
-            <span class="schedule-at">@</span>
-            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/was.png" alt="WAS" onerror="this.style.display='none'"><span>WAS</span></div>
-          </div>
-        </div>
-
-      </div>
     </div>
 
     <div class="sweats-panel">
