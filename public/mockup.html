@@ -137,6 +137,7 @@
   .panel-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    align-items: start;
     gap: 20px;
   }
   @media (max-width: 980px) {
@@ -156,6 +157,57 @@
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border);
   }
+
+  /* Weekly Schedule */
+  .schedule-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px 20px 20px;
+    margin-top: 20px;
+  }
+  .schedule-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .schedule-head h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+  }
+  .schedule-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 14px;
+  }
+  .schedule-group {
+    flex: 1 1 200px;
+    min-width: 180px;
+  }
+  .schedule-group-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--faint);
+    margin-bottom: 8px;
+  }
+  .schedule-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .schedule-row:last-child { border-bottom: none; }
+  .schedule-team { display: flex; align-items: center; gap: 5px; }
+  .schedule-team img { width: 16px; height: 16px; object-fit: contain; }
+  .schedule-at { color: var(--faint); font-size: 10px; font-weight: 700; }
 
   /* Weekly Sweats */
   .sweats-panel {
@@ -830,6 +882,81 @@
         <div class="scatter-axis-label">Scoring (x) vs. Depth (y) &mdash; all connected teams</div>
       </div>
 
+    </div>
+
+    <div class="schedule-panel">
+      <div class="schedule-head">
+        <h2>Weekly Schedule</h2>
+        <div class="week-dropdown" id="scheduleWeekDropdown">
+          <div class="week-select" id="scheduleWeekSelect">Week <span id="scheduleWeekLabel">1</span> <span>&#9662;</span></div>
+          <div class="week-menu" id="scheduleWeekMenu" hidden></div>
+        </div>
+      </div>
+      <p class="sweats-sub">Every game this week, in kickoff order.</p>
+
+      <div class="schedule-groups">
+
+        <div class="schedule-group">
+          <div class="schedule-group-label">THURSDAY NIGHT &middot; 8:15 PM ET</div>
+          <div class="schedule-row">
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/kc.png" alt="KC" onerror="this.style.display='none'"><span>KC</span></div>
+            <span class="schedule-at">@</span>
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/bal.png" alt="BAL" onerror="this.style.display='none'"><span>BAL</span></div>
+          </div>
+        </div>
+
+        <div class="schedule-group">
+          <div class="schedule-group-label">SUNDAY 1:00 PM ET</div>
+          <div class="schedule-row">
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/nyj.png" alt="NYJ" onerror="this.style.display='none'"><span>NYJ</span></div>
+            <span class="schedule-at">@</span>
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/buf.png" alt="BUF" onerror="this.style.display='none'"><span>BUF</span></div>
+          </div>
+          <div class="schedule-row">
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/mia.png" alt="MIA" onerror="this.style.display='none'"><span>MIA</span></div>
+            <span class="schedule-at">@</span>
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/ne.png" alt="NE" onerror="this.style.display='none'"><span>NE</span></div>
+          </div>
+          <div class="schedule-row">
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/cin.png" alt="CIN" onerror="this.style.display='none'"><span>CIN</span></div>
+            <span class="schedule-at">@</span>
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/cle.png" alt="CLE" onerror="this.style.display='none'"><span>CLE</span></div>
+          </div>
+        </div>
+
+        <div class="schedule-group">
+          <div class="schedule-group-label">SUNDAY 4:05 / 4:25 PM ET</div>
+          <div class="schedule-row">
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/dal.png" alt="DAL" onerror="this.style.display='none'"><span>DAL</span></div>
+            <span class="schedule-at">@</span>
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/sf.png" alt="SF" onerror="this.style.display='none'"><span>SF</span></div>
+          </div>
+          <div class="schedule-row">
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/gb.png" alt="GB" onerror="this.style.display='none'"><span>GB</span></div>
+            <span class="schedule-at">@</span>
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/chi.png" alt="CHI" onerror="this.style.display='none'"><span>CHI</span></div>
+          </div>
+        </div>
+
+        <div class="schedule-group">
+          <div class="schedule-group-label">SUNDAY NIGHT &middot; 8:20 PM ET</div>
+          <div class="schedule-row">
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/phi.png" alt="PHI" onerror="this.style.display='none'"><span>PHI</span></div>
+            <span class="schedule-at">@</span>
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/gb.png" alt="GB" onerror="this.style.display='none'"><span>GB</span></div>
+          </div>
+        </div>
+
+        <div class="schedule-group">
+          <div class="schedule-group-label">MONDAY NIGHT &middot; 8:15 PM ET</div>
+          <div class="schedule-row">
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/nyg.png" alt="NYG" onerror="this.style.display='none'"><span>NYG</span></div>
+            <span class="schedule-at">@</span>
+            <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/was.png" alt="WAS" onerror="this.style.display='none'"><span>WAS</span></div>
+          </div>
+        </div>
+
+      </div>
     </div>
 
     <div class="sweats-panel">
@@ -1913,29 +2040,36 @@
 
   selectSort('weekly');
 
-  const weekSelect = document.getElementById('weekSelect');
-  const weekMenu = document.getElementById('weekMenu');
-  const weekSelectLabel = document.getElementById('weekSelectLabel');
-  for (let w = 1; w <= 17; w++) {
-    const opt = document.createElement('span');
-    opt.className = 'week-option' + (w === 1 ? ' active' : '');
-    opt.textContent = 'Week ' + w;
-    opt.dataset.week = w;
-    weekMenu.appendChild(opt);
-  }
-  weekSelect.addEventListener('click', (e) => {
-    e.stopPropagation();
-    weekMenu.hidden = !weekMenu.hidden;
-  });
-  weekMenu.querySelectorAll('.week-option').forEach(option => {
-    option.addEventListener('click', () => {
-      weekMenu.querySelectorAll('.week-option').forEach(o => o.classList.remove('active'));
-      option.classList.add('active');
-      weekSelectLabel.textContent = option.dataset.week;
-      weekMenu.hidden = true;
+  function setupWeekDropdown(selectId, menuId, labelId, onChange) {
+    const select = document.getElementById(selectId);
+    const menu = document.getElementById(menuId);
+    const label = document.getElementById(labelId);
+    for (let w = 1; w <= 17; w++) {
+      const opt = document.createElement('span');
+      opt.className = 'week-option' + (w === 1 ? ' active' : '');
+      opt.textContent = 'Week ' + w;
+      opt.dataset.week = w;
+      menu.appendChild(opt);
+    }
+    select.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.week-menu').forEach(m => { if (m !== menu) m.hidden = true; });
+      menu.hidden = !menu.hidden;
     });
-  });
-  document.addEventListener('click', () => { weekMenu.hidden = true; });
+    menu.querySelectorAll('.week-option').forEach(option => {
+      option.addEventListener('click', () => {
+        menu.querySelectorAll('.week-option').forEach(o => o.classList.remove('active'));
+        option.classList.add('active');
+        label.textContent = option.dataset.week;
+        menu.hidden = true;
+        if (onChange) onChange(option.dataset.week);
+      });
+    });
+    document.addEventListener('click', () => { menu.hidden = true; });
+  }
+
+  setupWeekDropdown('weekSelect', 'weekMenu', 'weekSelectLabel');
+  setupWeekDropdown('scheduleWeekSelect', 'scheduleWeekMenu', 'scheduleWeekLabel');
 </script>
 
 </body>
