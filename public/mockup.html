@@ -137,7 +137,7 @@
   .panel-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    align-items: stretch;
+    align-items: start;
     gap: 20px;
   }
   @media (max-width: 980px) {
@@ -165,9 +165,6 @@
 
   /* Weekly Schedule */
   .schedule-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -185,32 +182,37 @@
     margin: 0;
   }
   .schedule-groups {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
     margin-top: 14px;
   }
-  .schedule-group-label {
-    font-size: 9.5px;
+  .schedule-chip {
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    padding: 7px 8px;
+  }
+  .schedule-time {
+    font-size: 8px;
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     color: var(--faint);
-    margin-bottom: 8px;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .schedule-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 7px 0;
-    border-bottom: 1px solid var(--border-soft);
-    font-size: 12.5px;
+    gap: 5px;
+    font-size: 11.5px;
     font-weight: 600;
     color: var(--ink);
   }
-  .schedule-row:last-child { border-bottom: none; }
-  .schedule-team { display: flex; align-items: center; gap: 5px; }
-  .schedule-team img { width: 16px; height: 16px; object-fit: contain; }
-  .schedule-at { color: var(--faint); font-size: 10px; font-weight: 700; }
+  .schedule-team { display: flex; align-items: center; gap: 4px; }
+  .schedule-team img { width: 14px; height: 14px; object-fit: contain; }
+  .schedule-at { color: var(--faint); font-size: 9px; font-weight: 700; }
 
   /* Weekly Sweats */
   .sweats-panel {
@@ -344,7 +346,7 @@
   }
 
   /* Team strength scatter */
-  .scatter-wrap { position: relative; width: 100%; aspect-ratio: 1 / 0.52; }
+  .scatter-wrap { position: relative; width: 100%; aspect-ratio: 1 / 0.4; }
   .scatter-quads {
     position: absolute; inset: 0;
     display: grid;
@@ -879,8 +881,8 @@
 
           <div class="schedule-groups">
 
-            <div class="schedule-group">
-              <div class="schedule-group-label">THURSDAY NIGHT &middot; 8:15 PM ET</div>
+            <div class="schedule-chip">
+              <div class="schedule-time">THU 8:15 PM</div>
               <div class="schedule-row">
                 <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/kc.png" alt="KC" onerror="this.style.display='none'"><span>KC</span></div>
                 <span class="schedule-at">@</span>
@@ -888,18 +890,26 @@
               </div>
             </div>
 
-            <div class="schedule-group">
-              <div class="schedule-group-label">SUNDAY 1:00 PM ET</div>
+            <div class="schedule-chip">
+              <div class="schedule-time">SUN 1:00 PM</div>
               <div class="schedule-row">
                 <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/nyj.png" alt="NYJ" onerror="this.style.display='none'"><span>NYJ</span></div>
                 <span class="schedule-at">@</span>
                 <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/buf.png" alt="BUF" onerror="this.style.display='none'"><span>BUF</span></div>
               </div>
+            </div>
+
+            <div class="schedule-chip">
+              <div class="schedule-time">SUN 1:00 PM</div>
               <div class="schedule-row">
                 <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/mia.png" alt="MIA" onerror="this.style.display='none'"><span>MIA</span></div>
                 <span class="schedule-at">@</span>
                 <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/ne.png" alt="NE" onerror="this.style.display='none'"><span>NE</span></div>
               </div>
+            </div>
+
+            <div class="schedule-chip">
+              <div class="schedule-time">SUN 1:00 PM</div>
               <div class="schedule-row">
                 <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/cin.png" alt="CIN" onerror="this.style.display='none'"><span>CIN</span></div>
                 <span class="schedule-at">@</span>
@@ -907,13 +917,17 @@
               </div>
             </div>
 
-            <div class="schedule-group">
-              <div class="schedule-group-label">SUNDAY 4:05 / 4:25 PM ET</div>
+            <div class="schedule-chip">
+              <div class="schedule-time">SUN 4:05 PM</div>
               <div class="schedule-row">
                 <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/dal.png" alt="DAL" onerror="this.style.display='none'"><span>DAL</span></div>
                 <span class="schedule-at">@</span>
                 <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/sf.png" alt="SF" onerror="this.style.display='none'"><span>SF</span></div>
               </div>
+            </div>
+
+            <div class="schedule-chip">
+              <div class="schedule-time">SUN 4:25 PM</div>
               <div class="schedule-row">
                 <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/gb.png" alt="GB" onerror="this.style.display='none'"><span>GB</span></div>
                 <span class="schedule-at">@</span>
@@ -921,8 +935,8 @@
               </div>
             </div>
 
-            <div class="schedule-group">
-              <div class="schedule-group-label">SUNDAY NIGHT &middot; 8:20 PM ET</div>
+            <div class="schedule-chip">
+              <div class="schedule-time">SUN 8:20 PM</div>
               <div class="schedule-row">
                 <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/phi.png" alt="PHI" onerror="this.style.display='none'"><span>PHI</span></div>
                 <span class="schedule-at">@</span>
@@ -930,8 +944,8 @@
               </div>
             </div>
 
-            <div class="schedule-group">
-              <div class="schedule-group-label">MONDAY NIGHT &middot; 8:15 PM ET</div>
+            <div class="schedule-chip">
+              <div class="schedule-time">MON 8:15 PM</div>
               <div class="schedule-row">
                 <div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/nyg.png" alt="NYG" onerror="this.style.display='none'"><span>NYG</span></div>
                 <span class="schedule-at">@</span>
