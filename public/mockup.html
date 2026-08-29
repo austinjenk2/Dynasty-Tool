@@ -489,7 +489,97 @@
   .sb-badge.sb-badge-good { color: var(--green); background: var(--green-bg); }
   .sb-badge.sb-badge-close { color: var(--gold); background: #f6efe0; }
   .sb-badge.sb-badge-bad { color: var(--red); background: var(--red-bg); }
-  .sb-chevron { flex-shrink: 0; color: var(--faint); }
+  .sb-chevron { flex-shrink: 0; color: var(--faint); transition: transform 0.15s; }
+  .sb-card { cursor: pointer; }
+  .sb-card.is-open .sb-chevron { transform: rotate(180deg); }
+
+  .sb-expand {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 18px;
+    margin-top: -2px;
+  }
+  .sb-exp-header { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .sb-exp-logo {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    color: #fff;
+  }
+  .sb-exp-title { flex: 1; min-width: 0; }
+  .sb-exp-name { font-weight: 700; font-size: 16px; }
+  .sb-exp-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .sb-exp-meta .sb-delta { color: var(--green); }
+  .sb-exp-right { text-align: right; flex-shrink: 0; }
+  .sb-exp-score { margin-bottom: 6px; }
+  .sb-exp-score .sb-score-mine, .sb-exp-score .sb-score-theirs { font-size: 18px; }
+
+  .sb-exp-table { width: 100%; border-collapse: collapse; }
+  .sb-exp-table thead th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: var(--faint);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .sb-exp-table thead th:not(:first-child) { text-align: right; width: 70px; }
+  .sb-exp-table tbody td { padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
+  .sb-exp-table tbody tr:last-child td { border-bottom: none; }
+  .sb-exp-player { display: flex; align-items: center; gap: 10px; }
+  .sb-exp-pos {
+    flex-shrink: 0;
+    width: 30px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+  }
+  .sb-exp-pos.sb-pos-qb { color: var(--red); }
+  .sb-exp-pos.sb-pos-rb { color: var(--green); }
+  .sb-exp-pos.sb-pos-wr { color: var(--blue); }
+  .sb-exp-pos.sb-pos-te { color: var(--gold); }
+  .sb-exp-pos.sb-pos-sfl { color: #7c5cbf; }
+  .sb-exp-avatar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 11px;
+    color: #fff;
+  }
+  .sb-exp-info { min-width: 0; }
+  .sb-exp-pname { font-weight: 700; font-size: 14px; }
+  .sb-exp-q { color: var(--gold); font-weight: 800; margin-left: 4px; }
+  .sb-exp-psub { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .sb-exp-pts { text-align: right; color: var(--faint); font-weight: 600; }
+  .sb-exp-proj { text-align: right; color: var(--gold); font-weight: 700; }
+  .sb-exp-footer { margin-top: 14px; }
+  .sb-exp-full {
+    display: block;
+    text-align: center;
+    padding: 10px;
+    border: 1px solid var(--green);
+    border-radius: 20px;
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-decoration: none;
+    cursor: pointer;
+  }
 
   .sb-root-section { display: flex; gap: 12px; margin-top: 16px; }
   .sb-root-panel {
@@ -2128,6 +2218,129 @@
 
         </div>
 
+        <template id="sbLineupTemplate">
+          <div class="sb-expand">
+            <div class="sb-exp-header">
+              <div class="sb-exp-logo"></div>
+              <div class="sb-exp-title">
+                <div class="sb-exp-name"></div>
+                <div class="sb-exp-meta"></div>
+              </div>
+              <div class="sb-exp-right">
+                <div class="sb-exp-score"></div>
+                <div class="sb-badge"></div>
+              </div>
+            </div>
+            <table class="sb-exp-table">
+              <thead>
+                <tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="sb-exp-player">
+                    <span class="sb-exp-pos sb-pos-qb">QB</span>
+                    <span class="sb-exp-avatar" style="background:var(--red)">DP</span>
+                    <span class="sb-exp-info"><span class="sb-exp-pname">Dak Prescott</span><span class="sb-exp-psub">QB &middot; DAL &middot; @ NYG Sun 8:20 PM</span></span>
+                  </td>
+                  <td class="sb-exp-pts">&mdash;</td>
+                  <td class="sb-exp-proj">20.0</td>
+                </tr>
+                <tr>
+                  <td class="sb-exp-player">
+                    <span class="sb-exp-pos sb-pos-rb">RB</span>
+                    <span class="sb-exp-avatar" style="background:var(--green)">AJ</span>
+                    <span class="sb-exp-info"><span class="sb-exp-pname">Ashton Jeanty<span class="sb-exp-q">Q</span></span><span class="sb-exp-psub">RB &middot; LV &middot; vs MIA Sun 4:25 PM</span></span>
+                  </td>
+                  <td class="sb-exp-pts">&mdash;</td>
+                  <td class="sb-exp-proj">12.6</td>
+                </tr>
+                <tr>
+                  <td class="sb-exp-player">
+                    <span class="sb-exp-pos sb-pos-rb">RB</span>
+                    <span class="sb-exp-avatar" style="background:var(--green)">SB</span>
+                    <span class="sb-exp-info"><span class="sb-exp-pname">Saquon Barkley</span><span class="sb-exp-psub">RB &middot; PHI &middot; vs WAS Sun 4:25 PM</span></span>
+                  </td>
+                  <td class="sb-exp-pts">&mdash;</td>
+                  <td class="sb-exp-proj">14.9</td>
+                </tr>
+                <tr>
+                  <td class="sb-exp-player">
+                    <span class="sb-exp-pos sb-pos-wr">WR</span>
+                    <span class="sb-exp-avatar" style="background:var(--blue)">AB</span>
+                    <span class="sb-exp-info"><span class="sb-exp-pname">A.J. Brown</span><span class="sb-exp-psub">WR &middot; NE &middot; @ SEA Wed 8:20 PM</span></span>
+                  </td>
+                  <td class="sb-exp-pts">&mdash;</td>
+                  <td class="sb-exp-proj">16.9</td>
+                </tr>
+                <tr>
+                  <td class="sb-exp-player">
+                    <span class="sb-exp-pos sb-pos-wr">WR</span>
+                    <span class="sb-exp-avatar" style="background:var(--blue)">DM</span>
+                    <span class="sb-exp-info"><span class="sb-exp-pname">DJ Moore</span><span class="sb-exp-psub">WR &middot; BUF &middot; @ HOU Sun 1:00 PM</span></span>
+                  </td>
+                  <td class="sb-exp-pts">&mdash;</td>
+                  <td class="sb-exp-proj">12.1</td>
+                </tr>
+                <tr>
+                  <td class="sb-exp-player">
+                    <span class="sb-exp-pos sb-pos-wr">WR</span>
+                    <span class="sb-exp-avatar" style="background:var(--blue)">MP</span>
+                    <span class="sb-exp-info"><span class="sb-exp-pname">Michael Pittman<span class="sb-exp-q">Q</span></span><span class="sb-exp-psub">WR &middot; PIT &middot; vs ATL Sun 1:00 PM</span></span>
+                  </td>
+                  <td class="sb-exp-pts">&mdash;</td>
+                  <td class="sb-exp-proj">10.8</td>
+                </tr>
+                <tr>
+                  <td class="sb-exp-player">
+                    <span class="sb-exp-pos sb-pos-te">TE</span>
+                    <span class="sb-exp-avatar" style="background:var(--gold)">TM</span>
+                    <span class="sb-exp-info"><span class="sb-exp-pname">Trey McBride</span><span class="sb-exp-psub">TE &middot; ARI &middot; @ LAC Sun 4:25 PM</span></span>
+                  </td>
+                  <td class="sb-exp-pts">&mdash;</td>
+                  <td class="sb-exp-proj">20.7</td>
+                </tr>
+                <tr>
+                  <td class="sb-exp-player">
+                    <span class="sb-exp-pos sb-pos-rb">FLX</span>
+                    <span class="sb-exp-avatar" style="background:var(--green)">BH</span>
+                    <span class="sb-exp-info"><span class="sb-exp-pname">Breece Hall<span class="sb-exp-q">Q</span></span><span class="sb-exp-psub">RB &middot; NYJ &middot; @ TEN Sun 1:00 PM</span></span>
+                  </td>
+                  <td class="sb-exp-pts">&mdash;</td>
+                  <td class="sb-exp-proj">13.8</td>
+                </tr>
+                <tr>
+                  <td class="sb-exp-player">
+                    <span class="sb-exp-pos sb-pos-te">FLX</span>
+                    <span class="sb-exp-avatar" style="background:var(--gold)">HF</span>
+                    <span class="sb-exp-info"><span class="sb-exp-pname">Harold Fannin</span><span class="sb-exp-psub">TE &middot; CLE &middot; @ JAX Sun 1:00 PM</span></span>
+                  </td>
+                  <td class="sb-exp-pts">&mdash;</td>
+                  <td class="sb-exp-proj">14.8</td>
+                </tr>
+                <tr>
+                  <td class="sb-exp-player">
+                    <span class="sb-exp-pos sb-pos-te">FLX</span>
+                    <span class="sb-exp-avatar" style="background:var(--gold)">TK</span>
+                    <span class="sb-exp-info"><span class="sb-exp-pname">Travis Kelce</span><span class="sb-exp-psub">TE &middot; KC &middot; vs DEN Mon 8:15 PM</span></span>
+                  </td>
+                  <td class="sb-exp-pts">&mdash;</td>
+                  <td class="sb-exp-proj">14.4</td>
+                </tr>
+                <tr>
+                  <td class="sb-exp-player">
+                    <span class="sb-exp-pos sb-pos-sfl">SFL</span>
+                    <span class="sb-exp-avatar" style="background:#7c5cbf">TL</span>
+                    <span class="sb-exp-info"><span class="sb-exp-pname">Trevor Lawrence</span><span class="sb-exp-psub">QB &middot; JAX &middot; vs CLE Sun 1:00 PM</span></span>
+                  </td>
+                  <td class="sb-exp-pts">&mdash;</td>
+                  <td class="sb-exp-proj">18.5</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="sb-exp-footer"><a class="sb-exp-full">VIEW FULL LINEUP &rarr;</a></div>
+          </div>
+        </template>
+
         <div class="sb-root-section">
           <div class="sb-root-panel sb-root-for">
             <div class="sb-root-head"><span>ROOT FOR</span><a class="sb-root-link">FULL GUIDE &rarr;</a></div>
@@ -2602,6 +2815,32 @@
       tab.classList.add('active');
       const target = tab.dataset.sbTab;
       sbViews.forEach(v => v.classList.toggle('is-active', v.dataset.sbView === target));
+    });
+  });
+
+  const sbLineupTemplate = document.getElementById('sbLineupTemplate');
+  document.querySelectorAll('.sb-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const openExpand = card.nextElementSibling;
+      const alreadyOpen = openExpand && openExpand.classList.contains('sb-expand');
+      document.querySelectorAll('.sb-expand').forEach(el => el.remove());
+      document.querySelectorAll('.sb-card.is-open').forEach(el => el.classList.remove('is-open'));
+      if (alreadyOpen) return;
+
+      const panel = sbLineupTemplate.content.cloneNode(true);
+      const cardLogo = card.querySelector('.sb-card-logo');
+      const panelLogo = panel.querySelector('.sb-exp-logo');
+      panelLogo.style.background = cardLogo.style.background;
+      panelLogo.textContent = cardLogo.textContent;
+      panel.querySelector('.sb-exp-name').textContent = card.querySelector('.sb-card-name').textContent;
+      panel.querySelector('.sb-exp-meta').innerHTML = card.querySelector('.sb-card-meta').innerHTML;
+      panel.querySelector('.sb-exp-score').innerHTML = card.querySelector('.sb-card-score').innerHTML;
+      const badge = card.querySelector('.sb-badge');
+      panel.querySelector('.sb-exp-header .sb-badge').className = badge.className;
+      panel.querySelector('.sb-exp-header .sb-badge').textContent = badge.textContent;
+
+      card.after(panel);
+      card.classList.add('is-open');
     });
   });
 
