@@ -402,6 +402,151 @@
   .scatter-tooltip .tt-league { font-weight: 600; }
   [hidden] { display: none !important; }
 
+  /* Scoreboard (lineups) page */
+  .sb-page {
+    background: #0b1f3f;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 8px;
+    color: #fff;
+  }
+  .sb-subtabs { display: flex; gap: 22px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 18px; }
+  .sb-subtab {
+    color: rgba(255,255,255,0.55);
+    font-weight: 700;
+    font-size: 14px;
+    text-decoration: none;
+    padding-bottom: 10px;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+  }
+  .sb-subtab.active { color: #fff; border-bottom-color: #3ddc84; }
+  .sb-view { display: none; }
+  .sb-view.is-active { display: block; }
+
+  .sb-stats {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .sb-stat { text-align: center; }
+  .sb-stat-value { font-size: 26px; font-weight: 800; line-height: 1; }
+  .sb-stat-value.sb-cyan { color: #4fc3ff; }
+  .sb-stat-value.sb-green { color: #3ddc84; }
+  .sb-stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: #93a0bf; margin-top: 6px; }
+  .sb-stat-divider { width: 1px; height: 34px; background: rgba(255,255,255,0.12); }
+
+  .sb-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 1000px) { .sb-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 680px) { .sb-grid { grid-template-columns: 1fr; } }
+
+  .sb-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .sb-card-logo {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 12px;
+    color: #fff;
+  }
+  .sb-card-main { flex: 1; min-width: 0; }
+  .sb-card-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sb-card-meta { font-size: 12px; color: #93a0bf; margin-top: 2px; }
+  .sb-card-meta .sb-delta { color: #3ddc84; }
+  .sb-card-score { text-align: right; flex-shrink: 0; }
+  .sb-score-mine { font-size: 16px; font-weight: 800; color: #4fc3ff; }
+  .sb-score-vs { font-size: 10px; color: #93a0bf; margin: 0 4px; }
+  .sb-score-theirs { font-size: 16px; font-weight: 800; color: #fff; }
+  .sb-badge {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+  .sb-badge.sb-badge-good { color: #3ddc84; background: rgba(61,220,132,0.14); }
+  .sb-badge.sb-badge-close { color: #e0a940; background: rgba(224,169,64,0.14); }
+  .sb-badge.sb-badge-bad { color: #ff5d5d; background: rgba(255,93,93,0.14); }
+  .sb-chevron { flex-shrink: 0; color: #93a0bf; }
+
+  .sb-root-section { display: flex; gap: 12px; margin-top: 16px; }
+  .sb-root-panel {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .sb-root-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .sb-root-head span { font-size: 12px; font-weight: 800; letter-spacing: 0.4px; }
+  .sb-root-for .sb-root-head span { color: #3ddc84; }
+  .sb-root-against .sb-root-head span { color: #ff5d5d; }
+  .sb-root-link { font-size: 11px; color: #93a0bf; text-decoration: none; font-weight: 600; }
+  .sb-root-players { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media (max-width: 800px) { .sb-root-players { grid-template-columns: repeat(2, 1fr); } }
+  .sb-player-card {
+    position: relative;
+    text-align: center;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    padding: 14px 8px 10px;
+    border: 1px solid;
+  }
+  .sb-root-for .sb-player-card { border-color: rgba(61,220,132,0.4); }
+  .sb-root-against .sb-player-card { border-color: rgba(255,93,93,0.4); }
+  .sb-player-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    color: #fff;
+    position: relative;
+  }
+  .sb-player-pos {
+    position: absolute;
+    top: -34px;
+    right: 6px;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #1a3a6b;
+    color: #fff;
+  }
+  .sb-player-name { font-size: 13px; font-weight: 700; }
+  .sb-player-delta { font-size: 20px; font-weight: 800; margin-top: 4px; }
+  .sb-root-for .sb-player-delta { color: #3ddc84; }
+  .sb-root-against .sb-player-delta { color: #ff5d5d; }
+  .sb-player-note { font-size: 11px; color: #93a0bf; margin-top: 2px; }
+
   /* Placeholder tab */
   .placeholder {
     margin-top: 40px;
@@ -1757,7 +1902,312 @@
     </div>
 
   </div>
-  <div data-view="lineups"><div class="placeholder"><h3>Lineups</h3><p>This section is being built.</p></div></div>
+  <div data-view="lineups">
+    <div class="sb-page">
+      <div class="sb-subtabs" id="sbSubtabs">
+        <a class="sb-subtab active" data-sb-tab="scoreboard">Scoreboard</a>
+        <a class="sb-subtab" data-sb-tab="rooting">Rooting Guide</a>
+      </div>
+
+      <div data-sb-view="scoreboard" class="sb-view is-active">
+        <div class="sb-stats">
+          <div class="sb-stat">
+            <div class="sb-stat-value sb-cyan">2655</div>
+            <div class="sb-stat-label">WEEK 1 PROJ PTS</div>
+          </div>
+          <div class="sb-stat-divider"></div>
+          <div class="sb-stat">
+            <div class="sb-stat-value sb-green">99%</div>
+            <div class="sb-stat-label">OF OPTIMAL STARTED</div>
+          </div>
+          <div class="sb-stat-divider"></div>
+          <div class="sb-stat">
+            <div class="sb-stat-value">14 of 18</div>
+            <div class="sb-stat-label">PROJECTED TO WIN</div>
+          </div>
+        </div>
+
+        <div class="sb-grid">
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#c8102e">FA</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Fantasy Football Anonymous</div>
+              <div class="sb-card-meta">vs BertoGenosis &middot; 5 Q &middot; <span class="sb-delta">+3.0</span></div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">150.0</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">143.9</span></div>
+            <div class="sb-badge sb-badge-close">Favored by 6.0</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#3b4f8a">76</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">1776</div>
+              <div class="sb-card-meta">vs Acey17 &middot; 5 Q &middot; <span class="sb-delta">+0.2</span></div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">157.2</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">144.4</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 12.7</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#6b3fa0">PP</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">PURPLE PEOPLE</div>
+              <div class="sb-card-meta">vs randomnacho &middot; 3 Q &middot; <span class="sb-delta">+1.9</span></div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">158.7</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">141.3</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 17.4</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#3f3f8a">BB</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Blockbuster Dynasty</div>
+              <div class="sb-card-meta">vs levibeck &middot; 2 Q &middot; <span class="sb-delta">+2.9</span></div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">71.4</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">155.7</span></div>
+            <div class="sb-badge sb-badge-bad">Underdog by 84.3</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#1d3557">BD</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Blitz Dynasty Football</div>
+              <div class="sb-card-meta">vs chillee &middot; 4 Q</div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">154.3</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">139.6</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 14.8</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#1c7a8c">P2</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Pure Potential Invitational 2</div>
+              <div class="sb-card-meta">vs regghiu23 &middot; 4 Q</div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">144.4</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">123.9</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 20.5</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#8a5a2b">DL</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Dynasty Is Life</div>
+              <div class="sb-card-meta">vs MesterMes &middot; 3 Q &middot; <span class="sb-delta">+0.0</span></div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">139.7</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">110.4</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 29.3</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#7a3f2f">GG</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Dynasty - Globo Gym v Avg Joes</div>
+              <div class="sb-card-meta">vs tiki44em &middot; 1 Q &middot; <span class="sb-delta">+9.4</span></div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">69.5</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">151.8</span></div>
+            <div class="sb-badge sb-badge-bad">Underdog by 82.3</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#a3441f">FL</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Flames in Football</div>
+              <div class="sb-card-meta">vs Socks1 &middot; 3 Q</div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">139.0</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">149.0</span></div>
+            <div class="sb-badge sb-badge-close">Underdog by 10.0</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#8a7a2f">SU</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Sunday Crew</div>
+              <div class="sb-card-meta">vs JGab &middot; 3 Q</div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">158.8</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">142.7</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 16.2</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#c8102e">OT</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">OTTOMAN</div>
+              <div class="sb-card-meta">vs naan0210 &middot; 3 Q</div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">163.7</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">141.9</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 21.8</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#b23a5a">53</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">BDGE Dynasty League 53</div>
+              <div class="sb-card-meta">vs midedunni &middot; 1 Q &middot; <span class="sb-delta">+0.4</span></div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">151.7</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">143.3</span></div>
+            <div class="sb-badge sb-badge-close">Favored by 8.3</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#5b6f5b">TD</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">The Doctor's</div>
+              <div class="sb-card-meta">vs MakeIt_Black &middot; 2 Q</div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">152.5</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">141.0</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 11.5</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#4a3f36">DG</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Degens from Up Country</div>
+              <div class="sb-card-meta">vs WhiteWolf4 &middot; 2 Q</div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">157.4</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">131.2</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 26.2</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:var(--navy)">EE</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Empire Entertainment</div>
+              <div class="sb-card-meta">vs jtford23 &middot; 1 Q &middot; <span class="sb-delta">+1.4</span></div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">169.3</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">108.5</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 60.9</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#2d2d33">SD</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Studs and Duds</div>
+              <div class="sb-card-meta">vs CandyMan98 &middot; 1 Q</div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">148.8</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">104.5</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 44.3</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#2f4f7a">GP</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">Grandpa Phil</div>
+              <div class="sb-card-meta">vs zenner &middot; 1 Q</div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">61.6</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">165.6</span></div>
+            <div class="sb-badge sb-badge-bad">Underdog by 104.0</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+          <div class="sb-card">
+            <div class="sb-card-logo" style="background:#3f6b4a">SC</div>
+            <div class="sb-card-main">
+              <div class="sb-card-name">StatChasers BestBall &amp; Chill 5.0 [DYNAST&hellip;</div>
+              <div class="sb-card-meta">vs LBLightItUp &middot; Best Ball</div>
+            </div>
+            <div class="sb-card-score"><span class="sb-score-mine">156.5</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">134.2</span></div>
+            <div class="sb-badge sb-badge-good">Favored by 22.3</div>
+            <div class="sb-chevron">&#9662;</div>
+          </div>
+
+        </div>
+
+        <div class="sb-root-section">
+          <div class="sb-root-panel sb-root-for">
+            <div class="sb-root-head"><span>ROOT FOR</span><a class="sb-root-link">FULL GUIDE &rarr;</a></div>
+            <div class="sb-root-players">
+              <div class="sb-player-card">
+                <div class="sb-player-pos">WR</div>
+                <div class="sb-player-avatar" style="background:#5b3fa0">ZF</div>
+                <div class="sb-player-name">Zay Flowers</div>
+                <div class="sb-player-delta">+7</div>
+                <div class="sb-player-note">7 for</div>
+              </div>
+              <div class="sb-player-card">
+                <div class="sb-player-pos">RB</div>
+                <div class="sb-player-avatar" style="background:#2f4f7a">JL</div>
+                <div class="sb-player-name">Jeremiyah Love</div>
+                <div class="sb-player-delta">+6</div>
+                <div class="sb-player-note">6 for</div>
+              </div>
+              <div class="sb-player-card">
+                <div class="sb-player-pos">WR</div>
+                <div class="sb-player-avatar" style="background:#3f6b4a">DL</div>
+                <div class="sb-player-name">Drake London</div>
+                <div class="sb-player-delta">+4</div>
+                <div class="sb-player-note">5 for &middot; 1 vs</div>
+              </div>
+              <div class="sb-player-card">
+                <div class="sb-player-pos">RB</div>
+                <div class="sb-player-avatar" style="background:#4a4a4a">AJ</div>
+                <div class="sb-player-name">Ashton Jeanty</div>
+                <div class="sb-player-delta">+4</div>
+                <div class="sb-player-note">4 for</div>
+              </div>
+            </div>
+          </div>
+          <div class="sb-root-panel sb-root-against">
+            <div class="sb-root-head"><span>ROOT AGAINST</span><a class="sb-root-link">FULL GUIDE &rarr;</a></div>
+            <div class="sb-root-players">
+              <div class="sb-player-card">
+                <div class="sb-player-pos">WR</div>
+                <div class="sb-player-avatar" style="background:#5a2d3d">TM</div>
+                <div class="sb-player-name">Terry McLaurin</div>
+                <div class="sb-player-delta">&minus;4</div>
+                <div class="sb-player-note">5 vs &middot; 1 for</div>
+              </div>
+              <div class="sb-player-card">
+                <div class="sb-player-pos">WR</div>
+                <div class="sb-player-avatar" style="background:#8a1f2b">MW</div>
+                <div class="sb-player-name">Michael Wilson</div>
+                <div class="sb-player-delta">&minus;4</div>
+                <div class="sb-player-note">4 vs</div>
+              </div>
+              <div class="sb-player-card">
+                <div class="sb-player-pos">RB</div>
+                <div class="sb-player-avatar" style="background:#2f2f5a">DH</div>
+                <div class="sb-player-name">Derrick Henry</div>
+                <div class="sb-player-delta">&minus;3</div>
+                <div class="sb-player-note">4 vs &middot; 1 for</div>
+              </div>
+              <div class="sb-player-card">
+                <div class="sb-player-pos">QB</div>
+                <div class="sb-player-avatar" style="background:#1a3a6b">JA</div>
+                <div class="sb-player-name">Josh Allen</div>
+                <div class="sb-player-delta">&minus;3</div>
+                <div class="sb-player-note">4 vs &middot; 1 for</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-sb-view="rooting" class="sb-view">
+        <div class="placeholder" style="border-color:rgba(255,255,255,0.2)">
+          <h3 style="color:#fff">Rooting Guide</h3>
+          <p style="color:#93a0bf">This section is being built.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
   <div data-view="waiver"><div class="placeholder"><h3>Waiver Wire</h3><p>This section is being built.</p></div></div>
   <div data-view="draft"><div class="placeholder"><h3>Draft Room</h3><p>This section is being built.</p></div></div>
   <div data-view="exposures"><div class="placeholder"><h3>Exposures</h3><p>This section is being built.</p></div></div>
@@ -2142,6 +2592,17 @@
       tab.classList.add('active');
       const target = tab.dataset.section;
       views.forEach(v => v.classList.toggle('is-active', v.dataset.view === target));
+    });
+  });
+
+  const sbSubtabs = document.querySelectorAll('.sb-subtab');
+  const sbViews = document.querySelectorAll('[data-sb-view]');
+  sbSubtabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      sbSubtabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.sbTab;
+      sbViews.forEach(v => v.classList.toggle('is-active', v.dataset.sbView === target));
     });
   });
 
