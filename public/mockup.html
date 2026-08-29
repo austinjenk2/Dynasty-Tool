@@ -551,7 +551,9 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 12px 18px;
+    cursor: pointer;
   }
+  .league-row:hover { border-color: var(--faint); }
   .league-id { display: flex; align-items: center; gap: 12px; }
   .league-logo {
     width: 40px; height: 40px;
@@ -602,6 +604,132 @@
   .rank-mid { color: var(--gold); }
   .rank-bad { color: var(--red); }
   .row-chevron { text-align: center; color: var(--faint); font-size: 12px; }
+
+  /* League detail */
+  .league-back {
+    display: inline-block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 16px;
+    cursor: pointer;
+  }
+  .league-back:hover { color: var(--ink); }
+  .ld-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .ld-header-left { display: flex; align-items: center; gap: 12px; }
+  .ld-rank {
+    font-family: 'Source Serif 4', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--faint);
+  }
+  .ld-avatar {
+    width: 42px; height: 42px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Source Serif 4', serif;
+    font-weight: 700;
+    color: #fff;
+    font-size: 14px;
+  }
+  .ld-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .ld-meta { font-size: 11.5px; color: var(--faint); margin-top: 2px; }
+  .ld-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ld-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+  }
+  .ld-tag b { color: var(--ink); }
+
+  .ld-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 980px) { .ld-stats { grid-template-columns: repeat(2, 1fr); } }
+  .ld-stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+  }
+  .ld-stat-card.wide { grid-column: span 2; }
+  @media (max-width: 980px) { .ld-stat-card.wide { grid-column: span 2; } }
+  .ld-stat-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
+  .ld-stat-value { font-family: 'Source Serif 4', serif; font-size: 22px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+  .ld-stat-value.small { font-size: 15px; }
+  .ld-firsts { display: flex; gap: 16px; margin-top: 4px; }
+  .ld-firsts > div { display: flex; flex-direction: column; align-items: center; }
+  .ld-firsts-year { font-size: 9.5px; color: var(--faint); font-weight: 600; }
+  .ld-firsts-num { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; color: var(--ink); }
+  .ld-opp { font-size: 11px; font-weight: 600; color: var(--muted); margin-left: 4px; }
+
+  .ld-columns {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 1200px) { .ld-columns { grid-template-columns: repeat(2, 1fr); } }
+  .ld-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .ld-col-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: #fff;
+  }
+  .ld-col-head.qb { background: var(--red); }
+  .ld-col-head.rb { background: var(--green); }
+  .ld-col-head.wr { background: var(--blue); }
+  .ld-col-head.te { background: var(--gold); }
+  .ld-col-head.picks { background: var(--navy); }
+  .ld-player {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 11.5px;
+  }
+  .ld-player:last-child { border-bottom: none; }
+  .ld-pos {
+    width: 22px;
+    font-size: 8.5px;
+    font-weight: 700;
+    color: var(--faint);
+  }
+  .ld-star { color: #d9a441; font-size: 10px; }
+  .ld-ptag { font-size: 8px; font-weight: 700; color: var(--faint); border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; }
+  .ld-pname { flex: 1; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ld-via { font-weight: 500; font-style: normal; color: var(--faint); font-size: 9.5px; }
+  .ld-pteam { font-size: 9.5px; color: var(--faint); font-weight: 600; }
+  .ld-pnum { font-size: 10.5px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1.2; }
+  .ld-pnum i { font-style: normal; font-size: 7.5px; font-weight: 600; color: var(--faint); }
 
   /* Notebook panel */
   .notebook-overlay {
@@ -1052,6 +1180,7 @@
   </div>
 
   <div data-view="leagues">
+    <div id="leaguesListView">
     <div class="page-title">
       <h1>Leagues</h1>
       <p>Every connected league, with this week's projected matchup and where you stand.</p>
@@ -1528,6 +1657,130 @@
       </div>
 
     </div>
+    </div>
+
+    <div id="leagueDetailView" hidden>
+      <a class="league-back" id="leagueBackBtn">&larr; Back to Leagues</a>
+
+      <div class="ld-header">
+        <div class="ld-header-left">
+          <div class="ld-rank">1</div>
+          <div class="ld-avatar" style="background:var(--navy)">EE</div>
+          <div>
+            <div class="ld-name">AusJ2</div>
+            <div class="ld-meta">0-0 &middot; 19 leagues</div>
+          </div>
+          <div class="roster-pill" style="margin-left:8px">FAVORITE</div>
+        </div>
+        <div class="ld-tags">
+          <span class="ld-tag">CON <b>1st</b></span>
+          <span class="ld-tag">VAL <b>1st</b></span>
+          <span class="ld-tag">QB <b>3rd</b></span>
+          <span class="ld-tag">RB <b>4th</b></span>
+          <span class="ld-tag">WR <b>1st</b></span>
+          <span class="ld-tag">TE <b>10th</b></span>
+          <span class="ld-tag">PICKS <b>4th</b></span>
+          <span class="ld-tag">PLAYOFF <b>1st</b></span>
+        </div>
+      </div>
+
+      <div class="ld-stats">
+        <div class="ld-stat-card">
+          <div class="ld-stat-label">RECORD</div>
+          <div class="ld-stat-value">9-5</div>
+          <div class="ld-stat-label" style="margin-top:8px">SEED</div>
+          <div class="ld-stat-value small">2nd</div>
+        </div>
+        <div class="ld-stat-card">
+          <div class="ld-stat-label">PF RANK</div>
+          <div class="ld-stat-value">4th</div>
+          <div class="ld-stat-label" style="margin-top:8px">VS #1</div>
+          <div class="ld-stat-value small">14.6</div>
+        </div>
+        <div class="ld-stat-card">
+          <div class="ld-stat-label">VALUE</div>
+          <div class="ld-stat-value">22.3</div>
+        </div>
+        <div class="ld-stat-card">
+          <div class="ld-stat-label">AVERAGE FIRSTS/LEAGUE</div>
+          <div class="ld-firsts">
+            <div><span class="ld-firsts-year">26</span><span class="ld-firsts-num">5.0</span></div>
+            <div><span class="ld-firsts-year">27</span><span class="ld-firsts-num">1.3</span></div>
+            <div><span class="ld-firsts-year">28</span><span class="ld-firsts-num">1.5</span></div>
+          </div>
+        </div>
+        <div class="ld-stat-card">
+          <div class="ld-stat-label">TRADE ACTIVITY</div>
+          <div class="roster-pill" style="margin:4px 0">ACTIVE</div>
+          <div class="ld-stat-value small">1st of 12</div>
+        </div>
+        <div class="ld-stat-card wide">
+          <div class="ld-stat-label">WEEK 1 PROJECTED <span class="favored-tag" style="margin-left:6px">Favored by 71.8</span></div>
+          <div class="matchup-scores" style="margin-top:6px">
+            <span class="proj-score mine" style="font-size:22px">187.8</span>
+            <span class="matchup-vs">vs</span>
+            <span class="proj-score theirs" style="font-size:22px">116.0</span>
+            <span class="ld-opp">jtford23</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ld-columns">
+
+        <div class="ld-col">
+          <div class="ld-col-head qb">QUARTERBACKS <span>3rd</span></div>
+          <div class="ld-player"><span class="ld-pos qb">QB</span><span class="ld-star">&#9733;</span><span class="ld-pname">Jayden Daniels</span><span class="ld-pteam">WAS</span><span class="ld-pnum">19.0<br><i>PROJ</i></span><span class="ld-pnum">2.4<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos qb">QB</span><span class="ld-star">&#9733;</span><span class="ld-pname">Lamar Jackson</span><span class="ld-pteam">BAL</span><span class="ld-pnum">20.8<br><i>PROJ</i></span><span class="ld-pnum">2.3<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos qb"></span><span class="ld-pname">Marcus Mariota</span><span class="ld-pteam">WAS</span><span class="ld-pnum">0.02<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos qb"></span><span class="ld-pname">Joe Flacco</span><span class="ld-pteam">CIN</span></div>
+          <div class="ld-player"><span class="ld-pos qb"></span><span class="ld-pname">Tyler Huntley</span><span class="ld-pteam">BAL</span></div>
+          <div class="ld-player"><span class="ld-pos qb"></span><span class="ld-pname">Davis Mills</span><span class="ld-pteam">HOU</span></div>
+        </div>
+
+        <div class="ld-col">
+          <div class="ld-col-head rb">RUNNING BACKS <span>4th</span></div>
+          <div class="ld-player"><span class="ld-pos rb">RB</span><span class="ld-star">&#9733;</span><span class="ld-pname">Jonathan Taylor</span><span class="ld-pteam">IND</span><span class="ld-pnum">18.9<br><i>PROJ</i></span><span class="ld-pnum">1.4<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos rb">RB</span><span class="ld-star">&#9733;</span><span class="ld-pname">Christian McCaffrey</span><span class="ld-pteam">SF</span><span class="ld-pnum">21.0<br><i>PROJ</i></span><span class="ld-pnum">1.0<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos rb">RB</span><span class="ld-star">&#9733;</span><span class="ld-pname">Saquon Barkley</span><span class="ld-pteam">PHI</span><span class="ld-pnum">14.9<br><i>PROJ</i></span><span class="ld-pnum">0.8<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos rb">RB</span><span class="ld-ptag">TX</span><span class="ld-pname">Nicholas Singleton</span><span class="ld-pteam">TEN</span><span class="ld-pnum">2.3<br><i>PROJ</i></span><span class="ld-pnum">0.2<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos rb"></span><span class="ld-pname">Aaron Jones</span><span class="ld-pteam">MIN</span><span class="ld-pnum">8.2<br><i>PROJ</i></span><span class="ld-pnum">0.09<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos rb"></span><span class="ld-pname">Jarquez Hunter</span><span class="ld-pteam">MIA</span><span class="ld-pnum">0.02<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos rb"></span><span class="ld-pname">Nick Chubb</span><span class="ld-pteam">FA</span></div>
+        </div>
+
+        <div class="ld-col">
+          <div class="ld-col-head wr">WIDE RECEIVERS <span>1st</span></div>
+          <div class="ld-player"><span class="ld-pos wr">WR</span><span class="ld-pname">Malik Nabers</span><span class="ld-pteam">NYG</span><span class="ld-pnum">13.7<br><i>PROJ</i></span><span class="ld-pnum">2.3<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos wr">WR</span><span class="ld-star">&#9733;</span><span class="ld-pname">Drake London</span><span class="ld-pteam">ATL</span><span class="ld-pnum">15.8<br><i>PROJ</i></span><span class="ld-pnum">2.1<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos wr">WR</span><span class="ld-star">&#9733;</span><span class="ld-pname">Amon-Ra St. Brown</span><span class="ld-pteam">DET</span><span class="ld-pnum">19.8<br><i>PROJ</i></span><span class="ld-pnum">2.1<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos wr">WR</span><span class="ld-star">&#9733;</span><span class="ld-pname">CeeDee Lamb</span><span class="ld-pteam">DAL</span><span class="ld-pnum">17.1<br><i>PROJ</i></span><span class="ld-pnum">2.0<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos wr"></span><span class="ld-pname">Jordyn Tyson</span><span class="ld-pteam">NO</span><span class="ld-pnum">1.1<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos wr">WR</span><span class="ld-star">&#9733;</span><span class="ld-pname">Tee Higgins</span><span class="ld-pteam">CIN</span><span class="ld-pnum">15.7<br><i>PROJ</i></span><span class="ld-pnum">0.8<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos wr"></span><span class="ld-pname">Davante Adams</span><span class="ld-pteam">LAR</span><span class="ld-pnum">12.3<br><i>PROJ</i></span><span class="ld-pnum">0.3<br><i>VAL</i></span></div>
+        </div>
+
+        <div class="ld-col">
+          <div class="ld-col-head te">TIGHT ENDS <span>10th</span></div>
+          <div class="ld-player"><span class="ld-pos te">TE</span><span class="ld-pname">Oronde Gadsden</span><span class="ld-pteam">LAC</span><span class="ld-pnum">4.8<br><i>PROJ</i></span><span class="ld-pnum">0.3<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos te">TE</span><span class="ld-star">&#9733;</span><span class="ld-pname">Travis Kelce</span><span class="ld-pteam">KC</span><span class="ld-pnum">11.0<br><i>PROJ</i></span><span class="ld-pnum">0.1<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos te">TE</span><span class="ld-pname">Jack Endries</span><span class="ld-pteam">CIN</span><span class="ld-pnum">0.7<br><i>PROJ</i></span><span class="ld-pnum">0.03<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pos te">TE</span><span class="ld-ptag">TX</span><span class="ld-pname">Jared Wiley</span><span class="ld-pteam">KC</span></div>
+        </div>
+
+        <div class="ld-col">
+          <div class="ld-col-head picks">PICKS <span>4th</span></div>
+          <div class="ld-player"><span class="ld-pname">2027 &middot; 1st</span><span class="ld-pnum">0.7<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pname">2027 &middot; 2nd <i class="ld-via">via kleincauner</i></span><span class="ld-pnum">0.4<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pname">2027 &middot; 3rd</span><span class="ld-pnum">0.08<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pname">2027 &middot; 4th</span><span class="ld-pnum">0.04<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pname">2028 &middot; 1st</span><span class="ld-pnum">0.8<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pname">2028 &middot; 2nd</span><span class="ld-pnum">0.2<br><i>VAL</i></span></div>
+          <div class="ld-player"><span class="ld-pname">2028 &middot; 3rd</span><span class="ld-pnum">0.08<br><i>VAL</i></span></div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
   <div data-view="lineups"><div class="placeholder"><h3>Lineups</h3><p>This section is being built.</p></div></div>
   <div data-view="waiver"><div class="placeholder"><h3>Waiver Wire</h3><p>This section is being built.</p></div></div>
@@ -2061,6 +2314,21 @@
   });
 
   selectSort('weekly');
+
+  const leaguesListView = document.getElementById('leaguesListView');
+  const leagueDetailView = document.getElementById('leagueDetailView');
+  const leagueBackBtn = document.getElementById('leagueBackBtn');
+  document.querySelectorAll('.league-row').forEach(row => {
+    row.addEventListener('click', () => {
+      leaguesListView.hidden = true;
+      leagueDetailView.hidden = false;
+      window.scrollTo(0, 0);
+    });
+  });
+  leagueBackBtn.addEventListener('click', () => {
+    leagueDetailView.hidden = true;
+    leaguesListView.hidden = false;
+  });
 
   function setupWeekDropdown(selectId, menuId, labelId, onChange) {
     const select = document.getElementById(selectId);
