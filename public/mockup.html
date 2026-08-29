@@ -581,6 +581,66 @@
     cursor: pointer;
   }
 
+  /* Rooting Guide */
+  .rg-header { text-align: center; margin-bottom: 18px; }
+  .rg-header h2 { font-family: 'Source Serif 4', serif; font-size: 22px; margin: 0 0 6px; }
+  .rg-header p { font-size: 13px; color: var(--muted); margin: 0; }
+
+  .rg-columns { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+  .rg-panel { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px; min-width: 0; }
+  .rg-panel-head { text-align: center; font-size: 12px; font-weight: 800; letter-spacing: 0.4px; margin-bottom: 10px; }
+  .rg-panel-for .rg-panel-head { color: var(--green); }
+  .rg-panel-against .rg-panel-head { color: var(--red); }
+  .rg-panel-even .rg-panel-head { color: var(--gold); }
+  .rg-list { display: flex; flex-direction: column; gap: 6px; max-height: 460px; overflow-y: auto; }
+  .rg-panel-even .rg-list { max-height: none; }
+
+  .rg-row { border: 1px solid var(--border-soft); border-radius: 6px; cursor: pointer; }
+  .rg-row:hover { border-color: var(--border); }
+  .rg-row-main { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+  .rg-delta { width: 24px; flex-shrink: 0; font-weight: 800; font-size: 13px; text-align: right; }
+  .rg-delta-pos { color: var(--green); }
+  .rg-delta-neg { color: var(--red); }
+  .rg-delta-even { color: var(--gold); }
+  .rg-pos {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .rg-pos.sb-pos-qb { color: var(--red); background: var(--red-bg); }
+  .rg-pos.sb-pos-rb { color: var(--green); background: var(--green-bg); }
+  .rg-pos.sb-pos-wr { color: var(--blue); background: rgba(47,111,163,0.12); }
+  .rg-pos.sb-pos-te { color: var(--gold); background: #f6efe0; }
+  .rg-name { font-weight: 700; font-size: 13px; }
+  .rg-team { font-size: 12px; color: var(--muted); }
+  .rg-note { margin-left: auto; flex-shrink: 0; font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .rg-note-for { color: var(--green); }
+  .rg-note-vs { color: var(--red); }
+
+  .rg-expand { padding: 10px 12px 12px; border-top: 1px solid var(--border-soft); font-size: 12.5px; line-height: 1.6; }
+  .rg-expand-line { margin: 0; }
+  .rg-expand-label.rg-for { color: var(--green); font-weight: 700; }
+  .rg-expand-label.rg-against { color: var(--red); font-weight: 700; }
+  .rg-expand-leagues { color: var(--ink); }
+  .rg-expand-empty { color: var(--faint); font-style: italic; }
+
+  .rg-slates-head { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: var(--muted); text-transform: uppercase; margin: 20px 0 10px; }
+  .rg-slates-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 900px) { .rg-slates-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .rg-slates-grid { grid-template-columns: 1fr; } }
+  .rg-slate-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+  .rg-slate-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .rg-slate-label { font-size: 11px; font-weight: 800; letter-spacing: 0.4px; color: var(--blue); }
+  .rg-slate-count { font-size: 11px; color: var(--faint); }
+  .rg-slate-chips { font-size: 12.5px; line-height: 2; }
+  .rg-chip { margin-right: 4px; }
+  .rg-chip-pos { color: var(--green); font-weight: 700; }
+  .rg-chip-neg { color: var(--red); font-weight: 700; }
+  .rg-chip-even { color: var(--gold); font-weight: 700; }
+  .rg-chip-more { color: var(--green); font-weight: 700; }
+
   /* Placeholder tab */
   .placeholder {
     margin-top: 40px;
@@ -2288,9 +2348,947 @@
       </div>
 
       <div data-sb-view="rooting" class="sb-view">
-        <div class="placeholder">
-          <h3>Rooting Guide</h3>
-          <p>This section is being built.</p>
+        <div class="rg-header">
+          <h2>Week 1 Rooting Guide</h2>
+          <p>Your starters versus your opponents across all scheduled matchups. Tap a player for the league list.</p>
+        </div>
+
+        <div class="rg-columns">
+          <div class="rg-panel rg-panel-for">
+            <div class="rg-panel-head">Root For</div>
+            <div class="rg-list">
+              <div class="rg-row" data-for="Empire Entertainment &amp;middot; OTTOMAN &amp;middot; StatChasers BestBall &amp; Chill 5.0 &amp;middot; Blitz Dynasty Football &amp;middot; Dynasty Is Life &amp;middot; The Doctor's &amp;middot; BDGE Dynasty League 53" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+7</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Zay Flowers</span>
+                  <span class="rg-team">BAL</span>
+                  <span class="rg-note">7 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Pure Potential Invitational 2 &amp;middot; Degens from Up Country &amp;middot; 1776 &amp;middot; Sunday Crew &amp;middot; PURPLE PEOPLE &amp;middot; Studs and Duds" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+6</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Jeremiyah Love</span>
+                  <span class="rg-team">ARI</span>
+                  <span class="rg-note">6 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Fantasy Football Anonymous &amp;middot; Flames in Football &amp;middot; Grandpa Phil &amp;middot; Dynasty - Globo Gym v Avg Joes &amp;middot; Blockbuster Dynasty" data-against="Empire Entertainment">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+4</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Drake London</span>
+                  <span class="rg-team">ATL</span>
+                  <span class="rg-note">5 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="OTTOMAN &amp;middot; StatChasers BestBall &amp; Chill 5.0 &amp;middot; Blitz Dynasty Football &amp;middot; Dynasty Is Life" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+4</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Ashton Jeanty</span>
+                  <span class="rg-team">LV</span>
+                  <span class="rg-note">4 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="The Doctor's &amp;middot; BDGE Dynasty League 53 &amp;middot; Pure Potential Invitational 2 &amp;middot; Degens from Up Country" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+4</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Chase Brown</span>
+                  <span class="rg-team">CIN</span>
+                  <span class="rg-note">4 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="1776 &amp;middot; Sunday Crew &amp;middot; PURPLE PEOPLE &amp;middot; Studs and Duds" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+4</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Colston Loveland</span>
+                  <span class="rg-team">CHI</span>
+                  <span class="rg-note">4 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Fantasy Football Anonymous &amp;middot; Flames in Football &amp;middot; Grandpa Phil &amp;middot; Dynasty - Globo Gym v Avg Joes" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+4</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Lamar Jackson</span>
+                  <span class="rg-team">BAL</span>
+                  <span class="rg-note">4 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Blockbuster Dynasty &amp;middot; Empire Entertainment &amp;middot; OTTOMAN &amp;middot; StatChasers BestBall &amp; Chill 5.0" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+4</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Tetairoa McMillan</span>
+                  <span class="rg-team">CAR</span>
+                  <span class="rg-note">4 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Blitz Dynasty Football &amp;middot; Dynasty Is Life &amp;middot; The Doctor's &amp;middot; BDGE Dynasty League 53" data-against="Pure Potential Invitational 2">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+3</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Mike Evans</span>
+                  <span class="rg-team">SF</span>
+                  <span class="rg-note">4 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Degens from Up Country &amp;middot; 1776 &amp;middot; Sunday Crew" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+3</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Bhayshul Tuten</span>
+                  <span class="rg-team">JAX</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="PURPLE PEOPLE &amp;middot; Studs and Duds &amp;middot; Fantasy Football Anonymous" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+3</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Dak Prescott</span>
+                  <span class="rg-team">DAL</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Flames in Football &amp;middot; Grandpa Phil &amp;middot; Dynasty - Globo Gym v Avg Joes" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+3</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Harold Fannin</span>
+                  <span class="rg-team">CLE</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Blockbuster Dynasty &amp;middot; Empire Entertainment &amp;middot; OTTOMAN" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+3</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Jalen Hurts</span>
+                  <span class="rg-team">PHI</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="StatChasers BestBall &amp; Chill 5.0 &amp;middot; Blitz Dynasty Football &amp;middot; Dynasty Is Life" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+3</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Jayden Daniels</span>
+                  <span class="rg-team">WAS</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="The Doctor's &amp;middot; BDGE Dynasty League 53 &amp;middot; Pure Potential Invitational 2" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+3</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Josh Downs</span>
+                  <span class="rg-team">IND</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Degens from Up Country &amp;middot; 1776 &amp;middot; Sunday Crew" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+3</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Sam LaPorta</span>
+                  <span class="rg-team">DET</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="PURPLE PEOPLE &amp;middot; Studs and Duds &amp;middot; Fantasy Football Anonymous" data-against="Flames in Football">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Cam Skattebo</span>
+                  <span class="rg-team">NYG</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Grandpa Phil &amp;middot; Dynasty - Globo Gym v Avg Joes &amp;middot; Blockbuster Dynasty" data-against="Empire Entertainment">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Jonathan Taylor</span>
+                  <span class="rg-team">IND</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="OTTOMAN &amp;middot; StatChasers BestBall &amp; Chill 5.0 &amp;middot; Blitz Dynasty Football" data-against="Dynasty Is Life">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Luther Burden</span>
+                  <span class="rg-team">CHI</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="The Doctor's &amp;middot; BDGE Dynasty League 53 &amp;middot; Pure Potential Invitational 2" data-against="Degens from Up Country">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Saquon Barkley</span>
+                  <span class="rg-team">PHI</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="1776 &amp;middot; Sunday Crew" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">A.J. Brown</span>
+                  <span class="rg-team">NE</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="PURPLE PEOPLE &amp;middot; Studs and Duds" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">CeeDee Lamb</span>
+                  <span class="rg-team">DAL</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Fantasy Football Anonymous &amp;middot; Flames in Football" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Jayden Reed</span>
+                  <span class="rg-team">GB</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Grandpa Phil &amp;middot; Dynasty - Globo Gym v Avg Joes" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Jaylen Waddle</span>
+                  <span class="rg-team">DEN</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Blockbuster Dynasty &amp;middot; Empire Entertainment" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Jordyn Tyson</span>
+                  <span class="rg-team">NO</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="OTTOMAN &amp;middot; StatChasers BestBall &amp; Chill 5.0" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Ladd McConkey</span>
+                  <span class="rg-team">LAC</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Blitz Dynasty Football &amp;middot; Dynasty Is Life" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Nico Collins</span>
+                  <span class="rg-team">HOU</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="The Doctor's &amp;middot; BDGE Dynasty League 53" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Puka Nacua</span>
+                  <span class="rg-team">LAR</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Pure Potential Invitational 2 &amp;middot; Degens from Up Country" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Trevor Lawrence</span>
+                  <span class="rg-team">JAX</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="1776 &amp;middot; Sunday Crew" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Tyler Warren</span>
+                  <span class="rg-team">IND</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="PURPLE PEOPLE &amp;middot; Studs and Duds" data-against="">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Zachariah Branch</span>
+                  <span class="rg-team">ATL</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Fantasy Football Anonymous &amp;middot; Flames in Football &amp;middot; Grandpa Phil" data-against="Dynasty - Globo Gym v Avg Joes &amp;middot; Blockbuster Dynasty">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+1</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Jared Goff</span>
+                  <span class="rg-team">DET</span>
+                  <span class="rg-note">3 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Empire Entertainment &amp;middot; OTTOMAN" data-against="StatChasers BestBall &amp; Chill 5.0">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+1</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Breece Hall</span>
+                  <span class="rg-team">NYJ</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Blitz Dynasty Football &amp;middot; Dynasty Is Life" data-against="The Doctor's">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+1</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Dalton Kincaid</span>
+                  <span class="rg-team">BUF</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="BDGE Dynasty League 53 &amp;middot; Pure Potential Invitational 2" data-against="Degens from Up Country">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+1</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Dalton Schultz</span>
+                  <span class="rg-team">HOU</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="1776 &amp;middot; Sunday Crew" data-against="PURPLE PEOPLE">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+1</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Jordan Love</span>
+                  <span class="rg-team">GB</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Studs and Duds &amp;middot; Fantasy Football Anonymous" data-against="Flames in Football">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+1</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Justin Herbert</span>
+                  <span class="rg-team">LAC</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Grandpa Phil &amp;middot; Dynasty - Globo Gym v Avg Joes" data-against="Blockbuster Dynasty">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-pos">+1</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Tee Higgins</span>
+                  <span class="rg-team">CIN</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rg-panel rg-panel-against">
+            <div class="rg-panel-head">Root Against</div>
+            <div class="rg-list">
+              <div class="rg-row" data-for="Empire Entertainment" data-against="OTTOMAN &amp;middot; StatChasers BestBall &amp; Chill 5.0 &amp;middot; Blitz Dynasty Football &amp;middot; Dynasty Is Life &amp;middot; The Doctor's">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-4</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Terry McLaurin</span>
+                  <span class="rg-team">WAS</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 5 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="BDGE Dynasty League 53 &amp;middot; Pure Potential Invitational 2 &amp;middot; Degens from Up Country &amp;middot; 1776">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-4</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Michael Wilson</span>
+                  <span class="rg-team">ARI</span>
+                  <span class="rg-note">4 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Sunday Crew" data-against="PURPLE PEOPLE &amp;middot; Studs and Duds &amp;middot; Fantasy Football Anonymous &amp;middot; Flames in Football">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-3</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Derrick Henry</span>
+                  <span class="rg-team">BAL</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 4 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Grandpa Phil" data-against="Dynasty - Globo Gym v Avg Joes &amp;middot; Blockbuster Dynasty &amp;middot; Empire Entertainment &amp;middot; OTTOMAN">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-3</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Josh Allen</span>
+                  <span class="rg-team">BUF</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 4 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="StatChasers BestBall &amp; Chill 5.0 &amp;middot; Blitz Dynasty Football &amp;middot; Dynasty Is Life">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-3</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Caleb Williams</span>
+                  <span class="rg-team">CHI</span>
+                  <span class="rg-note">3 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="The Doctor's &amp;middot; BDGE Dynasty League 53 &amp;middot; Pure Potential Invitational 2">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-3</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">DK Metcalf</span>
+                  <span class="rg-team">PIT</span>
+                  <span class="rg-note">3 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="Degens from Up Country &amp;middot; 1776 &amp;middot; Sunday Crew">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-3</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Isaiah Likely</span>
+                  <span class="rg-team">NYG</span>
+                  <span class="rg-note">3 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="PURPLE PEOPLE &amp;middot; Studs and Duds &amp;middot; Fantasy Football Anonymous">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-3</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Kenny Gainwell</span>
+                  <span class="rg-team">TB</span>
+                  <span class="rg-note">3 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="Flames in Football &amp;middot; Grandpa Phil &amp;middot; Dynasty - Globo Gym v Avg Joes">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-3</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Rico Dowdle</span>
+                  <span class="rg-team">PIT</span>
+                  <span class="rg-note">3 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Blockbuster Dynasty" data-against="Empire Entertainment &amp;middot; OTTOMAN &amp;middot; StatChasers BestBall &amp; Chill 5.0">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Carnell Tate</span>
+                  <span class="rg-team">TEN</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 3 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Blitz Dynasty Football" data-against="Dynasty Is Life &amp;middot; The Doctor's &amp;middot; BDGE Dynasty League 53">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Dallas Goedert</span>
+                  <span class="rg-team">PHI</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 3 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Pure Potential Invitational 2" data-against="Degens from Up Country &amp;middot; 1776 &amp;middot; Sunday Crew">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">DJ Moore</span>
+                  <span class="rg-team">BUF</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 3 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="PURPLE PEOPLE" data-against="Studs and Duds &amp;middot; Fantasy Football Anonymous &amp;middot; Flames in Football">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Fernando Mendoza</span>
+                  <span class="rg-team">LV</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 3 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Grandpa Phil" data-against="Dynasty - Globo Gym v Avg Joes &amp;middot; Blockbuster Dynasty &amp;middot; Empire Entertainment">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Josh Jacobs</span>
+                  <span class="rg-team">GB</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 3 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="OTTOMAN" data-against="StatChasers BestBall &amp; Chill 5.0 &amp;middot; Blitz Dynasty Football &amp;middot; Dynasty Is Life">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Trey McBride</span>
+                  <span class="rg-team">ARI</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 3 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="The Doctor's &amp;middot; BDGE Dynasty League 53">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Baker Mayfield</span>
+                  <span class="rg-team">TB</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="Pure Potential Invitational 2 &amp;middot; Degens from Up Country">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Bo Nix</span>
+                  <span class="rg-team">DEN</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="1776 &amp;middot; Sunday Crew">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">C.J. Stroud</span>
+                  <span class="rg-team">HOU</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="PURPLE PEOPLE &amp;middot; Studs and Duds">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Dylan Sampson</span>
+                  <span class="rg-team">CLE</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="Fantasy Football Anonymous &amp;middot; Flames in Football">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Gunnar Helm</span>
+                  <span class="rg-team">TEN</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="Grandpa Phil &amp;middot; Dynasty - Globo Gym v Avg Joes">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Ja'Marr Chase</span>
+                  <span class="rg-team">CIN</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="Blockbuster Dynasty &amp;middot; Empire Entertainment">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Jadarian Price</span>
+                  <span class="rg-team">SEA</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="OTTOMAN &amp;middot; StatChasers BestBall &amp; Chill 5.0">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">James Conner</span>
+                  <span class="rg-team">ARI</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="Blitz Dynasty Football &amp;middot; Dynasty Is Life">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Jayden Higgins</span>
+                  <span class="rg-team">HOU</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="The Doctor's &amp;middot; BDGE Dynasty League 53">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">KC Concepcion</span>
+                  <span class="rg-team">CLE</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="Pure Potential Invitational 2 &amp;middot; Degens from Up Country">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Khalil Shakir</span>
+                  <span class="rg-team">BUF</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="1776 &amp;middot; Sunday Crew">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Quentin Johnston</span>
+                  <span class="rg-team">LAC</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="PURPLE PEOPLE &amp;middot; Studs and Duds">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Rashee Rice</span>
+                  <span class="rg-team">KC</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="Fantasy Football Anonymous &amp;middot; Flames in Football">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">RJ Harvey</span>
+                  <span class="rg-team">DEN</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="" data-against="Grandpa Phil &amp;middot; Dynasty - Globo Gym v Avg Joes">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-2</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Xavier Worthy</span>
+                  <span class="rg-team">KC</span>
+                  <span class="rg-note">2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Blockbuster Dynasty" data-against="Empire Entertainment &amp;middot; OTTOMAN">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Brock Purdy</span>
+                  <span class="rg-team">SF</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="StatChasers BestBall &amp; Chill 5.0" data-against="Blitz Dynasty Football &amp;middot; Dynasty Is Life">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">David Montgomery</span>
+                  <span class="rg-team">HOU</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="The Doctor's" data-against="BDGE Dynasty League 53 &amp;middot; Pure Potential Invitational 2">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">De'Von Achane</span>
+                  <span class="rg-team">MIA</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Degens from Up Country" data-against="1776 &amp;middot; Sunday Crew">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Deebo Samuel</span>
+                  <span class="rg-team">SF</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="PURPLE PEOPLE" data-against="Studs and Duds &amp;middot; Fantasy Football Anonymous">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">DeVonta Smith</span>
+                  <span class="rg-team">PHI</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Flames in Football" data-against="Grandpa Phil &amp;middot; Dynasty - Globo Gym v Avg Joes">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Jahmyr Gibbs</span>
+                  <span class="rg-team">DET</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Blockbuster Dynasty" data-against="Empire Entertainment &amp;middot; OTTOMAN">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Javonte Williams</span>
+                  <span class="rg-team">DAL</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="StatChasers BestBall &amp; Chill 5.0" data-against="Blitz Dynasty Football &amp;middot; Dynasty Is Life">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Jaxson Dart</span>
+                  <span class="rg-team">NYG</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="The Doctor's" data-against="BDGE Dynasty League 53 &amp;middot; Pure Potential Invitational 2">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Jaylen Warren</span>
+                  <span class="rg-team">PIT</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Degens from Up Country" data-against="1776 &amp;middot; Sunday Crew">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Joe Burrow</span>
+                  <span class="rg-team">CIN</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="PURPLE PEOPLE" data-against="Studs and Duds &amp;middot; Fantasy Football Anonymous">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Rhamondre Stevenson</span>
+                  <span class="rg-team">NE</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Flames in Football" data-against="Grandpa Phil &amp;middot; Dynasty - Globo Gym v Avg Joes">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Tucker Kraft</span>
+                  <span class="rg-team">GB</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Blockbuster Dynasty" data-against="Empire Entertainment &amp;middot; OTTOMAN">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-neg">-1</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Tyler Shough</span>
+                  <span class="rg-team">NO</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rg-panel rg-panel-even">
+          <div class="rg-panel-head">Even On Both Sides</div>
+          <div class="rg-list">
+              <div class="rg-row" data-for="StatChasers BestBall &amp; Chill 5.0 &amp;middot; Blitz Dynasty Football &amp;middot; Dynasty Is Life &amp;middot; The Doctor's" data-against="BDGE Dynasty League 53 &amp;middot; Pure Potential Invitational 2 &amp;middot; Degens from Up Country &amp;middot; 1776">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Brock Bowers</span>
+                  <span class="rg-team">LV</span>
+                  <span class="rg-note">4 <span class="rg-note-for">for</span> &middot; 4 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Sunday Crew &amp;middot; PURPLE PEOPLE" data-against="Studs and Duds &amp;middot; Fantasy Football Anonymous">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Amon-Ra St. Brown</span>
+                  <span class="rg-team">DET</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Flames in Football &amp;middot; Grandpa Phil" data-against="Dynasty - Globo Gym v Avg Joes &amp;middot; Blockbuster Dynasty">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Christian McCaffrey</span>
+                  <span class="rg-team">SF</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Empire Entertainment &amp;middot; OTTOMAN" data-against="StatChasers BestBall &amp; Chill 5.0 &amp;middot; Blitz Dynasty Football">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Christian Watson</span>
+                  <span class="rg-team">GB</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Dynasty Is Life &amp;middot; The Doctor's" data-against="BDGE Dynasty League 53 &amp;middot; Pure Potential Invitational 2">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">James Cook</span>
+                  <span class="rg-team">BUF</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Degens from Up Country &amp;middot; 1776" data-against="Sunday Crew &amp;middot; PURPLE PEOPLE">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Parker Washington</span>
+                  <span class="rg-team">JAX</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Studs and Duds &amp;middot; Fantasy Football Anonymous" data-against="Flames in Football &amp;middot; Grandpa Phil">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Travis Kelce</span>
+                  <span class="rg-team">KC</span>
+                  <span class="rg-note">2 <span class="rg-note-for">for</span> &middot; 2 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Dynasty - Globo Gym v Avg Joes" data-against="Blockbuster Dynasty">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">D'Andre Swift</span>
+                  <span class="rg-team">CHI</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Empire Entertainment" data-against="OTTOMAN">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Davante Adams</span>
+                  <span class="rg-team">LAR</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="StatChasers BestBall &amp; Chill 5.0" data-against="Blitz Dynasty Football">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Drake Maye</span>
+                  <span class="rg-team">NE</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Dynasty Is Life" data-against="The Doctor's">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">George Pickens</span>
+                  <span class="rg-team">DAL</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="BDGE Dynasty League 53" data-against="Pure Potential Invitational 2">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Jalen Coker</span>
+                  <span class="rg-team">CAR</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Degens from Up Country" data-against="1776">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-te">TE</span>
+                  <span class="rg-name">Kyle Pitts</span>
+                  <span class="rg-team">ATL</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Sunday Crew" data-against="PURPLE PEOPLE">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-rb">RB</span>
+                  <span class="rg-name">Kyren Williams</span>
+                  <span class="rg-team">LAR</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Studs and Duds" data-against="Fantasy Football Anonymous">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Michael Pittman</span>
+                  <span class="rg-team">PIT</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Flames in Football" data-against="Grandpa Phil">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-qb">QB</span>
+                  <span class="rg-name">Patrick Mahomes</span>
+                  <span class="rg-team">KC</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Dynasty - Globo Gym v Avg Joes" data-against="Blockbuster Dynasty">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Stefon Diggs</span>
+                  <span class="rg-team">WAS</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+              <div class="rg-row" data-for="Empire Entertainment" data-against="OTTOMAN">
+                <div class="rg-row-main">
+                  <span class="rg-delta rg-delta-even">0</span>
+                  <span class="rg-pos sb-pos-wr">WR</span>
+                  <span class="rg-name">Wan'Dale Robinson</span>
+                  <span class="rg-team">TEN</span>
+                  <span class="rg-note">1 <span class="rg-note-for">for</span> &middot; 1 <span class="rg-note-vs">vs</span></span>
+                </div>
+              </div>
+          </div>
+        </div>
+
+        <div class="rg-slates-head">Week 1 Slates &mdash; When Your Rooting Interests Play</div>
+        <div class="rg-slates-grid">
+          <div class="rg-slate-card">
+            <div class="rg-slate-head"><span class="rg-slate-label">THURSDAY NIGHT</span><span class="rg-slate-count">4 sweats</span></div>
+            <div class="rg-slate-chips"><span class="rg-chip">Mike Evans <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Puka Nacua <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Brock Purdy <span class="rg-chip-neg">-1</span></span><span class="rg-chip">Deebo Samuel <span class="rg-chip-neg">-1</span></span></div>
+          </div>
+          <div class="rg-slate-card">
+            <div class="rg-slate-head"><span class="rg-slate-label">SUNDAY &middot; 1:00</span><span class="rg-slate-count">43 sweats</span></div>
+            <div class="rg-slate-chips"><span class="rg-chip">Zay Flowers <span class="rg-chip-pos">+7</span></span><span class="rg-chip">Drake London <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Chase Brown <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Colston Loveland <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Lamar Jackson <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Tetairoa McMillan <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Derrick Henry <span class="rg-chip-neg">-3</span></span><span class="rg-chip">Josh Allen <span class="rg-chip-neg">-3</span></span><span class="rg-chip rg-chip-more">+35 more</span></div>
+          </div>
+          <div class="rg-slate-card">
+            <div class="rg-slate-head"><span class="rg-slate-label">SUNDAY &middot; 4:00</span><span class="rg-slate-count">20 sweats</span></div>
+            <div class="rg-slate-chips"><span class="rg-chip">Jeremiyah Love <span class="rg-chip-pos">+6</span></span><span class="rg-chip">Terry McLaurin <span class="rg-chip-neg">-4</span></span><span class="rg-chip">Ashton Jeanty <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Michael Wilson <span class="rg-chip-neg">-4</span></span><span class="rg-chip">Jalen Hurts <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Jayden Daniels <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Dallas Goedert <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Fernando Mendoza <span class="rg-chip-neg">-2</span></span><span class="rg-chip rg-chip-more">+12 more</span></div>
+          </div>
+          <div class="rg-slate-card">
+            <div class="rg-slate-head"><span class="rg-slate-label">SUNDAY NIGHT</span><span class="rg-slate-count">6 sweats</span></div>
+            <div class="rg-slate-chips"><span class="rg-chip">Dak Prescott <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Isaiah Likely <span class="rg-chip-neg">-3</span></span><span class="rg-chip">Cam Skattebo <span class="rg-chip-pos">+2</span></span><span class="rg-chip">CeeDee Lamb <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Javonte Williams <span class="rg-chip-neg">-1</span></span><span class="rg-chip">Jaxson Dart <span class="rg-chip-neg">-1</span></span></div>
+          </div>
+          <div class="rg-slate-card">
+            <div class="rg-slate-head"><span class="rg-slate-label">MONDAY NIGHT</span><span class="rg-slate-count">5 sweats</span></div>
+            <div class="rg-slate-chips"><span class="rg-chip">Bo Nix <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Jaylen Waddle <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Rashee Rice <span class="rg-chip-neg">-2</span></span><span class="rg-chip">RJ Harvey <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Xavier Worthy <span class="rg-chip-neg">-2</span></span></div>
+          </div>
+          <div class="rg-slate-card">
+            <div class="rg-slate-head"><span class="rg-slate-label">OTHER</span><span class="rg-slate-count">3 sweats</span></div>
+            <div class="rg-slate-chips"><span class="rg-chip">A.J. Brown <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Jadarian Price <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Rhamondre Stevenson <span class="rg-chip-neg">-1</span></span></div>
+          </div>
         </div>
       </div>
 
@@ -2717,6 +3715,26 @@
 
       card.after(panel);
       card.classList.add('is-open');
+    });
+  });
+
+  document.querySelectorAll('.rg-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const existing = row.querySelector('.rg-expand');
+      const isOpen = !!existing;
+      document.querySelectorAll('.rg-expand').forEach(el => el.remove());
+      if (isOpen) return;
+
+      const forLeagues = row.dataset.for;
+      const againstLeagues = row.dataset.against;
+      const expand = document.createElement('div');
+      expand.className = 'rg-expand';
+      expand.innerHTML =
+        '<p class="rg-expand-line"><span class="rg-expand-label rg-for">Starting for you:</span> <span class="rg-expand-leagues">' +
+        (forLeagues || '<span class="rg-expand-empty">None</span>') + '</span></p>' +
+        '<p class="rg-expand-line"><span class="rg-expand-label rg-against">Starting against you:</span> <span class="rg-expand-leagues">' +
+        (againstLeagues || '<span class="rg-expand-empty">None</span>') + '</span></p>';
+      row.appendChild(expand);
     });
   });
 
