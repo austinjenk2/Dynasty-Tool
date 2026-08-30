@@ -408,7 +408,9 @@
     margin-top: 8px;
     color: var(--ink);
   }
-  .sb-subtabs { display: flex; gap: 22px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+  .sb-subtabs { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+  .sb-subtabs-left { display: flex; gap: 22px; }
+  #sbWeekDropdown .week-select { font-size: 12px; margin-bottom: 8px; }
   .sb-subtab {
     color: var(--muted);
     font-weight: 700;
@@ -639,7 +641,8 @@
   .rg-chip-pos { color: var(--green); font-weight: 700; }
   .rg-chip-neg { color: var(--red); font-weight: 700; }
   .rg-chip-even { color: var(--gold); font-weight: 700; }
-  .rg-chip-more { color: var(--green); font-weight: 700; }
+  .rg-chip-more { color: var(--green); font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .rg-slate-extra { display: inline; }
 
   /* Placeholder tab */
   .placeholder {
@@ -1999,15 +2002,21 @@
   <div data-view="lineups">
     <div class="sb-page">
       <div class="sb-subtabs" id="sbSubtabs">
-        <a class="sb-subtab active" data-sb-tab="scoreboard">Scoreboard</a>
-        <a class="sb-subtab" data-sb-tab="rooting">Rooting Guide</a>
+        <div class="sb-subtabs-left">
+          <a class="sb-subtab active" data-sb-tab="scoreboard">Scoreboard</a>
+          <a class="sb-subtab" data-sb-tab="rooting">Rooting Guide</a>
+        </div>
+        <span class="week-dropdown" id="sbWeekDropdown">
+          <span class="week-select" id="sbWeekSelect">WEEK <span id="sbWeekLabel">1</span> <span>&#9662;</span></span>
+          <span class="week-menu" id="sbWeekMenu" hidden></span>
+        </span>
       </div>
 
       <div data-sb-view="scoreboard" class="sb-view is-active">
         <div class="sb-stats">
           <div class="sb-stat">
             <div class="sb-stat-value sb-cyan">2655</div>
-            <div class="sb-stat-label">WEEK 1 PROJ PTS</div>
+            <div class="sb-stat-label">WEEK <span class="sb-week-num">1</span> PROJ PTS</div>
           </div>
           <div class="sb-stat-divider"></div>
           <div class="sb-stat">
@@ -2349,7 +2358,7 @@
 
       <div data-sb-view="rooting" class="sb-view">
         <div class="rg-header">
-          <h2>Week 1 Rooting Guide</h2>
+          <h2>Week <span class="sb-week-num">1</span> Rooting Guide</h2>
           <p>Your starters versus your opponents across all scheduled matchups. Tap a player for the league list.</p>
         </div>
 
@@ -3263,7 +3272,7 @@
           </div>
         </div>
 
-        <div class="rg-slates-head">Week 1 Slates &mdash; When Your Rooting Interests Play</div>
+        <div class="rg-slates-head">Week <span class="sb-week-num">1</span> Slates &mdash; When Your Rooting Interests Play</div>
         <div class="rg-slates-grid">
           <div class="rg-slate-card">
             <div class="rg-slate-head"><span class="rg-slate-label">THURSDAY NIGHT</span><span class="rg-slate-count">4 sweats</span></div>
@@ -3271,11 +3280,11 @@
           </div>
           <div class="rg-slate-card">
             <div class="rg-slate-head"><span class="rg-slate-label">SUNDAY &middot; 1:00</span><span class="rg-slate-count">43 sweats</span></div>
-            <div class="rg-slate-chips"><span class="rg-chip">Zay Flowers <span class="rg-chip-pos">+7</span></span><span class="rg-chip">Drake London <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Chase Brown <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Colston Loveland <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Lamar Jackson <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Tetairoa McMillan <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Derrick Henry <span class="rg-chip-neg">-3</span></span><span class="rg-chip">Josh Allen <span class="rg-chip-neg">-3</span></span><span class="rg-chip rg-chip-more">+35 more</span></div>
+            <div class="rg-slate-chips"><span class="rg-chip">Zay Flowers <span class="rg-chip-pos">+7</span></span><span class="rg-chip">Drake London <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Chase Brown <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Colston Loveland <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Lamar Jackson <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Tetairoa McMillan <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Derrick Henry <span class="rg-chip-neg">-3</span></span><span class="rg-chip">Josh Allen <span class="rg-chip-neg">-3</span></span><span class="rg-chip rg-chip-more" data-more-label="+35 more">+35 more</span><span class="rg-slate-extra" hidden><span class="rg-chip">Bhayshul Tuten <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Harold Fannin <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Josh Downs <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Sam LaPorta <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Jonathan Taylor <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Luther Burden <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Saquon Barkley <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Jayden Reed <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Jordyn Tyson <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Ladd McConkey <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Nico Collins <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Trevor Lawrence <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Tyler Warren <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Zachariah Branch <span class="rg-chip-pos">+2</span></span><span class="rg-chip">Jared Goff <span class="rg-chip-pos">+1</span></span><span class="rg-chip">Breece Hall <span class="rg-chip-pos">+1</span></span><span class="rg-chip">Dalton Kincaid <span class="rg-chip-pos">+1</span></span><span class="rg-chip">Dalton Schultz <span class="rg-chip-pos">+1</span></span><span class="rg-chip">Jordan Love <span class="rg-chip-pos">+1</span></span><span class="rg-chip">Justin Herbert <span class="rg-chip-pos">+1</span></span><span class="rg-chip">Tee Higgins <span class="rg-chip-pos">+1</span></span><span class="rg-chip">Caleb Williams <span class="rg-chip-neg">-3</span></span><span class="rg-chip">DK Metcalf <span class="rg-chip-neg">-3</span></span><span class="rg-chip">Kenny Gainwell <span class="rg-chip-neg">-3</span></span><span class="rg-chip">Rico Dowdle <span class="rg-chip-neg">-3</span></span><span class="rg-chip">Carnell Tate <span class="rg-chip-neg">-2</span></span><span class="rg-chip">DJ Moore <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Josh Jacobs <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Trey McBride <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Baker Mayfield <span class="rg-chip-neg">-2</span></span><span class="rg-chip">C.J. Stroud <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Dylan Sampson <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Gunnar Helm <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Ja'Marr Chase <span class="rg-chip-neg">-2</span></span><span class="rg-chip">James Conner <span class="rg-chip-neg">-2</span></span></span></div>
           </div>
           <div class="rg-slate-card">
             <div class="rg-slate-head"><span class="rg-slate-label">SUNDAY &middot; 4:00</span><span class="rg-slate-count">20 sweats</span></div>
-            <div class="rg-slate-chips"><span class="rg-chip">Jeremiyah Love <span class="rg-chip-pos">+6</span></span><span class="rg-chip">Terry McLaurin <span class="rg-chip-neg">-4</span></span><span class="rg-chip">Ashton Jeanty <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Michael Wilson <span class="rg-chip-neg">-4</span></span><span class="rg-chip">Jalen Hurts <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Jayden Daniels <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Dallas Goedert <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Fernando Mendoza <span class="rg-chip-neg">-2</span></span><span class="rg-chip rg-chip-more">+12 more</span></div>
+            <div class="rg-slate-chips"><span class="rg-chip">Jeremiyah Love <span class="rg-chip-pos">+6</span></span><span class="rg-chip">Terry McLaurin <span class="rg-chip-neg">-4</span></span><span class="rg-chip">Ashton Jeanty <span class="rg-chip-pos">+4</span></span><span class="rg-chip">Michael Wilson <span class="rg-chip-neg">-4</span></span><span class="rg-chip">Jalen Hurts <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Jayden Daniels <span class="rg-chip-pos">+3</span></span><span class="rg-chip">Dallas Goedert <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Fernando Mendoza <span class="rg-chip-neg">-2</span></span><span class="rg-chip rg-chip-more" data-more-label="+12 more">+12 more</span><span class="rg-slate-extra" hidden><span class="rg-chip">Jayden Higgins <span class="rg-chip-neg">-2</span></span><span class="rg-chip">KC Concepcion <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Khalil Shakir <span class="rg-chip-neg">-2</span></span><span class="rg-chip">Quentin Johnston <span class="rg-chip-neg">-2</span></span><span class="rg-chip">David Montgomery <span class="rg-chip-neg">-1</span></span><span class="rg-chip">De'Von Achane <span class="rg-chip-neg">-1</span></span><span class="rg-chip">DeVonta Smith <span class="rg-chip-neg">-1</span></span><span class="rg-chip">Jahmyr Gibbs <span class="rg-chip-neg">-1</span></span><span class="rg-chip">Jaylen Warren <span class="rg-chip-neg">-1</span></span><span class="rg-chip">Joe Burrow <span class="rg-chip-neg">-1</span></span><span class="rg-chip">Tucker Kraft <span class="rg-chip-neg">-1</span></span><span class="rg-chip">Tyler Shough <span class="rg-chip-neg">-1</span></span></span></div>
           </div>
           <div class="rg-slate-card">
             <div class="rg-slate-head"><span class="rg-slate-label">SUNDAY NIGHT</span><span class="rg-slate-count">6 sweats</span></div>
@@ -3738,6 +3747,17 @@
     });
   });
 
+  document.querySelectorAll('.rg-chip-more').forEach(more => {
+    more.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const extra = more.nextElementSibling;
+      if (!extra || !extra.classList.contains('rg-slate-extra')) return;
+      const nowHidden = !extra.hidden;
+      extra.hidden = nowHidden;
+      more.textContent = nowHidden ? more.dataset.moreLabel : 'Show less';
+    });
+  });
+
   const scatterDots = document.querySelectorAll('.scatter-dot');
   const scatterTooltip = document.getElementById('scatterTooltip');
   scatterDots.forEach(dot => {
@@ -3928,6 +3948,9 @@
 
   setupWeekDropdown('weekSelect', 'weekMenu', 'weekSelectLabel');
   setupWeekDropdown('scheduleWeekSelect', 'scheduleWeekMenu', 'scheduleWeekLabel');
+  setupWeekDropdown('sbWeekSelect', 'sbWeekMenu', 'sbWeekLabel', (week) => {
+    document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
+  });
 </script>
 
 </body>
