@@ -644,6 +644,140 @@
   .rg-chip-more { color: var(--green); font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
   .rg-slate-extra { display: inline; }
 
+  /* Waiver Manager */
+  .ww-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .ww-search {
+    flex: 1;
+    min-width: 200px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--faint);
+    font-size: 13px;
+  }
+  .ww-search input {
+    border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 13px; color: var(--ink); width: 100%;
+  }
+  .ww-search input::placeholder { color: var(--faint); }
+  .ww-toggle-group, .ww-pos-filter {
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .ww-toggle, .ww-pos-chip {
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .ww-toggle.active, .ww-pos-chip.active { background: var(--ink); color: #fff; }
+  .ww-sub { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .ww-table-head {
+    display: grid;
+    grid-template-columns: 2fr 0.7fr 0.8fr 0.8fr;
+    gap: 10px;
+    padding: 0 14px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--faint);
+  }
+  .ww-table-head span { text-align: right; }
+  .ww-table-head span:first-child { text-align: left; }
+  .ww-list { display: flex; flex-direction: column; gap: 8px; }
+  .ww-row {
+    display: grid;
+    grid-template-columns: 2fr 0.7fr 0.8fr 0.8fr;
+    gap: 10px;
+    align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .ww-player { display: flex; align-items: center; gap: 10px; }
+  .ww-avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    color: #fff;
+  }
+  .ww-pname { font-weight: 700; font-size: 14px; }
+  .ww-pmeta { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .ww-pmeta .ww-pos-qb { color: var(--red); }
+  .ww-pmeta .ww-pos-rb { color: var(--green); }
+  .ww-pmeta .ww-pos-wr { color: var(--blue); }
+  .ww-pmeta .ww-pos-te { color: var(--gold); }
+  .ww-value, .ww-proj, .ww-roster { text-align: right; font-weight: 700; font-size: 13.5px; }
+  .ww-value { color: var(--green); }
+
+  .ww-leagues-head { margin: 24px 0 4px; }
+  .ww-leagues-head h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    display: inline;
+  }
+  .ww-leagues-head .ww-sub { display: inline; margin: 0 0 0 8px; }
+  .ww-leagues-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+  }
+  @media (max-width: 1000px) { .ww-leagues-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .ww-leagues-grid { grid-template-columns: 1fr; } }
+  .ww-league-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .ww-league-logo {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 11px;
+    color: #fff;
+  }
+  .ww-league-main { flex: 1; min-width: 0; }
+  .ww-league-name { font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ww-league-meta { font-size: 11px; color: var(--faint); margin-top: 1px; }
+  .ww-faab { text-align: right; flex-shrink: 0; min-width: 90px; }
+  .ww-faab-amount { font-size: 13.5px; font-weight: 700; }
+  .ww-faab-amount .ww-faab-total { color: var(--faint); font-weight: 600; }
+  .ww-progress { width: 90px; height: 4px; background: var(--border-soft); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+  .ww-progress-fill { height: 100%; background: var(--blue); border-radius: 2px; }
+  .ww-league-chevron { flex-shrink: 0; color: var(--faint); font-size: 12px; }
+
   /* Placeholder tab */
   .placeholder {
     margin-top: 40px;
@@ -3303,7 +3437,341 @@
 
     </div>
   </div>
-  <div data-view="waiver"><div class="placeholder"><h3>Waiver Wire</h3><p>This section is being built.</p></div></div>
+  <div data-view="waiver">
+    <div class="page-title">
+      <h1>Waiver Manager</h1>
+      <p>Budgets, trending adds and the best free agents across all your leagues.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Best Available</h2>
+
+      <div class="ww-toolbar">
+        <div class="ww-search"><span>&#128269;</span><input type="text" placeholder="Search any free agent..."></div>
+        <div class="ww-toggle-group">
+          <span class="ww-toggle active">Value</span>
+          <span class="ww-toggle">Trending</span>
+        </div>
+        <div class="ww-pos-filter">
+          <span class="ww-pos-chip active">All</span>
+          <span class="ww-pos-chip">QB</span>
+          <span class="ww-pos-chip">RB</span>
+          <span class="ww-pos-chip">WR</span>
+          <span class="ww-pos-chip">TE</span>
+        </div>
+      </div>
+
+      <p class="ww-sub">Best available &middot; sorted by player value</p>
+
+      <div class="ww-table-head">
+        <span>PLAYER</span>
+        <span>VALUE</span>
+        <span>PROJ PPG</span>
+        <span>ROSTER %</span>
+      </div>
+
+      <div class="ww-list">
+
+        <div class="ww-row">
+          <div class="ww-player">
+            <div class="ww-avatar" style="background:var(--green)">JB</div>
+            <div>
+              <div class="ww-pname">Jaydon Blue</div>
+              <div class="ww-pmeta ww-pos-rb">RB</div>
+            </div>
+          </div>
+          <div class="ww-value">0.08</div>
+          <div class="ww-proj">3.3</div>
+          <div class="ww-roster">71%</div>
+        </div>
+
+        <div class="ww-row">
+          <div class="ww-player">
+            <div class="ww-avatar" style="background:var(--blue)">TF</div>
+            <div>
+              <div class="ww-pname">Troy Franklin</div>
+              <div class="ww-pmeta"><span class="ww-pos-wr">WR</span> &middot; DEN</div>
+            </div>
+          </div>
+          <div class="ww-value">0.06</div>
+          <div class="ww-proj">3.9</div>
+          <div class="ww-roster">79%</div>
+        </div>
+
+        <div class="ww-row">
+          <div class="ww-player">
+            <div class="ww-avatar" style="background:var(--blue)">CR</div>
+            <div>
+              <div class="ww-pname">Calvin Ridley</div>
+              <div class="ww-pmeta"><span class="ww-pos-wr">WR</span> &middot; TEN &middot; 7,328 adds</div>
+            </div>
+          </div>
+          <div class="ww-value">0.04</div>
+          <div class="ww-proj">4.5</div>
+          <div class="ww-roster">65%</div>
+        </div>
+
+        <div class="ww-row">
+          <div class="ww-player">
+            <div class="ww-avatar" style="background:var(--green)">GH</div>
+            <div>
+              <div class="ww-pname">George Holani</div>
+              <div class="ww-pmeta"><span class="ww-pos-rb">RB</span> &middot; SEA</div>
+            </div>
+          </div>
+          <div class="ww-value">0.04</div>
+          <div class="ww-proj">1.5</div>
+          <div class="ww-roster">24%</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:20px">
+      <div class="ww-leagues-head">
+        <h2 style="border:none;padding:0;margin:0">League-by-League</h2>
+        <span class="ww-sub">Budget and free agents in each of your 18 leagues.</span>
+      </div>
+
+      <div class="ww-leagues-grid">
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#3b4f8a">76</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">1776</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$200 <span class="ww-faab-total">/ $200</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#b23a5a">53</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">BDGE Dynasty League 53</div>
+            <div class="ww-league-meta">FAAB &middot; runs Sat/Sun</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$45 <span class="ww-faab-total">/ $100</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:45%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#1d3557">BD</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Blitz Dynasty Football</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$97 <span class="ww-faab-total">/ $100</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:97%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#3f3f8a">BB</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Blockbuster Dynasty</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$150 <span class="ww-faab-total">/ $150</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#4a3f36">DG</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Degens from Up Country</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$300 <span class="ww-faab-total">/ $200</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#7a3f2f">GG</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Dynasty - Globo Gym v Avg Jo&hellip;</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$170 <span class="ww-faab-total">/ $200</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:85%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#8a5a2b">DL</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Dynasty Is Life</div>
+            <div class="ww-league-meta">FAAB &middot; runs Wed/Thu/Fri/Sat/Sun</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$90 <span class="ww-faab-total">/ $100</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:90%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:var(--navy)">EE</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Empire Entertainment</div>
+            <div class="ww-league-meta">FAAB &middot; runs Mon/Tue/Thu/Fri/Sat/Sun</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$100 <span class="ww-faab-total">/ $100</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#1d3557">FA</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Fantasy Football Anonymous</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$100 <span class="ww-faab-total">/ $100</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#a3441f">FL</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Flames in Football</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$100 <span class="ww-faab-total">/ $100</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#2f4f7a">GP</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Grandpa Phil &#128121;</div>
+            <div class="ww-league-meta">FAAB &middot; runs Wed</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$100 <span class="ww-faab-total">/ $100</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:var(--red)">OT</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">OTTOMAN</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$197 <span class="ww-faab-total">/ $200</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:98.5%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#1c7a8c">P2</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Pure Potential Invitational 2</div>
+            <div class="ww-league-meta">FAAB &middot; runs Wed/Sat</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$100 <span class="ww-faab-total">/ $100</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#6b3fa0">PP</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">PURPLE PEOPLE</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$97 <span class="ww-faab-total">/ $100</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:97%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#3f6b4a">SC</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">StatChasers BestBall &amp; Chill 5&hellip;</div>
+            <div class="ww-league-meta">FAAB &middot; runs Wed/Sun</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$300 <span class="ww-faab-total">/ $300</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#2d2d33">SD</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Studs and Duds</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$100 <span class="ww-faab-total">/ $100</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#8a7a2f">SU</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">Sunday Crew</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$100 <span class="ww-faab-total">/ $100</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+        <div class="ww-league-card">
+          <div class="ww-league-logo" style="background:#5b6f5b">TD</div>
+          <div class="ww-league-main">
+            <div class="ww-league-name">The Doctor's</div>
+            <div class="ww-league-meta">FAAB &middot; runs Daily</div>
+          </div>
+          <div class="ww-faab">
+            <div class="ww-faab-amount">$200 <span class="ww-faab-total">/ $200</span></div>
+            <div class="ww-progress"><div class="ww-progress-fill" style="width:100%"></div></div>
+          </div>
+          <div class="ww-league-chevron">&#9662;</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
   <div data-view="draft"><div class="placeholder"><h3>Draft Room</h3><p>This section is being built.</p></div></div>
   <div data-view="exposures"><div class="placeholder"><h3>Exposures</h3><p>This section is being built.</p></div></div>
   <div data-view="trades"><div class="placeholder"><h3>Trade History</h3><p>This section is being built.</p></div></div>
@@ -3950,6 +4418,15 @@
   setupWeekDropdown('scheduleWeekSelect', 'scheduleWeekMenu', 'scheduleWeekLabel');
   setupWeekDropdown('sbWeekSelect', 'sbWeekMenu', 'sbWeekLabel', (week) => {
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
+  });
+
+  document.querySelectorAll('.ww-toggle-group, .ww-pos-filter').forEach(group => {
+    group.querySelectorAll('.ww-toggle, .ww-pos-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        group.querySelectorAll('.ww-toggle, .ww-pos-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+    });
   });
 </script>
 
