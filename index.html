@@ -813,6 +813,7 @@
     cursor: pointer;
     white-space: nowrap;
   }
+  .exp-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
   .exp-search {
     flex: 1;
     min-width: 180px;
@@ -935,6 +936,69 @@
   .exp-bar.exp-rb { background: var(--green); }
   .exp-bar.exp-wr { background: var(--blue); }
   .exp-bar.exp-te { background: var(--gold); }
+
+  .exp-list { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .exp-list-head, .exp-list-row {
+    display: grid;
+    grid-template-columns: 2.4fr 0.7fr 0.8fr 0.6fr 0.8fr 1.3fr;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 16px;
+  }
+  .exp-list-head {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--faint);
+    border-bottom: 1px solid var(--border);
+  }
+  .exp-list-head span:not(:first-child) { text-align: center; }
+  .exp-list-adp-head { color: var(--green) !important; font-weight: 800; }
+  .exp-sort-arrow { font-size: 10px; }
+  .exp-list-row { border-bottom: 1px solid var(--border-soft); }
+  .exp-list-row:last-child { border-bottom: none; }
+  .exp-list-row:hover { background: var(--bg); }
+  .exp-list-player { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .exp-list-avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    color: #fff;
+    border: 2px solid;
+  }
+  .exp-list-avatar.exp-qb { background: var(--red); border-color: var(--red); }
+  .exp-list-avatar.exp-rb { background: var(--green); border-color: var(--green); }
+  .exp-list-avatar.exp-wr { background: var(--blue); border-color: var(--blue); }
+  .exp-list-avatar.exp-te { background: var(--gold); border-color: var(--gold); }
+  .exp-list-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .exp-list-posrank { font-size: 11px; font-weight: 800; flex-shrink: 0; }
+  .exp-list-posrank.exp-qb { color: var(--red); }
+  .exp-list-posrank.exp-rb { color: var(--green); }
+  .exp-list-posrank.exp-wr { color: var(--blue); }
+  .exp-list-posrank.exp-te { color: var(--gold); }
+  .exp-list-team { text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); }
+  .exp-list-adp { text-align: center; font-weight: 700; font-size: 13.5px; }
+  .exp-list-dollar { text-align: center; color: var(--faint); font-weight: 600; }
+  .exp-list-leagues { text-align: center; font-weight: 700; font-size: 13px; }
+  .exp-list-leagues, .exp-list-adp { color: var(--ink); }
+  .exp-list-exposure { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+  .exp-list-bar-mini { width: 60px; height: 4px; background: var(--border-soft); border-radius: 2px; overflow: hidden; }
+  .exp-list-bar-fill { height: 100%; border-radius: 2px; }
+  .exp-list-bar-fill.exp-qb { background: var(--red); }
+  .exp-list-bar-fill.exp-rb { background: var(--green); }
+  .exp-list-bar-fill.exp-wr { background: var(--blue); }
+  .exp-list-bar-fill.exp-te { background: var(--gold); }
+  .exp-list-pct { font-weight: 800; font-size: 14px; width: 34px; text-align: right; }
+  .exp-list-pct.exp-qb { color: var(--red); }
+  .exp-list-pct.exp-rb { color: var(--green); }
+  .exp-list-pct.exp-wr { color: var(--blue); }
+  .exp-list-pct.exp-te { color: var(--gold); }
 
   /* Placeholder tab */
   .placeholder {
@@ -3965,7 +4029,7 @@
     </div>
 
     <div class="exp-grid">
-        <div class="exp-card exp-rb" data-pct="6" data-adp="1">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="1" data-pos="RB" data-rookie="0">
           <div class="exp-rank">1</div>
           <div class="exp-team-icon">ATL</div>
           <div class="exp-avatar-wrap">
@@ -3976,7 +4040,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="2">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="2" data-pos="RB" data-rookie="0">
           <div class="exp-rank">2</div>
           <div class="exp-team-icon">DET</div>
           <div class="exp-avatar-wrap">
@@ -3987,7 +4051,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="6" data-adp="3">
+        <div class="exp-card exp-qb" data-pct="6" data-adp="3" data-pos="QB" data-rookie="0">
           <div class="exp-rank">3</div>
           <div class="exp-team-icon">BUF</div>
           <div class="exp-avatar-wrap">
@@ -3998,7 +4062,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-qb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="4">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="4" data-pos="WR" data-rookie="0">
           <div class="exp-rank">4</div>
           <div class="exp-team-icon">CIN</div>
           <div class="exp-avatar-wrap">
@@ -4008,7 +4072,7 @@
           <div class="exp-name">Ja'Marr Chase</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="6" data-adp="5">
+        <div class="exp-card exp-qb" data-pct="6" data-adp="5" data-pos="QB" data-rookie="0">
           <div class="exp-rank">5</div>
           <div class="exp-team-icon">NE</div>
           <div class="exp-avatar-wrap">
@@ -4019,7 +4083,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-qb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="6">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="6" data-pos="WR" data-rookie="0">
           <div class="exp-rank">6</div>
           <div class="exp-team-icon">SEA</div>
           <div class="exp-avatar-wrap">
@@ -4029,7 +4093,7 @@
           <div class="exp-name">Jaxon Smith-Njigba</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="11" data-adp="7">
+        <div class="exp-card exp-wr" data-pct="11" data-adp="7" data-pos="WR" data-rookie="0">
           <div class="exp-rank">7</div>
           <div class="exp-team-icon">LAR</div>
           <div class="exp-avatar-wrap">
@@ -4040,7 +4104,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-wr" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-te" data-pct="22" data-adp="8">
+        <div class="exp-card exp-te" data-pct="22" data-adp="8" data-pos="TE" data-rookie="0">
           <div class="exp-rank">8</div>
           <div class="exp-team-icon">LV</div>
           <div class="exp-avatar-wrap">
@@ -4051,7 +4115,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-te">22%</span><span class="exp-frac">4/18</span></div>
           <div class="exp-bar exp-te" style="width:66%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="11" data-adp="9">
+        <div class="exp-card exp-wr" data-pct="11" data-adp="9" data-pos="WR" data-rookie="0">
           <div class="exp-rank">9</div>
           <div class="exp-team-icon">DET</div>
           <div class="exp-avatar-wrap">
@@ -4062,7 +4126,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-wr" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="22" data-adp="10">
+        <div class="exp-card exp-rb" data-pct="22" data-adp="10" data-pos="RB" data-rookie="1">
           <div class="exp-rank">10</div>
           <div class="exp-team-icon">LV</div>
           <div class="exp-avatar-wrap">
@@ -4073,7 +4137,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">22%</span><span class="exp-frac">4/18</span></div>
           <div class="exp-bar exp-rb" style="width:66%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="17" data-adp="11">
+        <div class="exp-card exp-qb" data-pct="17" data-adp="11" data-pos="QB" data-rookie="0">
           <div class="exp-rank">11</div>
           <div class="exp-team-icon">WAS</div>
           <div class="exp-avatar-wrap">
@@ -4084,7 +4148,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-qb" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="12">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="12" data-pos="QB" data-rookie="0">
           <div class="exp-rank">12</div>
           <div class="exp-team-icon">CHI</div>
           <div class="exp-avatar-wrap">
@@ -4094,7 +4158,7 @@
           <div class="exp-name">Caleb Williams</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="13">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="13" data-pos="WR" data-rookie="0">
           <div class="exp-rank">13</div>
           <div class="exp-team-icon">NYG</div>
           <div class="exp-avatar-wrap">
@@ -4105,7 +4169,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="22" data-adp="14">
+        <div class="exp-card exp-qb" data-pct="22" data-adp="14" data-pos="QB" data-rookie="0">
           <div class="exp-rank">14</div>
           <div class="exp-team-icon">BAL</div>
           <div class="exp-avatar-wrap">
@@ -4116,7 +4180,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">22%</span><span class="exp-frac">4/18</span></div>
           <div class="exp-bar exp-qb" style="width:66%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="33" data-adp="15">
+        <div class="exp-card exp-rb" data-pct="33" data-adp="15" data-pos="RB" data-rookie="1">
           <div class="exp-rank">15</div>
           <div class="exp-team-icon">ARI</div>
           <div class="exp-avatar-wrap">
@@ -4127,7 +4191,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">33%</span><span class="exp-frac">6/18</span></div>
           <div class="exp-bar exp-rb" style="width:99%"></div>
         </div>
-        <div class="exp-card exp-te" data-pct="6" data-adp="16">
+        <div class="exp-card exp-te" data-pct="6" data-adp="16" data-pos="TE" data-rookie="0">
           <div class="exp-rank">16</div>
           <div class="exp-team-icon">ARI</div>
           <div class="exp-avatar-wrap">
@@ -4138,7 +4202,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-te">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-te" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="6" data-adp="17">
+        <div class="exp-card exp-qb" data-pct="6" data-adp="17" data-pos="QB" data-rookie="0">
           <div class="exp-rank">17</div>
           <div class="exp-team-icon">CIN</div>
           <div class="exp-avatar-wrap">
@@ -4149,7 +4213,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-qb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="18">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="18" data-pos="WR" data-rookie="0">
           <div class="exp-rank">18</div>
           <div class="exp-team-icon">MIN</div>
           <div class="exp-avatar-wrap">
@@ -4159,7 +4223,7 @@
           <div class="exp-name">Justin Jefferson</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="19">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="19" data-pos="RB" data-rookie="1">
           <div class="exp-rank">19</div>
           <div class="exp-team-icon">LAC</div>
           <div class="exp-avatar-wrap">
@@ -4170,7 +4234,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="20">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="20" data-pos="RB" data-rookie="0">
           <div class="exp-rank">20</div>
           <div class="exp-team-icon">MIA</div>
           <div class="exp-avatar-wrap">
@@ -4181,7 +4245,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="17" data-adp="21">
+        <div class="exp-card exp-wr" data-pct="17" data-adp="21" data-pos="WR" data-rookie="0">
           <div class="exp-rank">21</div>
           <div class="exp-team-icon">DAL</div>
           <div class="exp-avatar-wrap">
@@ -4192,7 +4256,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-wr" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="28" data-adp="22">
+        <div class="exp-card exp-wr" data-pct="28" data-adp="22" data-pos="WR" data-rookie="0">
           <div class="exp-rank">22</div>
           <div class="exp-team-icon">ATL</div>
           <div class="exp-avatar-wrap">
@@ -4203,7 +4267,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">28%</span><span class="exp-frac">5/18</span></div>
           <div class="exp-bar exp-wr" style="width:84%"></div>
         </div>
-        <div class="exp-card exp-te" data-pct="22" data-adp="23">
+        <div class="exp-card exp-te" data-pct="22" data-adp="23" data-pos="TE" data-rookie="1">
           <div class="exp-rank">23</div>
           <div class="exp-team-icon">CHI</div>
           <div class="exp-avatar-wrap">
@@ -4214,7 +4278,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-te">22%</span><span class="exp-frac">4/18</span></div>
           <div class="exp-bar exp-te" style="width:66%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="11" data-adp="24">
+        <div class="exp-card exp-qb" data-pct="11" data-adp="24" data-pos="QB" data-rookie="0">
           <div class="exp-rank">24</div>
           <div class="exp-team-icon">LAC</div>
           <div class="exp-avatar-wrap">
@@ -4225,7 +4289,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-qb" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="17" data-adp="25">
+        <div class="exp-card exp-rb" data-pct="17" data-adp="25" data-pos="RB" data-rookie="0">
           <div class="exp-rank">25</div>
           <div class="exp-team-icon">IND</div>
           <div class="exp-avatar-wrap">
@@ -4236,7 +4300,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-rb" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="11" data-adp="26">
+        <div class="exp-card exp-rb" data-pct="11" data-adp="26" data-pos="RB" data-rookie="0">
           <div class="exp-rank">26</div>
           <div class="exp-team-icon">BUF</div>
           <div class="exp-avatar-wrap">
@@ -4247,7 +4311,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-rb" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="22" data-adp="27">
+        <div class="exp-card exp-wr" data-pct="22" data-adp="27" data-pos="WR" data-rookie="1">
           <div class="exp-rank">27</div>
           <div class="exp-team-icon">CAR</div>
           <div class="exp-avatar-wrap">
@@ -4258,7 +4322,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">22%</span><span class="exp-frac">4/18</span></div>
           <div class="exp-bar exp-wr" style="width:66%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="6" data-adp="28">
+        <div class="exp-card exp-qb" data-pct="6" data-adp="28" data-pos="QB" data-rookie="1">
           <div class="exp-rank">28</div>
           <div class="exp-team-icon">NYG</div>
           <div class="exp-avatar-wrap">
@@ -4269,7 +4333,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-qb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="17" data-adp="29">
+        <div class="exp-card exp-qb" data-pct="17" data-adp="29" data-pos="QB" data-rookie="0">
           <div class="exp-rank">29</div>
           <div class="exp-team-icon">PHI</div>
           <div class="exp-avatar-wrap">
@@ -4280,7 +4344,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-qb" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="30">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="30" data-pos="WR" data-rookie="0">
           <div class="exp-rank">30</div>
           <div class="exp-team-icon">DAL</div>
           <div class="exp-avatar-wrap">
@@ -4291,7 +4355,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="11" data-adp="31">
+        <div class="exp-card exp-qb" data-pct="11" data-adp="31" data-pos="QB" data-rookie="0">
           <div class="exp-rank">31</div>
           <div class="exp-team-icon">JAX</div>
           <div class="exp-avatar-wrap">
@@ -4302,7 +4366,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-qb" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-te" data-pct="11" data-adp="32">
+        <div class="exp-card exp-te" data-pct="11" data-adp="32" data-pos="TE" data-rookie="1">
           <div class="exp-rank">32</div>
           <div class="exp-team-icon">IND</div>
           <div class="exp-avatar-wrap">
@@ -4313,7 +4377,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-te">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-te" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="33">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="33" data-pos="WR" data-rookie="1">
           <div class="exp-rank">33</div>
           <div class="exp-team-icon">TB</div>
           <div class="exp-avatar-wrap">
@@ -4323,7 +4387,7 @@
           <div class="exp-name">Emeka Egbuka</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="6" data-adp="34">
+        <div class="exp-card exp-qb" data-pct="6" data-adp="34" data-pos="QB" data-rookie="0">
           <div class="exp-rank">34</div>
           <div class="exp-team-icon">KC</div>
           <div class="exp-avatar-wrap">
@@ -4334,7 +4398,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-qb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="22" data-adp="35">
+        <div class="exp-card exp-rb" data-pct="22" data-adp="35" data-pos="RB" data-rookie="0">
           <div class="exp-rank">35</div>
           <div class="exp-team-icon">CIN</div>
           <div class="exp-avatar-wrap">
@@ -4345,7 +4409,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">22%</span><span class="exp-frac">4/18</span></div>
           <div class="exp-bar exp-rb" style="width:66%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="36">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="36" data-pos="RB" data-rookie="0">
           <div class="exp-rank">36</div>
           <div class="exp-team-icon">SEA</div>
           <div class="exp-avatar-wrap">
@@ -4355,7 +4419,7 @@
           <div class="exp-name">Kenneth Walker</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="11" data-adp="37">
+        <div class="exp-card exp-wr" data-pct="11" data-adp="37" data-pos="WR" data-rookie="0">
           <div class="exp-rank">37</div>
           <div class="exp-team-icon">HOU</div>
           <div class="exp-avatar-wrap">
@@ -4366,7 +4430,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-wr" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="38">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="38" data-pos="QB" data-rookie="0">
           <div class="exp-rank">38</div>
           <div class="exp-team-icon">DEN</div>
           <div class="exp-avatar-wrap">
@@ -4376,7 +4440,7 @@
           <div class="exp-name">Bo Nix</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="39">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="39" data-pos="WR" data-rookie="0">
           <div class="exp-rank">39</div>
           <div class="exp-team-icon">TEN</div>
           <div class="exp-avatar-wrap">
@@ -4387,7 +4451,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="40">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="40" data-pos="WR" data-rookie="0">
           <div class="exp-rank">40</div>
           <div class="exp-team-icon">NO</div>
           <div class="exp-avatar-wrap">
@@ -4398,7 +4462,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="11" data-adp="41">
+        <div class="exp-card exp-rb" data-pct="11" data-adp="41" data-pos="RB" data-rookie="0">
           <div class="exp-rank">41</div>
           <div class="exp-team-icon">SF</div>
           <div class="exp-avatar-wrap">
@@ -4409,7 +4473,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-rb" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="11" data-adp="42">
+        <div class="exp-card exp-wr" data-pct="11" data-adp="42" data-pos="WR" data-rookie="0">
           <div class="exp-rank">42</div>
           <div class="exp-team-icon">LAC</div>
           <div class="exp-avatar-wrap">
@@ -4420,7 +4484,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-wr" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="6" data-adp="43">
+        <div class="exp-card exp-qb" data-pct="6" data-adp="43" data-pos="QB" data-rookie="0">
           <div class="exp-rank">43</div>
           <div class="exp-team-icon">SF</div>
           <div class="exp-avatar-wrap">
@@ -4431,7 +4495,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-qb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="44">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="44" data-pos="WR" data-rookie="0">
           <div class="exp-rank">44</div>
           <div class="exp-team-icon">NYJ</div>
           <div class="exp-avatar-wrap">
@@ -4441,7 +4505,7 @@
           <div class="exp-name">Garrett Wilson</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="17" data-adp="45">
+        <div class="exp-card exp-wr" data-pct="17" data-adp="45" data-pos="WR" data-rookie="1">
           <div class="exp-rank">45</div>
           <div class="exp-team-icon">CHI</div>
           <div class="exp-avatar-wrap">
@@ -4452,7 +4516,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-wr" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="46">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="46" data-pos="RB" data-rookie="1">
           <div class="exp-rank">46</div>
           <div class="exp-team-icon">CLE</div>
           <div class="exp-avatar-wrap">
@@ -4463,7 +4527,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="47">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="47" data-pos="WR" data-rookie="0">
           <div class="exp-rank">47</div>
           <div class="exp-team-icon">KC</div>
           <div class="exp-avatar-wrap">
@@ -4473,7 +4537,7 @@
           <div class="exp-name">Rashee Rice</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="48">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="48" data-pos="RB" data-rookie="0">
           <div class="exp-rank">48</div>
           <div class="exp-team-icon">NYJ</div>
           <div class="exp-avatar-wrap">
@@ -4484,7 +4548,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="49">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="49" data-pos="RB" data-rookie="1">
           <div class="exp-rank">49</div>
           <div class="exp-team-icon">HOU</div>
           <div class="exp-avatar-wrap">
@@ -4494,7 +4558,7 @@
           <div class="exp-name">TreVeyon Henderson</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="17" data-adp="50">
+        <div class="exp-card exp-qb" data-pct="17" data-adp="50" data-pos="QB" data-rookie="0">
           <div class="exp-rank">50</div>
           <div class="exp-team-icon">DAL</div>
           <div class="exp-avatar-wrap">
@@ -4505,7 +4569,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-qb" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="39" data-adp="51">
+        <div class="exp-card exp-wr" data-pct="39" data-adp="51" data-pos="WR" data-rookie="0">
           <div class="exp-rank">51</div>
           <div class="exp-team-icon">BAL</div>
           <div class="exp-avatar-wrap">
@@ -4516,7 +4580,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">39%</span><span class="exp-frac">7/18</span></div>
           <div class="exp-bar exp-wr" style="width:100%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="52">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="52" data-pos="WR" data-rookie="0">
           <div class="exp-rank">52</div>
           <div class="exp-team-icon">NE</div>
           <div class="exp-avatar-wrap">
@@ -4527,7 +4591,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="17" data-adp="53">
+        <div class="exp-card exp-rb" data-pct="17" data-adp="53" data-pos="RB" data-rookie="0">
           <div class="exp-rank">53</div>
           <div class="exp-team-icon">PHI</div>
           <div class="exp-avatar-wrap">
@@ -4538,7 +4602,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-rb" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="11" data-adp="54">
+        <div class="exp-card exp-qb" data-pct="11" data-adp="54" data-pos="QB" data-rookie="0">
           <div class="exp-rank">54</div>
           <div class="exp-team-icon">GB</div>
           <div class="exp-avatar-wrap">
@@ -4549,7 +4613,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-qb" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-te" data-pct="17" data-adp="55">
+        <div class="exp-card exp-te" data-pct="17" data-adp="55" data-pos="TE" data-rookie="1">
           <div class="exp-rank">55</div>
           <div class="exp-team-icon">CLE</div>
           <div class="exp-avatar-wrap">
@@ -4560,7 +4624,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-te">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-te" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="50" data-adp="56">
+        <div class="exp-card exp-wr" data-pct="50" data-adp="56" data-pos="WR" data-rookie="1">
           <div class="exp-rank">56</div>
           <div class="exp-team-icon">NO</div>
           <div class="exp-avatar-wrap">
@@ -4571,7 +4635,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">50%</span><span class="exp-frac">9/18</span></div>
           <div class="exp-bar exp-wr" style="width:100%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="11" data-adp="57">
+        <div class="exp-card exp-qb" data-pct="11" data-adp="57" data-pos="QB" data-rookie="1">
           <div class="exp-rank">57</div>
           <div class="exp-team-icon">LV</div>
           <div class="exp-avatar-wrap">
@@ -4582,7 +4646,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-qb" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-te" data-pct="6" data-adp="58">
+        <div class="exp-card exp-te" data-pct="6" data-adp="58" data-pos="TE" data-rookie="0">
           <div class="exp-rank">58</div>
           <div class="exp-team-icon">GB</div>
           <div class="exp-avatar-wrap">
@@ -4593,7 +4657,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-te">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-te" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="59">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="59" data-pos="WR" data-rookie="0">
           <div class="exp-rank">59</div>
           <div class="exp-team-icon">CHI</div>
           <div class="exp-avatar-wrap">
@@ -4603,7 +4667,7 @@
           <div class="exp-name">Rome Odunze</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="60">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="60" data-pos="WR" data-rookie="0">
           <div class="exp-rank">60</div>
           <div class="exp-team-icon">PHI</div>
           <div class="exp-avatar-wrap">
@@ -4614,7 +4678,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="61">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="61" data-pos="RB" data-rookie="0">
           <div class="exp-rank">61</div>
           <div class="exp-team-icon">LAR</div>
           <div class="exp-avatar-wrap">
@@ -4625,7 +4689,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="62">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="62" data-pos="RB" data-rookie="0">
           <div class="exp-rank">62</div>
           <div class="exp-team-icon">NYG</div>
           <div class="exp-avatar-wrap">
@@ -4636,7 +4700,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="63">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="63" data-pos="RB" data-rookie="0">
           <div class="exp-rank">63</div>
           <div class="exp-team-icon">TB</div>
           <div class="exp-avatar-wrap">
@@ -4646,7 +4710,7 @@
           <div class="exp-name">Bucky Irving</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="17" data-adp="64">
+        <div class="exp-card exp-rb" data-pct="17" data-adp="64" data-pos="RB" data-rookie="0">
           <div class="exp-rank">64</div>
           <div class="exp-team-icon">SEA</div>
           <div class="exp-avatar-wrap">
@@ -4657,7 +4721,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-rb" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="65">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="65" data-pos="WR" data-rookie="0">
           <div class="exp-rank">65</div>
           <div class="exp-team-icon">CIN</div>
           <div class="exp-avatar-wrap">
@@ -4668,7 +4732,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="66">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="66" data-pos="RB" data-rookie="0">
           <div class="exp-rank">66</div>
           <div class="exp-team-icon">DAL</div>
           <div class="exp-avatar-wrap">
@@ -4679,7 +4743,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="11" data-adp="67">
+        <div class="exp-card exp-qb" data-pct="11" data-adp="67" data-pos="QB" data-rookie="0">
           <div class="exp-rank">67</div>
           <div class="exp-team-icon">DET</div>
           <div class="exp-avatar-wrap">
@@ -4690,7 +4754,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-qb" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="68">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="68" data-pos="WR" data-rookie="0">
           <div class="exp-rank">68</div>
           <div class="exp-team-icon">ARI</div>
           <div class="exp-avatar-wrap">
@@ -4700,7 +4764,7 @@
           <div class="exp-name">Marvin Harrison</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="17" data-adp="69">
+        <div class="exp-card exp-wr" data-pct="17" data-adp="69" data-pos="WR" data-rookie="1">
           <div class="exp-rank">69</div>
           <div class="exp-team-icon">PHI</div>
           <div class="exp-avatar-wrap">
@@ -4711,7 +4775,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-wr" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-te" data-pct="17" data-adp="70">
+        <div class="exp-card exp-te" data-pct="17" data-adp="70" data-pos="TE" data-rookie="0">
           <div class="exp-rank">70</div>
           <div class="exp-team-icon">DET</div>
           <div class="exp-avatar-wrap">
@@ -4722,7 +4786,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-te">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-te" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="11" data-adp="71">
+        <div class="exp-card exp-wr" data-pct="11" data-adp="71" data-pos="WR" data-rookie="0">
           <div class="exp-rank">71</div>
           <div class="exp-team-icon">DEN</div>
           <div class="exp-avatar-wrap">
@@ -4733,7 +4797,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-wr" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="72">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="72" data-pos="WR" data-rookie="0">
           <div class="exp-rank">72</div>
           <div class="exp-team-icon">JAX</div>
           <div class="exp-avatar-wrap">
@@ -4743,7 +4807,7 @@
           <div class="exp-name">Brian Thomas</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="73">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="73" data-pos="QB" data-rookie="1">
           <div class="exp-rank">73</div>
           <div class="exp-team-icon">TEN</div>
           <div class="exp-avatar-wrap">
@@ -4753,7 +4817,7 @@
           <div class="exp-name">Cam Ward</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="74">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="74" data-pos="QB" data-rookie="0">
           <div class="exp-rank">74</div>
           <div class="exp-team-icon">TB</div>
           <div class="exp-avatar-wrap">
@@ -4763,7 +4827,7 @@
           <div class="exp-name">Baker Mayfield</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="11" data-adp="75">
+        <div class="exp-card exp-qb" data-pct="11" data-adp="75" data-pos="QB" data-rookie="1">
           <div class="exp-rank">75</div>
           <div class="exp-team-icon">NO</div>
           <div class="exp-avatar-wrap">
@@ -4774,7 +4838,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-qb" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="76">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="76" data-pos="RB" data-rookie="0">
           <div class="exp-rank">76</div>
           <div class="exp-team-icon">BAL</div>
           <div class="exp-avatar-wrap">
@@ -4785,7 +4849,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="77">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="77" data-pos="WR" data-rookie="0">
           <div class="exp-rank">77</div>
           <div class="exp-team-icon">DET</div>
           <div class="exp-avatar-wrap">
@@ -4795,7 +4859,7 @@
           <div class="exp-name">Jameson Williams</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-te" data-pct="6" data-adp="78">
+        <div class="exp-card exp-te" data-pct="6" data-adp="78" data-pos="TE" data-rookie="0">
           <div class="exp-rank">78</div>
           <div class="exp-team-icon">ATL</div>
           <div class="exp-avatar-wrap">
@@ -4806,7 +4870,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-te">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-te" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="11" data-adp="79">
+        <div class="exp-card exp-rb" data-pct="11" data-adp="79" data-pos="RB" data-rookie="0">
           <div class="exp-rank">79</div>
           <div class="exp-team-icon">JAX</div>
           <div class="exp-avatar-wrap">
@@ -4817,7 +4881,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-rb" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="80">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="80" data-pos="RB" data-rookie="0">
           <div class="exp-rank">80</div>
           <div class="exp-team-icon">GB</div>
           <div class="exp-avatar-wrap">
@@ -4828,7 +4892,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="17" data-adp="81">
+        <div class="exp-card exp-rb" data-pct="17" data-adp="81" data-pos="RB" data-rookie="1">
           <div class="exp-rank">81</div>
           <div class="exp-team-icon">JAX</div>
           <div class="exp-avatar-wrap">
@@ -4839,7 +4903,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-rb" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="17" data-adp="82">
+        <div class="exp-card exp-wr" data-pct="17" data-adp="82" data-pos="WR" data-rookie="1">
           <div class="exp-rank">82</div>
           <div class="exp-team-icon">CAR</div>
           <div class="exp-avatar-wrap">
@@ -4850,7 +4914,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-wr" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="83">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="83" data-pos="QB" data-rookie="0">
           <div class="exp-rank">83</div>
           <div class="exp-team-icon">HOU</div>
           <div class="exp-avatar-wrap">
@@ -4860,7 +4924,7 @@
           <div class="exp-name">C.J. Stroud</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="11" data-adp="84">
+        <div class="exp-card exp-qb" data-pct="11" data-adp="84" data-pos="QB" data-rookie="0">
           <div class="exp-rank">84</div>
           <div class="exp-team-icon">ARI</div>
           <div class="exp-avatar-wrap">
@@ -4871,7 +4935,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-qb" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="17" data-adp="85">
+        <div class="exp-card exp-wr" data-pct="17" data-adp="85" data-pos="WR" data-rookie="0">
           <div class="exp-rank">85</div>
           <div class="exp-team-icon">JAX</div>
           <div class="exp-avatar-wrap">
@@ -4882,7 +4946,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-wr" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="11" data-adp="86">
+        <div class="exp-card exp-wr" data-pct="11" data-adp="86" data-pos="WR" data-rookie="0">
           <div class="exp-rank">86</div>
           <div class="exp-team-icon">GB</div>
           <div class="exp-avatar-wrap">
@@ -4893,7 +4957,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-wr" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="87">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="87" data-pos="RB" data-rookie="0">
           <div class="exp-rank">87</div>
           <div class="exp-team-icon">CHI</div>
           <div class="exp-avatar-wrap">
@@ -4904,7 +4968,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="88">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="88" data-pos="WR" data-rookie="0">
           <div class="exp-rank">88</div>
           <div class="exp-team-icon">CHI</div>
           <div class="exp-avatar-wrap">
@@ -4915,7 +4979,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-te" data-pct="6" data-adp="89">
+        <div class="exp-card exp-te" data-pct="6" data-adp="89" data-pos="TE" data-rookie="1">
           <div class="exp-rank">89</div>
           <div class="exp-team-icon">DEN</div>
           <div class="exp-avatar-wrap">
@@ -4926,7 +4990,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-te">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-te" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="90">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="90" data-pos="QB" data-rookie="0">
           <div class="exp-rank">90</div>
           <div class="exp-team-icon">SEA</div>
           <div class="exp-avatar-wrap">
@@ -4936,7 +5000,7 @@
           <div class="exp-name">Sam Darnold</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="6" data-adp="91">
+        <div class="exp-card exp-qb" data-pct="6" data-adp="91" data-pos="QB" data-rookie="0">
           <div class="exp-rank">91</div>
           <div class="exp-team-icon">LAR</div>
           <div class="exp-avatar-wrap">
@@ -4947,7 +5011,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-qb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="92">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="92" data-pos="RB" data-rookie="0">
           <div class="exp-rank">92</div>
           <div class="exp-team-icon">HOU</div>
           <div class="exp-avatar-wrap">
@@ -4958,7 +5022,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="93">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="93" data-pos="WR" data-rookie="0">
           <div class="exp-rank">93</div>
           <div class="exp-team-icon">WAS</div>
           <div class="exp-avatar-wrap">
@@ -4969,7 +5033,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="94">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="94" data-pos="WR" data-rookie="0">
           <div class="exp-rank">94</div>
           <div class="exp-team-icon">ARI</div>
           <div class="exp-avatar-wrap">
@@ -4979,7 +5043,7 @@
           <div class="exp-name">Michael Wilson</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="95">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="95" data-pos="WR" data-rookie="0">
           <div class="exp-rank">95</div>
           <div class="exp-team-icon">MIN</div>
           <div class="exp-avatar-wrap">
@@ -4989,7 +5053,7 @@
           <div class="exp-name">Jordan Addison</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="96">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="96" data-pos="QB" data-rookie="0">
           <div class="exp-rank">96</div>
           <div class="exp-team-icon">GB</div>
           <div class="exp-avatar-wrap">
@@ -4999,7 +5063,7 @@
           <div class="exp-name">Malik Willis</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="97">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="97" data-pos="RB" data-rookie="1">
           <div class="exp-rank">97</div>
           <div class="exp-team-icon">DEN</div>
           <div class="exp-avatar-wrap">
@@ -5010,7 +5074,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="98">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="98" data-pos="TE" data-rookie="0">
           <div class="exp-rank">98</div>
           <div class="exp-team-icon">CIN</div>
           <div class="exp-avatar-wrap">
@@ -5020,7 +5084,7 @@
           <div class="exp-name">Jonathon Brooks</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="99">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="99" data-pos="QB" data-rookie="0">
           <div class="exp-rank">99</div>
           <div class="exp-team-icon">CAR</div>
           <div class="exp-avatar-wrap">
@@ -5030,7 +5094,7 @@
           <div class="exp-name">Bryce Young</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="100">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="100" data-pos="WR" data-rookie="0">
           <div class="exp-rank">100</div>
           <div class="exp-team-icon">LAR</div>
           <div class="exp-avatar-wrap">
@@ -5041,7 +5105,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="101">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="101" data-pos="WR" data-rookie="0">
           <div class="exp-rank">101</div>
           <div class="exp-team-icon">IND</div>
           <div class="exp-avatar-wrap">
@@ -5052,7 +5116,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="102">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="102" data-pos="TE" data-rookie="0">
           <div class="exp-rank">102</div>
           <div class="exp-team-icon">BAL</div>
           <div class="exp-avatar-wrap">
@@ -5062,7 +5126,7 @@
           <div class="exp-name">Isaiah Likely</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="103">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="103" data-pos="QB" data-rookie="0">
           <div class="exp-rank">103</div>
           <div class="exp-team-icon">IND</div>
           <div class="exp-avatar-wrap">
@@ -5072,7 +5136,7 @@
           <div class="exp-name">Daniel Jones</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-rb" data-pct="6" data-adp="104">
+        <div class="exp-card exp-rb" data-pct="6" data-adp="104" data-pos="RB" data-rookie="0">
           <div class="exp-rank">104</div>
           <div class="exp-team-icon">PIT</div>
           <div class="exp-avatar-wrap">
@@ -5083,7 +5147,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-rb">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-rb" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="105">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="105" data-pos="WR" data-rookie="0">
           <div class="exp-rank">105</div>
           <div class="exp-team-icon">MIN</div>
           <div class="exp-avatar-wrap">
@@ -5094,7 +5158,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="6" data-adp="106">
+        <div class="exp-card exp-wr" data-pct="6" data-adp="106" data-pos="WR" data-rookie="0">
           <div class="exp-rank">106</div>
           <div class="exp-team-icon">TEN</div>
           <div class="exp-avatar-wrap">
@@ -5105,7 +5169,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-wr" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="107">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="107" data-pos="RB" data-rookie="0">
           <div class="exp-rank">107</div>
           <div class="exp-team-icon">CHI</div>
           <div class="exp-avatar-wrap">
@@ -5115,7 +5179,7 @@
           <div class="exp-name">Kyle Monangai</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-te" data-pct="6" data-adp="108">
+        <div class="exp-card exp-te" data-pct="6" data-adp="108" data-pos="TE" data-rookie="0">
           <div class="exp-rank">108</div>
           <div class="exp-team-icon">BUF</div>
           <div class="exp-avatar-wrap">
@@ -5126,7 +5190,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-te">6%</span><span class="exp-frac">1/18</span></div>
           <div class="exp-bar exp-te" style="width:18%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="11" data-adp="109">
+        <div class="exp-card exp-wr" data-pct="11" data-adp="109" data-pos="WR" data-rookie="0">
           <div class="exp-rank">109</div>
           <div class="exp-team-icon">NYJ</div>
           <div class="exp-avatar-wrap">
@@ -5137,7 +5201,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-wr" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-te" data-pct="11" data-adp="110">
+        <div class="exp-card exp-te" data-pct="11" data-adp="110" data-pos="TE" data-rookie="0">
           <div class="exp-rank">110</div>
           <div class="exp-team-icon">LAC</div>
           <div class="exp-avatar-wrap">
@@ -5148,7 +5212,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-te">11%</span><span class="exp-frac">2/18</span></div>
           <div class="exp-bar exp-te" style="width:33%"></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="17" data-adp="111">
+        <div class="exp-card exp-wr" data-pct="17" data-adp="111" data-pos="WR" data-rookie="0">
           <div class="exp-rank">111</div>
           <div class="exp-team-icon">IND</div>
           <div class="exp-avatar-wrap">
@@ -5159,7 +5223,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">17%</span><span class="exp-frac">3/18</span></div>
           <div class="exp-bar exp-wr" style="width:51%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="112">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="112" data-pos="WR" data-rookie="1">
           <div class="exp-rank">112</div>
           <div class="exp-team-icon">GB</div>
           <div class="exp-avatar-wrap">
@@ -5169,7 +5233,7 @@
           <div class="exp-name">Matthew Golden</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-wr" data-pct="22" data-adp="113">
+        <div class="exp-card exp-wr" data-pct="22" data-adp="113" data-pos="WR" data-rookie="0">
           <div class="exp-rank">113</div>
           <div class="exp-team-icon">TB</div>
           <div class="exp-avatar-wrap">
@@ -5180,7 +5244,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-wr">22%</span><span class="exp-frac">4/18</span></div>
           <div class="exp-bar exp-wr" style="width:66%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="114">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="114" data-pos="TE" data-rookie="0">
           <div class="exp-rank">114</div>
           <div class="exp-team-icon">SF</div>
           <div class="exp-avatar-wrap">
@@ -5190,7 +5254,7 @@
           <div class="exp-name">George Kittle</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="115">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="115" data-pos="RB" data-rookie="0">
           <div class="exp-rank">115</div>
           <div class="exp-team-icon">LAR</div>
           <div class="exp-avatar-wrap">
@@ -5200,7 +5264,7 @@
           <div class="exp-name">Blake Corum</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-qb" data-pct="22" data-adp="116">
+        <div class="exp-card exp-qb" data-pct="22" data-adp="116" data-pos="QB" data-rookie="1">
           <div class="exp-rank">116</div>
           <div class="exp-team-icon">NE</div>
           <div class="exp-avatar-wrap">
@@ -5211,7 +5275,7 @@
           <div class="exp-pct-row"><span class="exp-pct exp-qb">22%</span><span class="exp-frac">4/18</span></div>
           <div class="exp-bar exp-qb" style="width:66%"></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="117">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="117" data-pos="WR" data-rookie="0">
           <div class="exp-rank">117</div>
           <div class="exp-team-icon">PIT</div>
           <div class="exp-avatar-wrap">
@@ -5221,7 +5285,7 @@
           <div class="exp-name">DK Metcalf</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="118">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="118" data-pos="TE" data-rookie="0">
           <div class="exp-rank">118</div>
           <div class="exp-team-icon">TEN</div>
           <div class="exp-avatar-wrap">
@@ -5231,7 +5295,7 @@
           <div class="exp-name">Quentin Johnston</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="119">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="119" data-pos="WR" data-rookie="0">
           <div class="exp-rank">119</div>
           <div class="exp-team-icon">DAL</div>
           <div class="exp-avatar-wrap">
@@ -5241,7 +5305,7 @@
           <div class="exp-name">Jake Ferguson</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
-        <div class="exp-card exp-empty" data-pct="-1" data-adp="120">
+        <div class="exp-card exp-empty" data-pct="-1" data-adp="120" data-pos="WR" data-rookie="1">
           <div class="exp-rank">120</div>
           <div class="exp-team-icon">HOU</div>
           <div class="exp-avatar-wrap">
@@ -5251,6 +5315,1309 @@
           <div class="exp-name">Jayden Higgins</div>
           <div class="exp-pct-row"><span class="exp-dash">&mdash;</span></div>
         </div>
+    </div>
+
+    <div class="exp-list" hidden>
+      <div class="exp-list-head">
+        <span>PLAYER</span>
+        <span>TEAM</span>
+        <span class="exp-list-adp-head">ADP <span class="exp-sort-arrow">&darr;</span></span>
+        <span>$</span>
+        <span>LEAGUES</span>
+        <span>EXPOSURE</span>
+      </div>
+      <div class="exp-list-body">
+        <div class="exp-list-row" data-pct="6" data-adp="1" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">BR</div>
+            <span class="exp-list-name">Bijan Robinson</span>
+            <span class="exp-list-posrank exp-rb">RB1</span>
+          </div>
+          <div class="exp-list-team">ATL</div>
+          <div class="exp-list-adp">1</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="2" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">JG</div>
+            <span class="exp-list-name">Jahmyr Gibbs</span>
+            <span class="exp-list-posrank exp-rb">RB2</span>
+          </div>
+          <div class="exp-list-team">DET</div>
+          <div class="exp-list-adp">2</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="3" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">JA</div>
+            <span class="exp-list-name">Josh Allen</span>
+            <span class="exp-list-posrank exp-qb">QB1</span>
+          </div>
+          <div class="exp-list-team">BUF</div>
+          <div class="exp-list-adp">3</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-qb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="5" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">DM</div>
+            <span class="exp-list-name">Drake Maye</span>
+            <span class="exp-list-posrank exp-qb">QB2</span>
+          </div>
+          <div class="exp-list-team">NE</div>
+          <div class="exp-list-adp">5</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-qb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="7" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">PN</div>
+            <span class="exp-list-name">Puka Nacua</span>
+            <span class="exp-list-posrank exp-wr">WR3</span>
+          </div>
+          <div class="exp-list-team">LAR</div>
+          <div class="exp-list-adp">7</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-wr">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="22" data-adp="8" data-pos="TE" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-te">BB</div>
+            <span class="exp-list-name">Brock Bowers</span>
+            <span class="exp-list-posrank exp-te">TE1</span>
+          </div>
+          <div class="exp-list-team">LV</div>
+          <div class="exp-list-adp">8</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">4/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-te" style="width:66%"></div></div>
+            <span class="exp-list-pct exp-te">22%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="9" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">AB</div>
+            <span class="exp-list-name">Amon-Ra St. Brown</span>
+            <span class="exp-list-posrank exp-wr">WR4</span>
+          </div>
+          <div class="exp-list-team">DET</div>
+          <div class="exp-list-adp">9</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-wr">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="22" data-adp="10" data-pos="RB" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">AJ</div>
+            <span class="exp-list-name">Ashton Jeanty</span>
+            <span class="exp-list-posrank exp-rb">RB3</span>
+          </div>
+          <div class="exp-list-team">LV</div>
+          <div class="exp-list-adp">10</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">4/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:66%"></div></div>
+            <span class="exp-list-pct exp-rb">22%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="11" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">JD</div>
+            <span class="exp-list-name">Jayden Daniels</span>
+            <span class="exp-list-posrank exp-qb">QB3</span>
+          </div>
+          <div class="exp-list-team">WAS</div>
+          <div class="exp-list-adp">11</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-qb">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="13" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">MN</div>
+            <span class="exp-list-name">Malik Nabers</span>
+            <span class="exp-list-posrank exp-wr">WR5</span>
+          </div>
+          <div class="exp-list-team">NYG</div>
+          <div class="exp-list-adp">13</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="22" data-adp="14" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">LJ</div>
+            <span class="exp-list-name">Lamar Jackson</span>
+            <span class="exp-list-posrank exp-qb">QB5</span>
+          </div>
+          <div class="exp-list-team">BAL</div>
+          <div class="exp-list-adp">14</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">4/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:66%"></div></div>
+            <span class="exp-list-pct exp-qb">22%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="33" data-adp="15" data-pos="RB" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">JL</div>
+            <span class="exp-list-name">Jeremiyah Love</span>
+            <span class="exp-list-posrank exp-rb">RB4</span>
+          </div>
+          <div class="exp-list-team">ARI</div>
+          <div class="exp-list-adp">15</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">6/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:99%"></div></div>
+            <span class="exp-list-pct exp-rb">33%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="16" data-pos="TE" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-te">TM</div>
+            <span class="exp-list-name">Trey McBride</span>
+            <span class="exp-list-posrank exp-te">TE2</span>
+          </div>
+          <div class="exp-list-team">ARI</div>
+          <div class="exp-list-adp">16</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-te" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-te">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="17" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">JB</div>
+            <span class="exp-list-name">Joe Burrow</span>
+            <span class="exp-list-posrank exp-qb">QB6</span>
+          </div>
+          <div class="exp-list-team">CIN</div>
+          <div class="exp-list-adp">17</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-qb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="19" data-pos="RB" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">OH</div>
+            <span class="exp-list-name">Omarion Hampton</span>
+            <span class="exp-list-posrank exp-rb">RB5</span>
+          </div>
+          <div class="exp-list-team">LAC</div>
+          <div class="exp-list-adp">19</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="20" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">DA</div>
+            <span class="exp-list-name">De'Von Achane</span>
+            <span class="exp-list-posrank exp-rb">RB6</span>
+          </div>
+          <div class="exp-list-team">MIA</div>
+          <div class="exp-list-adp">20</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="21" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">CL</div>
+            <span class="exp-list-name">CeeDee Lamb</span>
+            <span class="exp-list-posrank exp-wr">WR7</span>
+          </div>
+          <div class="exp-list-team">DAL</div>
+          <div class="exp-list-adp">21</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-wr">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="28" data-adp="22" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">DL</div>
+            <span class="exp-list-name">Drake London</span>
+            <span class="exp-list-posrank exp-wr">WR8</span>
+          </div>
+          <div class="exp-list-team">ATL</div>
+          <div class="exp-list-adp">22</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">5/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:84%"></div></div>
+            <span class="exp-list-pct exp-wr">28%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="22" data-adp="23" data-pos="TE" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-te">CL</div>
+            <span class="exp-list-name">Colston Loveland</span>
+            <span class="exp-list-posrank exp-te">TE3</span>
+          </div>
+          <div class="exp-list-team">CHI</div>
+          <div class="exp-list-adp">23</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">4/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-te" style="width:66%"></div></div>
+            <span class="exp-list-pct exp-te">22%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="24" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">JH</div>
+            <span class="exp-list-name">Justin Herbert</span>
+            <span class="exp-list-posrank exp-qb">QB7</span>
+          </div>
+          <div class="exp-list-team">LAC</div>
+          <div class="exp-list-adp">24</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-qb">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="25" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">JT</div>
+            <span class="exp-list-name">Jonathan Taylor</span>
+            <span class="exp-list-posrank exp-rb">RB7</span>
+          </div>
+          <div class="exp-list-team">IND</div>
+          <div class="exp-list-adp">25</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-rb">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="26" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">JC</div>
+            <span class="exp-list-name">James Cook</span>
+            <span class="exp-list-posrank exp-rb">RB8</span>
+          </div>
+          <div class="exp-list-team">BUF</div>
+          <div class="exp-list-adp">26</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-rb">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="22" data-adp="27" data-pos="WR" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">TM</div>
+            <span class="exp-list-name">Tetairoa McMillan</span>
+            <span class="exp-list-posrank exp-wr">WR9</span>
+          </div>
+          <div class="exp-list-team">CAR</div>
+          <div class="exp-list-adp">27</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">4/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:66%"></div></div>
+            <span class="exp-list-pct exp-wr">22%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="28" data-pos="QB" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">JD</div>
+            <span class="exp-list-name">Jaxson Dart</span>
+            <span class="exp-list-posrank exp-qb">QB8</span>
+          </div>
+          <div class="exp-list-team">NYG</div>
+          <div class="exp-list-adp">28</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-qb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="29" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">JH</div>
+            <span class="exp-list-name">Jalen Hurts</span>
+            <span class="exp-list-posrank exp-qb">QB9</span>
+          </div>
+          <div class="exp-list-team">PHI</div>
+          <div class="exp-list-adp">29</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-qb">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="30" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">GP</div>
+            <span class="exp-list-name">George Pickens</span>
+            <span class="exp-list-posrank exp-wr">WR10</span>
+          </div>
+          <div class="exp-list-team">DAL</div>
+          <div class="exp-list-adp">30</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="31" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">TL</div>
+            <span class="exp-list-name">Trevor Lawrence</span>
+            <span class="exp-list-posrank exp-qb">QB10</span>
+          </div>
+          <div class="exp-list-team">JAX</div>
+          <div class="exp-list-adp">31</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-qb">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="32" data-pos="TE" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-te">TW</div>
+            <span class="exp-list-name">Tyler Warren</span>
+            <span class="exp-list-posrank exp-te">TE4</span>
+          </div>
+          <div class="exp-list-team">IND</div>
+          <div class="exp-list-adp">32</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-te" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-te">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="34" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">PM</div>
+            <span class="exp-list-name">Patrick Mahomes</span>
+            <span class="exp-list-posrank exp-qb">QB11</span>
+          </div>
+          <div class="exp-list-team">KC</div>
+          <div class="exp-list-adp">34</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-qb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="22" data-adp="35" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">CB</div>
+            <span class="exp-list-name">Chase Brown</span>
+            <span class="exp-list-posrank exp-rb">RB9</span>
+          </div>
+          <div class="exp-list-team">CIN</div>
+          <div class="exp-list-adp">35</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">4/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:66%"></div></div>
+            <span class="exp-list-pct exp-rb">22%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="37" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">NC</div>
+            <span class="exp-list-name">Nico Collins</span>
+            <span class="exp-list-posrank exp-wr">WR12</span>
+          </div>
+          <div class="exp-list-team">HOU</div>
+          <div class="exp-list-adp">37</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-wr">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="39" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">CT</div>
+            <span class="exp-list-name">Carnell Tate</span>
+            <span class="exp-list-posrank exp-wr">WR13</span>
+          </div>
+          <div class="exp-list-team">TEN</div>
+          <div class="exp-list-adp">39</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="40" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">CO</div>
+            <span class="exp-list-name">Chris Olave</span>
+            <span class="exp-list-posrank exp-wr">WR14</span>
+          </div>
+          <div class="exp-list-team">NO</div>
+          <div class="exp-list-adp">40</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="41" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">CM</div>
+            <span class="exp-list-name">Christian McCaffrey</span>
+            <span class="exp-list-posrank exp-rb">RB11</span>
+          </div>
+          <div class="exp-list-team">SF</div>
+          <div class="exp-list-adp">41</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-rb">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="42" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">LM</div>
+            <span class="exp-list-name">Ladd McConkey</span>
+            <span class="exp-list-posrank exp-wr">WR15</span>
+          </div>
+          <div class="exp-list-team">LAC</div>
+          <div class="exp-list-adp">42</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-wr">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="43" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">BP</div>
+            <span class="exp-list-name">Brock Purdy</span>
+            <span class="exp-list-posrank exp-qb">QB13</span>
+          </div>
+          <div class="exp-list-team">SF</div>
+          <div class="exp-list-adp">43</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-qb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="45" data-pos="WR" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">LB</div>
+            <span class="exp-list-name">Luther Burden</span>
+            <span class="exp-list-posrank exp-wr">WR17</span>
+          </div>
+          <div class="exp-list-team">CHI</div>
+          <div class="exp-list-adp">45</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-wr">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="46" data-pos="RB" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">QJ</div>
+            <span class="exp-list-name">Quinshon Judkins</span>
+            <span class="exp-list-posrank exp-rb">RB12</span>
+          </div>
+          <div class="exp-list-team">CLE</div>
+          <div class="exp-list-adp">46</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="48" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">BH</div>
+            <span class="exp-list-name">Breece Hall</span>
+            <span class="exp-list-posrank exp-rb">RB13</span>
+          </div>
+          <div class="exp-list-team">NYJ</div>
+          <div class="exp-list-adp">48</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="50" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">DP</div>
+            <span class="exp-list-name">Dak Prescott</span>
+            <span class="exp-list-posrank exp-qb">QB14</span>
+          </div>
+          <div class="exp-list-team">DAL</div>
+          <div class="exp-list-adp">50</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-qb">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="39" data-adp="51" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">ZF</div>
+            <span class="exp-list-name">Zay Flowers</span>
+            <span class="exp-list-posrank exp-wr">WR19</span>
+          </div>
+          <div class="exp-list-team">BAL</div>
+          <div class="exp-list-adp">51</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">7/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:100%"></div></div>
+            <span class="exp-list-pct exp-wr">39%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="52" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">AB</div>
+            <span class="exp-list-name">A.J. Brown</span>
+            <span class="exp-list-posrank exp-wr">WR20</span>
+          </div>
+          <div class="exp-list-team">NE</div>
+          <div class="exp-list-adp">52</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="53" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">SB</div>
+            <span class="exp-list-name">Saquon Barkley</span>
+            <span class="exp-list-posrank exp-rb">RB15</span>
+          </div>
+          <div class="exp-list-team">PHI</div>
+          <div class="exp-list-adp">53</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-rb">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="54" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">JL</div>
+            <span class="exp-list-name">Jordan Love</span>
+            <span class="exp-list-posrank exp-qb">QB15</span>
+          </div>
+          <div class="exp-list-team">GB</div>
+          <div class="exp-list-adp">54</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-qb">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="55" data-pos="TE" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-te">HF</div>
+            <span class="exp-list-name">Harold Fannin</span>
+            <span class="exp-list-posrank exp-te">TE5</span>
+          </div>
+          <div class="exp-list-team">CLE</div>
+          <div class="exp-list-adp">55</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-te" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-te">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="50" data-adp="56" data-pos="WR" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">JT</div>
+            <span class="exp-list-name">Jordyn Tyson</span>
+            <span class="exp-list-posrank exp-wr">WR21</span>
+          </div>
+          <div class="exp-list-team">NO</div>
+          <div class="exp-list-adp">56</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">9/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:100%"></div></div>
+            <span class="exp-list-pct exp-wr">50%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="57" data-pos="QB" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">FM</div>
+            <span class="exp-list-name">Fernando Mendoza</span>
+            <span class="exp-list-posrank exp-qb">QB16</span>
+          </div>
+          <div class="exp-list-team">LV</div>
+          <div class="exp-list-adp">57</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-qb">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="58" data-pos="TE" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-te">TK</div>
+            <span class="exp-list-name">Tucker Kraft</span>
+            <span class="exp-list-posrank exp-te">TE6</span>
+          </div>
+          <div class="exp-list-team">GB</div>
+          <div class="exp-list-adp">58</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-te" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-te">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="60" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">DS</div>
+            <span class="exp-list-name">DeVonta Smith</span>
+            <span class="exp-list-posrank exp-wr">WR23</span>
+          </div>
+          <div class="exp-list-team">PHI</div>
+          <div class="exp-list-adp">60</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="61" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">KW</div>
+            <span class="exp-list-name">Kyren Williams</span>
+            <span class="exp-list-posrank exp-rb">RB16</span>
+          </div>
+          <div class="exp-list-team">LAR</div>
+          <div class="exp-list-adp">61</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="62" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">CS</div>
+            <span class="exp-list-name">Cam Skattebo</span>
+            <span class="exp-list-posrank exp-rb">RB17</span>
+          </div>
+          <div class="exp-list-team">NYG</div>
+          <div class="exp-list-adp">62</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="64" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">JP</div>
+            <span class="exp-list-name">Jadarian Price</span>
+            <span class="exp-list-posrank exp-rb">RB19</span>
+          </div>
+          <div class="exp-list-team">SEA</div>
+          <div class="exp-list-adp">64</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-rb">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="65" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">TH</div>
+            <span class="exp-list-name">Tee Higgins</span>
+            <span class="exp-list-posrank exp-wr">WR24</span>
+          </div>
+          <div class="exp-list-team">CIN</div>
+          <div class="exp-list-adp">65</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="66" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">JW</div>
+            <span class="exp-list-name">Javonte Williams</span>
+            <span class="exp-list-posrank exp-rb">RB20</span>
+          </div>
+          <div class="exp-list-team">DAL</div>
+          <div class="exp-list-adp">66</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="67" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">JG</div>
+            <span class="exp-list-name">Jared Goff</span>
+            <span class="exp-list-posrank exp-qb">QB17</span>
+          </div>
+          <div class="exp-list-team">DET</div>
+          <div class="exp-list-adp">67</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-qb">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="69" data-pos="WR" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">ML</div>
+            <span class="exp-list-name">Makai Lemon</span>
+            <span class="exp-list-posrank exp-wr">WR26</span>
+          </div>
+          <div class="exp-list-team">PHI</div>
+          <div class="exp-list-adp">69</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-wr">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="70" data-pos="TE" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-te">SL</div>
+            <span class="exp-list-name">Sam LaPorta</span>
+            <span class="exp-list-posrank exp-te">TE7</span>
+          </div>
+          <div class="exp-list-team">DET</div>
+          <div class="exp-list-adp">70</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-te" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-te">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="71" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">JW</div>
+            <span class="exp-list-name">Jaylen Waddle</span>
+            <span class="exp-list-posrank exp-wr">WR27</span>
+          </div>
+          <div class="exp-list-team">DEN</div>
+          <div class="exp-list-adp">71</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-wr">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="75" data-pos="QB" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">TS</div>
+            <span class="exp-list-name">Tyler Shough</span>
+            <span class="exp-list-posrank exp-qb">QB20</span>
+          </div>
+          <div class="exp-list-team">NO</div>
+          <div class="exp-list-adp">75</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-qb">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="76" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">DH</div>
+            <span class="exp-list-name">Derrick Henry</span>
+            <span class="exp-list-posrank exp-rb">RB21</span>
+          </div>
+          <div class="exp-list-team">BAL</div>
+          <div class="exp-list-adp">76</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="78" data-pos="TE" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-te">KP</div>
+            <span class="exp-list-name">Kyle Pitts</span>
+            <span class="exp-list-posrank exp-te">TE8</span>
+          </div>
+          <div class="exp-list-team">ATL</div>
+          <div class="exp-list-adp">78</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-te" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-te">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="79" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">TE</div>
+            <span class="exp-list-name">Travis Etienne</span>
+            <span class="exp-list-posrank exp-rb">RB22</span>
+          </div>
+          <div class="exp-list-team">JAX</div>
+          <div class="exp-list-adp">79</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-rb">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="80" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">JJ</div>
+            <span class="exp-list-name">Josh Jacobs</span>
+            <span class="exp-list-posrank exp-rb">RB23</span>
+          </div>
+          <div class="exp-list-team">GB</div>
+          <div class="exp-list-adp">80</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="81" data-pos="RB" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">BT</div>
+            <span class="exp-list-name">Bhayshul Tuten</span>
+            <span class="exp-list-posrank exp-rb">RB24</span>
+          </div>
+          <div class="exp-list-team">JAX</div>
+          <div class="exp-list-adp">81</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-rb">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="82" data-pos="WR" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">KC</div>
+            <span class="exp-list-name">KC Concepcion</span>
+            <span class="exp-list-posrank exp-wr">WR30</span>
+          </div>
+          <div class="exp-list-team">CAR</div>
+          <div class="exp-list-adp">82</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-wr">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="84" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">KM</div>
+            <span class="exp-list-name">Kyler Murray</span>
+            <span class="exp-list-posrank exp-qb">QB22</span>
+          </div>
+          <div class="exp-list-team">ARI</div>
+          <div class="exp-list-adp">84</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-qb">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="85" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">PW</div>
+            <span class="exp-list-name">Parker Washington</span>
+            <span class="exp-list-posrank exp-wr">WR31</span>
+          </div>
+          <div class="exp-list-team">JAX</div>
+          <div class="exp-list-adp">85</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-wr">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="86" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">CW</div>
+            <span class="exp-list-name">Christian Watson</span>
+            <span class="exp-list-posrank exp-wr">WR32</span>
+          </div>
+          <div class="exp-list-team">GB</div>
+          <div class="exp-list-adp">86</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-wr">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="87" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">DS</div>
+            <span class="exp-list-name">D'Andre Swift</span>
+            <span class="exp-list-posrank exp-rb">RB25</span>
+          </div>
+          <div class="exp-list-team">CHI</div>
+          <div class="exp-list-adp">87</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="88" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">DM</div>
+            <span class="exp-list-name">DJ Moore</span>
+            <span class="exp-list-posrank exp-wr">WR33</span>
+          </div>
+          <div class="exp-list-team">CHI</div>
+          <div class="exp-list-adp">88</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="89" data-pos="TE" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-te">KS</div>
+            <span class="exp-list-name">Kenyon Sadiq</span>
+            <span class="exp-list-posrank exp-te">TE9</span>
+          </div>
+          <div class="exp-list-team">DEN</div>
+          <div class="exp-list-adp">89</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-te" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-te">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="91" data-pos="QB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">MS</div>
+            <span class="exp-list-name">Matthew Stafford</span>
+            <span class="exp-list-posrank exp-qb">QB24</span>
+          </div>
+          <div class="exp-list-team">LAR</div>
+          <div class="exp-list-adp">91</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-qb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="92" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">DM</div>
+            <span class="exp-list-name">David Montgomery</span>
+            <span class="exp-list-posrank exp-rb">RB26</span>
+          </div>
+          <div class="exp-list-team">HOU</div>
+          <div class="exp-list-adp">92</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="93" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">TM</div>
+            <span class="exp-list-name">Terry McLaurin</span>
+            <span class="exp-list-posrank exp-wr">WR34</span>
+          </div>
+          <div class="exp-list-team">WAS</div>
+          <div class="exp-list-adp">93</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="97" data-pos="RB" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">RH</div>
+            <span class="exp-list-name">RJ Harvey</span>
+            <span class="exp-list-posrank exp-rb">RB27</span>
+          </div>
+          <div class="exp-list-team">DEN</div>
+          <div class="exp-list-adp">97</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="100" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">DA</div>
+            <span class="exp-list-name">Davante Adams</span>
+            <span class="exp-list-posrank exp-wr">WR37</span>
+          </div>
+          <div class="exp-list-team">LAR</div>
+          <div class="exp-list-adp">100</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="101" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">AP</div>
+            <span class="exp-list-name">Alec Pierce</span>
+            <span class="exp-list-posrank exp-wr">WR38</span>
+          </div>
+          <div class="exp-list-team">IND</div>
+          <div class="exp-list-adp">101</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="104" data-pos="RB" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-rb">JW</div>
+            <span class="exp-list-name">Jaylen Warren</span>
+            <span class="exp-list-posrank exp-rb">RB28</span>
+          </div>
+          <div class="exp-list-team">PIT</div>
+          <div class="exp-list-adp">104</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-rb" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-rb">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="105" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">DB</div>
+            <span class="exp-list-name">Denzel Boston</span>
+            <span class="exp-list-posrank exp-wr">WR39</span>
+          </div>
+          <div class="exp-list-team">MIN</div>
+          <div class="exp-list-adp">105</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="106" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">WR</div>
+            <span class="exp-list-name">Wan'Dale Robinson</span>
+            <span class="exp-list-posrank exp-wr">WR40</span>
+          </div>
+          <div class="exp-list-team">TEN</div>
+          <div class="exp-list-adp">106</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-wr">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="6" data-adp="108" data-pos="TE" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-te">DK</div>
+            <span class="exp-list-name">Dalton Kincaid</span>
+            <span class="exp-list-posrank exp-te">TE12</span>
+          </div>
+          <div class="exp-list-team">BUF</div>
+          <div class="exp-list-adp">108</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">1/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-te" style="width:18%"></div></div>
+            <span class="exp-list-pct exp-te">6%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="109" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">OC</div>
+            <span class="exp-list-name">Omar Cooper</span>
+            <span class="exp-list-posrank exp-wr">WR41</span>
+          </div>
+          <div class="exp-list-team">NYJ</div>
+          <div class="exp-list-adp">109</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-wr">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="11" data-adp="110" data-pos="TE" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-te">OG</div>
+            <span class="exp-list-name">Oronde Gadsden</span>
+            <span class="exp-list-posrank exp-te">TE13</span>
+          </div>
+          <div class="exp-list-team">LAC</div>
+          <div class="exp-list-adp">110</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">2/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-te" style="width:33%"></div></div>
+            <span class="exp-list-pct exp-te">11%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="17" data-adp="111" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">JD</div>
+            <span class="exp-list-name">Josh Downs</span>
+            <span class="exp-list-posrank exp-wr">WR42</span>
+          </div>
+          <div class="exp-list-team">IND</div>
+          <div class="exp-list-adp">111</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">3/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:51%"></div></div>
+            <span class="exp-list-pct exp-wr">17%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="22" data-adp="113" data-pos="WR" data-rookie="0">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-wr">ME</div>
+            <span class="exp-list-name">Mike Evans</span>
+            <span class="exp-list-posrank exp-wr">WR44</span>
+          </div>
+          <div class="exp-list-team">TB</div>
+          <div class="exp-list-adp">113</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">4/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-wr" style="width:66%"></div></div>
+            <span class="exp-list-pct exp-wr">22%</span>
+          </div>
+        </div>
+        <div class="exp-list-row" data-pct="22" data-adp="116" data-pos="QB" data-rookie="1">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-qb">TS</div>
+            <span class="exp-list-name">Ty Simpson</span>
+            <span class="exp-list-posrank exp-qb">QB28</span>
+          </div>
+          <div class="exp-list-team">NE</div>
+          <div class="exp-list-adp">116</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">4/18</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-qb" style="width:66%"></div></div>
+            <span class="exp-list-pct exp-qb">22%</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div data-view="trades"><div class="placeholder"><h3>Trade History</h3><p>This section is being built.</p></div></div>
@@ -5909,36 +7276,76 @@
   });
 
   const expGrid = document.querySelector('.exp-grid');
+  const expList = document.querySelector('.exp-list');
+  const expListBody = document.querySelector('.exp-list-body');
+  const expState = { pos: 'ALL', rookies: false };
 
-  function sortExpGrid(mode) {
-    if (!expGrid) return;
-    const cards = Array.from(expGrid.children);
-    cards.sort((a, b) => {
+  function sortExpItems(container, mode) {
+    if (!container) return;
+    const items = Array.from(container.children);
+    items.sort((a, b) => {
       if (mode === 'adp') {
         return Number(a.dataset.adp) - Number(b.dataset.adp);
       }
       const diff = Number(b.dataset.pct) - Number(a.dataset.pct);
       return diff !== 0 ? diff : Number(a.dataset.adp) - Number(b.dataset.adp);
     });
-    cards.forEach((card, i) => {
-      card.querySelector('.exp-rank').textContent = i + 1;
-      expGrid.appendChild(card);
+    items.forEach((item, i) => {
+      const rankEl = item.querySelector('.exp-rank');
+      if (rankEl) rankEl.textContent = i + 1;
+      container.appendChild(item);
+    });
+  }
+
+  function applyExpFilter() {
+    [expGrid, expListBody].forEach(container => {
+      if (!container) return;
+      Array.from(container.children).forEach(item => {
+        const posOk = expState.pos === 'ALL' || item.dataset.pos === expState.pos;
+        const rookieOk = !expState.rookies || item.dataset.rookie === '1';
+        item.hidden = !(posOk && rookieOk);
+      });
     });
   }
 
   document.querySelectorAll('.exp-group').forEach(group => {
-    group.querySelectorAll('.exp-chip').forEach(chip => {
+    const chips = Array.from(group.querySelectorAll('.exp-chip'));
+    const isBoardList = chips.some(c => c.textContent.trim() === 'Board');
+    const isSort = chips.some(c => c.textContent.trim() === 'ADP');
+    const isPosition = chips.some(c => c.textContent.trim() === 'QB');
+
+    chips.forEach(chip => {
       chip.addEventListener('click', () => {
-        group.querySelectorAll('.exp-chip').forEach(c => c.classList.remove('active'));
+        chips.forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
         const label = chip.textContent.trim();
-        if (label === 'ADP') sortExpGrid('adp');
-        else if (label === 'EXP%') sortExpGrid('exp');
+
+        if (isBoardList) {
+          const showList = label === 'List';
+          if (expGrid) expGrid.hidden = showList;
+          if (expList) expList.hidden = !showList;
+        } else if (isSort) {
+          if (label === 'ADP') { sortExpItems(expGrid, 'adp'); sortExpItems(expListBody, 'adp'); }
+          else if (label === 'EXP%') { sortExpItems(expGrid, 'exp'); sortExpItems(expListBody, 'exp'); }
+        } else if (isPosition) {
+          expState.pos = label === 'All' ? 'ALL' : label;
+          applyExpFilter();
+        }
       });
     });
   });
 
-  sortExpGrid('exp');
+  document.querySelectorAll('.exp-btn').forEach(btn => {
+    if (btn.textContent.trim() !== 'Rookies') return;
+    btn.addEventListener('click', () => {
+      expState.rookies = !expState.rookies;
+      btn.classList.toggle('active');
+      applyExpFilter();
+    });
+  });
+
+  sortExpItems(expGrid, 'exp');
+  sortExpItems(expListBody, 'exp');
 </script>
 
 </body>
