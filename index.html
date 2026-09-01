@@ -729,6 +729,26 @@
   .ww-pmeta .ww-pos-te { color: var(--gold); }
   .ww-value, .ww-proj, .ww-roster { text-align: right; font-weight: 700; font-size: 13.5px; }
   .ww-value { color: var(--green); }
+  .ww-roster { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .ww-avail {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--blue);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+  .ww-avail-expand {
+    grid-column: 1 / -1;
+    margin-top: -2px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .ww-avail-expand b { color: var(--ink); }
 
   .ww-leagues-head { margin: 24px 0 4px; }
   .ww-leagues-head h2 {
@@ -855,6 +875,29 @@
     color: var(--muted);
     cursor: pointer;
   }
+  .exp-filters-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .exp-filters-note { font-size: 11.5px; color: var(--faint); font-style: italic; margin: 0 0 14px; }
+  .exp-filters-groups { display: flex; gap: 32px; flex-wrap: wrap; }
+  .exp-filter-group { display: flex; flex-direction: column; gap: 8px; }
+  .exp-filter-label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
+  .exp-filter-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .exp-filter-chip {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .exp-filter-chip.active { background: var(--green); color: #fff; border-color: var(--green); }
 
   .exp-grid {
     display: grid;
@@ -3670,6 +3713,10 @@
 
       <div class="ww-toolbar">
         <div class="ww-search"><span>&#128269;</span><input type="text" placeholder="Search any free agent..."></div>
+        <div class="sort-dropdown" id="wwLeagueDropdown">
+          <div class="sort-select" id="wwLeagueSelect"><span id="wwLeagueSelectLabel">All Leagues</span> <span>&#9662;</span></div>
+          <div class="sort-menu" id="wwLeagueMenu" hidden></div>
+        </div>
         <div class="ww-toggle-group">
           <span class="ww-toggle active">Value</span>
           <span class="ww-toggle">Trending</span>
@@ -3683,7 +3730,7 @@
         </div>
       </div>
 
-      <p class="ww-sub">Best available &middot; sorted by player value</p>
+      <p class="ww-sub" id="wwSub">Best available &middot; sorted by player value</p>
 
       <div class="ww-table-head">
         <span>PLAYER</span>
@@ -3692,9 +3739,9 @@
         <span>ROSTER %</span>
       </div>
 
-      <div class="ww-list">
+      <div class="ww-list" id="wwList">
 
-        <div class="ww-row">
+        <div class="ww-row" data-pos="RB" data-leagues="1776|Blitz Dynasty Football|Empire Entertainment|OTTOMAN|Studs and Duds">
           <div class="ww-player">
             <div class="ww-avatar" style="background:var(--green)">JB</div>
             <div>
@@ -3704,10 +3751,13 @@
           </div>
           <div class="ww-value">0.08</div>
           <div class="ww-proj">3.3</div>
-          <div class="ww-roster">71%</div>
+          <div class="ww-roster">
+            71%
+            <span class="ww-avail">5 leagues</span>
+          </div>
         </div>
 
-        <div class="ww-row">
+        <div class="ww-row" data-pos="WR" data-leagues="BDGE Dynasty League 53|Dynasty Is Life|Grandpa Phil|Sunday Crew">
           <div class="ww-player">
             <div class="ww-avatar" style="background:var(--blue)">TF</div>
             <div>
@@ -3717,10 +3767,13 @@
           </div>
           <div class="ww-value">0.06</div>
           <div class="ww-proj">3.9</div>
-          <div class="ww-roster">79%</div>
+          <div class="ww-roster">
+            79%
+            <span class="ww-avail">4 leagues</span>
+          </div>
         </div>
 
-        <div class="ww-row">
+        <div class="ww-row" data-pos="WR" data-leagues="Blockbuster Dynasty|Degens from Up Country|Fantasy Football Anonymous|Pure Potential Invitational 2|PURPLE PEOPLE|The Doctor's">
           <div class="ww-player">
             <div class="ww-avatar" style="background:var(--blue)">CR</div>
             <div>
@@ -3730,10 +3783,13 @@
           </div>
           <div class="ww-value">0.04</div>
           <div class="ww-proj">4.5</div>
-          <div class="ww-roster">65%</div>
+          <div class="ww-roster">
+            65%
+            <span class="ww-avail">6 leagues</span>
+          </div>
         </div>
 
-        <div class="ww-row">
+        <div class="ww-row" data-pos="RB" data-leagues="1776|BDGE Dynasty League 53|Blockbuster Dynasty|Dynasty Is Life|Empire Entertainment|Fantasy Football Anonymous|Flames in Football|Grandpa Phil|Pure Potential Invitational 2|PURPLE PEOPLE|StatChasers BestBall &amp; Chill 5.0|Studs and Duds|The Doctor's|Dynasty - Globo Gym v Avg Joes">
           <div class="ww-player">
             <div class="ww-avatar" style="background:var(--green)">GH</div>
             <div>
@@ -3743,7 +3799,10 @@
           </div>
           <div class="ww-value">0.04</div>
           <div class="ww-proj">1.5</div>
-          <div class="ww-roster">24%</div>
+          <div class="ww-roster">
+            24%
+            <span class="ww-avail">14 leagues</span>
+          </div>
         </div>
 
       </div>
@@ -4020,13 +4079,50 @@
       </div>
       <div class="exp-btn" data-year-filter="2026">Rookies</div>
       <div class="exp-btn" data-year-filter="2025">2nd Year</div>
-      <div class="exp-btn">&#128465; Filters</div>
+      <div class="exp-btn" id="expFiltersBtn">&#128465; Filters</div>
       <div class="exp-search"><span>&#128269;</span><input type="text" placeholder="Search player or team..."></div>
       <div class="exp-assets">
-        <span class="exp-assets-label">All Assets</span>
-        <input type="range" min="0" max="100" value="100">
+        <span class="exp-assets-label" id="expAssetsLabel">All Assets</span>
+        <input type="range" min="0" max="100" value="100" id="expAssetsRange">
       </div>
       <div class="exp-refresh">&#8635;</div>
+    </div>
+
+    <div class="exp-filters-panel" id="expFiltersPanel" hidden>
+      <p class="exp-filters-note">League-setting filters below need real league data from the Sleeper API to actually narrow results &mdash; they're wired up to toggle now and will filter for real once that's connected.</p>
+      <div class="exp-filters-groups">
+        <div class="exp-filter-group">
+          <div class="exp-filter-label">PPR</div>
+          <div class="exp-filter-chips" data-filter-category="ppr">
+            <span class="exp-filter-chip">Full PPR</span>
+            <span class="exp-filter-chip">Half PPR</span>
+            <span class="exp-filter-chip">Tiered PPR</span>
+          </div>
+        </div>
+        <div class="exp-filter-group">
+          <div class="exp-filter-label">PASS TD</div>
+          <div class="exp-filter-chips" data-filter-category="passtd">
+            <span class="exp-filter-chip">4pt Pass TD</span>
+            <span class="exp-filter-chip">5pt Pass TD</span>
+            <span class="exp-filter-chip">6pt Pass TD</span>
+          </div>
+        </div>
+        <div class="exp-filter-group">
+          <div class="exp-filter-label">TE PREMIUM</div>
+          <div class="exp-filter-chips" data-filter-category="tep">
+            <span class="exp-filter-chip">0 TEP</span>
+            <span class="exp-filter-chip">0.5 TEP</span>
+            <span class="exp-filter-chip">0.75 TEP</span>
+          </div>
+        </div>
+        <div class="exp-filter-group">
+          <div class="exp-filter-label">LEAGUE TYPE</div>
+          <div class="exp-filter-chips" data-filter-category="leaguetype">
+            <span class="exp-filter-chip">Standard</span>
+            <span class="exp-filter-chip">Best Ball</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="exp-grid">
@@ -7267,46 +7363,144 @@
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
   });
 
-  document.querySelectorAll('.ww-toggle-group, .ww-pos-filter').forEach(group => {
-    group.querySelectorAll('.ww-toggle, .ww-pos-chip').forEach(chip => {
+  document.querySelectorAll('.ww-toggle-group').forEach(group => {
+    group.querySelectorAll('.ww-toggle').forEach(chip => {
       chip.addEventListener('click', () => {
-        group.querySelectorAll('.ww-toggle, .ww-pos-chip').forEach(c => c.classList.remove('active'));
+        group.querySelectorAll('.ww-toggle').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
       });
+    });
+  });
+
+  const wwLeagues = [
+    '1776', 'BDGE Dynasty League 53', 'Blitz Dynasty Football', 'Blockbuster Dynasty',
+    'Degens from Up Country', 'Dynasty - Globo Gym v Avg Joes', 'Dynasty Is Life',
+    'Empire Entertainment', 'Fantasy Football Anonymous', 'Flames in Football', 'Grandpa Phil',
+    'OTTOMAN', 'Pure Potential Invitational 2', 'PURPLE PEOPLE', 'StatChasers BestBall & Chill 5.0',
+    'Studs and Duds', 'Sunday Crew', "The Doctor's",
+  ];
+  const wwState = { pos: 'ALL', league: 'ALL' };
+
+  function applyWwFilter() {
+    document.querySelectorAll('#wwList > .ww-row').forEach(row => {
+      const posOk = wwState.pos === 'ALL' || row.dataset.pos === wwState.pos;
+      const leagueOk = wwState.league === 'ALL' ||
+        row.dataset.leagues.split('|').includes(wwState.league);
+      row.hidden = !(posOk && leagueOk);
+    });
+  }
+
+  document.querySelectorAll('.ww-pos-filter').forEach(group => {
+    group.querySelectorAll('.ww-pos-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        group.querySelectorAll('.ww-pos-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        wwState.pos = chip.textContent.trim() === 'All' ? 'ALL' : chip.textContent.trim();
+        applyWwFilter();
+      });
+    });
+  });
+
+  const wwLeagueMenu = document.getElementById('wwLeagueMenu');
+  const wwLeagueSelectLabel = document.getElementById('wwLeagueSelectLabel');
+  const wwSub = document.getElementById('wwSub');
+  if (wwLeagueMenu) {
+    const allOpt = document.createElement('div');
+    allOpt.className = 'sort-option active';
+    allOpt.textContent = 'All Leagues';
+    allOpt.dataset.league = 'ALL';
+    wwLeagueMenu.appendChild(allOpt);
+    wwLeagues.forEach(name => {
+      const opt = document.createElement('div');
+      opt.className = 'sort-option';
+      opt.textContent = name;
+      opt.dataset.league = name;
+      wwLeagueMenu.appendChild(opt);
+    });
+
+    const wwLeagueSelect = document.getElementById('wwLeagueSelect');
+    wwLeagueSelect.addEventListener('click', (e) => {
+      e.stopPropagation();
+      wwLeagueMenu.hidden = !wwLeagueMenu.hidden;
+    });
+    wwLeagueMenu.querySelectorAll('.sort-option').forEach(option => {
+      option.addEventListener('click', () => {
+        wwLeagueMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+        option.classList.add('active');
+        wwState.league = option.dataset.league;
+        wwLeagueSelectLabel.textContent = option.dataset.league === 'ALL' ? 'All Leagues' : option.dataset.league;
+        wwSub.textContent = option.dataset.league === 'ALL'
+          ? 'Best available · sorted by player value'
+          : `Best available in ${option.dataset.league} · sorted by player value`;
+        wwLeagueMenu.hidden = true;
+        applyWwFilter();
+      });
+    });
+    document.addEventListener('click', () => { wwLeagueMenu.hidden = true; });
+  }
+
+  document.querySelectorAll('.ww-avail').forEach(badge => {
+    badge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const row = badge.closest('.ww-row');
+      const existing = row.nextElementSibling;
+      const isOpen = existing && existing.classList.contains('ww-avail-expand');
+      document.querySelectorAll('.ww-avail-expand').forEach(el => el.remove());
+      if (isOpen) return;
+      const leagues = row.dataset.leagues.split('|');
+      const expand = document.createElement('div');
+      expand.className = 'ww-avail-expand';
+      expand.innerHTML = '<b>Available (free agent) in:</b> ' + leagues.join(' &middot; ');
+      row.after(expand);
     });
   });
 
   const expGrid = document.querySelector('.exp-grid');
   const expList = document.querySelector('.exp-list');
   const expListBody = document.querySelector('.exp-list-body');
-  const expState = { pos: 'ALL', year: null };
+  const expState = { pos: 'ALL', year: null, sortMode: 'exp', sortDir: 1, assetFraction: 1 };
 
-  function sortExpItems(container, mode) {
+  function expCompare(mode, a, b) {
+    if (mode === 'adp') return Number(a.dataset.adp) - Number(b.dataset.adp);
+    const diff = Number(b.dataset.pct) - Number(a.dataset.pct);
+    return diff !== 0 ? diff : Number(a.dataset.adp) - Number(b.dataset.adp);
+  }
+
+  function sortExpItems(container) {
     if (!container) return;
     const items = Array.from(container.children);
-    items.sort((a, b) => {
-      if (mode === 'adp') {
-        return Number(a.dataset.adp) - Number(b.dataset.adp);
-      }
-      const diff = Number(b.dataset.pct) - Number(a.dataset.pct);
-      return diff !== 0 ? diff : Number(a.dataset.adp) - Number(b.dataset.adp);
-    });
-    items.forEach((item, i) => {
-      const rankEl = item.querySelector('.exp-rank');
-      if (rankEl) rankEl.textContent = i + 1;
-      container.appendChild(item);
-    });
+    items.sort((a, b) => expCompare(expState.sortMode, a, b) * expState.sortDir);
+    items.forEach(item => container.appendChild(item));
   }
 
   function applyExpFilter() {
     [expGrid, expListBody].forEach(container => {
       if (!container) return;
-      Array.from(container.children).forEach(item => {
+      const items = Array.from(container.children);
+      const passesBase = items.map(item => {
         const posOk = expState.pos === 'ALL' || item.dataset.pos === expState.pos;
         const yearOk = !expState.year || item.dataset.year === expState.year;
-        item.hidden = !(posOk && yearOk);
+        return posOk && yearOk;
+      });
+      const baseCount = passesBase.filter(Boolean).length;
+      const keepCount = Math.max(1, Math.ceil(baseCount * expState.assetFraction));
+      let shown = 0;
+      items.forEach((item, i) => {
+        if (!passesBase[i]) { item.hidden = true; return; }
+        shown++;
+        item.hidden = shown > keepCount;
+        if (container === expGrid) {
+          const rankEl = item.querySelector('.exp-rank');
+          if (rankEl && !item.hidden) rankEl.textContent = shown;
+        }
       });
     });
+  }
+
+  function refreshExpBoard() {
+    sortExpItems(expGrid);
+    sortExpItems(expListBody);
+    applyExpFilter();
   }
 
   document.querySelectorAll('.exp-group').forEach(group => {
@@ -7317,17 +7511,22 @@
 
     chips.forEach(chip => {
       chip.addEventListener('click', () => {
+        const label = chip.textContent.trim();
+        const wasActive = chip.classList.contains('active');
         chips.forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
-        const label = chip.textContent.trim();
 
         if (isBoardList) {
           const showList = label === 'List';
           if (expGrid) expGrid.hidden = showList;
           if (expList) expList.hidden = !showList;
         } else if (isSort) {
-          if (label === 'ADP') { sortExpItems(expGrid, 'adp'); sortExpItems(expListBody, 'adp'); }
-          else if (label === 'EXP%') { sortExpItems(expGrid, 'exp'); sortExpItems(expListBody, 'exp'); }
+          const mode = label === 'ADP' ? 'adp' : (label === 'EXP%' ? 'exp' : null);
+          if (mode) {
+            expState.sortDir = (wasActive && expState.sortMode === mode) ? expState.sortDir * -1 : 1;
+            expState.sortMode = mode;
+            refreshExpBoard();
+          }
         } else if (isPosition) {
           expState.pos = label === 'All' ? 'ALL' : label;
           applyExpFilter();
@@ -7348,8 +7547,40 @@
     });
   });
 
-  sortExpItems(expGrid, 'exp');
-  sortExpItems(expListBody, 'exp');
+  const expFiltersBtn = document.getElementById('expFiltersBtn');
+  const expFiltersPanel = document.getElementById('expFiltersPanel');
+  if (expFiltersBtn && expFiltersPanel) {
+    expFiltersBtn.addEventListener('click', () => {
+      expFiltersPanel.hidden = !expFiltersPanel.hidden;
+      expFiltersBtn.classList.toggle('active', !expFiltersPanel.hidden);
+    });
+  }
+  document.querySelectorAll('.exp-filter-chips').forEach(group => {
+    const chips = Array.from(group.querySelectorAll('.exp-filter-chip'));
+    chips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const wasActive = chip.classList.contains('active');
+        chips.forEach(c => c.classList.remove('active'));
+        if (!wasActive) chip.classList.add('active');
+        // League-setting filters are cosmetic until real per-league data
+        // (PPR/Pass TD/TEP/League Type from the Sleeper API) is wired in.
+      });
+    });
+  });
+
+  const expAssetsRange = document.getElementById('expAssetsRange');
+  const expAssetsLabel = document.getElementById('expAssetsLabel');
+  if (expAssetsRange) {
+    expAssetsRange.addEventListener('input', () => {
+      expState.assetFraction = Number(expAssetsRange.value) / 100;
+      expAssetsLabel.textContent = expState.assetFraction >= 1
+        ? 'All Assets'
+        : `Top ${Math.round(expState.assetFraction * 100)}%`;
+      applyExpFilter();
+    });
+  }
+
+  refreshExpBoard();
 </script>
 
 </body>
