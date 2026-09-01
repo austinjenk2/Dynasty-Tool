@@ -1695,6 +1695,170 @@
 
   [data-view] { display: none; }
   [data-view].is-active { display: block; }
+
+  /* Draft Room */
+  .dr-subtabs { display: flex; align-items: center; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+  .dr-subtabs-left { display: flex; gap: 22px; }
+  .dr-subtab { padding: 12px 0; font-size: 14px; font-weight: 700; color: var(--muted); border-bottom: 2.5px solid transparent; cursor: pointer; }
+  .dr-subtab:hover:not(.active) { color: var(--ink); }
+  .dr-subtab.active { color: var(--ink); border-bottom-color: var(--red); }
+  .dr-view { display: none; }
+  .dr-view.is-active { display: block; }
+
+  .dr-drafts-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .dr-drafts-count { font-size: 12px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); }
+  .dr-drafts-search { max-width: 220px; }
+  .dr-drafts-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 900px) { .dr-drafts-list { grid-template-columns: 1fr; } }
+
+  .dr-draft-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+  .dr-draft-row:hover { border-color: var(--faint); }
+  .dr-draft-row.dr-row-hidden { display: none; }
+  .dr-draft-status {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    border: 1.5px solid var(--faint);
+    color: var(--faint);
+    border-radius: 20px;
+    padding: 3px 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .dr-draft-status.dr-status-live { color: var(--red); border-color: var(--red); }
+  .dr-draft-status.dr-status-upcoming { color: var(--blue); border-color: var(--blue); }
+  .dr-draft-main { flex: 1; min-width: 0; }
+  .dr-draft-name { font-size: 13.5px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dr-draft-meta { font-size: 11px; color: var(--faint); margin-top: 2px; }
+  .dr-draft-chevron { color: var(--faint); font-size: 16px; flex-shrink: 0; }
+
+  .dr-board-back { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; margin-bottom: 14px; }
+  .dr-board-back:hover { color: var(--ink); }
+  .dr-board-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; gap: 12px; flex-wrap: wrap; }
+  .dr-board-title-row { display: flex; align-items: center; gap: 12px; }
+  .dr-board-name { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 700; }
+  .dr-board-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .dr-board-toggle { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+  .dr-board-toggle-btn { padding: 8px 16px; font-size: 12.5px; font-weight: 700; color: var(--muted); cursor: pointer; }
+  .dr-board-toggle-btn.active { background: var(--ink); color: #fff; }
+
+  .dr-board-panel { display: none; }
+  .dr-board-panel.is-active { display: block; }
+
+  .dr-grid-wrap { overflow-x: auto; margin-bottom: 20px; padding-bottom: 6px; }
+  .dr-grid { display: flex; gap: 8px; width: max-content; }
+  .dr-grid-col { display: flex; flex-direction: column; gap: 8px; width: 132px; flex-shrink: 0; }
+  .dr-grid-team-head { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 4px; cursor: pointer; border-radius: 6px; border: 1.5px solid transparent; }
+  .dr-grid-team-head:hover, .dr-grid-team-head.is-active { border-color: var(--ink); background: var(--surface); }
+  .dr-team-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .dr-team-name { font-size: 11px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+
+  .dr-pick {
+    background: var(--surface);
+    border: 1.5px solid var(--border-soft);
+    border-radius: 6px;
+    padding: 8px;
+    min-height: 64px;
+    position: relative;
+  }
+  .dr-pick.dr-pos-qb { border-color: var(--red); }
+  .dr-pick.dr-pos-rb { border-color: var(--green); }
+  .dr-pick.dr-pos-wr { border-color: var(--blue); }
+  .dr-pick.dr-pos-te { border-color: var(--gold); }
+  .dr-pick.dr-team-dim { opacity: 0.3; }
+  .dr-pick-num { font-size: 9.5px; font-weight: 700; color: var(--faint); float: right; }
+  .dr-pick-name { font-size: 12px; font-weight: 700; color: var(--ink); margin-top: 8px; }
+  .dr-pick-meta { font-size: 10px; color: var(--faint); margin-top: 2px; }
+  .dr-pick-meta .dr-pos { font-weight: 800; }
+  .dr-pick-meta.dr-pos-qb .dr-pos { color: var(--red); }
+  .dr-pick-meta.dr-pos-rb .dr-pos { color: var(--green); }
+  .dr-pick-meta.dr-pos-wr .dr-pos { color: var(--blue); }
+  .dr-pick-meta.dr-pos-te .dr-pos { color: var(--gold); }
+  .dr-pick-trade { font-size: 9.5px; color: var(--faint); font-style: italic; margin-top: 4px; }
+
+  .dr-board-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .dr-board-bottom { grid-template-columns: 1fr; } }
+  .dr-roster-panel, .dr-chat-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .dr-roster-head { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 10px; }
+  .dr-roster-team { font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .dr-roster-value { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .dr-roster-section-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 10px 0 6px; }
+  .dr-roster-player { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-soft); font-size: 12.5px; }
+  .dr-roster-player:last-child { border-bottom: none; }
+  .dr-roster-pos { width: 24px; font-size: 10px; font-weight: 800; color: #fff; border-radius: 4px; text-align: center; padding: 2px 0; flex-shrink: 0; }
+  .dr-roster-pos.dr-pos-qb { background: var(--red); }
+  .dr-roster-pos.dr-pos-rb { background: var(--green); }
+  .dr-roster-pos.dr-pos-wr { background: var(--blue); }
+  .dr-roster-pos.dr-pos-te { background: var(--gold); }
+  .dr-roster-name { flex: 1; font-weight: 600; }
+  .dr-roster-team-abbr { color: var(--faint); font-size: 11px; }
+
+  .dr-chat-tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--border); margin-bottom: 40px; }
+  .dr-chat-tab { padding-bottom: 8px; font-size: 12.5px; font-weight: 700; color: var(--muted); border-bottom: 2px solid transparent; }
+  .dr-chat-tab.active { color: var(--ink); border-bottom-color: var(--red); }
+  .dr-chat-empty { text-align: center; color: var(--faint); font-size: 13px; padding: 40px 0; }
+
+  .dr-intel-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+  .dr-intel-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .dr-intel-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 6px; }
+  .dr-intel-value { font-size: 20px; font-weight: 700; font-family: 'Source Serif 4', serif; }
+  .dr-intel-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .dr-intel-note { font-size: 11px; color: var(--faint); font-style: italic; margin-bottom: 16px; }
+  .dr-intel-table-head, .dr-intel-row { display: grid; grid-template-columns: 2.5fr 1fr 1fr; gap: 10px; align-items: center; padding: 10px 4px; }
+  .dr-intel-table-head { font-size: 10px; font-weight: 800; letter-spacing: 0.4px; color: var(--faint); border-bottom: 1px solid var(--border); }
+  .dr-intel-row { border-bottom: 1px solid var(--border-soft); font-size: 12.5px; }
+  .dr-intel-manager { display: flex; align-items: center; gap: 10px; }
+  .dr-intel-rank { width: 16px; color: var(--faint); font-weight: 700; font-size: 11px; }
+  .dr-intel-mname { font-weight: 700; }
+  .dr-intel-msub { font-size: 11px; color: var(--faint); margin-top: 2px; }
+  .dr-intel-trading .plus { color: var(--green); font-weight: 700; }
+  .dr-intel-trading .minus { color: var(--red); font-weight: 700; }
+  .dr-intel-clock { text-align: right; font-size: 12px; }
+
+  .adp-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+  .adp-pos-chips { display: flex; gap: 6px; }
+  .adp-caption { font-size: 11.5px; color: var(--faint); margin: 10px 0 16px; }
+  .adp-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; }
+  @media (max-width: 1400px) { .adp-grid { grid-template-columns: repeat(8, 1fr); } }
+  @media (max-width: 1000px) { .adp-grid { grid-template-columns: repeat(6, 1fr); } }
+  @media (max-width: 700px) { .adp-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 460px) { .adp-grid { grid-template-columns: repeat(2, 1fr); } }
+  .adp-card { position: relative; background: var(--surface); border: 1.5px solid var(--border-soft); border-radius: 7px; padding: 6px; }
+  .adp-card.adp-row-hidden { display: none; }
+  .adp-card.adp-qb { border-color: var(--red); }
+  .adp-card.adp-rb { border-color: var(--green); }
+  .adp-card.adp-wr { border-color: var(--blue); }
+  .adp-card.adp-te { border-color: var(--gold); }
+  .adp-rank { font-size: 10px; font-weight: 700; color: var(--faint); }
+  .adp-team-icon {
+    position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 7px; font-weight: 700; color: var(--faint);
+  }
+  .adp-avatar-wrap { position: relative; margin: 5px 0; }
+  .adp-avatar { width: 100%; aspect-ratio: 1 / 0.85; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #fff; }
+  .adp-pos-badge { position: absolute; bottom: 3px; right: 3px; font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 3px; color: #fff; }
+  .adp-pos-badge.adp-qb { background: var(--red); }
+  .adp-pos-badge.adp-rb { background: var(--green); }
+  .adp-pos-badge.adp-wr { background: var(--blue); }
+  .adp-pos-badge.adp-te { background: var(--gold); }
+  .adp-name { font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .adp-sub-row { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; margin-top: 1px; }
+  .adp-posrank { font-size: 10px; font-weight: 800; }
+  .adp-posrank.adp-qb { color: var(--red); }
+  .adp-posrank.adp-rb { color: var(--green); }
+  .adp-posrank.adp-wr { color: var(--blue); }
+  .adp-posrank.adp-te { color: var(--gold); }
+  .adp-value { font-size: 12px; font-weight: 700; color: var(--ink); }
 </style>
 </head>
 <body>
@@ -4313,7 +4477,1842 @@
       </div>
     </div>
   </div>
-  <div data-view="draft"><div class="placeholder"><h3>Draft Room</h3><p>This section is being built.</p></div></div>
+  <div data-view="draft">
+    <div class="page-title">
+      <h1>Draft Room</h1>
+      <p>Every completed and upcoming draft across your 18 leagues.</p>
+    </div>
+
+    <div class="dr-subtabs">
+      <div class="dr-subtabs-left">
+        <a class="dr-subtab active" data-dr-tab="drafts">My Drafts</a>
+        <a class="dr-subtab" data-dr-tab="marketadp">Market ADP</a>
+        <a class="dr-subtab" data-dr-tab="myadp">My ADP</a>
+        <a class="dr-subtab" data-dr-tab="war">WAR</a>
+      </div>
+    </div>
+
+    <div data-dr-view="drafts" class="dr-view is-active">
+
+      <div id="drDraftsHome">
+        <div class="dr-drafts-head">
+          <div class="dr-drafts-count">DRAFTS &middot; <span id="drDraftsCount">28</span></div>
+          <div class="search-box dr-drafts-search"><input type="text" id="drDraftsSearch" placeholder="Search leagues..."></div>
+        </div>
+        <div class="dr-drafts-list" id="drDraftsList">
+        <div class="dr-draft-row" data-league="Empire Entertainment" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:var(--navy)">EE</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Empire Entertainment</div>
+            <div class="dr-draft-meta">Aug 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="OTTOMAN" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:var(--red)">OT</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">OTTOMAN</div>
+            <div class="dr-draft-meta">Aug 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="StatChasers BestBall & Chill 5.0" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#3f6b4a">SC</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">StatChasers BestBall & Chill 5.0</div>
+            <div class="dr-draft-meta">Jul 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Blitz Dynasty Football" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#1d3557">BD</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Blitz Dynasty Football</div>
+            <div class="dr-draft-meta">Jul 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Dynasty Is Life" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#8a5a2b">DL</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Dynasty Is Life</div>
+            <div class="dr-draft-meta">Jun 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="The Doctor's" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#5b6f5b">TD</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">The Doctor's</div>
+            <div class="dr-draft-meta">Jun 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="BDGE Dynasty League 53" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#b23a5a">53</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">BDGE Dynasty League 53</div>
+            <div class="dr-draft-meta">May 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Pure Potential Invitational 2" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#1c7a8c">P2</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Pure Potential Invitational 2</div>
+            <div class="dr-draft-meta">May 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Degens from Up Country" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#4a3f36">DG</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Degens from Up Country</div>
+            <div class="dr-draft-meta">May 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="1776" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#3b4f8a">76</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">1776</div>
+            <div class="dr-draft-meta">Apr 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Sunday Crew" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#8a7a2f">SU</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Sunday Crew</div>
+            <div class="dr-draft-meta">Apr 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="PURPLE PEOPLE" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#6b3fa0">PP</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">PURPLE PEOPLE</div>
+            <div class="dr-draft-meta">Apr 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Studs and Duds" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#2d2d33">SD</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Studs and Duds</div>
+            <div class="dr-draft-meta">Mar 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Fantasy Football Anonymous" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#1d3557">FA</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Fantasy Football Anonymous</div>
+            <div class="dr-draft-meta">Mar 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Flames in Football" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#a3441f">FL</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Flames in Football</div>
+            <div class="dr-draft-meta">Feb 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Grandpa Phil" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#2f4f7a">GP</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Grandpa Phil</div>
+            <div class="dr-draft-meta">Feb 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Dynasty - Globo Gym v Avg Joes" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#7a3f2f">GG</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Dynasty - Globo Gym v Avg Joes</div>
+            <div class="dr-draft-meta">Jan 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Blockbuster Dynasty" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#3f3f8a">BB</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Blockbuster Dynasty</div>
+            <div class="dr-draft-meta">Jan 2026 &middot; Rookie Draft &middot; 12 teams &middot; 4 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Empire Entertainment" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:var(--navy)">EE</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Empire Entertainment</div>
+            <div class="dr-draft-meta">Aug 2024 &middot; Startup Draft &middot; 12 teams &middot; 27 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="OTTOMAN" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:var(--red)">OT</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">OTTOMAN</div>
+            <div class="dr-draft-meta">Jun 2024 &middot; Startup Draft &middot; 12 teams &middot; 28 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="StatChasers BestBall & Chill 5.0" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#3f6b4a">SC</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">StatChasers BestBall & Chill 5.0</div>
+            <div class="dr-draft-meta">Mar 2024 &middot; Startup Draft &middot; 12 teams &middot; 29 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Blitz Dynasty Football" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#1d3557">BD</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Blitz Dynasty Football</div>
+            <div class="dr-draft-meta">Jan 2024 &middot; Startup Draft &middot; 12 teams &middot; 27 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Dynasty Is Life" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#8a5a2b">DL</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Dynasty Is Life</div>
+            <div class="dr-draft-meta">Nov 2023 &middot; Startup Draft &middot; 12 teams &middot; 28 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="The Doctor's" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#5b6f5b">TD</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">The Doctor's</div>
+            <div class="dr-draft-meta">Sep 2023 &middot; Startup Draft &middot; 12 teams &middot; 29 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="BDGE Dynasty League 53" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#b23a5a">53</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">BDGE Dynasty League 53</div>
+            <div class="dr-draft-meta">Jul 2023 &middot; Startup Draft &middot; 12 teams &middot; 27 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Pure Potential Invitational 2" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#1c7a8c">P2</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Pure Potential Invitational 2</div>
+            <div class="dr-draft-meta">May 2023 &middot; Startup Draft &middot; 12 teams &middot; 28 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="Degens from Up Country" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#4a3f36">DG</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">Degens from Up Country</div>
+            <div class="dr-draft-meta">Mar 2023 &middot; Startup Draft &middot; 12 teams &middot; 29 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        <div class="dr-draft-row" data-league="1776" data-status="complete">
+          <div class="dr-draft-status dr-status-complete">COMPLETE</div>
+          <div class="league-logo" style="background:#3b4f8a">76</div>
+          <div class="dr-draft-main">
+            <div class="dr-draft-name">1776</div>
+            <div class="dr-draft-meta">Feb 2023 &middot; Startup Draft &middot; 12 teams &middot; 27 rounds</div>
+          </div>
+          <div class="dr-draft-chevron">&rsaquo;</div>
+        </div>
+        </div>
+      </div>
+
+      <div id="drBoardView" hidden>
+        <a class="dr-board-back" id="drBoardBack">&larr; Back to Drafts</a>
+
+        <div class="dr-board-head">
+          <div class="dr-board-title-row">
+            <div class="league-logo" id="drBoardLogo" style="background:#2f4f7a">GP</div>
+            <div>
+              <div class="dr-board-name" id="drBoardName">Grandpa Phil</div>
+              <div class="dr-board-sub" id="drBoardSub">2026 &middot; Rookie Draft &middot; Linear &middot; 12 teams &middot; 4 rounds &middot; Complete</div>
+            </div>
+          </div>
+          <div class="dr-board-toggle">
+            <div class="dr-board-toggle-btn active" data-dr-board-tab="board">Board</div>
+            <div class="dr-board-toggle-btn" data-dr-board-tab="intel">Intel</div>
+          </div>
+        </div>
+
+        <div class="dr-board-panel is-active" data-dr-board-panel="board">
+          <div class="dr-grid-wrap">
+            <div class="dr-grid" id="drGrid">
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="okNikolai">
+              <div class="dr-team-avatar" style="background:#5b6f73">oK</div>
+              <div class="dr-team-name">okNikolai</div>
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="okNikolai">
+              <span class="dr-pick-num">1.01</span>
+              <div class="dr-pick-name">Jeremiyah Love</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; ARI</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="okNikolai">
+              <span class="dr-pick-num">2.01</span>
+              <div class="dr-pick-name">Jonah Coleman</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; DEN</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-te" data-team="okNikolai">
+              <span class="dr-pick-num">3.01</span>
+              <div class="dr-pick-name">Cade Stover</div>
+              <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; HOU</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="okNikolai">
+              <span class="dr-pick-num">4.01</span>
+              <div class="dr-pick-name">Woody Marks</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; HOU</div>
+              
+            </div>
+          </div>
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="carsonfrye12">
+              <div class="dr-team-avatar" style="background:#8a5a2b">cF</div>
+              <div class="dr-team-name">carsonfrye12</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="carsonfrye12">
+              <span class="dr-pick-num">1.02</span>
+              <div class="dr-pick-name">Carnell Tate</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; TEN</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-te" data-team="carsonfrye12">
+              <span class="dr-pick-num">2.02</span>
+              <div class="dr-pick-name">Eli Stowers</div>
+              <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; PHI</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="carsonfrye12">
+              <span class="dr-pick-num">3.02</span>
+              <div class="dr-pick-name">Demond Claiborne</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; NE</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="carsonfrye12">
+              <span class="dr-pick-num">4.02</span>
+              <div class="dr-pick-name">Kyle Williams</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NE</div>
+              
+            </div>
+          </div>
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="PaulPatterson">
+              <div class="dr-team-avatar" style="background:#2f4f7a">PP</div>
+              <div class="dr-team-name">PaulPatterson</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
+              <span class="dr-pick-num">1.03</span>
+              <div class="dr-pick-name">Jordyn Tyson</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NO</div>
+              <div class="dr-pick-trade">&rarr; AusJ2</div>
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="Domo8">
+              <span class="dr-pick-num">2.03</span>
+              <div class="dr-pick-name">Emmett Johnson</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; KC</div>
+              <div class="dr-pick-trade">&rarr; Domo8</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson">
+              <span class="dr-pick-num">3.03</span>
+              <div class="dr-pick-name">Malachi Fields</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NE</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson">
+              <span class="dr-pick-num">4.03</span>
+              <div class="dr-pick-name">Chimere Dike</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; TEN</div>
+              
+            </div>
+          </div>
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="AusJ2">
+              <div class="dr-team-avatar" style="background:#1c7a8c">AJ</div>
+              <div class="dr-team-name">AusJ2</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
+              <span class="dr-pick-num">1.04</span>
+              <div class="dr-pick-name">Makai Lemon</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; PHI</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="carsonfrye12">
+              <span class="dr-pick-num">2.04</span>
+              <div class="dr-pick-name">Germie Bernard</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; PIT</div>
+              <div class="dr-pick-trade">&rarr; carsonfrye12</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
+              <span class="dr-pick-num">3.04</span>
+              <div class="dr-pick-name">Zachariah Branch</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; SEA</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
+              <span class="dr-pick-num">4.04</span>
+              <div class="dr-pick-name">Donte Thornton</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; LV</div>
+              
+            </div>
+          </div>
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="WesB69">
+              <div class="dr-team-avatar" style="background:#a3441f">WB</div>
+              <div class="dr-team-name">WesB69</div>
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="PaulPatterson">
+              <span class="dr-pick-num">1.05</span>
+              <div class="dr-pick-name">Jadarian Price</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; SEA</div>
+              <div class="dr-pick-trade">&rarr; PaulPatterson</div>
+            </div>
+            <div class="dr-pick dr-pos-te" data-team="carsonfrye12">
+              <span class="dr-pick-num">2.05</span>
+              <div class="dr-pick-name">Eli Raridon</div>
+              <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; NE</div>
+              <div class="dr-pick-trade">&rarr; carsonfrye12</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="WesB69">
+              <span class="dr-pick-num">3.05</span>
+              <div class="dr-pick-name">Elijah Sarratt</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; MIN</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="WesB69">
+              <span class="dr-pick-num">4.05</span>
+              <div class="dr-pick-name">Kalel Mullings</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; TEN</div>
+              
+            </div>
+          </div>
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="Domo8">
+              <div class="dr-team-avatar" style="background:#4a3f36">D8</div>
+              <div class="dr-team-name">Domo8</div>
+            </div>
+            <div class="dr-pick dr-pos-qb" data-team="AusJ2">
+              <span class="dr-pick-num">1.06</span>
+              <div class="dr-pick-name">Fernando Mendoza</div>
+              <div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; LV</div>
+              <div class="dr-pick-trade">&rarr; AusJ2</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="Domo8">
+              <span class="dr-pick-num">2.06</span>
+              <div class="dr-pick-name">Cyrus Allen</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; KC</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="Domo8">
+              <span class="dr-pick-num">3.06</span>
+              <div class="dr-pick-name">Kaytron Allen</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; PIT</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="Domo8">
+              <span class="dr-pick-num">4.06</span>
+              <div class="dr-pick-name">Devin Neal</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; NO</div>
+              
+            </div>
+          </div>
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="KingProfitVII">
+              <div class="dr-team-avatar" style="background:#8a7a2f">KP</div>
+              <div class="dr-team-name">KingProfitVII</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
+              <span class="dr-pick-num">1.07</span>
+              <div class="dr-pick-name">KC Concepcion</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CLE</div>
+              <div class="dr-pick-trade">&rarr; AusJ2</div>
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="AusJ2">
+              <span class="dr-pick-num">2.07</span>
+              <div class="dr-pick-name">Nicholas Singleton</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; TEN</div>
+              <div class="dr-pick-trade">&rarr; AusJ2</div>
+            </div>
+            <div class="dr-pick dr-pos-qb" data-team="KingProfitVII">
+              <span class="dr-pick-num">3.07</span>
+              <div class="dr-pick-name">Drew Allar</div>
+              <div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; CHI</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="KingProfitVII">
+              <span class="dr-pick-num">4.07</span>
+              <div class="dr-pick-name">Jaydon Blue</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; DAL</div>
+              
+            </div>
+          </div>
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="dbush24">
+              <div class="dr-team-avatar" style="background:#3b4f8a">db</div>
+              <div class="dr-team-name">dbush24</div>
+            </div>
+            <div class="dr-pick dr-pos-te" data-team="DanyloFilipok">
+              <span class="dr-pick-num">1.08</span>
+              <div class="dr-pick-name">Kenyon Sadiq</div>
+              <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; NYJ</div>
+              <div class="dr-pick-trade">&rarr; DanyloFilipok</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="rynchk">
+              <span class="dr-pick-num">2.08</span>
+              <div class="dr-pick-name">Ja'Kobi Lane</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; BAL</div>
+              <div class="dr-pick-trade">&rarr; rynchk</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="dbush24">
+              <span class="dr-pick-num">3.08</span>
+              <div class="dr-pick-name">Ted Hurst</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CAR</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="dbush24">
+              <span class="dr-pick-num">4.08</span>
+              <div class="dr-pick-name">Isaac TeSlaa</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; DET</div>
+              
+            </div>
+          </div>
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="Burtrum">
+              <div class="dr-team-avatar" style="background:#6b3fa0">Bu</div>
+              <div class="dr-team-name">Burtrum</div>
+            </div>
+            <div class="dr-pick dr-pos-qb" data-team="okNikolai">
+              <span class="dr-pick-num">1.09</span>
+              <div class="dr-pick-name">Ty Simpson</div>
+              <div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; LAR</div>
+              <div class="dr-pick-trade">&rarr; okNikolai</div>
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="AusJ2">
+              <span class="dr-pick-num">2.09</span>
+              <div class="dr-pick-name">Mike Washington</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; LV</div>
+              <div class="dr-pick-trade">&rarr; AusJ2</div>
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="Burtrum">
+              <span class="dr-pick-num">3.09</span>
+              <div class="dr-pick-name">Kaelon Black</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; DAL</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="Burtrum">
+              <span class="dr-pick-num">4.09</span>
+              <div class="dr-pick-name">Jack Bech</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; LV</div>
+              
+            </div>
+          </div>
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="zenner">
+              <div class="dr-team-avatar" style="background:#3f6b4a">ze</div>
+              <div class="dr-team-name">zenner</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
+              <span class="dr-pick-num">1.10</span>
+              <div class="dr-pick-name">Omar Cooper</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NYJ</div>
+              <div class="dr-pick-trade">&rarr; AusJ2</div>
+            </div>
+            <div class="dr-pick dr-pos-qb" data-team="rynchk">
+              <span class="dr-pick-num">2.10</span>
+              <div class="dr-pick-name">Carson Beck</div>
+              <div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; ARI</div>
+              <div class="dr-pick-trade">&rarr; rynchk</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="zenner">
+              <span class="dr-pick-num">3.10</span>
+              <div class="dr-pick-name">Caleb Douglas</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; DET</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-te" data-team="zenner">
+              <span class="dr-pick-num">4.10</span>
+              <div class="dr-pick-name">Jared Wiley</div>
+              <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; KC</div>
+              
+            </div>
+          </div>
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="DanyloFilipok">
+              <div class="dr-team-avatar" style="background:#1d3557">DF</div>
+              <div class="dr-team-name">DanyloFilipok</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="rynchk">
+              <span class="dr-pick-num">1.11</span>
+              <div class="dr-pick-name">Denzel Boston</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CLE</div>
+              <div class="dr-pick-trade">&rarr; rynchk</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson">
+              <span class="dr-pick-num">2.11</span>
+              <div class="dr-pick-name">Chris Bell</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; MIA</div>
+              <div class="dr-pick-trade">&rarr; PaulPatterson</div>
+            </div>
+            <div class="dr-pick dr-pos-te" data-team="DanyloFilipok">
+              <span class="dr-pick-num">3.11</span>
+              <div class="dr-pick-name">Max Klare</div>
+              <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; LAC</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-rb" data-team="DanyloFilipok">
+              <span class="dr-pick-num">4.11</span>
+              <div class="dr-pick-name">Tahj Brooks</div>
+              <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; CIN</div>
+              
+            </div>
+          </div>
+          <div class="dr-grid-col">
+            <div class="dr-grid-team-head" data-team="rynchk">
+              <div class="dr-team-avatar" style="background:#b23a5a">ry</div>
+              <div class="dr-team-name">rynchk</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
+              <span class="dr-pick-num">1.12</span>
+              <div class="dr-pick-name">De'Zha Stribling</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; SF</div>
+              <div class="dr-pick-trade">&rarr; AusJ2</div>
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson">
+              <span class="dr-pick-num">2.12</span>
+              <div class="dr-pick-name">Antonio Williams</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; WAS</div>
+              <div class="dr-pick-trade">&rarr; PaulPatterson</div>
+            </div>
+            <div class="dr-pick dr-pos-te" data-team="rynchk">
+              <span class="dr-pick-num">3.12</span>
+              <div class="dr-pick-name">Oscar Delp</div>
+              <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; ATL</div>
+              
+            </div>
+            <div class="dr-pick dr-pos-wr" data-team="rynchk">
+              <span class="dr-pick-num">4.12</span>
+              <div class="dr-pick-name">Jimmy Horn Jr.</div>
+              <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CAR</div>
+              
+            </div>
+          </div>
+
+            </div>
+          </div>
+
+          <div class="dr-board-bottom">
+            <div class="dr-roster-panel">
+              <div class="dr-roster-head">ROSTER</div>
+              <div class="dr-roster-team">AusJ2 (You)</div>
+              <div class="dr-roster-value">13 drafted &middot; 4.07 value</div>
+              <div class="dr-roster-section-label">STARTERS</div>
+              <div class="dr-roster-player">
+                <span class="dr-roster-pos dr-pos-qb">QB</span>
+                <span class="dr-roster-name">Fernando Mendoza</span>
+                <span class="dr-roster-team-abbr">LV</span>
+              </div>
+              <div class="dr-roster-player">
+                <span class="dr-roster-pos dr-pos-rb">RB</span>
+                <span class="dr-roster-name">Nicholas Singleton</span>
+                <span class="dr-roster-team-abbr">TEN</span>
+              </div>
+              <div class="dr-roster-player">
+                <span class="dr-roster-pos dr-pos-rb">RB</span>
+                <span class="dr-roster-name">Demond Claiborne</span>
+                <span class="dr-roster-team-abbr">NE</span>
+              </div>
+              <div class="dr-roster-player">
+                <span class="dr-roster-pos dr-pos-wr">WR</span>
+                <span class="dr-roster-name">Jordyn Tyson</span>
+                <span class="dr-roster-team-abbr">NO</span>
+              </div>
+              <div class="dr-roster-player">
+                <span class="dr-roster-pos dr-pos-wr">WR</span>
+                <span class="dr-roster-name">KC Concepcion</span>
+                <span class="dr-roster-team-abbr">CLE</span>
+              </div>
+              <div class="dr-roster-player">
+                <span class="dr-roster-pos dr-pos-wr">WR</span>
+                <span class="dr-roster-name">Omar Cooper</span>
+                <span class="dr-roster-team-abbr">NYJ</span>
+              </div>
+              <div class="dr-roster-player">
+                <span class="dr-roster-pos dr-pos-te">TE</span>
+                <span class="dr-roster-name">Jack Endries</span>
+                <span class="dr-roster-team-abbr">CIN</span>
+              </div>
+            </div>
+            <div class="dr-chat-panel">
+              <div class="dr-board-name" style="font-size:15px;margin-bottom:10px" id="drChatTitle">Grandpa Phil</div>
+              <div class="dr-chat-tabs">
+                <div class="dr-chat-tab active">Chat</div>
+                <div class="dr-chat-tab">DMs</div>
+                <div class="dr-chat-tab">Pinned</div>
+                <div class="dr-chat-tab">Mentions</div>
+              </div>
+              <div class="dr-chat-empty">Connect your Sleeper account to view chat</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dr-board-panel" data-dr-board-panel="intel">
+          <div class="dr-intel-note">Draft intel comes straight from the Sleeper API once a league is connected &mdash; this is a sample layout using Grandpa Phil's draft.</div>
+          <div class="dr-intel-cards">
+            <div class="dr-intel-card">
+              <div class="dr-intel-label">TIMED PICKS</div>
+              <div class="dr-intel-value">8/48</div>
+              <div class="dr-intel-sub">recorded live in this room</div>
+            </div>
+            <div class="dr-intel-card">
+              <div class="dr-intel-label">SLOWEST PICK</div>
+              <div class="dr-intel-value">3h 44m</div>
+              <div class="dr-intel-sub">Kevin Coleman &middot; AusJ2</div>
+            </div>
+            <div class="dr-intel-card">
+              <div class="dr-intel-label">FASTEST DRAFTER</div>
+              <div class="dr-intel-value">AusJ2</div>
+              <div class="dr-intel-sub">avg 1h 17m</div>
+            </div>
+          </div>
+          <div class="dr-intel-table-head">
+            <div>MANAGER</div>
+            <div>STARTUP TRADING</div>
+            <div style="text-align:right">CLOCK</div>
+          </div>
+          <div class="dr-intel-row">
+            <div class="dr-intel-manager">
+              <span class="dr-intel-rank">1</span>
+              <div>
+                <div class="dr-intel-mname">okNikolai</div>
+                <div class="dr-intel-msub">holds future 1sts &middot; 25 startups</div>
+              </div>
+            </div>
+            <div class="dr-intel-trading"><span class="plus">+20</span> / <span class="minus">−9</span> startup 1sts<br><span class="dr-intel-msub">4 trades &middot; 28 other-startup trades</span></div>
+            <div class="dr-intel-clock">—<br><span class="dr-intel-msub">avg — &middot; slowest —</span></div>
+          </div>
+          <div class="dr-intel-row">
+            <div class="dr-intel-manager">
+              <span class="dr-intel-rank">2</span>
+              <div>
+                <div class="dr-intel-mname">carsonfrye12</div>
+                <div class="dr-intel-msub">holds future 1sts &middot; 1 startup</div>
+              </div>
+            </div>
+            <div class="dr-intel-trading"><span class="plus">+0</span> / <span class="minus">−0</span> startup 1sts<br><span class="dr-intel-msub">2 trades &middot; 1 other-startup trade</span></div>
+            <div class="dr-intel-clock">2h 22m<br><span class="dr-intel-msub">avg 2h 22m (1) &middot; slowest 2h 22m Bernard</span></div>
+          </div>
+          <div class="dr-intel-row">
+            <div class="dr-intel-manager">
+              <span class="dr-intel-rank">3</span>
+              <div>
+                <div class="dr-intel-mname">PaulPatterson</div>
+                <div class="dr-intel-msub">holds future 1sts &middot; 20 startups</div>
+              </div>
+            </div>
+            <div class="dr-intel-trading"><span class="plus">+20</span> / <span class="minus">−13</span> startup 1sts<br><span class="dr-intel-msub">2 trades &middot; 111 other-startup trades</span></div>
+            <div class="dr-intel-clock">—<br><span class="dr-intel-msub">avg — &middot; slowest —</span></div>
+          </div>
+          <div class="dr-intel-row">
+            <div class="dr-intel-manager">
+              <span class="dr-intel-rank">4</span>
+              <div>
+                <div class="dr-intel-mname">AusJ2</div>
+                <div class="dr-intel-msub">holds future 1sts &middot; 8 startups</div>
+              </div>
+            </div>
+            <div class="dr-intel-trading"><span class="plus">+11</span> / <span class="minus">−6</span> startup 1sts<br><span class="dr-intel-msub">1 trade &middot; 31 other-startup trades</span></div>
+            <div class="dr-intel-clock">7h 44m<br><span class="dr-intel-msub">avg 1h 17m (6) &middot; slowest 3h 44m Coleman</span></div>
+          </div>
+          <div class="dr-intel-row">
+            <div class="dr-intel-manager">
+              <span class="dr-intel-rank">5</span>
+              <div>
+                <div class="dr-intel-mname">WesB69</div>
+                <div class="dr-intel-msub">holds future 1sts &middot; 47 startups</div>
+              </div>
+            </div>
+            <div class="dr-intel-trading"><span class="plus">+25</span> / <span class="minus">−43</span> startup 1sts<br><span class="dr-intel-msub">1 trade &middot; 138 other-startup trades</span></div>
+            <div class="dr-intel-clock">—<br><span class="dr-intel-msub">avg — &middot; slowest —</span></div>
+          </div>
+          <div class="dr-intel-row">
+            <div class="dr-intel-manager">
+              <span class="dr-intel-rank">6</span>
+              <div>
+                <div class="dr-intel-mname">Domo8</div>
+                <div class="dr-intel-msub">holds future 1sts &middot; 22 startups</div>
+              </div>
+            </div>
+            <div class="dr-intel-trading"><span class="plus">+6</span> / <span class="minus">−11</span> startup 1sts<br><span class="dr-intel-msub">0 trades &middot; 28 other-startup trades</span></div>
+            <div class="dr-intel-clock">—<br><span class="dr-intel-msub">avg — &middot; slowest —</span></div>
+          </div>
+          <div class="dr-intel-row">
+            <div class="dr-intel-manager">
+              <span class="dr-intel-rank">7</span>
+              <div>
+                <div class="dr-intel-mname">KingProfitVII</div>
+                <div class="dr-intel-msub">holds future 1sts &middot; 29 startups</div>
+              </div>
+            </div>
+            <div class="dr-intel-trading"><span class="plus">+18</span> / <span class="minus">−16</span> startup 1sts<br><span class="dr-intel-msub">0 trades &middot; 44 other-startup trades</span></div>
+            <div class="dr-intel-clock">—<br><span class="dr-intel-msub">avg — &middot; slowest —</span></div>
+          </div>
+          <div class="dr-intel-row">
+            <div class="dr-intel-manager">
+              <span class="dr-intel-rank">8</span>
+              <div>
+                <div class="dr-intel-mname">dbush24</div>
+                <div class="dr-intel-msub">holds future 1sts &middot; 2 startups</div>
+              </div>
+            </div>
+            <div class="dr-intel-trading"><span class="plus">+0</span> / <span class="minus">−0</span> startup 1sts<br><span class="dr-intel-msub">1 trade &middot; 0 other-startup trades</span></div>
+            <div class="dr-intel-clock">—<br><span class="dr-intel-msub">avg — &middot; slowest —</span></div>
+          </div>
+          <div class="dr-intel-row">
+            <div class="dr-intel-manager">
+              <span class="dr-intel-rank">9</span>
+              <div>
+                <div class="dr-intel-mname">Burtrum</div>
+                <div class="dr-intel-msub">holds future 1sts &middot; 18 startups</div>
+              </div>
+            </div>
+            <div class="dr-intel-trading"><span class="plus">+7</span> / <span class="minus">−11</span> startup 1sts<br><span class="dr-intel-msub">3 trades &middot; 29 other-startup trades</span></div>
+            <div class="dr-intel-clock">—<br><span class="dr-intel-msub">avg — &middot; slowest —</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div data-dr-view="marketadp" class="dr-view">
+      <div class="adp-toolbar">
+        <div class="exp-btn active" data-adp-type="startup">Startup</div>
+        <div class="exp-btn" data-adp-type="rookie">Rookie</div>
+        <div class="chip">8/2/26 &ndash; 9/1/26</div>
+        <div class="exp-btn">&#9881; Filters</div>
+        <div class="adp-pos-chips">
+          <div class="exp-filter-chip active" data-adp-pos="ALL">All</div>
+          <div class="exp-filter-chip" data-adp-pos="QB">QB</div>
+          <div class="exp-filter-chip" data-adp-pos="RB">RB</div>
+          <div class="exp-filter-chip" data-adp-pos="WR">WR</div>
+          <div class="exp-filter-chip" data-adp-pos="TE">TE</div>
+        </div>
+        <div class="exp-search" style="max-width:220px"><input type="text" id="adpSearchInput" placeholder="Search player..."></div>
+      </div>
+      <p class="adp-caption" id="adpCaption">56 drafts averaged &middot; startup &middot; 300 players &middot; 139,593 in the archive</p>
+      <div class="adp-grid" id="adpGridStartup">
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Bijan Robinson">
+          <span class="adp-rank">1</span>
+          <span class="adp-team-icon">ATL</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">BR</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Bijan Robinson</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB1</span><span class="adp-value">1.02</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Jahmyr Gibbs">
+          <span class="adp-rank">2</span>
+          <span class="adp-team-icon">DET</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">JG</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Jahmyr Gibbs</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB2</span><span class="adp-value">1.03</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Josh Allen">
+          <span class="adp-rank">3</span>
+          <span class="adp-team-icon">BUF</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">JA</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Josh Allen</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB1</span><span class="adp-value">1.03</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Ja'Marr Chase">
+          <span class="adp-rank">4</span>
+          <span class="adp-team-icon">CIN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">JC</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Ja'Marr Chase</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR1</span><span class="adp-value">1.04</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Drake Maye">
+          <span class="adp-rank">5</span>
+          <span class="adp-team-icon">NE</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">DM</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Drake Maye</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB2</span><span class="adp-value">1.05</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Jaxon Smith-Njigba">
+          <span class="adp-rank">6</span>
+          <span class="adp-team-icon">SEA</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">JS</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Jaxon Smith-Njigba</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR2</span><span class="adp-value">1.07</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Puka Nacua">
+          <span class="adp-rank">7</span>
+          <span class="adp-team-icon">LAR</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">PN</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Puka Nacua</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR3</span><span class="adp-value">1.07</span></div>
+        </div>
+        <div class="adp-card adp-te" data-pos="TE" data-name="Brock Bowers">
+          <span class="adp-rank">8</span>
+          <span class="adp-team-icon">LV</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--gold)">BB</div>
+            <span class="adp-pos-badge adp-te">TE</span>
+          </div>
+          <div class="adp-name">Brock Bowers</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-te">TE1</span><span class="adp-value">1.09</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Ashton Jeanty">
+          <span class="adp-rank">9</span>
+          <span class="adp-team-icon">LV</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">AJ</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Ashton Jeanty</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB3</span><span class="adp-value">1.10</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Amon-Ra St. Brown">
+          <span class="adp-rank">10</span>
+          <span class="adp-team-icon">DET</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">AS</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Amon-Ra St. Brown</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR4</span><span class="adp-value">1.11</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Jayden Daniels">
+          <span class="adp-rank">11</span>
+          <span class="adp-team-icon">WAS</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">JD</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Jayden Daniels</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB3</span><span class="adp-value">1.11</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Caleb Williams">
+          <span class="adp-rank">12</span>
+          <span class="adp-team-icon">CHI</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">CW</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Caleb Williams</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB4</span><span class="adp-value">1.12</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Malik Nabers">
+          <span class="adp-rank">13</span>
+          <span class="adp-team-icon">NYG</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">MN</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Malik Nabers</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR5</span><span class="adp-value">2.02</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Lamar Jackson">
+          <span class="adp-rank">14</span>
+          <span class="adp-team-icon">BAL</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">LJ</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Lamar Jackson</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB5</span><span class="adp-value">2.03</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Jeremiyah Love">
+          <span class="adp-rank">15</span>
+          <span class="adp-team-icon">LV</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">JL</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Jeremiyah Love</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB4</span><span class="adp-value">2.03</span></div>
+        </div>
+        <div class="adp-card adp-te" data-pos="TE" data-name="Trey McBride">
+          <span class="adp-rank">16</span>
+          <span class="adp-team-icon">ARI</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--gold)">TM</div>
+            <span class="adp-pos-badge adp-te">TE</span>
+          </div>
+          <div class="adp-name">Trey McBride</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-te">TE2</span><span class="adp-value">2.04</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Justin Jefferson">
+          <span class="adp-rank">17</span>
+          <span class="adp-team-icon">MIN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">JJ</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Justin Jefferson</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR6</span><span class="adp-value">2.05</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Joe Burrow">
+          <span class="adp-rank">18</span>
+          <span class="adp-team-icon">CIN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">JB</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Joe Burrow</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB6</span><span class="adp-value">2.05</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Omarion Hampton">
+          <span class="adp-rank">19</span>
+          <span class="adp-team-icon">LAC</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">OH</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Omarion Hampton</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB5</span><span class="adp-value">2.06</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="De'Von Achane">
+          <span class="adp-rank">20</span>
+          <span class="adp-team-icon">MIA</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">DA</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">De'Von Achane</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB6</span><span class="adp-value">2.08</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="CeeDee Lamb">
+          <span class="adp-rank">21</span>
+          <span class="adp-team-icon">DAL</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">CL</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">CeeDee Lamb</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR7</span><span class="adp-value">2.08</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Drake London">
+          <span class="adp-rank">22</span>
+          <span class="adp-team-icon">ATL</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">DL</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Drake London</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR8</span><span class="adp-value">2.11</span></div>
+        </div>
+        <div class="adp-card adp-te" data-pos="TE" data-name="Colston Loveland">
+          <span class="adp-rank">23</span>
+          <span class="adp-team-icon">CHI</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--gold)">CL</div>
+            <span class="adp-pos-badge adp-te">TE</span>
+          </div>
+          <div class="adp-name">Colston Loveland</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-te">TE3</span><span class="adp-value">2.12</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Justin Herbert">
+          <span class="adp-rank">24</span>
+          <span class="adp-team-icon">LAC</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">JH</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Justin Herbert</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB7</span><span class="adp-value">2.12</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Nico Collins">
+          <span class="adp-rank">25</span>
+          <span class="adp-team-icon">HOU</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">NC</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Nico Collins</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR9</span><span class="adp-value">3.01</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Chase Brown">
+          <span class="adp-rank">26</span>
+          <span class="adp-team-icon">CIN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">CB</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Chase Brown</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB7</span><span class="adp-value">3.02</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Jonathan Taylor">
+          <span class="adp-rank">27</span>
+          <span class="adp-team-icon">IND</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">JT</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Jonathan Taylor</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB8</span><span class="adp-value">3.02</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Patrick Mahomes">
+          <span class="adp-rank">28</span>
+          <span class="adp-team-icon">KC</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">PM</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Patrick Mahomes</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB8</span><span class="adp-value">3.03</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="James Cook">
+          <span class="adp-rank">29</span>
+          <span class="adp-team-icon">BUF</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">JC</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">James Cook</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB9</span><span class="adp-value">3.03</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Tetairoa McMillan">
+          <span class="adp-rank">30</span>
+          <span class="adp-team-icon">CAR</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">TM</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Tetairoa McMillan</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR10</span><span class="adp-value">3.04</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Jaxson Dart">
+          <span class="adp-rank">31</span>
+          <span class="adp-team-icon">NYG</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">JD</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Jaxson Dart</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB9</span><span class="adp-value">3.05</span></div>
+        </div>
+        <div class="adp-card adp-te" data-pos="TE" data-name="Tyler Warren">
+          <span class="adp-rank">32</span>
+          <span class="adp-team-icon">IND</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--gold)">TW</div>
+            <span class="adp-pos-badge adp-te">TE</span>
+          </div>
+          <div class="adp-name">Tyler Warren</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-te">TE4</span><span class="adp-value">3.06</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Emeka Egbuka">
+          <span class="adp-rank">33</span>
+          <span class="adp-team-icon">TB</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">EE</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Emeka Egbuka</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR11</span><span class="adp-value">3.06</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Jalen Hurts">
+          <span class="adp-rank">34</span>
+          <span class="adp-team-icon">PHI</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">JH</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Jalen Hurts</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB10</span><span class="adp-value">3.07</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Trevor Lawrence">
+          <span class="adp-rank">35</span>
+          <span class="adp-team-icon">JAX</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">TL</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Trevor Lawrence</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB11</span><span class="adp-value">3.08</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="George Pickens">
+          <span class="adp-rank">36</span>
+          <span class="adp-team-icon">DAL</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">GP</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">George Pickens</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR12</span><span class="adp-value">3.08</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Kenneth Walker III">
+          <span class="adp-rank">37</span>
+          <span class="adp-team-icon">SEA</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">KW</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Kenneth Walker III</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB10</span><span class="adp-value">4.01</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Quinshon Judkins">
+          <span class="adp-rank">38</span>
+          <span class="adp-team-icon">CLE</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">QJ</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Quinshon Judkins</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB11</span><span class="adp-value">4.02</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Bo Nix">
+          <span class="adp-rank">39</span>
+          <span class="adp-team-icon">DEN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">BN</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Bo Nix</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB12</span><span class="adp-value">4.03</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Carnell Tate">
+          <span class="adp-rank">40</span>
+          <span class="adp-team-icon">TEN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">CT</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Carnell Tate</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR13</span><span class="adp-value">4.03</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Chris Olave">
+          <span class="adp-rank">41</span>
+          <span class="adp-team-icon">NO</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">CO</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Chris Olave</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR14</span><span class="adp-value">4.04</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Christian McCaffrey">
+          <span class="adp-rank">42</span>
+          <span class="adp-team-icon">SF</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">CM</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Christian McCaffrey</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB12</span><span class="adp-value">4.04</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Ladd McConkey">
+          <span class="adp-rank">43</span>
+          <span class="adp-team-icon">LAC</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">LM</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Ladd McConkey</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR15</span><span class="adp-value">4.07</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Garrett Wilson">
+          <span class="adp-rank">44</span>
+          <span class="adp-team-icon">NYJ</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">GW</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Garrett Wilson</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR16</span><span class="adp-value">4.08</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Brock Purdy">
+          <span class="adp-rank">45</span>
+          <span class="adp-team-icon">SF</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">BP</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Brock Purdy</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB13</span><span class="adp-value">4.08</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Luther Burden III">
+          <span class="adp-rank">46</span>
+          <span class="adp-team-icon">CHI</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">LB</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Luther Burden III</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR17</span><span class="adp-value">4.11</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Rashee Rice">
+          <span class="adp-rank">47</span>
+          <span class="adp-team-icon">KC</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">RR</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Rashee Rice</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR18</span><span class="adp-value">4.12</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Breece Hall">
+          <span class="adp-rank">48</span>
+          <span class="adp-team-icon">NYJ</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">BH</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Breece Hall</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB13</span><span class="adp-value">5.02</span></div>
+        </div>
+      </div>
+      <div class="adp-grid" id="adpGridRookie" hidden>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Jeremiyah Love">
+          <span class="adp-rank">1</span>
+          <span class="adp-team-icon">ARI</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">JL</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Jeremiyah Love</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB1</span><span class="adp-value">1.01</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Carnell Tate">
+          <span class="adp-rank">2</span>
+          <span class="adp-team-icon">TEN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">CT</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Carnell Tate</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR1</span><span class="adp-value">1.02</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Jordyn Tyson">
+          <span class="adp-rank">3</span>
+          <span class="adp-team-icon">NO</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">JT</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Jordyn Tyson</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR2</span><span class="adp-value">1.03</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Makai Lemon">
+          <span class="adp-rank">4</span>
+          <span class="adp-team-icon">PHI</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">ML</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Makai Lemon</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR3</span><span class="adp-value">1.04</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Jadarian Price">
+          <span class="adp-rank">5</span>
+          <span class="adp-team-icon">SEA</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">JP</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Jadarian Price</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB2</span><span class="adp-value">1.05</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Fernando Mendoza">
+          <span class="adp-rank">6</span>
+          <span class="adp-team-icon">LV</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">FM</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Fernando Mendoza</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB1</span><span class="adp-value">1.06</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="KC Concepcion">
+          <span class="adp-rank">7</span>
+          <span class="adp-team-icon">CLE</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">KC</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">KC Concepcion</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR4</span><span class="adp-value">1.07</span></div>
+        </div>
+        <div class="adp-card adp-te" data-pos="TE" data-name="Kenyon Sadiq">
+          <span class="adp-rank">8</span>
+          <span class="adp-team-icon">NYJ</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--gold)">KS</div>
+            <span class="adp-pos-badge adp-te">TE</span>
+          </div>
+          <div class="adp-name">Kenyon Sadiq</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-te">TE1</span><span class="adp-value">1.08</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Ty Simpson">
+          <span class="adp-rank">9</span>
+          <span class="adp-team-icon">LAR</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">TS</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Ty Simpson</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB2</span><span class="adp-value">1.09</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Omar Cooper">
+          <span class="adp-rank">10</span>
+          <span class="adp-team-icon">NYJ</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">OC</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Omar Cooper</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR5</span><span class="adp-value">1.10</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Denzel Boston">
+          <span class="adp-rank">11</span>
+          <span class="adp-team-icon">CLE</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">DB</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Denzel Boston</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR6</span><span class="adp-value">1.11</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="De'Zha Stribling">
+          <span class="adp-rank">12</span>
+          <span class="adp-team-icon">SF</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">DS</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">De'Zha Stribling</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR7</span><span class="adp-value">1.12</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Jonah Coleman">
+          <span class="adp-rank">13</span>
+          <span class="adp-team-icon">DEN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">JC</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Jonah Coleman</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB3</span><span class="adp-value">2.01</span></div>
+        </div>
+        <div class="adp-card adp-te" data-pos="TE" data-name="Eli Stowers">
+          <span class="adp-rank">14</span>
+          <span class="adp-team-icon">PHI</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--gold)">ES</div>
+            <span class="adp-pos-badge adp-te">TE</span>
+          </div>
+          <div class="adp-name">Eli Stowers</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-te">TE2</span><span class="adp-value">2.02</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Emmett Johnson">
+          <span class="adp-rank">15</span>
+          <span class="adp-team-icon">KC</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">EJ</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Emmett Johnson</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB4</span><span class="adp-value">2.03</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Germie Bernard">
+          <span class="adp-rank">16</span>
+          <span class="adp-team-icon">PIT</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">GB</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Germie Bernard</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR8</span><span class="adp-value">2.04</span></div>
+        </div>
+        <div class="adp-card adp-te" data-pos="TE" data-name="Eli Raridon">
+          <span class="adp-rank">17</span>
+          <span class="adp-team-icon">NE</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--gold)">ER</div>
+            <span class="adp-pos-badge adp-te">TE</span>
+          </div>
+          <div class="adp-name">Eli Raridon</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-te">TE3</span><span class="adp-value">2.05</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Cyrus Allen">
+          <span class="adp-rank">18</span>
+          <span class="adp-team-icon">KC</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">CA</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Cyrus Allen</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR9</span><span class="adp-value">2.06</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Nicholas Singleton">
+          <span class="adp-rank">19</span>
+          <span class="adp-team-icon">TEN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">NS</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Nicholas Singleton</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB5</span><span class="adp-value">2.07</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Ja'Kobi Lane">
+          <span class="adp-rank">20</span>
+          <span class="adp-team-icon">BAL</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">JL</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Ja'Kobi Lane</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR10</span><span class="adp-value">2.08</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Mike Washington">
+          <span class="adp-rank">21</span>
+          <span class="adp-team-icon">LV</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">MW</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Mike Washington</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB6</span><span class="adp-value">2.09</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Carson Beck">
+          <span class="adp-rank">22</span>
+          <span class="adp-team-icon">ARI</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">CB</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Carson Beck</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB3</span><span class="adp-value">2.10</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Chris Bell">
+          <span class="adp-rank">23</span>
+          <span class="adp-team-icon">MIA</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">CB</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Chris Bell</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR11</span><span class="adp-value">2.11</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Antonio Williams">
+          <span class="adp-rank">24</span>
+          <span class="adp-team-icon">WAS</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">AW</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Antonio Williams</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR12</span><span class="adp-value">2.12</span></div>
+        </div>
+        <div class="adp-card adp-te" data-pos="TE" data-name="Cade Stover">
+          <span class="adp-rank">25</span>
+          <span class="adp-team-icon">HOU</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--gold)">CS</div>
+            <span class="adp-pos-badge adp-te">TE</span>
+          </div>
+          <div class="adp-name">Cade Stover</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-te">TE4</span><span class="adp-value">3.01</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Demond Claiborne">
+          <span class="adp-rank">26</span>
+          <span class="adp-team-icon">NE</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">DC</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Demond Claiborne</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB7</span><span class="adp-value">3.02</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Malachi Fields">
+          <span class="adp-rank">27</span>
+          <span class="adp-team-icon">NE</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">MF</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Malachi Fields</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR13</span><span class="adp-value">3.03</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Zachariah Branch">
+          <span class="adp-rank">28</span>
+          <span class="adp-team-icon">SEA</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">ZB</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Zachariah Branch</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR14</span><span class="adp-value">3.04</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Elijah Sarratt">
+          <span class="adp-rank">29</span>
+          <span class="adp-team-icon">MIN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">ES</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Elijah Sarratt</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR15</span><span class="adp-value">3.05</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Kaytron Allen">
+          <span class="adp-rank">30</span>
+          <span class="adp-team-icon">PIT</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">KA</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Kaytron Allen</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB8</span><span class="adp-value">3.06</span></div>
+        </div>
+        <div class="adp-card adp-qb" data-pos="QB" data-name="Drew Allar">
+          <span class="adp-rank">31</span>
+          <span class="adp-team-icon">CHI</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--red)">DA</div>
+            <span class="adp-pos-badge adp-qb">QB</span>
+          </div>
+          <div class="adp-name">Drew Allar</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-qb">QB4</span><span class="adp-value">3.07</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Ted Hurst">
+          <span class="adp-rank">32</span>
+          <span class="adp-team-icon">CAR</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">TH</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Ted Hurst</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR16</span><span class="adp-value">3.08</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Kaelon Black">
+          <span class="adp-rank">33</span>
+          <span class="adp-team-icon">DAL</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">KB</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Kaelon Black</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB9</span><span class="adp-value">3.09</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Caleb Douglas">
+          <span class="adp-rank">34</span>
+          <span class="adp-team-icon">DET</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">CD</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Caleb Douglas</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR17</span><span class="adp-value">3.10</span></div>
+        </div>
+        <div class="adp-card adp-te" data-pos="TE" data-name="Max Klare">
+          <span class="adp-rank">35</span>
+          <span class="adp-team-icon">LAC</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--gold)">MK</div>
+            <span class="adp-pos-badge adp-te">TE</span>
+          </div>
+          <div class="adp-name">Max Klare</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-te">TE5</span><span class="adp-value">3.11</span></div>
+        </div>
+        <div class="adp-card adp-te" data-pos="TE" data-name="Oscar Delp">
+          <span class="adp-rank">36</span>
+          <span class="adp-team-icon">ATL</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--gold)">OD</div>
+            <span class="adp-pos-badge adp-te">TE</span>
+          </div>
+          <div class="adp-name">Oscar Delp</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-te">TE6</span><span class="adp-value">3.12</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Woody Marks">
+          <span class="adp-rank">37</span>
+          <span class="adp-team-icon">HOU</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">WM</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Woody Marks</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB10</span><span class="adp-value">4.01</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Kyle Williams">
+          <span class="adp-rank">38</span>
+          <span class="adp-team-icon">NE</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">KW</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Kyle Williams</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR18</span><span class="adp-value">4.02</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Chimere Dike">
+          <span class="adp-rank">39</span>
+          <span class="adp-team-icon">TEN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">CD</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Chimere Dike</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR19</span><span class="adp-value">4.03</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Donte Thornton">
+          <span class="adp-rank">40</span>
+          <span class="adp-team-icon">LV</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">DT</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Donte Thornton</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR20</span><span class="adp-value">4.04</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Kalel Mullings">
+          <span class="adp-rank">41</span>
+          <span class="adp-team-icon">TEN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">KM</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Kalel Mullings</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB11</span><span class="adp-value">4.05</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Devin Neal">
+          <span class="adp-rank">42</span>
+          <span class="adp-team-icon">NO</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">DN</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Devin Neal</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB12</span><span class="adp-value">4.06</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Jaydon Blue">
+          <span class="adp-rank">43</span>
+          <span class="adp-team-icon">DAL</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">JB</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Jaydon Blue</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB13</span><span class="adp-value">4.07</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Isaac TeSlaa">
+          <span class="adp-rank">44</span>
+          <span class="adp-team-icon">DET</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">IT</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Isaac TeSlaa</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR21</span><span class="adp-value">4.08</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Jack Bech">
+          <span class="adp-rank">45</span>
+          <span class="adp-team-icon">LV</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">JB</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Jack Bech</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR22</span><span class="adp-value">4.09</span></div>
+        </div>
+        <div class="adp-card adp-te" data-pos="TE" data-name="Jared Wiley">
+          <span class="adp-rank">46</span>
+          <span class="adp-team-icon">KC</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--gold)">JW</div>
+            <span class="adp-pos-badge adp-te">TE</span>
+          </div>
+          <div class="adp-name">Jared Wiley</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-te">TE7</span><span class="adp-value">4.10</span></div>
+        </div>
+        <div class="adp-card adp-rb" data-pos="RB" data-name="Tahj Brooks">
+          <span class="adp-rank">47</span>
+          <span class="adp-team-icon">CIN</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--green)">TB</div>
+            <span class="adp-pos-badge adp-rb">RB</span>
+          </div>
+          <div class="adp-name">Tahj Brooks</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-rb">RB14</span><span class="adp-value">4.11</span></div>
+        </div>
+        <div class="adp-card adp-wr" data-pos="WR" data-name="Jimmy Horn Jr.">
+          <span class="adp-rank">48</span>
+          <span class="adp-team-icon">CAR</span>
+          <div class="adp-avatar-wrap">
+            <div class="adp-avatar" style="background:var(--blue)">JH</div>
+            <span class="adp-pos-badge adp-wr">WR</span>
+          </div>
+          <div class="adp-name">Jimmy Horn Jr.</div>
+          <div class="adp-sub-row"><span class="adp-posrank adp-wr">WR23</span><span class="adp-value">4.12</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div data-dr-view="myadp" class="dr-view">
+      <div class="placeholder"><h3>My ADP</h3><p>Coming soon &mdash; this will compare your actual draft picks against the market once a real ADP source is wired in.</p></div>
+    </div>
+
+    <div data-dr-view="war" class="dr-view">
+      <div class="placeholder"><h3>WAR</h3><p>Coming soon &mdash; Wins Above Replacement scoring is being built.</p></div>
+    </div>
+
+  </div>
   <div data-view="exposures">
     <div class="page-title">
       <h1>Exposures</h1>
@@ -7406,12 +9405,31 @@
     views.forEach(v => v.classList.toggle('is-active', v.dataset.view === name));
     window.scrollTo(0, 0);
   }
-  function goToLeagueDetail() {
+  function goToLeagueDetail(name) {
     goToSection('leagues');
     const listView = document.getElementById('leaguesListView');
     const detailView = document.getElementById('leagueDetailView');
     if (listView) listView.hidden = true;
     if (detailView) detailView.hidden = false;
+    if (name && detailView) {
+      const row = document.querySelector('.league-row[data-name="' + name.replace(/"/g, '\\"') + '"]');
+      if (row) {
+        const logo = row.querySelector('.league-logo');
+        const pill = row.querySelector('.roster-pill');
+        const cols = row.querySelectorAll('.col-center');
+        const ldAvatar = detailView.querySelector('.ld-avatar');
+        const ldName = detailView.querySelector('.ld-name');
+        const ldMeta = detailView.querySelector('.ld-meta');
+        const ldPill = detailView.querySelector('.ld-header-left .roster-pill');
+        const ldRank = detailView.querySelector('.ld-rank');
+        if (ldAvatar && logo) { ldAvatar.style.background = logo.style.background; ldAvatar.textContent = logo.textContent; }
+        if (ldName) ldName.textContent = name;
+        if (ldMeta && cols[0]) ldMeta.textContent = cols[0].textContent + ' · 12 teams';
+        if (ldPill && pill) { ldPill.className = pill.className; ldPill.textContent = pill.textContent; }
+        if (ldRank) ldRank.textContent = String(Number(row.dataset.index) + 1);
+      }
+    }
+    window.scrollTo(0, 0);
   }
   function goToRootingGuide() {
     goToSection('lineups');
@@ -7468,6 +9486,139 @@
       if (guideLink) guideLink.addEventListener('click', () => goToRootingGuide());
     });
   });
+
+  (function initDraftRoom() {
+    const drSubtabs = document.querySelectorAll('.dr-subtab');
+    const drViews = document.querySelectorAll('[data-dr-view]');
+    if (!drSubtabs.length) return;
+
+    drSubtabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        drSubtabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const target = tab.dataset.drTab;
+        drViews.forEach(v => v.classList.toggle('is-active', v.dataset.drView === target));
+      });
+    });
+
+    // ---- My Drafts list -> board ----
+    const drDraftsHome = document.getElementById('drDraftsHome');
+    const drBoardView = document.getElementById('drBoardView');
+    const drBoardBack = document.getElementById('drBoardBack');
+    const drBoardName = document.getElementById('drBoardName');
+    const drBoardSub = document.getElementById('drBoardSub');
+    const drBoardLogo = document.getElementById('drBoardLogo');
+    const drChatTitle = document.getElementById('drChatTitle');
+
+    function openDraftBoard(row) {
+      drDraftsHome.hidden = true;
+      drBoardView.hidden = false;
+      const name = row.dataset.league;
+      const logo = row.querySelector('.league-logo');
+      const metaText = row.querySelector('.dr-draft-meta').textContent;
+      drBoardName.textContent = name;
+      drChatTitle.textContent = name;
+      drBoardSub.textContent = '2026 · ' + metaText.split(' · ').slice(1).join(' · ') + ' · Linear · Complete';
+      if (logo) { drBoardLogo.style.background = logo.style.background; drBoardLogo.textContent = logo.textContent; }
+      document.querySelectorAll('.dr-board-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.drBoardTab === 'board'));
+      document.querySelectorAll('.dr-board-panel').forEach(p => p.classList.toggle('is-active', p.dataset.drBoardPanel === 'board'));
+      document.querySelectorAll('.dr-grid-team-head').forEach(h => h.classList.remove('is-active'));
+      document.querySelectorAll('.dr-pick').forEach(p => p.classList.remove('dr-team-dim'));
+      window.scrollTo(0, 0);
+    }
+
+    document.querySelectorAll('.dr-draft-row').forEach(row => {
+      row.addEventListener('click', () => openDraftBoard(row));
+    });
+    if (drBoardBack) {
+      drBoardBack.addEventListener('click', () => {
+        drBoardView.hidden = true;
+        drDraftsHome.hidden = false;
+      });
+    }
+
+    // ---- Search filter on My Drafts ----
+    const drDraftsSearch = document.getElementById('drDraftsSearch');
+    if (drDraftsSearch) {
+      drDraftsSearch.addEventListener('input', () => {
+        const q = drDraftsSearch.value.trim().toLowerCase();
+        document.querySelectorAll('.dr-draft-row').forEach(row => {
+          const match = row.dataset.league.toLowerCase().includes(q);
+          row.classList.toggle('dr-row-hidden', !match);
+        });
+      });
+    }
+
+    // ---- Board / Intel toggle ----
+    document.querySelectorAll('.dr-board-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.dr-board-toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const target = btn.dataset.drBoardTab;
+        document.querySelectorAll('.dr-board-panel').forEach(p => p.classList.toggle('is-active', p.dataset.drBoardPanel === target));
+      });
+    });
+
+    // ---- Click a manager to highlight all picks they own ----
+    document.querySelectorAll('.dr-grid-team-head').forEach(head => {
+      head.addEventListener('click', () => {
+        const already = head.classList.contains('is-active');
+        document.querySelectorAll('.dr-grid-team-head').forEach(h => h.classList.remove('is-active'));
+        document.querySelectorAll('.dr-pick').forEach(p => p.classList.remove('dr-team-dim'));
+        if (already) return;
+        head.classList.add('is-active');
+        const team = head.dataset.team;
+        document.querySelectorAll('.dr-pick').forEach(p => {
+          if (p.dataset.team !== team) p.classList.add('dr-team-dim');
+        });
+      });
+    });
+
+    // ---- Market ADP ----
+    const adpGridStartup = document.getElementById('adpGridStartup');
+    const adpGridRookie = document.getElementById('adpGridRookie');
+    const adpCaption = document.getElementById('adpCaption');
+    const adpTypeBtns = document.querySelectorAll('[data-adp-type]');
+    let adpType = 'startup';
+
+    adpTypeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        adpTypeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        adpType = btn.dataset.adpType;
+        adpGridStartup.hidden = adpType !== 'startup';
+        adpGridRookie.hidden = adpType !== 'rookie';
+        adpCaption.textContent = adpType === 'startup'
+          ? '56 drafts averaged · startup · 300 players · 139,593 in the archive'
+          : '18 drafts averaged · rookie · 48 players · 2026 class';
+        applyAdpFilters();
+      });
+    });
+
+    const adpPosChips = document.querySelectorAll('[data-adp-pos]');
+    let adpPos = 'ALL';
+    adpPosChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        adpPosChips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        adpPos = chip.dataset.adpPos;
+        applyAdpFilters();
+      });
+    });
+
+    const adpSearchInput = document.getElementById('adpSearchInput');
+    if (adpSearchInput) adpSearchInput.addEventListener('input', applyAdpFilters);
+
+    function applyAdpFilters() {
+      const grid = adpType === 'startup' ? adpGridStartup : adpGridRookie;
+      const q = adpSearchInput ? adpSearchInput.value.trim().toLowerCase() : '';
+      grid.querySelectorAll('.adp-card').forEach(card => {
+        const posOk = adpPos === 'ALL' || card.dataset.pos === adpPos;
+        const nameOk = !q || card.dataset.name.toLowerCase().includes(q);
+        card.classList.toggle('adp-row-hidden', !(posOk && nameOk));
+      });
+    }
+  })();
 
   const sbSubtabs = document.querySelectorAll('.sb-subtab');
   const sbViews = document.querySelectorAll('[data-sb-view]');
@@ -7658,7 +9809,7 @@
     const leagueEl = e.target.closest('.tt-league');
     if (!leagueEl) return;
     e.stopPropagation();
-    goToLeagueDetail();
+    goToLeagueDetail(leagueEl.dataset.leagueName);
   });
 
   const notebookBtn = document.getElementById('notebookBtn');
@@ -7785,9 +9936,7 @@
   const leagueBackBtn = document.getElementById('leagueBackBtn');
   document.querySelectorAll('.league-row').forEach(row => {
     row.addEventListener('click', () => {
-      leaguesListView.hidden = true;
-      leagueDetailView.hidden = false;
-      window.scrollTo(0, 0);
+      goToLeagueDetail(row.dataset.name);
     });
   });
   leagueBackBtn.addEventListener('click', () => {
@@ -8100,7 +10249,7 @@
       row.innerHTML = `<span>${league}</span><span>&rsaquo;</span>`;
       row.addEventListener('click', () => {
         playerModal.hidden = true;
-        goToLeagueDetail();
+        goToLeagueDetail(league);
       });
       pmLeagueList.appendChild(row);
     });
