@@ -10462,24 +10462,24 @@
     });
   }
 
-  document.querySelectorAll('.rg-row').forEach(row => {
-    row.addEventListener('click', () => {
-      const existing = row.querySelector('.rg-expand');
-      const isOpen = !!existing;
-      document.querySelectorAll('.rg-expand').forEach(el => el.remove());
-      if (isOpen) return;
+  document.addEventListener('click', (e) => {
+    const row = e.target.closest('.rg-row');
+    if (!row) return;
+    const existing = row.querySelector('.rg-expand');
+    const isOpen = !!existing;
+    document.querySelectorAll('.rg-expand').forEach(el => el.remove());
+    if (isOpen) return;
 
-      const forLeagues = row.dataset.for;
-      const againstLeagues = row.dataset.against;
-      const expand = document.createElement('div');
-      expand.className = 'rg-expand';
-      expand.innerHTML =
-        '<p class="rg-expand-line"><span class="rg-expand-label rg-for">Starting for you:</span> <span class="rg-expand-leagues">' +
-        (forLeagues || '<span class="rg-expand-empty">None</span>') + '</span></p>' +
-        '<p class="rg-expand-line"><span class="rg-expand-label rg-against">Starting against you:</span> <span class="rg-expand-leagues">' +
-        (againstLeagues || '<span class="rg-expand-empty">None</span>') + '</span></p>';
-      row.appendChild(expand);
-    });
+    const forLeagues = row.dataset.for;
+    const againstLeagues = row.dataset.against;
+    const expand = document.createElement('div');
+    expand.className = 'rg-expand';
+    expand.innerHTML =
+      '<p class="rg-expand-line"><span class="rg-expand-label rg-for">Starting for you:</span> <span class="rg-expand-leagues">' +
+      (forLeagues || '<span class="rg-expand-empty">None</span>') + '</span></p>' +
+      '<p class="rg-expand-line"><span class="rg-expand-label rg-against">Starting against you:</span> <span class="rg-expand-leagues">' +
+      (againstLeagues || '<span class="rg-expand-empty">None</span>') + '</span></p>';
+    row.appendChild(expand);
   });
 
   (function initRootingLeaguesBlacklist() {
@@ -10500,19 +10500,40 @@
     if (!rgBtn || !rgPanel || !rgChipsEl || !forListEl || !againstListEl || !evenListEl) return;
 
     const rgBlacklist = new Set();
-    const rgRows = Array.from(document.querySelectorAll('.rg-row')).map(el => ({
+    let rgRows = Array.from(document.querySelectorAll('.rg-row')).map(el => ({
       el,
       forAll: (el.dataset.for || '').split(' &middot; ').filter(Boolean),
       againstAll: (el.dataset.against || '').split(' &middot; ').filter(Boolean),
     }));
+    let rgLeagueNames = allLeagues;
+
+    function wireChips() {
+      rgChipsEl.querySelectorAll('.rg-league-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const league = chip.dataset.league;
+          if (rgBlacklist.has(league)) {
+            rgBlacklist.delete(league);
+            chip.classList.add('active');
+            chip.classList.remove('excluded');
+          } else {
+            rgBlacklist.add(league);
+            chip.classList.remove('active');
+            chip.classList.add('excluded');
+          }
+          updateCount();
+          recomputeRootingGuide();
+        });
+      });
+    }
 
     rgChipsEl.innerHTML = allLeagues.map(name =>
       `<span class="rg-league-chip active" data-league="${name}">${name}</span>`
     ).join('');
+    wireChips();
 
     function updateCount() {
-      const included = allLeagues.length - rgBlacklist.size;
-      rgCountEl.textContent = `(${included} of ${allLeagues.length})`;
+      const included = rgLeagueNames.length - rgBlacklist.size;
+      rgCountEl.textContent = `(${included} of ${rgLeagueNames.length})`;
     }
 
     function recomputeRootingGuide() {
@@ -10556,22 +10577,79 @@
     }
 
     rgBtn.addEventListener('click', () => { rgPanel.hidden = !rgPanel.hidden; });
-    rgChipsEl.querySelectorAll('.rg-league-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const league = chip.dataset.league;
-        if (rgBlacklist.has(league)) {
-          rgBlacklist.delete(league);
-          chip.classList.add('active');
-          chip.classList.remove('excluded');
-        } else {
-          rgBlacklist.add(league);
-          chip.classList.remove('active');
-          chip.classList.add('excluded');
-        }
-        updateCount();
-        recomputeRootingGuide();
+
+    async function renderRealRootingGuide() {
+      if (!window.sleeperGetPlayerDict) return;
+      const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.myMatchup && e.oppMatchup);
+      if (!entries.length) return;
+      let dict;
+      try {
+        dict = await window.sleeperGetPlayerDict();
+      } catch (err) {
+        return;
+      }
+
+      const byPlayer = {};
+      entries.forEach(entry => {
+        const myStarters = (entry.myMatchup.starters || []).filter(id => id && id !== '0');
+        const oppStarters = (entry.oppMatchup.starters || []).filter(id => id && id !== '0');
+        myStarters.forEach(id => {
+          byPlayer[id] = byPlayer[id] || { for: [], against: [] };
+          byPlayer[id].for.push(entry.league.name);
+        });
+        oppStarters.forEach(id => {
+          byPlayer[id] = byPlayer[id] || { for: [], against: [] };
+          byPlayer[id].against.push(entry.league.name);
+        });
       });
-    });
+
+      const rowsData = Object.keys(byPlayer).map(id => {
+        const p = dict[id];
+        const pos = p ? p.position : null;
+        if (!p || !['QB', 'RB', 'WR', 'TE'].includes(pos)) return null;
+        return {
+          name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
+          team: p.team || 'FA',
+          pos,
+          for: byPlayer[id].for,
+          against: byPlayer[id].against,
+        };
+      }).filter(Boolean);
+
+      document.querySelectorAll('.rg-row').forEach(el => el.remove());
+      rgRows = rowsData.map(r => {
+        const delta = r.for.length - r.against.length;
+        const posClass = r.pos.toLowerCase();
+        const deltaClass = delta > 0 ? 'rg-delta-pos' : (delta < 0 ? 'rg-delta-neg' : 'rg-delta-even');
+        const deltaText = delta > 0 ? `+${delta}` : String(delta);
+        const noteParts = [];
+        if (r.for.length) noteParts.push(`${r.for.length} <span class="rg-note-for">for</span>`);
+        if (r.against.length) noteParts.push(`${r.against.length} <span class="rg-note-vs">vs</span>`);
+        const el = document.createElement('div');
+        el.className = 'rg-row';
+        el.dataset.for = r.for.join(' &middot; ');
+        el.dataset.against = r.against.join(' &middot; ');
+        el.innerHTML =
+          '<div class="rg-row-main">' +
+            `<span class="rg-delta ${deltaClass}">${deltaText}</span>` +
+            `<span class="rg-pos sb-pos-${posClass}">${r.pos}</span>` +
+            `<span class="rg-name">${r.name}</span>` +
+            `<span class="rg-team">${r.team}</span>` +
+            `<span class="rg-note">${noteParts.join(' &middot; ')}</span>` +
+          '</div>';
+        return { el, forAll: r.for.slice(), againstAll: r.against.slice() };
+      });
+
+      rgLeagueNames = entries.map(e => e.league.name).sort();
+      rgBlacklist.clear();
+      rgChipsEl.innerHTML = rgLeagueNames.map(name =>
+        `<span class="rg-league-chip active" data-league="${name}">${name}</span>`
+      ).join('');
+      wireChips();
+      updateCount();
+      recomputeRootingGuide();
+    }
+    window.renderRealRootingGuide = renderRealRootingGuide;
   })();
 
   document.querySelectorAll('.rg-chip-more').forEach(more => {
@@ -11062,6 +11140,7 @@
         if (window.renderRealExposures) window.renderRealExposures();
         if (window.renderRealScoreboard) window.renderRealScoreboard();
         if (window.renderRealTrades) window.renderRealTrades();
+        if (window.renderRealRootingGuide) window.renderRealRootingGuide();
       } catch (err) {
         setSyncState('error', "Couldn't sync — check your connection");
       }
