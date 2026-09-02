@@ -9947,26 +9947,38 @@
     const drBoardName = document.getElementById('drBoardName');
     const drBoardSub = document.getElementById('drBoardSub');
     const drBoardLogo = document.getElementById('drBoardLogo');
+    const drGrid = document.getElementById('drGrid');
+    const drDraftsList = document.getElementById('drDraftsList');
+    const drDraftsCountEl = document.getElementById('drDraftsCount');
 
     function openDraftBoard(row) {
       drDraftsHome.hidden = true;
       drBoardView.hidden = false;
+      document.querySelectorAll('.dr-board-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.drBoardTab === 'board'));
+      document.querySelectorAll('.dr-board-panel').forEach(p => p.classList.toggle('is-active', p.dataset.drBoardPanel === 'board'));
+      document.querySelectorAll('.dr-grid-team-head').forEach(h => h.classList.remove('is-active'));
+      document.querySelectorAll('.dr-pick').forEach(p => p.classList.remove('dr-team-dim'));
+      window.scrollTo(0, 0);
+
+      const draftId = row.dataset.draftId;
+      if (draftId) {
+        renderRealDraftBoard(draftId, row);
+        return;
+      }
       const name = row.dataset.league;
       const logo = row.querySelector('.league-logo');
       const metaText = row.querySelector('.dr-draft-meta').textContent;
       drBoardName.textContent = name;
       drBoardSub.textContent = '2026 · ' + metaText.split(' · ').slice(1).join(' · ') + ' · Linear · Complete';
       if (logo) { drBoardLogo.style.background = logo.style.background; drBoardLogo.textContent = logo.textContent; }
-      document.querySelectorAll('.dr-board-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.drBoardTab === 'board'));
-      document.querySelectorAll('.dr-board-panel').forEach(p => p.classList.toggle('is-active', p.dataset.drBoardPanel === 'board'));
-      document.querySelectorAll('.dr-grid-team-head').forEach(h => h.classList.remove('is-active'));
-      document.querySelectorAll('.dr-pick').forEach(p => p.classList.remove('dr-team-dim'));
-      window.scrollTo(0, 0);
     }
 
-    document.querySelectorAll('.dr-draft-row').forEach(row => {
-      row.addEventListener('click', () => openDraftBoard(row));
-    });
+    if (drDraftsList) {
+      drDraftsList.addEventListener('click', (e) => {
+        const row = e.target.closest('.dr-draft-row');
+        if (row) openDraftBoard(row);
+      });
+    }
     if (drBoardBack) {
       drBoardBack.addEventListener('click', () => {
         drBoardView.hidden = true;
@@ -9997,19 +10009,21 @@
     });
 
     // ---- Click a manager to highlight all picks they own ----
-    document.querySelectorAll('.dr-grid-team-head').forEach(head => {
-      head.addEventListener('click', () => {
+    if (drGrid) {
+      drGrid.addEventListener('click', (e) => {
+        const head = e.target.closest('.dr-grid-team-head');
+        if (!head) return;
         const already = head.classList.contains('is-active');
-        document.querySelectorAll('.dr-grid-team-head').forEach(h => h.classList.remove('is-active'));
-        document.querySelectorAll('.dr-pick').forEach(p => p.classList.remove('dr-team-dim'));
+        drGrid.querySelectorAll('.dr-grid-team-head').forEach(h => h.classList.remove('is-active'));
+        drGrid.querySelectorAll('.dr-pick').forEach(p => p.classList.remove('dr-team-dim'));
         if (already) return;
         head.classList.add('is-active');
         const team = head.dataset.team;
-        document.querySelectorAll('.dr-pick').forEach(p => {
+        drGrid.querySelectorAll('.dr-pick').forEach(p => {
           if (p.dataset.team !== team) p.classList.add('dr-team-dim');
         });
       });
-    });
+    }
 
     // ---- Market ADP ----
     const adpGridStartup = document.getElementById('adpGridStartup');
@@ -10054,6 +10068,169 @@
         const nameOk = !q || card.dataset.name.toLowerCase().includes(q);
         card.classList.toggle('adp-row-hidden', !(posOk && nameOk));
       });
+    }
+
+    // ---- Real Sleeper draft data ----
+    const DR_ROSTER_COLORS = ['var(--navy)', 'var(--red)', '#3f6b4a', '#1d3557', '#8a5a2b', '#5b6f5b', '#b23a5a', '#1c7a8c', '#4a3f36', '#3b4f8a', '#8a7a2f', '#6b3fa0', '#2d2d33', '#a3441f', '#2f4f7a', '#7a3f2f', '#3f3f8a', '#6b6b74'];
+
+    function drInitials(name) {
+      const parts = (name || '?').split(' ').filter(Boolean);
+      return ((parts[0] ? parts[0][0] : '?') + (parts[1] ? parts[1][0] : '')).toUpperCase();
+    }
+
+    function drUserName(entry, userId) {
+      const u = (entry.users || []).find(u => u.user_id === userId);
+      return u ? (u.display_name || u.username) : null;
+    }
+
+    function drRosterOwnerName(entry, rosterId) {
+      const roster = (entry.allRosters || []).find(r => r.roster_id === rosterId);
+      if (!roster) return null;
+      return drUserName(entry, roster.owner_id);
+    }
+
+    function drStatusMeta(status) {
+      if (status === 'complete') return { cls: 'dr-status-complete', label: 'COMPLETE' };
+      if (status === 'drafting') return { cls: 'dr-status-live', label: 'LIVE' };
+      return { cls: 'dr-status-upcoming', label: 'UPCOMING' };
+    }
+
+    function renderRealDraftRoom() {
+      if (!drDraftsList) return;
+      const entries = Object.values(window.sleeperLeagueData || {})
+        .filter(e => e.draftId && window.__sleeperDraftCache && window.__sleeperDraftCache[e.draftId]);
+      if (!entries.length) return;
+
+      entries.sort((a, b) => {
+        const da = window.__sleeperDraftCache[a.draftId].draft;
+        const db = window.__sleeperDraftCache[b.draftId].draft;
+        return (db.start_time || 0) - (da.start_time || 0);
+      });
+
+      drDraftsList.innerHTML = entries.map((entry, i) => {
+        const { draft } = window.__sleeperDraftCache[entry.draftId];
+        const status = drStatusMeta(draft.status);
+        const name = entry.league.name;
+        const monthLabel = draft.start_time
+          ? new Date(draft.start_time).toLocaleString('en-US', { month: 'short', year: 'numeric' })
+          : String(entry.league.season);
+        const teams = (draft.settings && draft.settings.teams) || entry.league.total_rosters || (entry.allRosters || []).length;
+        const rounds = (draft.settings && draft.settings.rounds) || '?';
+        const typeLabel = draft.type ? draft.type[0].toUpperCase() + draft.type.slice(1) : 'Draft';
+        const color = DR_ROSTER_COLORS[i % DR_ROSTER_COLORS.length];
+        return '<div class="dr-draft-row" data-league="' + name + '" data-draft-id="' + entry.draftId + '">' +
+          '<div class="dr-draft-status ' + status.cls + '">' + status.label + '</div>' +
+          '<div class="league-logo" style="background:' + color + '">' + drInitials(name) + '</div>' +
+          '<div class="dr-draft-main">' +
+            '<div class="dr-draft-name">' + name + '</div>' +
+            '<div class="dr-draft-meta">' + monthLabel + ' &middot; ' + typeLabel + ' Draft &middot; ' + teams + ' teams &middot; ' + rounds + ' rounds</div>' +
+          '</div>' +
+          '<div class="dr-draft-chevron">&rsaquo;</div>' +
+        '</div>';
+      }).join('');
+      if (drDraftsCountEl) drDraftsCountEl.textContent = String(entries.length);
+    }
+    window.renderRealDraftRoom = renderRealDraftRoom;
+
+    async function renderRealDraftBoard(draftId, row) {
+      const cached = window.__sleeperDraftCache && window.__sleeperDraftCache[draftId];
+      const entry = Object.values(window.sleeperLeagueData || {}).find(e => e.draftId === draftId);
+      if (!cached || !entry || !drGrid) return;
+      const { draft, picks } = cached;
+      const name = entry.league.name;
+      const status = drStatusMeta(draft.status);
+      const teams = (draft.settings && draft.settings.teams) || entry.league.total_rosters || (entry.allRosters || []).length;
+      const rounds = (draft.settings && draft.settings.rounds) || Math.max(1, ...picks.map(p => p.round || 1));
+      const typeLabel = draft.type ? draft.type[0].toUpperCase() + draft.type.slice(1) : 'Draft';
+
+      drBoardName.textContent = name;
+      drBoardSub.textContent = entry.league.season + ' &middot; ' + typeLabel + ' Draft &middot; ' + teams + ' teams &middot; ' + rounds + ' rounds &middot; ' + status.label;
+      if (drBoardLogo) {
+        const rowLogo = row ? row.querySelector('.league-logo') : null;
+        drBoardLogo.style.background = rowLogo ? rowLogo.style.background : DR_ROSTER_COLORS[0];
+        drBoardLogo.textContent = drInitials(name);
+      }
+
+      let dict = {};
+      if (window.sleeperGetPlayerDict) {
+        try { dict = await window.sleeperGetPlayerDict(); } catch (err) {}
+      }
+
+      function pickPlayerInfo(pick) {
+        const meta = pick.metadata || {};
+        let first = meta.first_name, last = meta.last_name, pos = meta.position, team = meta.team;
+        if (!first && pick.player_id && dict[pick.player_id]) {
+          const p = dict[pick.player_id];
+          first = p.first_name; last = p.last_name; pos = p.position; team = p.team;
+        }
+        return { name: [first, last].filter(Boolean).join(' ') || 'Unknown Player', pos: pos || '', team: team || 'FA' };
+      }
+
+      const slotToRoster = draft.slot_to_roster_id || {};
+      const slots = Object.keys(slotToRoster).map(Number).sort((a, b) => a - b);
+
+      const columnsHtml = slots.map(slot => {
+        const originalRosterId = slotToRoster[String(slot)];
+        const headName = drRosterOwnerName(entry, originalRosterId) || ('Slot ' + slot);
+        const headColor = DR_ROSTER_COLORS[(slot - 1) % DR_ROSTER_COLORS.length];
+        const rowsHtml = [];
+        for (let round = 1; round <= rounds; round++) {
+          const pick = picks.find(p => p.draft_slot === slot && p.round === round);
+          const pickNum = round + '.' + String(slot).padStart(2, '0');
+          if (!pick) {
+            rowsHtml.push(
+              '<div class="dr-pick">' +
+                '<span class="dr-pick-num">' + pickNum + '</span>' +
+                '<div class="dr-pick-name">&mdash;</div>' +
+              '</div>'
+            );
+            continue;
+          }
+          const info = pickPlayerInfo(pick);
+          const posClass = info.pos ? 'dr-pos-' + info.pos.toLowerCase() : '';
+          const currentRosterId = pick.roster_id;
+          const traded = currentRosterId !== originalRosterId;
+          const currentName = traded ? (drRosterOwnerName(entry, currentRosterId) || 'Traded') : headName;
+          rowsHtml.push(
+            '<div class="dr-pick ' + posClass + '" data-team="' + currentRosterId + '">' +
+              '<span class="dr-pick-num">' + pickNum + '</span>' +
+              '<div class="dr-pick-name">' + info.name + '</div>' +
+              '<div class="dr-pick-meta ' + posClass + '"><span class="dr-pos">' + info.pos + '</span> &middot; ' + info.team + '</div>' +
+              (traded ? '<div class="dr-pick-trade">&rarr; ' + currentName + '</div>' : '') +
+            '</div>'
+          );
+        }
+        return '<div class="dr-grid-col">' +
+          '<div class="dr-grid-team-head" data-team="' + originalRosterId + '">' +
+            '<div class="dr-team-avatar" style="background:' + headColor + '">' + drInitials(headName) + '</div>' +
+            '<div class="dr-team-name">' + headName + '</div>' +
+          '</div>' +
+          rowsHtml.join('') +
+        '</div>';
+      }).join('');
+      drGrid.innerHTML = columnsHtml;
+
+      const rosterPanel = drBoardView.querySelector('.dr-roster-panel');
+      if (rosterPanel && entry.roster) {
+        const myRosterId = entry.roster.roster_id;
+        const myPicks = picks.filter(p => p.roster_id === myRosterId)
+          .sort((a, b) => (a.round - b.round) || (a.draft_slot - b.draft_slot));
+        const myName = (drRosterOwnerName(entry, myRosterId) || 'You') + ' (You)';
+        rosterPanel.querySelector('.dr-roster-team').textContent = myName;
+        rosterPanel.querySelector('.dr-roster-value').textContent = myPicks.length + ' drafted';
+        const sectionLabel = rosterPanel.querySelector('.dr-roster-section-label');
+        if (sectionLabel) sectionLabel.textContent = 'YOUR PICKS';
+        const playersHtml = myPicks.map(pick => {
+          const info = pickPlayerInfo(pick);
+          const posClass = info.pos ? 'dr-pos-' + info.pos.toLowerCase() : '';
+          return '<div class="dr-roster-player">' +
+            '<span class="dr-roster-pos ' + posClass + '">' + (info.pos || '-') + '</span>' +
+            '<span class="dr-roster-name">' + info.name + '</span>' +
+            '<span class="dr-roster-team-abbr">' + info.team + '</span>' +
+          '</div>';
+        }).join('') || '<div class="dr-roster-sub">No picks yet.</div>';
+        rosterPanel.querySelector('.dr-roster-players').innerHTML = playersHtml;
+      }
     }
   })();
 
@@ -11131,6 +11308,31 @@
           return renderLeagueRow(lg, i, myRoster, isCoOwned);
         });
 
+        // Draft data is cached per draft_id (not reset each sync) since a
+        // completed draft never changes -- only re-fetch drafts that are
+        // still pre_draft/drafting so an in-progress draft stays live.
+        window.__sleeperDraftCache = window.__sleeperDraftCache || {};
+        await Promise.all(leagues.map(async (lg) => {
+          const draftId = lg.draft_id;
+          const entry = window.sleeperLeagueData[lg.league_id];
+          if (!draftId || !entry) return;
+          const cached = window.__sleeperDraftCache[draftId];
+          if (cached && cached.draft && cached.draft.status === 'complete') {
+            entry.draftId = draftId;
+            return;
+          }
+          try {
+            const [draft, picks] = await Promise.all([
+              sleeperFetch(`/draft/${draftId}`),
+              sleeperFetch(`/draft/${draftId}/picks`),
+            ]);
+            window.__sleeperDraftCache[draftId] = { draft, picks };
+            entry.draftId = draftId;
+          } catch (err) {
+            // Leave uncached -- Draft Room just skips this league's draft.
+          }
+        }));
+
         leagueList.innerHTML = '';
         rows.forEach(r => leagueList.appendChild(r));
         selectSort(currentSortCriterion || 'sleeper');
@@ -11143,6 +11345,7 @@
         if (window.renderRealTrades) window.renderRealTrades();
         if (window.renderRealWaiverWire) window.renderRealWaiverWire();
         if (window.renderRealRootingGuide) window.renderRealRootingGuide();
+        if (window.renderRealDraftRoom) window.renderRealDraftRoom();
       } catch (err) {
         setSyncState('error', "Couldn't sync — check your connection");
       }
