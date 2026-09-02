@@ -10202,9 +10202,16 @@
       };
     }
 
-    function tradePickAssetHtml(pick) {
+    function tradePickAssetHtml(pick, entry) {
       const label = `${pick.season} ${tradeOrdinal(pick.round)}`;
-      return `<div class="trade-asset-pick"><span class="trade-pick-badge">${tradeOrdinal(pick.round)}</span><span class="trade-asset-name">${label}</span></div>`;
+      const originalRoster = (entry.allRosters || []).find(r => r.roster_id === pick.roster_id);
+      const originalUser = originalRoster ? (entry.users || []).find(u => u.user_id === originalRoster.owner_id) : null;
+      const originalName = originalUser ? (originalUser.display_name || originalUser.username) : null;
+      const sub = originalName ? `Originally ${originalName}'s pick` : '';
+      return '<div class="trade-asset-pick">' +
+        `<span class="trade-pick-badge">${tradeOrdinal(pick.round)}</span>` +
+        `<div><div class="trade-asset-name">${label}</div>${sub ? `<div class="trade-asset-sub">${sub}</div>` : ''}</div>` +
+        '</div>';
     }
 
     function tradeFaabAssetHtml(amount) {
@@ -10248,8 +10255,8 @@
           }
         });
         (t.draft_picks || []).forEach(pick => {
-          if (pick.owner_id === myRosterId) gotHtml.push(tradePickAssetHtml(pick));
-          else if (pick.previous_owner_id === myRosterId) gaveHtml.push(tradePickAssetHtml(pick));
+          if (pick.owner_id === myRosterId) gotHtml.push(tradePickAssetHtml(pick, entry));
+          else if (pick.previous_owner_id === myRosterId) gaveHtml.push(tradePickAssetHtml(pick, entry));
         });
         (t.waiver_budget || []).forEach(wb => {
           if (wb.receiver === myRosterId) gotHtml.push(tradeFaabAssetHtml(wb.amount));
@@ -11012,7 +11019,7 @@
         ]);
         window.__sleeperProjections = projections;
 
-        window.sleeperLeagueData = window.sleeperLeagueData || {};
+        window.sleeperLeagueData = {};
         const rows = leagues.map((lg, i) => {
           const leagueRosters = rosters[i] || [];
           const ownedRoster = leagueRosters.find(r => r.owner_id === saved.userId);
