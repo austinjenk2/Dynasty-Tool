@@ -10502,15 +10502,204 @@
   const leaguesListView = document.getElementById('leaguesListView');
   const leagueDetailView = document.getElementById('leagueDetailView');
   const leagueBackBtn = document.getElementById('leagueBackBtn');
-  document.querySelectorAll('.league-row').forEach(row => {
-    row.addEventListener('click', () => {
-      goToLeagueDetail(row.dataset.name);
-    });
+  leagueList.addEventListener('click', (e) => {
+    const row = e.target.closest('.league-row');
+    if (!row) return;
+    goToLeagueDetail(row.dataset.name);
   });
   leagueBackBtn.addEventListener('click', () => {
     leagueDetailView.hidden = true;
     leaguesListView.hidden = false;
   });
+
+  (function initSleeperIntegration() {
+    const SLEEPER_API = 'https://api.sleeper.app/v1';
+    const STORAGE_KEY = 'dynastyToolSleeperUser';
+
+    async function sleeperFetch(path) {
+      const res = await fetch(SLEEPER_API + path);
+      if (!res.ok) throw new Error('Sleeper API ' + res.status + ' on ' + path);
+      return res.json();
+    }
+
+    function getSavedUser() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (e) { return null; }
+    }
+    function saveUser(user) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(user)); } catch (e) {}
+    }
+
+    const userChip = document.getElementById('sleeperUserChip');
+    const connectPanel = document.getElementById('sleeperConnectPanel');
+    const usernameInput = document.getElementById('sleeperUsernameInput');
+    const connectBtn = document.getElementById('sleeperConnectBtn');
+    const connectStatus = document.getElementById('sleeperConnectStatus');
+    const leagueCountChip = document.getElementById('leagueCountChip');
+    const syncDot = document.getElementById('syncDot');
+    const syncStatusText = document.getElementById('syncStatusText');
+    if (!userChip || !connectPanel) return;
+
+    let lastSyncedAt = null;
+    let pollTimer = null;
+
+    function setSyncState(state, message) {
+      syncDot.classList.remove('sync-error', 'sync-pending');
+      if (state === 'error') syncDot.classList.add('sync-error');
+      if (state === 'pending') syncDot.classList.add('sync-pending');
+      if (message) syncStatusText.textContent = message;
+    }
+
+    function tickSyncedLabel() {
+      if (!lastSyncedAt) return;
+      const secs = Math.round((Date.now() - lastSyncedAt) / 1000);
+      if (secs < 10) syncStatusText.textContent = 'Synced just now';
+      else if (secs < 60) syncStatusText.textContent = `Synced ${secs}s ago`;
+      else syncStatusText.textContent = `Synced ${Math.round(secs / 60)}m ago`;
+    }
+    setInterval(tickSyncedLabel, 5000);
+
+    userChip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      connectPanel.hidden = !connectPanel.hidden;
+      if (!connectPanel.hidden) usernameInput.focus();
+    });
+    connectPanel.addEventListener('click', (e) => e.stopPropagation());
+    document.addEventListener('click', () => { connectPanel.hidden = true; });
+
+    connectBtn.addEventListener('click', () => connectSleeperUser(usernameInput.value.trim()));
+    usernameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') connectSleeperUser(usernameInput.value.trim());
+    });
+
+    async function connectSleeperUser(username) {
+      if (!username) return;
+      connectBtn.disabled = true;
+      connectStatus.classList.remove('is-error');
+      connectStatus.textContent = 'Connecting…';
+      try {
+        const user = await sleeperFetch('/user/' + encodeURIComponent(username));
+        if (!user || !user.user_id) throw new Error('not found');
+        saveUser({ username: user.display_name || user.username || username, userId: user.user_id });
+        userChip.textContent = user.display_name || user.username || username;
+        connectPanel.hidden = true;
+        connectStatus.textContent = '';
+        usernameInput.value = '';
+        await loadSleeperData();
+        startPolling();
+      } catch (err) {
+        connectStatus.classList.add('is-error');
+        connectStatus.textContent = /not found/.test(err.message)
+          ? "Couldn't find that Sleeper username."
+          : "Couldn't reach Sleeper right now.";
+      } finally {
+        connectBtn.disabled = false;
+      }
+    }
+
+    function guessSeasons() {
+      // Try the current calendar year first, then fall back a year in case
+      // Sleeper hasn't rolled the new season over yet (off-season gap).
+      const year = new Date().getFullYear();
+      return [String(year), String(year - 1)];
+    }
+
+    const ROSTER_COLORS = ['var(--navy)', 'var(--red)', '#3f6b4a', '#1d3557', '#8a5a2b', '#5b6f5b', '#b23a5a', '#1c7a8c', '#4a3f36', '#3b4f8a', '#8a7a2f', '#6b3fa0', '#2d2d33', '#a3441f', '#2f4f7a', '#7a3f2f', '#3f3f8a', '#6b6b74'];
+
+    function leagueInitials(name) {
+      const words = name.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
+      if (!words.length) return '??';
+      if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+
+    function scoringLabel(league) {
+      const s = league.scoring_settings || {};
+      const rec = s.rec ? (s.rec === 1 ? 'PPR' : s.rec === 0.5 ? 'Half PPR' : `${s.rec} PPR`) : 'Standard';
+      const teams = league.total_rosters || 12;
+      const rosterPositions = league.roster_positions || [];
+      const isSF = rosterPositions.includes('SUPER_FLEX') || rosterPositions.filter(p => p === 'QB').length > 1;
+      return `Sleeper &middot; ${teams} teams &middot; ${isSF ? 'SF' : '1QB'} &middot; ${rec}`;
+    }
+
+    function renderLeagueRow(league, index, roster) {
+      const wins = roster && roster.settings ? (roster.settings.wins || 0) : 0;
+      const losses = roster && roster.settings ? (roster.settings.losses || 0) : 0;
+      const color = ROSTER_COLORS[index % ROSTER_COLORS.length];
+      const initials = leagueInitials(league.name);
+      const row = document.createElement('div');
+      row.className = 'league-row';
+      row.dataset.index = String(index);
+      row.dataset.name = league.name;
+      row.dataset.roster = 'favorite';
+      row.dataset.value = '0';
+      row.dataset.weekly = '0';
+      row.dataset.playoff = '0';
+      row.dataset.wins = String(wins);
+      row.innerHTML =
+        '<div class="league-id">' +
+          `<div class="league-logo" style="background:${color}">${initials}</div>` +
+          `<div><div class="league-name">${league.name}</div><div class="league-meta">${scoringLabel(league)}</div></div>` +
+        '</div>' +
+        '<div class="matchup-col">' +
+          '<div class="matchup-scores"><span class="proj-score mine">&mdash;</span><span class="matchup-vs">vs</span><span class="proj-score theirs">&mdash;</span></div>' +
+          '<div class="favored-tag">Live scores coming soon</div>' +
+        '</div>' +
+        '<div class="roster-pill">&mdash;</div>' +
+        `<div class="col-center">${wins}-${losses}</div>` +
+        '<div class="col-center">&mdash;</div>' +
+        '<div class="col-center">&mdash;</div>' +
+        '<div class="col-center">&mdash;</div>' +
+        '<div class="row-chevron">&#9662;</div>';
+      return row;
+    }
+
+    async function loadSleeperData() {
+      const saved = getSavedUser();
+      if (!saved) return;
+      setSyncState('pending', 'Syncing…');
+      try {
+        let leagues = [];
+        for (const yr of guessSeasons()) {
+          leagues = await sleeperFetch(`/user/${saved.userId}/leagues/nfl/${yr}`);
+          if (leagues && leagues.length) break;
+        }
+        leagues = leagues || [];
+
+        const rosters = await Promise.all(
+          leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => []))
+        );
+
+        const rows = leagues.map((lg, i) => {
+          const myRoster = (rosters[i] || []).find(r => r.owner_id === saved.userId);
+          return renderLeagueRow(lg, i, myRoster);
+        });
+
+        leagueList.innerHTML = '';
+        rows.forEach(r => leagueList.appendChild(r));
+        selectSort(currentSortCriterion || 'sleeper');
+
+        if (leagueCountChip) leagueCountChip.textContent = `${leagues.length} League${leagues.length === 1 ? '' : 's'}`;
+        lastSyncedAt = Date.now();
+        setSyncState('ok', 'Synced just now');
+      } catch (err) {
+        setSyncState('error', "Couldn't sync — check your connection");
+      }
+    }
+
+    function startPolling() {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(() => {
+        if (getSavedUser()) loadSleeperData();
+      }, 60000);
+    }
+
+    const saved = getSavedUser();
+    if (saved) {
+      userChip.textContent = saved.username;
+      loadSleeperData();
+      startPolling();
+    }
+  })();
 
   function setupWeekDropdown(selectId, menuId, labelId, onChange) {
     const select = document.getElementById(selectId);
