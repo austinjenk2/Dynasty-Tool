@@ -10067,9 +10067,9 @@
       'OTTOMAN', 'Pure Potential Invitational 2', 'PURPLE PEOPLE', 'StatChasers BestBall & Chill 5.0',
       'Studs and Duds', 'Sunday Crew', "The Doctor's",
     ];
-    const tradeCards = Array.from(tradeGrid.querySelectorAll('.trade-card'));
+    let tradeCards = Array.from(tradeGrid.querySelectorAll('.trade-card'));
     const tradeCountEl = document.getElementById('tradeCount');
-    const tradeNow = new Date('2026-09-01T00:00:00');
+    const tradeNow = new Date();
     let tradeLeague = 'ALL';
     let tradeRange = '1M';
     let tradeQuery = '';
@@ -10077,22 +10077,23 @@
     const tradeLeagueMenu = document.getElementById('tradeLeagueMenu');
     const tradeLeagueSelect = document.getElementById('tradeLeagueSelect');
     const tradeLeagueSelectLabel = document.getElementById('tradeLeagueSelectLabel');
-    if (tradeLeagueMenu) {
+
+    function buildTradeLeagueMenu(names) {
+      if (!tradeLeagueMenu) return;
+      tradeLeagueMenu.innerHTML = '';
+      tradeLeague = 'ALL';
+      if (tradeLeagueSelectLabel) tradeLeagueSelectLabel.textContent = 'All Leagues';
       const allOpt = document.createElement('div');
       allOpt.className = 'sort-option active';
       allOpt.textContent = 'All Leagues';
       allOpt.dataset.league = 'ALL';
       tradeLeagueMenu.appendChild(allOpt);
-      tradeLeagues.forEach(name => {
+      names.forEach(name => {
         const opt = document.createElement('div');
         opt.className = 'sort-option';
         opt.textContent = name;
         opt.dataset.league = name;
         tradeLeagueMenu.appendChild(opt);
-      });
-      tradeLeagueSelect.addEventListener('click', (e) => {
-        e.stopPropagation();
-        tradeLeagueMenu.hidden = !tradeLeagueMenu.hidden;
       });
       tradeLeagueMenu.querySelectorAll('.sort-option').forEach(option => {
         option.addEventListener('click', () => {
@@ -10104,8 +10105,16 @@
           applyTradeFilters();
         });
       });
+    }
+    if (tradeLeagueMenu) {
+      buildTradeLeagueMenu(tradeLeagues);
+      tradeLeagueSelect.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tradeLeagueMenu.hidden = !tradeLeagueMenu.hidden;
+      });
       document.addEventListener('click', () => { tradeLeagueMenu.hidden = true; });
     }
+    window.setTradeLeagueOptions = buildTradeLeagueMenu;
 
     document.querySelectorAll('.trade-range-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -10165,6 +10174,126 @@
     }
 
     applyTradeFilters();
+
+    const TRADE_POS_COLOR = { QB: 'var(--red)', RB: 'var(--green)', WR: 'var(--blue)', TE: 'var(--gold)' };
+
+    function tradeInitials(name) {
+      const parts = (name || '').split(' ').filter(Boolean);
+      return ((parts[0] ? parts[0][0] : '?') + (parts[1] ? parts[1][0] : '')).toUpperCase();
+    }
+
+    function tradeOrdinal(n) {
+      const rem100 = n % 100;
+      const suffix = (rem100 >= 11 && rem100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+      return n + suffix;
+    }
+
+    function tradePlayerAssetHtml(id, dict) {
+      const p = dict[id];
+      const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id) : id;
+      const pos = p ? (p.position || '') : '';
+      const team = p ? (p.team || 'FA') : '';
+      return {
+        name,
+        html: '<div class="trade-asset-player">' +
+          `<span class="trade-asset-avatar" style="background:${TRADE_POS_COLOR[pos] || 'var(--muted)'}">${tradeInitials(name)}</span>` +
+          `<div><div class="trade-asset-name">${name}</div><div class="trade-asset-sub">${pos} &middot; ${team}</div></div>` +
+        '</div>',
+      };
+    }
+
+    function tradePickAssetHtml(pick) {
+      const label = `${pick.season} ${tradeOrdinal(pick.round)}`;
+      return `<div class="trade-asset-pick"><span class="trade-pick-badge">${tradeOrdinal(pick.round)}</span><span class="trade-asset-name">${label}</span></div>`;
+    }
+
+    function tradeFaabAssetHtml(amount) {
+      return `<div class="trade-asset-faab"><span class="trade-faab-icon">$</span><span class="trade-asset-name">$${amount} FAAB</span></div>`;
+    }
+
+    async function renderRealTrades() {
+      const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+      if (!entries.length || !window.sleeperGetPlayerDict) return;
+      let dict;
+      try {
+        dict = await window.sleeperGetPlayerDict();
+      } catch (err) {
+        return;
+      }
+
+      const allTrades = [];
+      entries.forEach(entry => {
+        (entry.trades || []).forEach(t => allTrades.push({ entry, t }));
+      });
+      allTrades.sort((a, b) => (b.t.created || 0) - (a.t.created || 0));
+
+      const cardsHtml = allTrades.map(({ entry, t }) => {
+        const myRosterId = entry.roster.roster_id;
+        const gotHtml = [];
+        const gaveHtml = [];
+        const playerNames = [];
+
+        Object.entries(t.adds || {}).forEach(([pid, rid]) => {
+          if (rid === myRosterId) {
+            const asset = tradePlayerAssetHtml(pid, dict);
+            gotHtml.push(asset.html);
+            playerNames.push(asset.name);
+          }
+        });
+        Object.entries(t.drops || {}).forEach(([pid, rid]) => {
+          if (rid === myRosterId) {
+            const asset = tradePlayerAssetHtml(pid, dict);
+            gaveHtml.push(asset.html);
+            playerNames.push(asset.name);
+          }
+        });
+        (t.draft_picks || []).forEach(pick => {
+          if (pick.owner_id === myRosterId) gotHtml.push(tradePickAssetHtml(pick));
+          else if (pick.previous_owner_id === myRosterId) gaveHtml.push(tradePickAssetHtml(pick));
+        });
+        (t.waiver_budget || []).forEach(wb => {
+          if (wb.receiver === myRosterId) gotHtml.push(tradeFaabAssetHtml(wb.amount));
+          else if (wb.sender === myRosterId) gaveHtml.push(tradeFaabAssetHtml(wb.amount));
+        });
+
+        const otherRosterId = (t.roster_ids || []).find(id => id !== myRosterId);
+        const otherRoster = (entry.allRosters || []).find(r => r.roster_id === otherRosterId);
+        const otherUser = otherRoster ? (entry.users || []).find(u => u.user_id === otherRoster.owner_id) : null;
+        const withName = otherUser ? (otherUser.display_name || otherUser.username || 'Unknown') : 'Unknown';
+
+        const created = t.created ? new Date(t.created) : new Date();
+        const dateIso = created.toISOString().slice(0, 10);
+        const dateLabel = created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const players = playerNames.filter(Boolean).join(',');
+
+        return `<div class="trade-card" data-league="${entry.league.name}" data-date="${dateIso}" data-players="${players}">
+            <div class="trade-card-head">
+              <div class="trade-card-title">${entry.league.name} &middot; ${dateLabel}</div>
+              <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+            </div>
+            <div class="trade-card-meta">${entry.league.total_rosters || 12} Teams</div>
+            <div class="trade-card-with">with <b>${withName}</b></div>
+            <div class="trade-cols">
+              <div class="trade-col">
+                <div class="trade-side-label">YOU GOT</div>
+                ${gotHtml.join('') || '<div class="trade-asset-name" style="color:var(--faint)">Nothing</div>'}
+              </div>
+              <div class="trade-col">
+                <div class="trade-side-label">YOU GAVE</div>
+                ${gaveHtml.join('') || '<div class="trade-asset-name" style="color:var(--faint)">Nothing</div>'}
+              </div>
+            </div>
+          </div>`;
+      });
+
+      tradeGrid.innerHTML = cardsHtml.join('') || '<div class="exp-loading">No trades found yet.</div>';
+      tradeCards = Array.from(tradeGrid.querySelectorAll('.trade-card'));
+      if (window.setTradeLeagueOptions) {
+        window.setTradeLeagueOptions(entries.map(e => e.league.name).sort());
+      }
+      applyTradeFilters();
+    }
+    window.renderRealTrades = renderRealTrades;
   })();
 
   const sbSubtabs = document.querySelectorAll('.sb-subtab');
@@ -10865,11 +10994,21 @@
         leagues = leagues || [];
 
         const { week, season } = await getNflState();
-        const [rosters, allMatchups, allUsers, projections] = await Promise.all([
+        // Transactions are fetched per-week (0..current), so this grows every
+        // week of the season -- fine early on, but worth revisiting with a
+        // caching layer for completed past weeks once we're deep into the
+        // season and this is 15-17 fetches per league instead of 1-2.
+        const tradeWeeks = [];
+        for (let w = 0; w <= week; w++) tradeWeeks.push(w);
+        const [rosters, allMatchups, allUsers, projections, allTransactions] = await Promise.all([
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/matchups/${week}`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
           getWeekProjections(season, week),
+          Promise.all(leagues.map(lg =>
+            Promise.all(tradeWeeks.map(w => sleeperFetch(`/league/${lg.league_id}/transactions/${w}`).catch(() => [])))
+              .then(arrs => arrs.flat())
+          )),
         ]);
         window.__sleeperProjections = projections;
 
@@ -10892,8 +11031,16 @@
           const users = allUsers[i] || [];
           const oppUser = oppRoster ? users.find(u => u.user_id === oppRoster.owner_id) : null;
 
+          const myTrades = myRoster
+            ? (allTransactions[i] || []).filter(t =>
+                t && t.type === 'trade' && t.status === 'complete' &&
+                (t.roster_ids || []).includes(myRoster.roster_id)
+              )
+            : [];
+
           window.sleeperLeagueData[lg.league_id] = {
             league: lg, roster: myRoster, isCoOwned, week, myMatchup, oppMatchup, oppUser,
+            allRosters: leagueRosters, users, trades: myTrades,
           };
           return renderLeagueRow(lg, i, myRoster, isCoOwned);
         });
@@ -10907,6 +11054,7 @@
         setSyncState('ok', 'Synced just now');
         if (window.renderRealExposures) window.renderRealExposures();
         if (window.renderRealScoreboard) window.renderRealScoreboard();
+        if (window.renderRealTrades) window.renderRealTrades();
       } catch (err) {
         setSyncState('error', "Couldn't sync — check your connection");
       }
