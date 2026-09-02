@@ -386,6 +386,13 @@
     transform: translate(-50%, -50%) scale(1.25);
     box-shadow: 0 0 0 3px rgba(200,16,46,0.25);
   }
+  .scatter-dot.scatter-dot-multi {
+    filter: brightness(0.8);
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink);
+  }
+  .scatter-dot.scatter-dot-multi.is-active {
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink), 0 0 0 7px rgba(200,16,46,0.25);
+  }
   .scatter-axis-label {
     font-size: 11.5px;
     color: var(--faint);
@@ -413,8 +420,14 @@
     color: #c9c6ba;
     margin-bottom: 4px;
   }
-  .scatter-tooltip .tt-league { font-weight: 600; cursor: pointer; pointer-events: auto; }
-  .scatter-tooltip .tt-league:hover { text-decoration: underline; }
+  .scatter-tooltip .tt-league { font-weight: 600; cursor: pointer; pointer-events: auto; padding: 4px 0; }
+  .scatter-tooltip .tt-league:hover .tt-league-name { text-decoration: underline; }
+  .scatter-tooltip .tt-league + .tt-league { margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 6px; }
+  .scatter-tooltip .tt-league-name { font-weight: 700; }
+  .scatter-tooltip .tt-league-stats { color: #c9c6ba; font-size: 10.5px; margin-top: 1px; }
+  .scatter-tooltip .tt-name { font-weight: 700; font-size: 12.5px; }
+  .scatter-tooltip .tt-stats { color: #c9c6ba; font-size: 11px; margin-top: 2px; }
+  .scatter-tooltip .tt-overlap { color: #6fc3ff; font-weight: 700; font-size: 10px; letter-spacing: 0.2px; margin-top: 6px; }
   [hidden] { display: none !important; }
 
   /* Scoreboard (lineups) page */
@@ -1767,7 +1780,8 @@
     border: 1.5px solid var(--border-soft);
     border-radius: 6px;
     padding: 8px;
-    min-height: 64px;
+    height: 82px;
+    overflow: hidden;
     position: relative;
   }
   .dr-pick.dr-pos-qb { border-color: var(--red); }
@@ -1776,24 +1790,23 @@
   .dr-pick.dr-pos-te { border-color: var(--gold); }
   .dr-pick.dr-team-dim { opacity: 0.3; }
   .dr-pick-num { font-size: 9.5px; font-weight: 700; color: var(--faint); float: right; }
-  .dr-pick-name { font-size: 12px; font-weight: 700; color: var(--ink); margin-top: 8px; }
-  .dr-pick-meta { font-size: 10px; color: var(--faint); margin-top: 2px; }
+  .dr-pick-name { font-size: 12px; font-weight: 700; color: var(--ink); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dr-pick-meta { font-size: 10px; color: var(--faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dr-pick-meta .dr-pos { font-weight: 800; }
   .dr-pick-meta.dr-pos-qb .dr-pos { color: var(--red); }
   .dr-pick-meta.dr-pos-rb .dr-pos { color: var(--green); }
   .dr-pick-meta.dr-pos-wr .dr-pos { color: var(--blue); }
   .dr-pick-meta.dr-pos-te .dr-pos { color: var(--gold); }
-  .dr-pick-trade { font-size: 9.5px; color: var(--faint); font-style: italic; margin-top: 4px; }
+  .dr-pick-trade { font-size: 9.5px; color: var(--faint); font-style: italic; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  .dr-board-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 900px) { .dr-board-bottom { grid-template-columns: 1fr; } }
-  .dr-roster-panel, .dr-chat-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .dr-board-bottom { display: block; }
+  .dr-roster-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
   .dr-roster-head { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 10px; }
   .dr-roster-team { font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
   .dr-roster-value { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
-  .dr-roster-section-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 10px 0 6px; }
-  .dr-roster-player { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-soft); font-size: 12.5px; }
-  .dr-roster-player:last-child { border-bottom: none; }
+  .dr-roster-section-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 10px 0 8px; }
+  .dr-roster-players { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 12px; }
+  .dr-roster-player { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--border-soft); border-radius: 6px; font-size: 12.5px; }
   .dr-roster-pos { width: 24px; font-size: 10px; font-weight: 800; color: #fff; border-radius: 4px; text-align: center; padding: 2px 0; flex-shrink: 0; }
   .dr-roster-pos.dr-pos-qb { background: var(--red); }
   .dr-roster-pos.dr-pos-rb { background: var(--green); }
@@ -1801,11 +1814,6 @@
   .dr-roster-pos.dr-pos-te { background: var(--gold); }
   .dr-roster-name { flex: 1; font-weight: 600; }
   .dr-roster-team-abbr { color: var(--faint); font-size: 11px; }
-
-  .dr-chat-tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--border); margin-bottom: 40px; }
-  .dr-chat-tab { padding-bottom: 8px; font-size: 12.5px; font-weight: 700; color: var(--muted); border-bottom: 2px solid transparent; }
-  .dr-chat-tab.active { color: var(--ink); border-bottom-color: var(--red); }
-  .dr-chat-empty { text-align: center; color: var(--faint); font-size: 13px; padding: 40px 0; }
 
   .dr-intel-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
   .dr-intel-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
@@ -1859,6 +1867,45 @@
   .adp-posrank.adp-wr { color: var(--blue); }
   .adp-posrank.adp-te { color: var(--gold); }
   .adp-value { font-size: 12px; font-weight: 700; color: var(--ink); }
+
+  /* Trade History */
+  .trade-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .trade-range-toggle { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .trade-range-btn { padding: 8px 14px; font-size: 12.5px; font-weight: 700; color: var(--muted); cursor: pointer; }
+  .trade-range-btn.active { background: var(--ink); color: #fff; }
+  .trade-daterange { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .trade-count { font-size: 12px; color: var(--faint); font-weight: 700; margin-left: auto; white-space: nowrap; }
+  .trade-hide-btn.active { background: var(--ink); color: #fff; }
+
+  .trade-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 1100px) { .trade-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 700px) { .trade-grid { grid-template-columns: 1fr; } }
+  .trade-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .trade-card.trade-row-hidden { display: none; }
+  .trade-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .trade-card-title { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .trade-card-icons { display: flex; gap: 6px; color: var(--faint); font-size: 13px; flex-shrink: 0; }
+  .trade-card-meta { font-size: 11px; color: var(--faint); margin-top: 4px; }
+  .trade-card-with { font-size: 12px; color: var(--muted); margin-top: 4px; margin-bottom: 12px; }
+  .trade-card-with b { color: var(--ink); }
+  .trade-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .trade-side-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 8px; }
+  .trade-col.trade-values-hidden { filter: blur(5px); }
+  .trade-asset-player, .trade-asset-pick, .trade-asset-faab { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+  .trade-asset-avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff;
+  }
+  .trade-asset-name { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .trade-asset-sub { font-size: 10.5px; color: var(--faint); margin-top: 1px; }
+  .trade-pick-badge {
+    width: 28px; height: 28px; border-radius: 6px; background: var(--blue); color: #fff;
+    font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .trade-faab-icon {
+    width: 28px; height: 28px; border-radius: 6px; background: var(--green); color: #fff;
+    font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -2034,20 +2081,20 @@
         <h2>Team Strength</h2>
         <div class="scatter-wrap">
           <div class="scatter-quads">
-            <div style="display:flex;align-items:flex-start">Strong Depth</div>
-            <div style="display:flex;align-items:flex-start;justify-content:flex-end;text-align:right">Stacked</div>
-            <div style="display:flex;align-items:flex-end">Rebuild</div>
-            <div style="display:flex;align-items:flex-end;justify-content:flex-end;text-align:right">Top Heavy</div>
+            <div style="display:flex;align-items:flex-start">Overachieving</div>
+            <div style="display:flex;align-items:flex-start;justify-content:flex-end;text-align:right">Contending &amp; Stacked</div>
+            <div style="display:flex;align-items:flex-end">Rebuilding</div>
+            <div style="display:flex;align-items:flex-end;justify-content:flex-end;text-align:right">Underachieving</div>
           </div>
-          <div class="scatter-dot" style="left:78%;top:22%;background:var(--red)" data-leagues="Redraft Rumble"></div>
-          <div class="scatter-dot" style="left:85%;top:14%;background:var(--red)" data-leagues="The Gridiron Guild"></div>
-          <div class="scatter-dot" style="left:62%;top:34%;background:var(--navy)" data-leagues="Sunday Scorchers"></div>
-          <div class="scatter-dot" style="left:38%;top:44%;background:var(--navy)" data-leagues="End Zone Elites"></div>
-          <div class="scatter-dot" style="left:74%;top:70%;background:var(--faint)" data-leagues="Field Goal Fanatics"></div>
-          <div class="scatter-dot" style="left:42%;top:82%;background:#c9c6ba" data-leagues="Rebuild Nation, Waiver Warriors"></div>
+          <div class="scatter-dot scatter-dot-multi" style="left:85%;top:12%;background:var(--red)" data-leagues="Empire Entertainment, OTTOMAN, StatChasers BestBall & Chill 5.0"></div>
+          <div class="scatter-dot scatter-dot-multi" style="left:66%;top:30%;background:var(--navy)" data-leagues="Blitz Dynasty Football, Dynasty Is Life"></div>
+          <div class="scatter-dot" style="left:56%;top:46%;background:var(--navy)" data-leagues="The Doctor's"></div>
+          <div class="scatter-dot" style="left:80%;top:64%;background:var(--gold)" data-leagues="BDGE Dynasty League 53"></div>
+          <div class="scatter-dot scatter-dot-multi" style="left:32%;top:80%;background:var(--faint)" data-leagues="Grandpa Phil, Dynasty - Globo Gym v Avg Joes"></div>
+          <div class="scatter-dot" style="left:24%;top:20%;background:#c9c6ba" data-leagues="PURPLE PEOPLE"></div>
           <div class="scatter-tooltip" id="scatterTooltip" hidden></div>
         </div>
-        <div class="scatter-axis-label">Scoring (x) vs. Depth (y) &mdash; all connected teams</div>
+        <div class="scatter-axis-label">Roster Value (x) vs. Contending Odds (y) &mdash; all connected teams</div>
       </div>
 
     </div>
@@ -5145,51 +5192,43 @@
               <div class="dr-roster-team">AusJ2 (You)</div>
               <div class="dr-roster-value">13 drafted &middot; 4.07 value</div>
               <div class="dr-roster-section-label">STARTERS</div>
-              <div class="dr-roster-player">
-                <span class="dr-roster-pos dr-pos-qb">QB</span>
-                <span class="dr-roster-name">Fernando Mendoza</span>
-                <span class="dr-roster-team-abbr">LV</span>
+              <div class="dr-roster-players">
+                <div class="dr-roster-player">
+                  <span class="dr-roster-pos dr-pos-qb">QB</span>
+                  <span class="dr-roster-name">Fernando Mendoza</span>
+                  <span class="dr-roster-team-abbr">LV</span>
+                </div>
+                <div class="dr-roster-player">
+                  <span class="dr-roster-pos dr-pos-rb">RB</span>
+                  <span class="dr-roster-name">Nicholas Singleton</span>
+                  <span class="dr-roster-team-abbr">TEN</span>
+                </div>
+                <div class="dr-roster-player">
+                  <span class="dr-roster-pos dr-pos-rb">RB</span>
+                  <span class="dr-roster-name">Demond Claiborne</span>
+                  <span class="dr-roster-team-abbr">NE</span>
+                </div>
+                <div class="dr-roster-player">
+                  <span class="dr-roster-pos dr-pos-wr">WR</span>
+                  <span class="dr-roster-name">Jordyn Tyson</span>
+                  <span class="dr-roster-team-abbr">NO</span>
+                </div>
+                <div class="dr-roster-player">
+                  <span class="dr-roster-pos dr-pos-wr">WR</span>
+                  <span class="dr-roster-name">KC Concepcion</span>
+                  <span class="dr-roster-team-abbr">CLE</span>
+                </div>
+                <div class="dr-roster-player">
+                  <span class="dr-roster-pos dr-pos-wr">WR</span>
+                  <span class="dr-roster-name">Omar Cooper</span>
+                  <span class="dr-roster-team-abbr">NYJ</span>
+                </div>
+                <div class="dr-roster-player">
+                  <span class="dr-roster-pos dr-pos-te">TE</span>
+                  <span class="dr-roster-name">Jack Endries</span>
+                  <span class="dr-roster-team-abbr">CIN</span>
+                </div>
               </div>
-              <div class="dr-roster-player">
-                <span class="dr-roster-pos dr-pos-rb">RB</span>
-                <span class="dr-roster-name">Nicholas Singleton</span>
-                <span class="dr-roster-team-abbr">TEN</span>
-              </div>
-              <div class="dr-roster-player">
-                <span class="dr-roster-pos dr-pos-rb">RB</span>
-                <span class="dr-roster-name">Demond Claiborne</span>
-                <span class="dr-roster-team-abbr">NE</span>
-              </div>
-              <div class="dr-roster-player">
-                <span class="dr-roster-pos dr-pos-wr">WR</span>
-                <span class="dr-roster-name">Jordyn Tyson</span>
-                <span class="dr-roster-team-abbr">NO</span>
-              </div>
-              <div class="dr-roster-player">
-                <span class="dr-roster-pos dr-pos-wr">WR</span>
-                <span class="dr-roster-name">KC Concepcion</span>
-                <span class="dr-roster-team-abbr">CLE</span>
-              </div>
-              <div class="dr-roster-player">
-                <span class="dr-roster-pos dr-pos-wr">WR</span>
-                <span class="dr-roster-name">Omar Cooper</span>
-                <span class="dr-roster-team-abbr">NYJ</span>
-              </div>
-              <div class="dr-roster-player">
-                <span class="dr-roster-pos dr-pos-te">TE</span>
-                <span class="dr-roster-name">Jack Endries</span>
-                <span class="dr-roster-team-abbr">CIN</span>
-              </div>
-            </div>
-            <div class="dr-chat-panel">
-              <div class="dr-board-name" style="font-size:15px;margin-bottom:10px" id="drChatTitle">Grandpa Phil</div>
-              <div class="dr-chat-tabs">
-                <div class="dr-chat-tab active">Chat</div>
-                <div class="dr-chat-tab">DMs</div>
-                <div class="dr-chat-tab">Pinned</div>
-                <div class="dr-chat-tab">Mentions</div>
-              </div>
-              <div class="dr-chat-empty">Connect your Sleeper account to view chat</div>
             </div>
           </div>
         </div>
@@ -8976,7 +9015,327 @@
       </div>
     </div>
   </div>
-  <div data-view="trades"><div class="placeholder"><h3>Trade History</h3><p>This section is being built.</p></div></div>
+  <div data-view="trades">
+    <div class="page-title">
+      <h1>Trade History</h1>
+      <p>Every trade you've made, across all of your leagues.</p>
+    </div>
+
+    <div class="trade-toolbar">
+      <div class="sort-dropdown" id="tradeLeagueDropdown">
+        <div class="sort-select" id="tradeLeagueSelect"><span id="tradeLeagueSelectLabel">All Leagues</span> <span>&#9662;</span></div>
+        <div class="sort-menu" id="tradeLeagueMenu" hidden></div>
+      </div>
+      <div class="exp-search" style="max-width:220px"><input type="text" id="tradeSearchInput" placeholder="Search player..."></div>
+      <div class="trade-range-toggle">
+        <div class="trade-range-btn active" data-trade-range="1M">1M</div>
+        <div class="trade-range-btn" data-trade-range="3M">3M</div>
+        <div class="trade-range-btn" data-trade-range="ALL">All</div>
+      </div>
+      <div class="chip trade-daterange">&#128197; Date Range</div>
+      <div class="trade-count" id="tradeCount">15 trades</div>
+      <div class="exp-refresh trade-hide-btn" id="tradeHideBtn" title="Hide trade values">&#128065;</div>
+    </div>
+
+    <div class="trade-grid" id="tradeGrid">
+        <div class="trade-card" data-league="PURPLE PEOPLE" data-date="2026-08-29" data-players="CeeDee Lamb,Rhamondre Stevenson,A.J. Brown,Breece Hall">
+          <div class="trade-card-head">
+            <div class="trade-card-title">PURPLE PEOPLE &middot; Aug 29, 2026</div>
+            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+          </div>
+          <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 5pt Pass TD &middot; Full PPR &middot; 0.75 TEP</div>
+          <div class="trade-card-with">with <b>PaulPatterson</b></div>
+          <div class="trade-cols">
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GOT</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--blue)">CL</span>
+                <div><div class="trade-asset-name">CeeDee Lamb</div><div class="trade-asset-sub">WR &middot; DAL</div></div>
+              </div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--green)">RS</span>
+                <div><div class="trade-asset-name">Rhamondre Stevenson</div><div class="trade-asset-sub">RB &middot; NE</div></div>
+              </div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">3rd</span>
+                <span class="trade-asset-name">2027 3rd</span>
+              </div>
+            </div>
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GAVE</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--blue)">AB</span>
+                <div><div class="trade-asset-name">A.J. Brown</div><div class="trade-asset-sub">WR &middot; NE</div></div>
+              </div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--green)">BH</span>
+                <div><div class="trade-asset-name">Breece Hall</div><div class="trade-asset-sub">RB &middot; NYJ</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="trade-card" data-league="Blockbuster Dynasty" data-date="2026-08-27" data-players="Ashton Jeanty">
+          <div class="trade-card-head">
+            <div class="trade-card-title">Blockbuster Dynasty &middot; Aug 27, 2026</div>
+            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+          </div>
+          <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Tiered PPR (RB 0.5, WR 1, TE 1.5)</div>
+          <div class="trade-card-with">with <b>Heerag</b></div>
+          <div class="trade-cols">
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GOT</div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">1st</span>
+                <span class="trade-asset-name">2029 1st</span>
+              </div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">1st</span>
+                <span class="trade-asset-name">2027 1st</span>
+              </div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">1st</span>
+                <span class="trade-asset-name">2029 1st</span>
+              </div>
+            </div>
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GAVE</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--green)">AJ</span>
+                <div><div class="trade-asset-name">Ashton Jeanty</div><div class="trade-asset-sub">RB &middot; LV</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="trade-card" data-league="Grandpa Phil" data-date="2026-08-26" data-players="Jordyn Tyson,Elijah Sarratt,Dalton Schultz,Makai Lemon">
+          <div class="trade-card-head">
+            <div class="trade-card-title">Grandpa Phil &middot; Aug 26, 2026</div>
+            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+          </div>
+          <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
+          <div class="trade-card-with">with <b>PaulPatterson</b></div>
+          <div class="trade-cols">
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GOT</div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">1st</span>
+                <div><div class="trade-asset-name">2026 1st</div><div class="trade-asset-sub">Jordyn Tyson</div></div>
+              </div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">3rd</span>
+                <div><div class="trade-asset-name">2026 3rd</div><div class="trade-asset-sub">Elijah Sarratt</div></div>
+              </div>
+            </div>
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GAVE</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--gold)">DS</span>
+                <div><div class="trade-asset-name">Dalton Schultz</div><div class="trade-asset-sub">TE &middot; HOU</div></div>
+              </div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">1st</span>
+                <div><div class="trade-asset-name">2026 1st</div><div class="trade-asset-sub">Makai Lemon</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="trade-card" data-league="Degens from Up Country" data-date="2026-08-23" data-players="Matt Hibner">
+          <div class="trade-card-head">
+            <div class="trade-card-title">Degens from Up Country &middot; Aug 23, 2026</div>
+            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+          </div>
+          <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
+          <div class="trade-card-with">with <b>Prophet93</b></div>
+          <div class="trade-cols">
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GOT</div>
+              <div class="trade-asset-faab">
+                <span class="trade-faab-icon">$</span>
+                <span class="trade-asset-name">$100 FAAB</span>
+              </div>
+            </div>
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GAVE</div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">4th</span>
+                <div><div class="trade-asset-name">2026 4th</div><div class="trade-asset-sub">Matt Hibner</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="trade-card" data-league="Degens from Up Country" data-date="2026-08-21" data-players="Stefon Diggs,Marquise Brown,Malachi Fields">
+          <div class="trade-card-head">
+            <div class="trade-card-title">Degens from Up Country &middot; Aug 21, 2026</div>
+            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+          </div>
+          <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
+          <div class="trade-card-with">with <b>Prophet93</b></div>
+          <div class="trade-cols">
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GOT</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--blue)">SD</span>
+                <div><div class="trade-asset-name">Stefon Diggs</div><div class="trade-asset-sub">WR &middot; WAS</div></div>
+              </div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--blue)">MB</span>
+                <div><div class="trade-asset-name">Marquise Brown</div><div class="trade-asset-sub">WR &middot; PHI</div></div>
+              </div>
+            </div>
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GAVE</div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">3rd</span>
+                <div><div class="trade-asset-name">2026 3rd</div><div class="trade-asset-sub">Malachi Fields</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="trade-card" data-league="The Doctor's" data-date="2026-08-20" data-players="Jordyn Tyson,KC Concepcion">
+          <div class="trade-card-head">
+            <div class="trade-card-title">The Doctor's &middot; Aug 20, 2026</div>
+            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+          </div>
+          <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
+          <div class="trade-card-with">with <b>Maxminette</b></div>
+          <div class="trade-cols">
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GOT</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--blue)">JT</span>
+                <div><div class="trade-asset-name">Jordyn Tyson</div><div class="trade-asset-sub">WR &middot; NO</div></div>
+              </div>
+            </div>
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GAVE</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--blue)">KC</span>
+                <div><div class="trade-asset-name">KC Concepcion</div><div class="trade-asset-sub">WR &middot; CLE</div></div>
+              </div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">2nd</span>
+                <span class="trade-asset-name">2027 2nd</span>
+              </div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">3rd</span>
+                <span class="trade-asset-name">2027 3rd</span>
+              </div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">4th</span>
+                <span class="trade-asset-name">2027 4th</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="trade-card" data-league="Empire Entertainment" data-date="2026-07-30" data-players="Chris Olave,Rome Odunze">
+          <div class="trade-card-head">
+            <div class="trade-card-title">Empire Entertainment &middot; Jul 30, 2026</div>
+            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+          </div>
+          <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; Non-TEP</div>
+          <div class="trade-card-with">with <b>okNikolai</b></div>
+          <div class="trade-cols">
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GOT</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--blue)">CO</span>
+                <div><div class="trade-asset-name">Chris Olave</div><div class="trade-asset-sub">WR &middot; NO</div></div>
+              </div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">2nd</span>
+                <span class="trade-asset-name">2027 2nd</span>
+              </div>
+            </div>
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GAVE</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--blue)">RO</span>
+                <div><div class="trade-asset-name">Rome Odunze</div><div class="trade-asset-sub">WR &middot; CHI</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="trade-card" data-league="OTTOMAN" data-date="2026-07-18" data-players="Bo Nix,Kyler Murray">
+          <div class="trade-card-head">
+            <div class="trade-card-title">OTTOMAN &middot; Jul 18, 2026</div>
+            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+          </div>
+          <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
+          <div class="trade-card-with">with <b>carsonfrye12</b></div>
+          <div class="trade-cols">
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GOT</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--red)">BN</span>
+                <div><div class="trade-asset-name">Bo Nix</div><div class="trade-asset-sub">QB &middot; DEN</div></div>
+              </div>
+            </div>
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GAVE</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--red)">KM</span>
+                <div><div class="trade-asset-name">Kyler Murray</div><div class="trade-asset-sub">QB &middot; ARI</div></div>
+              </div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">4th</span>
+                <span class="trade-asset-name">2027 4th</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="trade-card" data-league="StatChasers BestBall & Chill 5.0" data-date="2026-06-12" data-players="Isaiah Likely,Jonnu Smith">
+          <div class="trade-card-head">
+            <div class="trade-card-title">StatChasers BestBall & Chill 5.0 &middot; Jun 12, 2026</div>
+            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+          </div>
+          <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 1.0 TEP</div>
+          <div class="trade-card-with">with <b>WesB69</b></div>
+          <div class="trade-cols">
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GOT</div>
+              <div class="trade-asset-faab">
+                <span class="trade-faab-icon">$</span>
+                <span class="trade-asset-name">$60 FAAB</span>
+              </div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--gold)">IL</span>
+                <div><div class="trade-asset-name">Isaiah Likely</div><div class="trade-asset-sub">TE &middot; BAL</div></div>
+              </div>
+            </div>
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GAVE</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--gold)">JS</span>
+                <div><div class="trade-asset-name">Jonnu Smith</div><div class="trade-asset-sub">TE &middot; PIT</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="trade-card" data-league="Blitz Dynasty Football" data-date="2026-05-05" data-players="Kyren Williams">
+          <div class="trade-card-head">
+            <div class="trade-card-title">Blitz Dynasty Football &middot; May 5, 2026</div>
+            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+          </div>
+          <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
+          <div class="trade-card-with">with <b>KingProfitVII</b></div>
+          <div class="trade-cols">
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GOT</div>
+              <div class="trade-asset-pick">
+                <span class="trade-pick-badge">1st</span>
+                <span class="trade-asset-name">2027 1st</span>
+              </div>
+            </div>
+            <div class="trade-col">
+              <div class="trade-side-label">YOU GAVE</div>
+              <div class="trade-asset-player">
+                <span class="trade-asset-avatar" style="background:var(--green)">KW</span>
+                <div><div class="trade-asset-name">Kyren Williams</div><div class="trade-asset-sub">RB &middot; LAR</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
   <div data-view="records"><div class="placeholder"><h3>Record Book</h3><p>This section is being built.</p></div></div>
   <div data-view="calculator"><div class="placeholder"><h3>Trade Calculator</h3><p>This section is being built.</p></div></div>
   <div data-view="database"><div class="placeholder"><h3>Trade Database</h3><p>This section is being built.</p></div></div>
@@ -9508,7 +9867,6 @@
     const drBoardName = document.getElementById('drBoardName');
     const drBoardSub = document.getElementById('drBoardSub');
     const drBoardLogo = document.getElementById('drBoardLogo');
-    const drChatTitle = document.getElementById('drChatTitle');
 
     function openDraftBoard(row) {
       drDraftsHome.hidden = true;
@@ -9517,7 +9875,6 @@
       const logo = row.querySelector('.league-logo');
       const metaText = row.querySelector('.dr-draft-meta').textContent;
       drBoardName.textContent = name;
-      drChatTitle.textContent = name;
       drBoardSub.textContent = '2026 · ' + metaText.split(' · ').slice(1).join(' · ') + ' · Linear · Complete';
       if (logo) { drBoardLogo.style.background = logo.style.background; drBoardLogo.textContent = logo.textContent; }
       document.querySelectorAll('.dr-board-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.drBoardTab === 'board'));
@@ -9618,6 +9975,116 @@
         card.classList.toggle('adp-row-hidden', !(posOk && nameOk));
       });
     }
+  })();
+
+  (function initTradeHistory() {
+    const tradeGrid = document.getElementById('tradeGrid');
+    if (!tradeGrid) return;
+    const tradeLeagues = [
+      '1776', 'BDGE Dynasty League 53', 'Blitz Dynasty Football', 'Blockbuster Dynasty',
+      'Degens from Up Country', 'Dynasty - Globo Gym v Avg Joes', 'Dynasty Is Life',
+      'Empire Entertainment', 'Fantasy Football Anonymous', 'Flames in Football', 'Grandpa Phil',
+      'OTTOMAN', 'Pure Potential Invitational 2', 'PURPLE PEOPLE', 'StatChasers BestBall & Chill 5.0',
+      'Studs and Duds', 'Sunday Crew', "The Doctor's",
+    ];
+    const tradeCards = Array.from(tradeGrid.querySelectorAll('.trade-card'));
+    const tradeCountEl = document.getElementById('tradeCount');
+    const tradeNow = new Date('2026-09-01T00:00:00');
+    let tradeLeague = 'ALL';
+    let tradeRange = '1M';
+    let tradeQuery = '';
+
+    const tradeLeagueMenu = document.getElementById('tradeLeagueMenu');
+    const tradeLeagueSelect = document.getElementById('tradeLeagueSelect');
+    const tradeLeagueSelectLabel = document.getElementById('tradeLeagueSelectLabel');
+    if (tradeLeagueMenu) {
+      const allOpt = document.createElement('div');
+      allOpt.className = 'sort-option active';
+      allOpt.textContent = 'All Leagues';
+      allOpt.dataset.league = 'ALL';
+      tradeLeagueMenu.appendChild(allOpt);
+      tradeLeagues.forEach(name => {
+        const opt = document.createElement('div');
+        opt.className = 'sort-option';
+        opt.textContent = name;
+        opt.dataset.league = name;
+        tradeLeagueMenu.appendChild(opt);
+      });
+      tradeLeagueSelect.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tradeLeagueMenu.hidden = !tradeLeagueMenu.hidden;
+      });
+      tradeLeagueMenu.querySelectorAll('.sort-option').forEach(option => {
+        option.addEventListener('click', () => {
+          tradeLeagueMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+          option.classList.add('active');
+          tradeLeague = option.dataset.league;
+          tradeLeagueSelectLabel.textContent = option.dataset.league === 'ALL' ? 'All Leagues' : option.dataset.league;
+          tradeLeagueMenu.hidden = true;
+          applyTradeFilters();
+        });
+      });
+      document.addEventListener('click', () => { tradeLeagueMenu.hidden = true; });
+    }
+
+    document.querySelectorAll('.trade-range-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.trade-range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tradeRange = btn.dataset.tradeRange;
+        applyTradeFilters();
+      });
+    });
+
+    const tradeSearchInput = document.getElementById('tradeSearchInput');
+    if (tradeSearchInput) {
+      tradeSearchInput.addEventListener('input', () => {
+        tradeQuery = tradeSearchInput.value.trim().toLowerCase();
+        applyTradeFilters();
+      });
+    }
+
+    const tradeHideBtn = document.getElementById('tradeHideBtn');
+    if (tradeHideBtn) {
+      tradeHideBtn.addEventListener('click', () => {
+        const hidden = tradeHideBtn.classList.toggle('active');
+        tradeHideBtn.innerHTML = hidden ? '&#128064;' : '&#128065;';
+        tradeGrid.querySelectorAll('.trade-col').forEach(col => col.classList.toggle('trade-values-hidden', hidden));
+      });
+    }
+
+    function withinRange(dateStr) {
+      if (tradeRange === 'ALL') return true;
+      const months = tradeRange === '1M' ? 1 : 3;
+      const cutoff = new Date(tradeNow);
+      cutoff.setMonth(cutoff.getMonth() - months);
+      return new Date(dateStr + 'T00:00:00') >= cutoff;
+    }
+
+    function applyTradeFilters() {
+      let visibleCount = 0;
+      const matches = [];
+      const nonMatches = [];
+      tradeCards.forEach(card => {
+        const leagueOk = tradeLeague === 'ALL' || card.dataset.league === tradeLeague;
+        const rangeOk = withinRange(card.dataset.date);
+        const visible = leagueOk && rangeOk;
+        card.classList.toggle('trade-row-hidden', !visible);
+        if (visible) {
+          visibleCount++;
+          const players = (card.dataset.players || '').toLowerCase();
+          if (tradeQuery && players.includes(tradeQuery)) matches.push(card);
+          else nonMatches.push(card);
+        }
+      });
+      if (tradeQuery) {
+        matches.forEach(c => tradeGrid.appendChild(c));
+        nonMatches.forEach(c => tradeGrid.appendChild(c));
+      }
+      if (tradeCountEl) tradeCountEl.textContent = `${visibleCount} trade${visibleCount === 1 ? '' : 's'}`;
+    }
+
+    applyTradeFilters();
   })();
 
   const sbSubtabs = document.querySelectorAll('.sb-subtab');
@@ -9782,26 +10249,89 @@
 
   const scatterDots = document.querySelectorAll('.scatter-dot');
   const scatterTooltip = document.getElementById('scatterTooltip');
+  const scatterLeagueStats = {
+    'Empire Entertainment': { value: 1, contending: 1 },
+    'OTTOMAN': { value: 1, contending: 2 },
+    'StatChasers BestBall & Chill 5.0': { value: 2, contending: 1 },
+    'Blitz Dynasty Football': { value: 3, contending: 4 },
+    'Dynasty Is Life': { value: 4, contending: 3 },
+    "The Doctor's": { value: 5, contending: 6 },
+    'BDGE Dynasty League 53': { value: 4, contending: 9 },
+    'Grandpa Phil': { value: 10, contending: 11 },
+    'Dynasty - Globo Gym v Avg Joes': { value: 11, contending: 10 },
+    'PURPLE PEOPLE': { value: 8, contending: 2 },
+  };
+  let scatterPinned = false;
+
+  function scatterOrdinal(n) {
+    const rem100 = n % 100;
+    const suffix = (rem100 >= 11 && rem100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+    return n + suffix;
+  }
+  function scatterStatsLine(name) {
+    const s = scatterLeagueStats[name];
+    if (!s) return '';
+    return `${scatterOrdinal(s.value)} of 12 value &middot; ${scatterOrdinal(s.contending)} of 12 contending`;
+  }
+  function scatterShowPreview(dot) {
+    const leagues = dot.dataset.leagues.split(',').map(s => s.trim());
+    const primary = leagues[0];
+    let html = `<div class="tt-name">${primary}</div><div class="tt-stats">${scatterStatsLine(primary)}</div>`;
+    if (leagues.length > 1) {
+      html += `<div class="tt-overlap">+${leagues.length - 1} OVERLAPPING &middot; CLICK TO CHOOSE &rarr;</div>`;
+    }
+    scatterTooltip.innerHTML = html;
+    scatterTooltip.style.left = dot.style.left;
+    scatterTooltip.style.top = dot.style.top;
+    scatterTooltip.hidden = false;
+  }
+  function scatterShowChooser(dot) {
+    const leagues = dot.dataset.leagues.split(',').map(s => s.trim());
+    scatterTooltip.innerHTML = `<div class="tt-title">${leagues.length} LEAGUES HERE</div>` +
+      leagues.map(name =>
+        `<div class="tt-league" data-league-name="${name}">` +
+        `<div class="tt-league-name">${name}</div>` +
+        `<div class="tt-league-stats">${scatterStatsLine(name)}</div>` +
+        `</div>`
+      ).join('');
+    scatterTooltip.style.left = dot.style.left;
+    scatterTooltip.style.top = dot.style.top;
+    scatterTooltip.hidden = false;
+  }
+
   scatterDots.forEach(dot => {
+    dot.addEventListener('mouseenter', () => {
+      if (scatterPinned) return;
+      scatterShowPreview(dot);
+    });
+    dot.addEventListener('mouseleave', () => {
+      if (scatterPinned) return;
+      scatterTooltip.hidden = true;
+    });
     dot.addEventListener('click', (e) => {
       e.stopPropagation();
-      const alreadyActive = dot.classList.contains('is-active');
+      const leagues = dot.dataset.leagues.split(',').map(s => s.trim());
+      if (leagues.length === 1) {
+        scatterPinned = false;
+        scatterDots.forEach(d => d.classList.remove('is-active'));
+        scatterTooltip.hidden = true;
+        goToLeagueDetail(leagues[0]);
+        return;
+      }
+      const already = scatterPinned && dot.classList.contains('is-active');
       scatterDots.forEach(d => d.classList.remove('is-active'));
-      if (alreadyActive) {
+      if (already) {
+        scatterPinned = false;
         scatterTooltip.hidden = true;
         return;
       }
       dot.classList.add('is-active');
-      const leagues = dot.dataset.leagues.split(',').map(s => s.trim());
-      const label = leagues.length > 1 ? 'LEAGUES IN THIS SPOT' : 'LEAGUE';
-      scatterTooltip.innerHTML = `<div class="tt-title">${label}</div>` +
-        leagues.map(name => `<div class="tt-league" data-league-name="${name}">${name}</div>`).join('');
-      scatterTooltip.style.left = dot.style.left;
-      scatterTooltip.style.top = dot.style.top;
-      scatterTooltip.hidden = false;
+      scatterPinned = true;
+      scatterShowChooser(dot);
     });
   });
   document.addEventListener('click', () => {
+    scatterPinned = false;
     scatterDots.forEach(d => d.classList.remove('is-active'));
     scatterTooltip.hidden = true;
   });
@@ -9809,6 +10339,9 @@
     const leagueEl = e.target.closest('.tt-league');
     if (!leagueEl) return;
     e.stopPropagation();
+    scatterPinned = false;
+    scatterDots.forEach(d => d.classList.remove('is-active'));
+    scatterTooltip.hidden = true;
     goToLeagueDetail(leagueEl.dataset.leagueName);
   });
 
