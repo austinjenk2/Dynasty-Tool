@@ -10186,6 +10186,38 @@
     return ((parts[0] ? parts[0][0] : '?') + (parts[1] ? parts[1][0] : '')).toUpperCase();
   }
 
+  function sbProjectionFor(id) {
+    const proj = window.__sleeperProjections || {};
+    return proj[id] != null ? Number(proj[id]) : null;
+  }
+
+  // A player who already has a recorded point value (even 0.0) is treated as
+  // having played; otherwise we fall back to their weekly projection. This is
+  // an approximation -- a real 0-point stat line looks identical to "hasn't
+  // played yet" -- but it's the best signal available without live per-game
+  // status from Sleeper's public API.
+  function sbEffectivePoints(id, pointsMap) {
+    if (pointsMap && pointsMap[id] != null) return Number(pointsMap[id]);
+    const proj = sbProjectionFor(id);
+    return proj != null ? proj : 0;
+  }
+
+  function sbMatchupProjectedTotal(matchup) {
+    if (!matchup) return 0;
+    const starters = (matchup.starters || []).filter(id => id && id !== '0');
+    const pointsMap = matchup.players_points || {};
+    return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap), 0);
+  }
+
+  // Simple logistic curve over the live-adjusted point differential. This is
+  // our own estimate, not a figure Sleeper provides -- calibrated so a ~10pt
+  // edge is roughly a 70/30 favorite and a ~20pt edge is roughly 90/10.
+  function sbWinProbability(myTotal, oppTotal) {
+    const diff = myTotal - oppTotal;
+    const pct = 1 / (1 + Math.exp(-0.11 * diff));
+    return Math.round(Math.min(99, Math.max(1, pct * 100)));
+  }
+
   function sbLineupRowsHtml(matchup, dict) {
     if (!matchup) {
       return '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:16px 0">No matchup data yet</td></tr>';
@@ -10202,6 +10234,8 @@
       const team = p ? (p.team || 'FA') : '';
       const posClass = pos.toLowerCase();
       const pts = pointsMap[id] != null ? Number(pointsMap[id]).toFixed(1) : '&mdash;';
+      const proj = sbProjectionFor(id);
+      const projText = proj != null ? proj.toFixed(1) : '&mdash;';
       return '<tr>' +
         '<td class="sb-exp-player">' +
           `<span class="sb-exp-pos sb-pos-${posClass}">${pos}</span>` +
@@ -10209,7 +10243,7 @@
           `<span class="sb-exp-info"><span class="sb-exp-pname">${name}</span><span class="sb-exp-psub">${pos} &middot; ${team}</span></span>` +
         '</td>' +
         `<td class="sb-exp-pts">${pts}</td>` +
-        '<td class="sb-exp-proj">&mdash;</td>' +
+        `<td class="sb-exp-proj">${projText}</td>` +
       '</tr>';
     }).join('');
   }
@@ -10787,16 +10821,35 @@
       return row;
     }
 
-    let cachedNflWeek = null;
-    async function getCurrentWeek() {
-      if (cachedNflWeek) return cachedNflWeek;
+    let cachedNflState = null;
+    async function getNflState() {
+      if (cachedNflState) return cachedNflState;
       try {
         const state = await sleeperFetch('/state/nfl');
-        cachedNflWeek = state.week || 1;
+        cachedNflState = { week: state.week || 1, season: state.season || String(new Date().getFullYear()) };
       } catch (e) {
-        cachedNflWeek = 1;
+        cachedNflState = { week: 1, season: String(new Date().getFullYear()) };
       }
-      return cachedNflWeek;
+      return cachedNflState;
+    }
+
+    async function getWeekProjections(season, week) {
+      try {
+        const list = await sleeperFetch(
+          `/projections/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
+        );
+        const map = {};
+        (list || []).forEach(p => {
+          if (!p || !p.player_id || !p.stats) return;
+          const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std;
+          if (pts != null) map[p.player_id] = Number(pts);
+        });
+        return map;
+      } catch (e) {
+        // Unofficial/undocumented endpoint -- if it's unavailable or its shape
+        // changed, just render without projections instead of failing sync.
+        return {};
+      }
     }
 
     async function loadSleeperData() {
@@ -10811,12 +10864,14 @@
         }
         leagues = leagues || [];
 
-        const week = await getCurrentWeek();
-        const [rosters, allMatchups, allUsers] = await Promise.all([
+        const { week, season } = await getNflState();
+        const [rosters, allMatchups, allUsers, projections] = await Promise.all([
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/matchups/${week}`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
+          getWeekProjections(season, week),
         ]);
+        window.__sleeperProjections = projections;
 
         window.sleeperLeagueData = window.sleeperLeagueData || {};
         const rows = leagues.map((lg, i) => {
@@ -11274,7 +11329,7 @@
     const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
     if (!entries.length) return;
 
-    let totalPts = 0, leading = 0, withMatchup = 0;
+    let totalPts = 0, favoredCount = 0, withMatchup = 0;
     sbGrid.innerHTML = entries.map((entry, i) => {
       const color = SB_ROSTER_COLORS[i % SB_ROSTER_COLORS.length];
       const initials = sbLeagueInitials(entry.league.name);
@@ -11286,20 +11341,25 @@
 
       let badgeClass = 'sb-badge-close';
       let badgeText = 'No matchup yet';
+      let metaExtra = '';
       if (entry.myMatchup) {
         withMatchup++;
         totalPts += myPts;
-        const delta = myPts - oppPts;
-        if (delta > 0) { leading++; badgeClass = 'sb-badge-good'; badgeText = `Leading by ${delta.toFixed(1)}`; }
-        else if (delta < 0) { badgeClass = 'sb-badge-bad'; badgeText = `Trailing by ${Math.abs(delta).toFixed(1)}`; }
-        else { leading++; badgeClass = 'sb-badge-close'; badgeText = 'Tied'; }
+        const myProj = sbMatchupProjectedTotal(entry.myMatchup);
+        const oppProj = sbMatchupProjectedTotal(entry.oppMatchup);
+        const winPct = sbWinProbability(myProj, oppProj);
+        if (winPct >= 55) { favoredCount++; badgeClass = 'sb-badge-good'; }
+        else if (winPct <= 45) { badgeClass = 'sb-badge-bad'; }
+        else { badgeClass = 'sb-badge-close'; }
+        badgeText = `${winPct}% Win Prob`;
+        metaExtra = ` &middot; proj ${myProj.toFixed(1)}-${oppProj.toFixed(1)}`;
       }
 
       return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}">
           <div class="sb-card-logo" style="background:${color}">${initials}</div>
           <div class="sb-card-main">
             <div class="sb-card-name">${entry.league.name}</div>
-            <div class="sb-card-meta">vs ${oppName}</div>
+            <div class="sb-card-meta">vs ${oppName}${metaExtra}</div>
           </div>
           <div class="sb-card-score"><span class="sb-score-mine">${myPts.toFixed(1)}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${oppPts.toFixed(1)}</span></div>
           <div class="sb-badge ${badgeClass}">${badgeText}</div>
@@ -11318,8 +11378,8 @@
     if (ptsLabel) ptsLabel.innerHTML = `WEEK <span class="sb-week-num">${week}</span> PTS SO FAR`;
     if (optimalStat) optimalStat.hidden = true;
     if (optimalDivider) optimalDivider.hidden = true;
-    if (winsValue) winsValue.textContent = `${leading} of ${withMatchup}`;
-    if (winsLabel) winsLabel.textContent = 'LEADING OR TIED';
+    if (winsValue) winsValue.textContent = `${favoredCount} of ${withMatchup}`;
+    if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
     const sbWeekLabel = document.getElementById('sbWeekLabel');
     if (sbWeekLabel) sbWeekLabel.textContent = week;
