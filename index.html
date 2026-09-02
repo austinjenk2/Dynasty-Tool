@@ -2820,24 +2820,24 @@
       </div>
 
       <div data-sb-view="scoreboard" class="sb-view is-active">
-        <div class="sb-stats">
-          <div class="sb-stat">
-            <div class="sb-stat-value sb-cyan">2655</div>
-            <div class="sb-stat-label">WEEK <span class="sb-week-num">1</span> PROJ PTS</div>
+        <div class="sb-stats" id="sbStats">
+          <div class="sb-stat" id="sbStatPts">
+            <div class="sb-stat-value sb-cyan" id="sbStatPtsValue">2655</div>
+            <div class="sb-stat-label" id="sbStatPtsLabel">WEEK <span class="sb-week-num">1</span> PROJ PTS</div>
           </div>
-          <div class="sb-stat-divider"></div>
-          <div class="sb-stat">
+          <div class="sb-stat-divider" id="sbStatOptimalDivider"></div>
+          <div class="sb-stat" id="sbStatOptimal">
             <div class="sb-stat-value sb-green">99%</div>
             <div class="sb-stat-label">OF OPTIMAL STARTED</div>
           </div>
           <div class="sb-stat-divider"></div>
-          <div class="sb-stat">
-            <div class="sb-stat-value">14 of 18</div>
-            <div class="sb-stat-label">PROJECTED TO WIN</div>
+          <div class="sb-stat" id="sbStatWins">
+            <div class="sb-stat-value" id="sbStatWinsValue">14 of 18</div>
+            <div class="sb-stat-label" id="sbStatWinsLabel">PROJECTED TO WIN</div>
           </div>
         </div>
 
-        <div class="sb-grid">
+        <div class="sb-grid" id="sbGrid">
 
           <div class="sb-card">
             <div class="sb-card-logo" style="background:#c8102e">FA</div>
@@ -10179,13 +10179,101 @@
   });
 
   const sbLineupTemplate = document.getElementById('sbLineupTemplate');
-  document.querySelectorAll('.sb-card').forEach(card => {
-    card.addEventListener('click', () => {
+  const SB_POS_COLOR = { qb: 'var(--red)', rb: 'var(--green)', wr: 'var(--blue)', te: 'var(--gold)' };
+
+  function sbInitials(name) {
+    const parts = (name || '').split(' ').filter(Boolean);
+    return ((parts[0] ? parts[0][0] : '?') + (parts[1] ? parts[1][0] : '')).toUpperCase();
+  }
+
+  function sbLineupRowsHtml(matchup, dict) {
+    if (!matchup) {
+      return '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:16px 0">No matchup data yet</td></tr>';
+    }
+    const starters = (matchup.starters || []).filter(id => id && id !== '0');
+    const pointsMap = matchup.players_points || {};
+    if (!starters.length) {
+      return '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:16px 0">No starters set yet</td></tr>';
+    }
+    return starters.map(id => {
+      const p = dict[id];
+      const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id) : id;
+      const pos = p ? (p.position || '') : '';
+      const team = p ? (p.team || 'FA') : '';
+      const posClass = pos.toLowerCase();
+      const pts = pointsMap[id] != null ? Number(pointsMap[id]).toFixed(1) : '&mdash;';
+      return '<tr>' +
+        '<td class="sb-exp-player">' +
+          `<span class="sb-exp-pos sb-pos-${posClass}">${pos}</span>` +
+          `<span class="sb-exp-avatar" style="background:${SB_POS_COLOR[posClass] || 'var(--muted)'}">${sbInitials(name)}</span>` +
+          `<span class="sb-exp-info"><span class="sb-exp-pname">${name}</span><span class="sb-exp-psub">${pos} &middot; ${team}</span></span>` +
+        '</td>' +
+        `<td class="sb-exp-pts">${pts}</td>` +
+        '<td class="sb-exp-proj">&mdash;</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  async function openRealSbExpand(card, entry) {
+    const panel = document.createElement('div');
+    panel.className = 'sb-expand';
+    panel.innerHTML = '<div class="ld-loading">Loading lineups…</div>';
+    card.after(panel);
+    card.classList.add('is-open');
+
+    let dict;
+    try {
+      dict = await window.sleeperGetPlayerDict();
+    } catch (err) {
+      panel.innerHTML = '<div class="ld-loading">Could not load player data from Sleeper.</div>';
+      return;
+    }
+
+    const cardLogo = card.querySelector('.sb-card-logo');
+    const badge = card.querySelector('.sb-badge');
+    panel.innerHTML =
+      '<div class="sb-exp-header">' +
+        `<div class="sb-exp-logo" style="background:${cardLogo.style.background}">${cardLogo.textContent}</div>` +
+        '<div class="sb-exp-title">' +
+          `<div class="sb-exp-name">${card.querySelector('.sb-card-name').textContent}</div>` +
+          `<div class="sb-exp-meta">${card.querySelector('.sb-card-meta').innerHTML}</div>` +
+        '</div>' +
+        '<div class="sb-exp-right">' +
+          `<div class="sb-exp-score">${card.querySelector('.sb-card-score').innerHTML}</div>` +
+          `<div class="sb-badge ${badge.className.replace('sb-badge', '').trim()}">${badge.textContent}</div>` +
+        '</div>' +
+      '</div>' +
+      '<div class="sb-lineups-cols">' +
+        '<div class="sb-lineup-col">' +
+          '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
+          '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
+          `<tbody>${sbLineupRowsHtml(entry.myMatchup, dict)}</tbody></table>` +
+        '</div>' +
+        '<div class="sb-lineup-col">' +
+          '<div class="sb-lineup-label sb-lineup-label-opp">OPPONENT LINEUP</div>' +
+          '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
+          `<tbody>${sbLineupRowsHtml(entry.oppMatchup, dict)}</tbody></table>` +
+        '</div>' +
+      '</div>';
+  }
+
+  const sbGridEl = document.getElementById('sbGrid');
+  if (sbGridEl) {
+    sbGridEl.addEventListener('click', (e) => {
+      const card = e.target.closest('.sb-card');
+      if (!card) return;
       const openExpand = card.nextElementSibling;
       const alreadyOpen = openExpand && openExpand.classList.contains('sb-expand');
       document.querySelectorAll('.sb-expand').forEach(el => el.remove());
       document.querySelectorAll('.sb-card.is-open').forEach(el => el.classList.remove('is-open'));
       if (alreadyOpen) return;
+
+      const leagueId = card.dataset.sleeperLeagueId;
+      const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+      if (entry && window.sleeperGetPlayerDict) {
+        openRealSbExpand(card, entry);
+        return;
+      }
 
       const panel = sbLineupTemplate.content.cloneNode(true);
       const cardLogo = card.querySelector('.sb-card-logo');
@@ -10202,7 +10290,7 @@
       card.after(panel);
       card.classList.add('is-open');
     });
-  });
+  }
 
   document.querySelectorAll('.rg-row').forEach(row => {
     row.addEventListener('click', () => {
@@ -10699,6 +10787,18 @@
       return row;
     }
 
+    let cachedNflWeek = null;
+    async function getCurrentWeek() {
+      if (cachedNflWeek) return cachedNflWeek;
+      try {
+        const state = await sleeperFetch('/state/nfl');
+        cachedNflWeek = state.week || 1;
+      } catch (e) {
+        cachedNflWeek = 1;
+      }
+      return cachedNflWeek;
+    }
+
     async function loadSleeperData() {
       const saved = getSavedUser();
       if (!saved) return;
@@ -10711,9 +10811,12 @@
         }
         leagues = leagues || [];
 
-        const rosters = await Promise.all(
-          leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => []))
-        );
+        const week = await getCurrentWeek();
+        const [rosters, allMatchups, allUsers] = await Promise.all([
+          Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => []))),
+          Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/matchups/${week}`).catch(() => []))),
+          Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
+        ]);
 
         window.sleeperLeagueData = window.sleeperLeagueData || {};
         const rows = leagues.map((lg, i) => {
@@ -10724,7 +10827,19 @@
             : null;
           const isCoOwned = !ownedRoster && !!coOwnedRoster;
           const myRoster = ownedRoster || coOwnedRoster || null;
-          window.sleeperLeagueData[lg.league_id] = { league: lg, roster: myRoster, isCoOwned };
+
+          const matchups = allMatchups[i] || [];
+          const myMatchup = myRoster ? matchups.find(m => m.roster_id === myRoster.roster_id) : null;
+          const oppMatchup = myMatchup
+            ? matchups.find(m => m.matchup_id === myMatchup.matchup_id && m.roster_id !== myRoster.roster_id)
+            : null;
+          const oppRoster = oppMatchup ? leagueRosters.find(r => r.roster_id === oppMatchup.roster_id) : null;
+          const users = allUsers[i] || [];
+          const oppUser = oppRoster ? users.find(u => u.user_id === oppRoster.owner_id) : null;
+
+          window.sleeperLeagueData[lg.league_id] = {
+            league: lg, roster: myRoster, isCoOwned, week, myMatchup, oppMatchup, oppUser,
+          };
           return renderLeagueRow(lg, i, myRoster, isCoOwned);
         });
 
@@ -10736,6 +10851,7 @@
         lastSyncedAt = Date.now();
         setSyncState('ok', 'Synced just now');
         if (window.renderRealExposures) window.renderRealExposures();
+        if (window.renderRealScoreboard) window.renderRealScoreboard();
       } catch (err) {
         setSyncState('error', "Couldn't sync — check your connection");
       }
@@ -11143,6 +11259,73 @@
   }
   window.renderRealExposures = renderRealExposures;
 
+  const SB_ROSTER_COLORS = ['var(--navy)', 'var(--red)', '#3f6b4a', '#1d3557', '#8a5a2b', '#5b6f5b', '#b23a5a', '#1c7a8c', '#4a3f36', '#3b4f8a', '#8a7a2f', '#6b3fa0', '#2d2d33', '#a3441f', '#2f4f7a', '#7a3f2f', '#3f3f8a', '#6b6b74'];
+
+  function sbLeagueInitials(name) {
+    const words = name.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
+    if (!words.length) return '??';
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+
+  function renderRealScoreboard() {
+    const sbGrid = document.getElementById('sbGrid');
+    if (!sbGrid) return;
+    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+    if (!entries.length) return;
+
+    let totalPts = 0, leading = 0, withMatchup = 0;
+    sbGrid.innerHTML = entries.map((entry, i) => {
+      const color = SB_ROSTER_COLORS[i % SB_ROSTER_COLORS.length];
+      const initials = sbLeagueInitials(entry.league.name);
+      const myPts = entry.myMatchup ? (entry.myMatchup.points || 0) : 0;
+      const oppPts = entry.oppMatchup ? (entry.oppMatchup.points || 0) : 0;
+      const oppName = entry.oppUser
+        ? (entry.oppUser.display_name || entry.oppUser.username || 'Opponent')
+        : (entry.myMatchup ? 'TBD' : 'No matchup yet');
+
+      let badgeClass = 'sb-badge-close';
+      let badgeText = 'No matchup yet';
+      if (entry.myMatchup) {
+        withMatchup++;
+        totalPts += myPts;
+        const delta = myPts - oppPts;
+        if (delta > 0) { leading++; badgeClass = 'sb-badge-good'; badgeText = `Leading by ${delta.toFixed(1)}`; }
+        else if (delta < 0) { badgeClass = 'sb-badge-bad'; badgeText = `Trailing by ${Math.abs(delta).toFixed(1)}`; }
+        else { leading++; badgeClass = 'sb-badge-close'; badgeText = 'Tied'; }
+      }
+
+      return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}">
+          <div class="sb-card-logo" style="background:${color}">${initials}</div>
+          <div class="sb-card-main">
+            <div class="sb-card-name">${entry.league.name}</div>
+            <div class="sb-card-meta">vs ${oppName}</div>
+          </div>
+          <div class="sb-card-score"><span class="sb-score-mine">${myPts.toFixed(1)}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${oppPts.toFixed(1)}</span></div>
+          <div class="sb-badge ${badgeClass}">${badgeText}</div>
+          <div class="sb-chevron">&#9662;</div>
+        </div>`;
+    }).join('');
+
+    const ptsValue = document.getElementById('sbStatPtsValue');
+    const ptsLabel = document.getElementById('sbStatPtsLabel');
+    const optimalStat = document.getElementById('sbStatOptimal');
+    const optimalDivider = document.getElementById('sbStatOptimalDivider');
+    const winsValue = document.getElementById('sbStatWinsValue');
+    const winsLabel = document.getElementById('sbStatWinsLabel');
+    const week = entries[0].week || 1;
+    if (ptsValue) ptsValue.textContent = totalPts.toFixed(1);
+    if (ptsLabel) ptsLabel.innerHTML = `WEEK <span class="sb-week-num">${week}</span> PTS SO FAR`;
+    if (optimalStat) optimalStat.hidden = true;
+    if (optimalDivider) optimalDivider.hidden = true;
+    if (winsValue) winsValue.textContent = `${leading} of ${withMatchup}`;
+    if (winsLabel) winsLabel.textContent = 'LEADING OR TIED';
+    document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
+    const sbWeekLabel = document.getElementById('sbWeekLabel');
+    if (sbWeekLabel) sbWeekLabel.textContent = week;
+  }
+  window.renderRealScoreboard = renderRealScoreboard;
+
   document.querySelectorAll('.exp-group').forEach(group => {
     const chips = Array.from(group.querySelectorAll('.exp-chip'));
     const isBoardList = chips.some(c => c.textContent.trim() === 'Board');
@@ -11260,9 +11443,9 @@
     pmExpPct.textContent = pct > 0 ? `${pct}%` : '0%';
 
     pmLeagueList.innerHTML = '';
-    leagues.forEach((league, i) => {
+    leagues.forEach((league) => {
       const row = document.createElement('div');
-      row.className = 'pm-league-row' + (i >= 5 ? ' pm-league-hidden' : '');
+      row.className = 'pm-league-row';
       row.innerHTML = `<span>${league}</span><span>&rsaquo;</span>`;
       row.addEventListener('click', () => {
         playerModal.hidden = true;
@@ -11270,7 +11453,7 @@
       });
       pmLeagueList.appendChild(row);
     });
-    pmShowAll.hidden = leagues.length <= 5;
+    pmShowAll.hidden = true;
 
     document.querySelectorAll('.pm-tab').forEach(t => t.classList.toggle('active', t.dataset.pmTab === 'exposure'));
     document.querySelectorAll('.pm-panel').forEach(p => { p.hidden = p.dataset.pmPanel !== 'exposure'; });
