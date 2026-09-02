@@ -1159,6 +1159,26 @@
   }
   .placeholder p { color: var(--muted); font-size: 13px; margin: 0; }
 
+  /* Settings */
+  .settings-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 4px 20px; }
+  .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 0; }
+  .settings-row + .settings-row { border-top: 1px solid var(--border-soft); }
+  .settings-label { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .settings-sub { font-size: 12px; color: var(--muted); margin-top: 4px; max-width: 520px; }
+  .toggle-switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: var(--border); border-radius: 24px; transition: background 0.15s ease;
+  }
+  .toggle-slider::before {
+    content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px;
+    background: #fff; border-radius: 50%; transition: transform 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .toggle-switch input:checked + .toggle-slider { background: var(--green); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+
   /* Leagues page */
   .league-toolbar {
     display: flex;
@@ -1952,6 +1972,7 @@
     <a class="section-tab" data-section="records">Record Book</a>
     <a class="section-tab" data-section="calculator">Trade Calculator</a>
     <a class="section-tab" data-section="database">Trade Database</a>
+    <a class="section-tab" data-section="settings">Settings</a>
   </div>
 </nav>
 
@@ -9376,6 +9397,25 @@
   <div data-view="records"><div class="placeholder"><h3>Record Book</h3><p>This section is being built.</p></div></div>
   <div data-view="calculator"><div class="placeholder"><h3>Trade Calculator</h3><p>This section is being built.</p></div></div>
   <div data-view="database"><div class="placeholder"><h3>Trade Database</h3><p>This section is being built.</p></div></div>
+  <div data-view="settings">
+    <div class="page-title">
+      <h1>Settings</h1>
+      <p>Preferences for how your Sleeper data is pulled in.</p>
+    </div>
+
+    <div class="settings-panel">
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Include co-managed leagues</div>
+          <div class="settings-sub">Count leagues where you're a co-manager (not the primary owner) toward your Exposures and roster data. Turn this off if you only want leagues you own counted.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="coManagedToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
 
 </div>
 
@@ -10626,7 +10666,7 @@
       return `Sleeper &middot; ${teams} teams &middot; ${isSF ? 'SF' : '1QB'} &middot; ${rec}`;
     }
 
-    function renderLeagueRow(league, index, roster) {
+    function renderLeagueRow(league, index, roster, isCoOwned) {
       const wins = roster && roster.settings ? (roster.settings.wins || 0) : 0;
       const losses = roster && roster.settings ? (roster.settings.losses || 0) : 0;
       const color = ROSTER_COLORS[index % ROSTER_COLORS.length];
@@ -10650,7 +10690,7 @@
           '<div class="matchup-scores"><span class="proj-score mine">&mdash;</span><span class="matchup-vs">vs</span><span class="proj-score theirs">&mdash;</span></div>' +
           '<div class="favored-tag">Live scores coming soon</div>' +
         '</div>' +
-        '<div class="roster-pill">&mdash;</div>' +
+        `<div class="roster-pill">${isCoOwned ? 'CO-MANAGED' : '&mdash;'}</div>` +
         `<div class="col-center">${wins}-${losses}</div>` +
         '<div class="col-center">&mdash;</div>' +
         '<div class="col-center">&mdash;</div>' +
@@ -10677,9 +10717,15 @@
 
         window.sleeperLeagueData = window.sleeperLeagueData || {};
         const rows = leagues.map((lg, i) => {
-          const myRoster = (rosters[i] || []).find(r => r.owner_id === saved.userId);
-          window.sleeperLeagueData[lg.league_id] = { league: lg, roster: myRoster || null };
-          return renderLeagueRow(lg, i, myRoster);
+          const leagueRosters = rosters[i] || [];
+          const ownedRoster = leagueRosters.find(r => r.owner_id === saved.userId);
+          const coOwnedRoster = !ownedRoster
+            ? leagueRosters.find(r => (r.co_owners || []).includes(saved.userId))
+            : null;
+          const isCoOwned = !ownedRoster && !!coOwnedRoster;
+          const myRoster = ownedRoster || coOwnedRoster || null;
+          window.sleeperLeagueData[lg.league_id] = { league: lg, roster: myRoster, isCoOwned };
+          return renderLeagueRow(lg, i, myRoster, isCoOwned);
         });
 
         leagueList.innerHTML = '';
@@ -10784,6 +10830,18 @@
     }
     window.renderRealLeagueDetail = renderRealLeagueDetail;
     window.sleeperGetPlayerDict = getPlayerDict;
+
+    const coManagedToggle = document.getElementById('coManagedToggle');
+    if (coManagedToggle) {
+      try {
+        const v = localStorage.getItem('dynastyToolIncludeCoManaged');
+        coManagedToggle.checked = v === null ? true : v === 'true';
+      } catch (e) {}
+      coManagedToggle.addEventListener('change', () => {
+        try { localStorage.setItem('dynastyToolIncludeCoManaged', String(coManagedToggle.checked)); } catch (e) {}
+        if (window.renderRealExposures) window.renderRealExposures();
+      });
+    }
 
     const saved = getSavedUser();
     if (saved) {
@@ -10976,9 +11034,18 @@
     applyExpFilter();
   }
 
+  function isCoManagedIncluded() {
+    try {
+      const v = localStorage.getItem('dynastyToolIncludeCoManaged');
+      return v === null ? true : v === 'true';
+    } catch (e) { return true; }
+  }
+
   async function renderRealExposures() {
     if (!expGrid || !expListBody || !window.sleeperGetPlayerDict) return;
-    const leagueEntries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+    const includeCoManaged = isCoManagedIncluded();
+    const leagueEntries = Object.values(window.sleeperLeagueData || {})
+      .filter(e => e.roster && (includeCoManaged || !e.isCoOwned));
     if (!leagueEntries.length) return;
 
     expGrid.innerHTML = '<div class="exp-loading">Loading your rosters…</div>';
