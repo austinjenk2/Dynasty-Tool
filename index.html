@@ -1469,6 +1469,7 @@
   .ld-pteam { font-size: 9.5px; color: var(--faint); font-weight: 600; }
   .ld-pnum { font-size: 10.5px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1.2; }
   .ld-pnum i { font-style: normal; font-size: 7.5px; font-weight: 600; color: var(--faint); }
+  .ld-loading { grid-column: 1 / -1; text-align: center; color: var(--faint); font-size: 13px; padding: 30px 0; }
 
   /* Notebook panel */
   .notebook-overlay {
@@ -2737,7 +2738,7 @@
         </div>
       </div>
 
-      <div class="ld-columns">
+      <div class="ld-columns" id="ldColumns">
 
         <div class="ld-col">
           <div class="ld-col-head qb">QUARTERBACKS <span>3rd</span></div>
@@ -9821,6 +9822,9 @@
         if (ldMeta && cols[0]) ldMeta.textContent = cols[0].textContent + ' · 12 teams';
         if (ldPill && pill) { ldPill.className = pill.className; ldPill.textContent = pill.textContent; }
         if (ldRank) ldRank.textContent = String(Number(row.dataset.index) + 1);
+        if (row.dataset.sleeperLeagueId && window.renderRealLeagueDetail) {
+          window.renderRealLeagueDetail(row.dataset.sleeperLeagueId);
+        }
       }
     }
     window.scrollTo(0, 0);
@@ -10630,6 +10634,7 @@
       row.className = 'league-row';
       row.dataset.index = String(index);
       row.dataset.name = league.name;
+      row.dataset.sleeperLeagueId = league.league_id;
       row.dataset.roster = 'favorite';
       row.dataset.value = '0';
       row.dataset.weekly = '0';
@@ -10669,8 +10674,10 @@
           leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => []))
         );
 
+        window.sleeperLeagueData = window.sleeperLeagueData || {};
         const rows = leagues.map((lg, i) => {
           const myRoster = (rosters[i] || []).find(r => r.owner_id === saved.userId);
+          window.sleeperLeagueData[lg.league_id] = { league: lg, roster: myRoster || null };
           return renderLeagueRow(lg, i, myRoster);
         });
 
@@ -10692,6 +10699,88 @@
         if (getSavedUser()) loadSleeperData();
       }, 60000);
     }
+
+    const PLAYER_CACHE_KEY = 'dynastyToolSleeperPlayers';
+    const PLAYER_CACHE_AT_KEY = 'dynastyToolSleeperPlayersAt';
+    const PLAYER_CACHE_TTL = 24 * 60 * 60 * 1000;
+    let playerDictPromise = null;
+
+    function getPlayerDict() {
+      if (window.__sleeperPlayerDict) return Promise.resolve(window.__sleeperPlayerDict);
+      if (playerDictPromise) return playerDictPromise;
+      playerDictPromise = (async () => {
+        try {
+          const at = Number(localStorage.getItem(PLAYER_CACHE_AT_KEY) || 0);
+          const cached = at && (Date.now() - at < PLAYER_CACHE_TTL) ? localStorage.getItem(PLAYER_CACHE_KEY) : null;
+          if (cached) {
+            const dict = JSON.parse(cached);
+            window.__sleeperPlayerDict = dict;
+            return dict;
+          }
+        } catch (e) {}
+        const dict = await sleeperFetch('/players/nfl');
+        window.__sleeperPlayerDict = dict;
+        try {
+          localStorage.setItem(PLAYER_CACHE_KEY, JSON.stringify(dict));
+          localStorage.setItem(PLAYER_CACHE_AT_KEY, String(Date.now()));
+        } catch (e) {
+          // Player dictionary is ~5MB; if it doesn't fit in localStorage we
+          // just refetch next time instead of failing the render.
+        }
+        return dict;
+      })();
+      return playerDictPromise;
+    }
+
+    const LD_POS_LABELS = { QB: 'QUARTERBACKS', RB: 'RUNNING BACKS', WR: 'WIDE RECEIVERS', TE: 'TIGHT ENDS' };
+
+    async function renderRealLeagueDetail(leagueId) {
+      const ldColumns = document.getElementById('ldColumns');
+      const entry = window.sleeperLeagueData && window.sleeperLeagueData[leagueId];
+      if (!ldColumns || !entry) return;
+      ldColumns.innerHTML = '<div class="ld-loading">Loading roster…</div>';
+      if (!entry.roster) {
+        ldColumns.innerHTML = '<div class="ld-loading">Could not find your roster in this league.</div>';
+        return;
+      }
+      let dict;
+      try {
+        dict = await getPlayerDict();
+      } catch (err) {
+        ldColumns.innerHTML = '<div class="ld-loading">Could not load player data from Sleeper.</div>';
+        return;
+      }
+
+      const starters = new Set((entry.roster.starters || []).filter(id => id && id !== '0'));
+      const playerIds = (entry.roster.players || []).filter(id => id && id !== '0');
+      const groups = { QB: [], RB: [], WR: [], TE: [] };
+      playerIds.forEach(id => {
+        const p = dict[id];
+        if (!p || !groups[p.position]) return;
+        groups[p.position].push({
+          name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
+          team: p.team || 'FA',
+          isStarter: starters.has(id),
+        });
+      });
+      Object.keys(groups).forEach(pos => {
+        groups[pos].sort((a, b) => Number(b.isStarter) - Number(a.isStarter));
+      });
+
+      ldColumns.innerHTML = Object.keys(groups).map(pos => {
+        const posClass = pos.toLowerCase();
+        const playerRows = groups[pos].map(p =>
+          '<div class="ld-player">' +
+            `<span class="ld-pos ${posClass}">${p.isStarter ? pos : ''}</span>` +
+            (p.isStarter ? '<span class="ld-star">&#9733;</span>' : '') +
+            `<span class="ld-pname">${p.name}</span>` +
+            `<span class="ld-pteam">${p.team}</span>` +
+          '</div>'
+        ).join('') || '<div class="ld-player"><span class="ld-pname" style="color:var(--faint)">None rostered</span></div>';
+        return `<div class="ld-col"><div class="ld-col-head ${posClass}">${LD_POS_LABELS[pos]}</div>${playerRows}</div>`;
+      }).join('');
+    }
+    window.renderRealLeagueDetail = renderRealLeagueDetail;
 
     const saved = getSavedUser();
     if (saved) {
