@@ -11085,7 +11085,7 @@
         // season and this is 15-17 fetches per league instead of 1-2.
         const tradeWeeks = [];
         for (let w = 0; w <= week; w++) tradeWeeks.push(w);
-        const [rosters, allMatchups, allUsers, projections, allTransactions] = await Promise.all([
+        const [rosters, allMatchups, allUsers, projections, allTransactions, trendingAdds] = await Promise.all([
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/matchups/${week}`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
@@ -11094,8 +11094,10 @@
             Promise.all(tradeWeeks.map(w => sleeperFetch(`/league/${lg.league_id}/transactions/${w}`).catch(() => [])))
               .then(arrs => arrs.flat())
           )),
+          sleeperFetch('/players/nfl/trending/add?lookback_hours=24&limit=25').catch(() => []),
         ]);
         window.__sleeperProjections = projections;
+        window.__sleeperTrendingAdds = trendingAdds;
 
         window.sleeperLeagueData = {};
         const rows = leagues.map((lg, i) => {
@@ -11140,6 +11142,7 @@
         if (window.renderRealExposures) window.renderRealExposures();
         if (window.renderRealScoreboard) window.renderRealScoreboard();
         if (window.renderRealTrades) window.renderRealTrades();
+        if (window.renderRealWaiverWire) window.renderRealWaiverWire();
         if (window.renderRealRootingGuide) window.renderRealRootingGuide();
       } catch (err) {
         setSyncState('error', "Couldn't sync — check your connection");
@@ -11299,7 +11302,7 @@
     });
   });
 
-  const wwLeagues = [
+  const wwMockLeagues = [
     '1776', 'BDGE Dynasty League 53', 'Blitz Dynasty Football', 'Blockbuster Dynasty',
     'Degens from Up Country', 'Dynasty - Globo Gym v Avg Joes', 'Dynasty Is Life',
     'Empire Entertainment', 'Fantasy Football Anonymous', 'Flames in Football', 'Grandpa Phil',
@@ -11307,6 +11310,7 @@
     'Studs and Duds', 'Sunday Crew', "The Doctor's",
   ];
   const wwState = { pos: 'ALL', league: 'ALL' };
+  const wwList = document.getElementById('wwList');
 
   function applyWwFilter() {
     document.querySelectorAll('#wwList > .ww-row').forEach(row => {
@@ -11331,24 +11335,24 @@
   const wwLeagueMenu = document.getElementById('wwLeagueMenu');
   const wwLeagueSelectLabel = document.getElementById('wwLeagueSelectLabel');
   const wwSub = document.getElementById('wwSub');
-  if (wwLeagueMenu) {
+
+  function buildWwLeagueMenu(names) {
+    if (!wwLeagueMenu) return;
+    wwLeagueMenu.innerHTML = '';
+    wwState.league = 'ALL';
+    if (wwLeagueSelectLabel) wwLeagueSelectLabel.textContent = 'All Leagues';
+    if (wwSub) wwSub.textContent = 'Best available · sorted by trending adds';
     const allOpt = document.createElement('div');
     allOpt.className = 'sort-option active';
     allOpt.textContent = 'All Leagues';
     allOpt.dataset.league = 'ALL';
     wwLeagueMenu.appendChild(allOpt);
-    wwLeagues.forEach(name => {
+    names.forEach(name => {
       const opt = document.createElement('div');
       opt.className = 'sort-option';
       opt.textContent = name;
       opt.dataset.league = name;
       wwLeagueMenu.appendChild(opt);
-    });
-
-    const wwLeagueSelect = document.getElementById('wwLeagueSelect');
-    wwLeagueSelect.addEventListener('click', (e) => {
-      e.stopPropagation();
-      wwLeagueMenu.hidden = !wwLeagueMenu.hidden;
     });
     wwLeagueMenu.querySelectorAll('.sort-option').forEach(option => {
       option.addEventListener('click', () => {
@@ -11357,17 +11361,28 @@
         wwState.league = option.dataset.league;
         wwLeagueSelectLabel.textContent = option.dataset.league === 'ALL' ? 'All Leagues' : option.dataset.league;
         wwSub.textContent = option.dataset.league === 'ALL'
-          ? 'Best available · sorted by player value'
-          : `Best available in ${option.dataset.league} · sorted by player value`;
+          ? 'Best available · sorted by trending adds'
+          : `Best available in ${option.dataset.league} · sorted by trending adds`;
         wwLeagueMenu.hidden = true;
         applyWwFilter();
       });
     });
+  }
+  if (wwLeagueMenu) {
+    buildWwLeagueMenu(wwMockLeagues);
+    const wwLeagueSelect = document.getElementById('wwLeagueSelect');
+    wwLeagueSelect.addEventListener('click', (e) => {
+      e.stopPropagation();
+      wwLeagueMenu.hidden = !wwLeagueMenu.hidden;
+    });
     document.addEventListener('click', () => { wwLeagueMenu.hidden = true; });
   }
+  window.setWwLeagueOptions = buildWwLeagueMenu;
 
-  document.querySelectorAll('.ww-avail').forEach(badge => {
-    badge.addEventListener('click', (e) => {
+  if (wwList) {
+    wwList.addEventListener('click', (e) => {
+      const badge = e.target.closest('.ww-avail');
+      if (!badge) return;
       e.stopPropagation();
       const row = badge.closest('.ww-row');
       const existing = row.nextElementSibling;
@@ -11380,7 +11395,102 @@
       expand.innerHTML = '<b>Available (free agent) in:</b> ' + leagues.join(' &middot; ');
       row.after(expand);
     });
-  });
+  }
+
+  function wwInitials(name) {
+    const parts = (name || '').split(' ').filter(Boolean);
+    return ((parts[0] ? parts[0][0] : '?') + (parts[1] ? parts[1][0] : '')).toUpperCase();
+  }
+
+  const WW_WAIVER_TYPE_LABEL = { 0: 'Rolling Waivers', 1: 'Reverse Standings', 2: 'FAAB' };
+
+  async function renderRealWaiverWire() {
+    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+    if (!entries.length || !window.sleeperGetPlayerDict) return;
+    let dict;
+    try {
+      dict = await window.sleeperGetPlayerDict();
+    } catch (err) {
+      return;
+    }
+
+    const WW_POS_COLOR = { QB: 'var(--red)', RB: 'var(--green)', WR: 'var(--blue)', TE: 'var(--gold)' };
+    const projections = window.__sleeperProjections || {};
+    const trending = window.__sleeperTrendingAdds || [];
+
+    const rowsHtml = trending.map(t => {
+      const p = dict[t.player_id];
+      if (!p || !WW_POS_COLOR[p.position]) return null;
+      const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || t.player_id;
+      const availableIn = [];
+      entries.forEach(entry => {
+        const rosteredIds = new Set();
+        (entry.allRosters || []).forEach(r => (r.players || []).forEach(id => rosteredIds.add(id)));
+        if (!rosteredIds.has(t.player_id)) availableIn.push(entry.league.name);
+      });
+      if (!availableIn.length) return null;
+
+      const rosterPct = Math.round(((entries.length - availableIn.length) / entries.length) * 100);
+      const proj = projections[t.player_id] != null ? Number(projections[t.player_id]).toFixed(1) : '&mdash;';
+      const posClass = p.position.toLowerCase();
+
+      return `<div class="ww-row" data-pos="${p.position}" data-leagues="${availableIn.join('|')}">
+          <div class="ww-player">
+            <div class="ww-avatar" style="background:${WW_POS_COLOR[p.position]}">${wwInitials(name)}</div>
+            <div>
+              <div class="ww-pname">${name}</div>
+              <div class="ww-pmeta"><span class="ww-pos-${posClass}">${p.position}</span> &middot; ${p.team || 'FA'} &middot; ${t.count.toLocaleString()} adds</div>
+            </div>
+          </div>
+          <div class="ww-value">${t.count.toLocaleString()}</div>
+          <div class="ww-proj">${proj}</div>
+          <div class="ww-roster">
+            ${rosterPct}%
+            <span class="ww-avail">${availableIn.length} league${availableIn.length === 1 ? '' : 's'}</span>
+          </div>
+        </div>`;
+    }).filter(Boolean);
+
+    if (wwList) {
+      wwList.innerHTML = rowsHtml.join('') || '<div class="exp-loading">No trending free agents available in your leagues right now.</div>';
+    }
+    const wwValueHead = document.querySelector('.ww-table-head span:nth-child(2)');
+    if (wwValueHead) wwValueHead.textContent = 'TRENDING ADDS';
+
+    if (window.setWwLeagueOptions) {
+      window.setWwLeagueOptions(entries.map(e => e.league.name).sort());
+    }
+    applyWwFilter();
+
+    const leaguesGrid = document.querySelector('.ww-leagues-grid');
+    const leaguesSub = document.querySelector('.ww-leagues-head .ww-sub');
+    if (leaguesGrid) {
+      leaguesGrid.innerHTML = entries.map((entry, i) => {
+        const color = SB_ROSTER_COLORS[i % SB_ROSTER_COLORS.length];
+        const initials = sbLeagueInitials(entry.league.name);
+        const settings = entry.league.settings || {};
+        const total = settings.waiver_budget || 100;
+        const used = (entry.roster.settings && entry.roster.settings.waiver_budget_used) || 0;
+        const remaining = Math.max(0, total - used);
+        const pct = total ? Math.round((remaining / total) * 100) : 0;
+        const typeLabel = WW_WAIVER_TYPE_LABEL[settings.waiver_type] || 'Waivers';
+        return `<div class="ww-league-card">
+            <div class="ww-league-logo" style="background:${color}">${initials}</div>
+            <div class="ww-league-main">
+              <div class="ww-league-name">${entry.league.name}</div>
+              <div class="ww-league-meta">${typeLabel}</div>
+            </div>
+            <div class="ww-faab">
+              <div class="ww-faab-amount">$${remaining} <span class="ww-faab-total">/ $${total}</span></div>
+              <div class="ww-progress"><div class="ww-progress-fill" style="width:${pct}%"></div></div>
+            </div>
+            <div class="ww-league-chevron">&#9662;</div>
+          </div>`;
+      }).join('');
+    }
+    if (leaguesSub) leaguesSub.textContent = `Budget and free agents in each of your ${entries.length} leagues.`;
+  }
+  window.renderRealWaiverWire = renderRealWaiverWire;
 
   const expGrid = document.querySelector('.exp-grid');
   const expList = document.querySelector('.exp-list');
