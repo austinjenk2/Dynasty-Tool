@@ -94,7 +94,34 @@
     font-size: 12.5px;
     font-weight: 600;
   }
-  .chip.user { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .chip.user { background: var(--ink); color: #fff; border-color: var(--ink); cursor: pointer; }
+  .sleeper-connect-wrap { position: relative; }
+  .sleeper-connect-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 20;
+    width: 260px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 10px 24px -8px rgba(0,0,0,0.25);
+    padding: 14px;
+  }
+  .sleeper-connect-panel label { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: 0.4px; color: var(--faint); margin-bottom: 6px; }
+  .sleeper-connect-panel input {
+    width: 100%; height: 34px; padding: 0 10px; margin-bottom: 8px;
+    border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px;
+  }
+  .sleeper-connect-panel button {
+    width: 100%; height: 34px; border: none; border-radius: 6px;
+    background: var(--ink); color: #fff; font-weight: 700; font-size: 12.5px; cursor: pointer;
+  }
+  .sleeper-connect-panel button:disabled { opacity: 0.6; cursor: default; }
+  .sleeper-connect-status { font-size: 11.5px; color: var(--muted); margin-top: 8px; min-height: 14px; }
+  .sleeper-connect-status.is-error { color: var(--red); }
+  .sync-dot.sync-error { background: var(--red); }
+  .sync-dot.sync-pending { background: var(--gold); }
   .search-box {
     height: 32px;
     flex: 1;
@@ -1927,12 +1954,20 @@
 </nav>
 
 <div class="utility-bar">
-  <div class="chip user">AusJ2</div>
+  <div class="sleeper-connect-wrap">
+    <div class="chip user" id="sleeperUserChip" title="Click to connect your Sleeper account">AusJ2</div>
+    <div class="sleeper-connect-panel" id="sleeperConnectPanel" hidden>
+      <label for="sleeperUsernameInput">Sleeper username</label>
+      <input type="text" id="sleeperUsernameInput" placeholder="e.g. AusJ2">
+      <button id="sleeperConnectBtn">Connect</button>
+      <div class="sleeper-connect-status" id="sleeperConnectStatus"></div>
+    </div>
+  </div>
   <div class="search-box">
     <input type="text" placeholder="Search Username / League">
   </div>
-  <div class="chip">18 Leagues</div>
-  <div class="sync-status"><span class="sync-dot"></span>Synced 2m ago</div>
+  <div class="chip" id="leagueCountChip">18 Leagues</div>
+  <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncStatusText">Sample data &mdash; not connected</span></div>
 </div>
 
 <div class="content">
