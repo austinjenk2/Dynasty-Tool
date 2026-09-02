@@ -1078,6 +1078,7 @@
   .exp-bar.exp-rb { background: var(--green); }
   .exp-bar.exp-wr { background: var(--blue); }
   .exp-bar.exp-te { background: var(--gold); }
+  .exp-loading { grid-column: 1 / -1; text-align: center; color: var(--faint); font-size: 13px; padding: 40px 0; }
 
   .exp-list { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .exp-list-head, .exp-list-row {
@@ -10688,6 +10689,7 @@
         if (leagueCountChip) leagueCountChip.textContent = `${leagues.length} League${leagues.length === 1 ? '' : 's'}`;
         lastSyncedAt = Date.now();
         setSyncState('ok', 'Synced just now');
+        if (window.renderRealExposures) window.renderRealExposures();
       } catch (err) {
         setSyncState('error', "Couldn't sync — check your connection");
       }
@@ -10781,6 +10783,7 @@
       }).join('');
     }
     window.renderRealLeagueDetail = renderRealLeagueDetail;
+    window.sleeperGetPlayerDict = getPlayerDict;
 
     const saved = getSavedUser();
     if (saved) {
@@ -10973,6 +10976,106 @@
     applyExpFilter();
   }
 
+  async function renderRealExposures() {
+    if (!expGrid || !expListBody || !window.sleeperGetPlayerDict) return;
+    const leagueEntries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+    if (!leagueEntries.length) return;
+
+    expGrid.innerHTML = '<div class="exp-loading">Loading your rosters…</div>';
+    expListBody.innerHTML = '';
+
+    let dict;
+    try {
+      dict = await window.sleeperGetPlayerDict();
+    } catch (err) {
+      expGrid.innerHTML = '<div class="exp-loading">Could not load player data from Sleeper.</div>';
+      return;
+    }
+
+    const totalLeagues = leagueEntries.length;
+    const exposureMap = {};
+    leagueEntries.forEach(entry => {
+      const players = (entry.roster.players || []).filter(id => id && id !== '0');
+      players.forEach(id => {
+        if (!exposureMap[id]) exposureMap[id] = { count: 0, leagues: [] };
+        exposureMap[id].count++;
+        exposureMap[id].leagues.push(entry.league.name);
+      });
+    });
+
+    const EXP_POS_COLOR = { QB: 'var(--red)', RB: 'var(--green)', WR: 'var(--blue)', TE: 'var(--gold)' };
+    const rows = Object.keys(exposureMap).map(id => {
+      const p = dict[id];
+      if (!p || !EXP_POS_COLOR[p.position]) return null;
+      const info = exposureMap[id];
+      return {
+        name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
+        team: p.team || 'FA',
+        pos: p.position,
+        count: info.count,
+        pct: Math.round((info.count / totalLeagues) * 100),
+        leagues: info.leagues,
+      };
+    }).filter(Boolean);
+
+    rows.sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name));
+
+    function expInitials(name) {
+      const parts = name.split(' ').filter(Boolean);
+      return ((parts[0] ? parts[0][0] : '?') + (parts[1] ? parts[1][0] : '')).toUpperCase();
+    }
+
+    const posRankCounter = {};
+    expGrid.innerHTML = rows.map((r, i) => {
+      const posClass = r.pos.toLowerCase();
+      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="" data-leagues="${r.leagues.join('|')}">
+          <div class="exp-rank">${i + 1}</div>
+          <div class="exp-team-icon">${r.team}</div>
+          <div class="exp-avatar-wrap">
+            <div class="exp-avatar" style="background:${EXP_POS_COLOR[r.pos]}">${expInitials(r.name)}</div>
+            <span class="exp-pos-badge exp-${posClass}">${r.pos}</span>
+          </div>
+          <div class="exp-name">${r.name}</div>
+          <div class="exp-pct-row"><span class="exp-pct exp-${posClass}">${r.pct}%</span><span class="exp-frac">${r.count}/${totalLeagues}</span></div>
+          <div class="exp-bar exp-${posClass}" style="width:${r.pct}%"></div>
+        </div>`;
+    }).join('');
+
+    expListBody.innerHTML = rows.map((r, i) => {
+      const posClass = r.pos.toLowerCase();
+      posRankCounter[r.pos] = (posRankCounter[r.pos] || 0) + 1;
+      return `<div class="exp-list-row" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="" data-leagues="${r.leagues.join('|')}">
+          <div class="exp-list-player">
+            <div class="exp-list-avatar exp-${posClass}">${expInitials(r.name)}</div>
+            <span class="exp-list-name">${r.name}</span>
+            <span class="exp-list-posrank exp-${posClass}">${r.pos}${posRankCounter[r.pos]}</span>
+          </div>
+          <div class="exp-list-team">${r.team}</div>
+          <div class="exp-list-adp">&mdash;</div>
+          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-leagues">${r.count}/${totalLeagues}</div>
+          <div class="exp-list-exposure">
+            <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-${posClass}" style="width:${r.pct}%"></div></div>
+            <span class="exp-list-pct exp-${posClass}">${r.pct}%</span>
+          </div>
+        </div>`;
+    }).join('');
+
+    document.querySelectorAll('.exp-card, .exp-list-row').forEach(item => {
+      item.addEventListener('click', () => openPlayerModal(item));
+    });
+
+    expState.sortMode = 'exp';
+    document.querySelectorAll('.exp-group').forEach(group => {
+      const chips = Array.from(group.querySelectorAll('.exp-chip'));
+      if (chips.some(c => c.textContent.trim() === 'ADP')) {
+        chips.forEach(c => c.classList.toggle('active', c.textContent.trim() === 'EXP%'));
+      }
+    });
+    refreshExpBoard();
+  }
+  window.renderRealExposures = renderRealExposures;
+
   document.querySelectorAll('.exp-group').forEach(group => {
     const chips = Array.from(group.querySelectorAll('.exp-chip'));
     const isBoardList = chips.some(c => c.textContent.trim() === 'Board');
@@ -11085,7 +11188,8 @@
     pmPosBadge.className = 'pm-pos-badge pm-' + pos.toLowerCase();
     pmMetaText.textContent = team;
 
-    pmExpFrac.textContent = `${leagues.length} of 18`;
+    const totalLeagueCount = (window.sleeperLeagueData && Object.keys(window.sleeperLeagueData).length) || 18;
+    pmExpFrac.textContent = `${leagues.length} of ${totalLeagueCount}`;
     pmExpPct.textContent = pct > 0 ? `${pct}%` : '0%';
 
     pmLeagueList.innerHTML = '';
