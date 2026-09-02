@@ -10203,14 +10203,13 @@
     }
 
     function tradePickAssetHtml(pick, entry) {
-      const label = `${pick.season} ${tradeOrdinal(pick.round)}`;
       const originalRoster = (entry.allRosters || []).find(r => r.roster_id === pick.roster_id);
       const originalUser = originalRoster ? (entry.users || []).find(u => u.user_id === originalRoster.owner_id) : null;
       const originalName = originalUser ? (originalUser.display_name || originalUser.username) : null;
-      const sub = originalName ? `Originally ${originalName}'s pick` : '';
+      const label = `${pick.season} ${tradeOrdinal(pick.round)}${originalName ? ` (${originalName})` : ''}`;
       return '<div class="trade-asset-pick">' +
         `<span class="trade-pick-badge">${tradeOrdinal(pick.round)}</span>` +
-        `<div><div class="trade-asset-name">${label}</div>${sub ? `<div class="trade-asset-sub">${sub}</div>` : ''}</div>` +
+        `<div><div class="trade-asset-name">${label}</div></div>` +
         '</div>';
     }
 
