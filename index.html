@@ -10595,7 +10595,16 @@
     if (!matchup) return false;
     const starters = (matchup.starters || []).filter(id => id && id !== '0');
     const pointsMap = matchup.players_points || {};
-    return starters.some(id => pointsMap[id] != null || sbProjectionFor(id, projMap) != null);
+    // Sleeper pre-fills players_points with 0 for every starter before
+    // anyone has actually played, so a recorded 0 alone doesn't prove real
+    // data exists (that's indistinguishable from "hasn't happened yet").
+    // Only a genuine nonzero score, or an actual (non-null) projection,
+    // counts.
+    return starters.some(id => {
+      const pts = pointsMap[id];
+      if (pts != null && Number(pts) !== 0) return true;
+      return sbProjectionFor(id, projMap) != null;
+    });
   }
 
   // Simple logistic curve over the live-adjusted point differential. This is
@@ -11409,7 +11418,8 @@
         (list || []).forEach(p => {
           if (!p || !p.player_id) return;
           if (p.stats) {
-            const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std;
+            const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std ?? p.stats.pts
+              ?? p.pts_ppr ?? p.pts_half_ppr ?? p.pts_std;
             if (pts != null) map[p.player_id] = Number(pts);
           }
           if (p.team && p.opponent && !games[p.team]) {
@@ -12348,16 +12358,6 @@
   // If that data isn't there (endpoint shape differs, or nothing loaded yet)
   // this just leaves the existing schedule content alone rather than
   // clearing it out.
-  function formatGameWhen(dateStr) {
-    if (!dateStr) return 'TBD';
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return String(dateStr).toUpperCase();
-    const hasTime = /T\d{2}:\d{2}/.test(String(dateStr)) || String(dateStr).includes(':');
-    return hasTime
-      ? d.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }).toUpperCase()
-      : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
-  }
-
   function renderRealSchedule() {
     const container = document.getElementById('scheduleGroups');
     const sub = document.getElementById('scheduleSub');
@@ -12366,6 +12366,10 @@
     const teams = Object.keys(gameInfo);
     if (!teams.length) return;
 
+    // The "date" field on this undocumented endpoint turned out not to be a
+    // trustworthy per-game kickoff time (it came back as the same wrong day
+    // for nearly every game) -- a confidently wrong date is worse than none,
+    // so this only uses the real team/opponent pairing and drops the date.
     const seen = new Set();
     const games = [];
     teams.forEach(team => {
@@ -12376,19 +12380,18 @@
       seen.add(key);
       const away = info.isAway ? team : (gameInfo[info.opponent] && gameInfo[info.opponent].isAway ? info.opponent : team);
       const home = away === team ? info.opponent : team;
-      games.push({ away, home, date: info.date });
+      games.push({ away, home });
     });
     if (!games.length) return;
 
-    games.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-    const anyRealTime = games.some(g => g.date && /T\d{2}:\d{2}/.test(String(g.date)));
-    if (sub) sub.textContent = anyRealTime ? 'Every game this week, in kickoff order.' : 'Every game this week (kickoff times not available from Sleeper).';
+    games.sort((a, b) => a.away.localeCompare(b.away));
+    if (sub) sub.textContent = "Every game this week (Sleeper doesn't give us reliable kickoff times).";
 
     container.innerHTML = games.map(g => {
       const awayLower = g.away.toLowerCase();
       const homeLower = g.home.toLowerCase();
       return '<div class="schedule-chip">' +
-        `<div class="schedule-time">${formatGameWhen(g.date)}</div>` +
+        '<div class="schedule-time">KICKOFF TBD</div>' +
         '<div class="schedule-row">' +
           `<div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/${awayLower}.png" alt="${g.away}" onerror="this.style.display='none'"><span>${g.away}</span></div>` +
           '<span class="schedule-at">@</span>' +
