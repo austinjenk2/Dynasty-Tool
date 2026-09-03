@@ -2030,21 +2030,21 @@
           <h2>Portfolio Health</h2>
 
           <div class="track">
-            <div class="track-label">ROSTER VALUE</div>
+            <div class="track-label" id="phRosterValueLabel">ROSTER VALUE</div>
             <div class="track-bar-row">
               <div class="track-bar-bg"></div>
-              <div class="track-bar-fill" style="width:78%"></div>
-              <div class="track-marker" style="left:78%"></div>
+              <div class="track-bar-fill" id="phRosterValueFill" style="width:0%"></div>
+              <div class="track-marker" id="phRosterValueMarker" style="left:0%" hidden></div>
             </div>
             <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
           </div>
 
           <div class="track">
-            <div class="track-label">POINT PROJECTION</div>
+            <div class="track-label" id="phPointProjLabel">POINT PROJECTION</div>
             <div class="track-bar-row">
               <div class="track-bar-bg"></div>
-              <div class="track-bar-fill" style="width:56%"></div>
-              <div class="track-marker" style="left:56%"></div>
+              <div class="track-bar-fill" id="phPointProjFill" style="width:0%"></div>
+              <div class="track-marker" id="phPointProjMarker" style="left:0%" hidden></div>
             </div>
             <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
           </div>
@@ -11401,7 +11401,7 @@
 
           window.sleeperLeagueData[lg.league_id] = {
             league: lg, roster: myRoster, isCoOwned, week, myMatchup, oppMatchup, oppUser,
-            allRosters: leagueRosters, users, trades: myTrades, allTrades: leagueTrades,
+            allRosters: leagueRosters, users, trades: myTrades, allTrades: leagueTrades, allMatchups: matchups,
           };
           return renderLeagueRow(lg, i, myRoster, isCoOwned, myMatchup, oppMatchup, oppUser);
         });
@@ -12196,6 +12196,39 @@
     }
     if (recordValues[1]) {
       recordValues[1].innerHTML = `<span class="win">${projWins}</span><span class="sep">-</span><span class="loss">${projLosses}</span>`;
+    }
+
+    // Point Projection: real percentile rank of your projected weekly total
+    // within each league (using every team's matchup, not just yours),
+    // averaged across leagues. Roster Value needs a valuation source this
+    // app doesn't have, so it stays at 0 with its marker hidden.
+    const phRosterValueLabel = document.getElementById('phRosterValueLabel');
+    if (phRosterValueLabel) phRosterValueLabel.textContent = 'ROSTER VALUE (no data source)';
+
+    let pctSum = 0, pctCount = 0;
+    entries.forEach(e => {
+      if (!e.allMatchups || !e.allMatchups.length) return;
+      const totals = e.allMatchups
+        .filter(m => m && m.roster_id != null)
+        .map(m => ({ rosterId: m.roster_id, total: sbMatchupProjectedTotal(m) }));
+      if (totals.length < 2 || !e.allMatchups.some(m => sbMatchupHasData(m))) return;
+      const myTotal = totals.find(t => t.rosterId === e.roster.roster_id);
+      if (!myTotal) return;
+      const sortedDesc = [...totals].sort((a, b) => b.total - a.total);
+      const rank = sortedDesc.findIndex(t => t.rosterId === e.roster.roster_id) + 1;
+      pctSum += ((totals.length - rank) / (totals.length - 1)) * 100;
+      pctCount++;
+    });
+
+    const phPointProjFill = document.getElementById('phPointProjFill');
+    const phPointProjMarker = document.getElementById('phPointProjMarker');
+    if (pctCount > 0) {
+      const avgPct = Math.round(pctSum / pctCount);
+      if (phPointProjFill) phPointProjFill.style.width = avgPct + '%';
+      if (phPointProjMarker) { phPointProjMarker.style.left = avgPct + '%'; phPointProjMarker.hidden = false; }
+    } else {
+      if (phPointProjFill) phPointProjFill.style.width = '0%';
+      if (phPointProjMarker) phPointProjMarker.hidden = true;
     }
   }
   window.renderRealDashboard = renderRealDashboard;
