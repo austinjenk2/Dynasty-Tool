@@ -11276,10 +11276,12 @@
         leagues = leagues || [];
 
         const { week, season } = await getNflState();
-        // Transactions are fetched per-week (0..current), so this grows every
-        // week of the season -- fine early on, but worth revisiting with a
-        // caching layer for completed past weeks once we're deep into the
-        // season and this is 15-17 fetches per league instead of 1-2.
+        // A completed week's transactions never change, so they're cached
+        // permanently (not reset each sync, unlike window.sleeperLeagueData)
+        // and only the current week is ever re-fetched. Without this, the
+        // per-league fetch count would keep growing every week of the
+        // season -- 15-17 fetches/league by December instead of a flat 1.
+        window.__sleeperTransactionsCache = window.__sleeperTransactionsCache || {};
         const tradeWeeks = [];
         for (let w = 0; w <= week; w++) tradeWeeks.push(w);
         const [rosters, allMatchups, allUsers, projections, allTransactions, trendingAdds] = await Promise.all([
@@ -11288,8 +11290,15 @@
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
           getWeekProjections(season, week),
           Promise.all(leagues.map(lg =>
-            Promise.all(tradeWeeks.map(w => sleeperFetch(`/league/${lg.league_id}/transactions/${w}`).catch(() => [])))
-              .then(arrs => arrs.flat())
+            Promise.all(tradeWeeks.map(async (w) => {
+              const cacheKey = `${lg.league_id}_${w}`;
+              if (w < week && window.__sleeperTransactionsCache[cacheKey]) {
+                return window.__sleeperTransactionsCache[cacheKey];
+              }
+              const data = await sleeperFetch(`/league/${lg.league_id}/transactions/${w}`).catch(() => []);
+              if (w < week) window.__sleeperTransactionsCache[cacheKey] = data;
+              return data;
+            })).then(arrs => arrs.flat())
           )),
           sleeperFetch('/players/nfl/trending/add?lookback_hours=24&limit=25').catch(() => []),
         ]);
