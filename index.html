@@ -189,6 +189,7 @@
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border);
   }
+  .ph-sub { font-size: 12px; color: var(--muted); margin: -6px 0 14px; }
 
   /* Weekly Schedule */
   .schedule-panel {
@@ -343,6 +344,7 @@
   .sweat-pos.wr { background: var(--navy); }
   .sweat-pos.rb { background: #3f6b4a; }
   .sweat-pos.qb { background: var(--red); }
+  .sweat-pos.te { background: var(--gold); }
   .sweat-name { font-size: 12px; font-weight: 600; color: var(--ink); margin-top: 2px; }
   .sweat-count { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; }
   .sweat-count span { font-family: 'Source Sans 3', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); margin-left: 4px; }
@@ -2028,6 +2030,7 @@
 
         <div class="panel">
           <h2>Portfolio Health</h2>
+          <p class="ph-sub">Each bar is a percentile: where you'd rank against the other teams in your leagues this week if every league had the same number of teams (0 = last place, 100 = first place), averaged across all your connected leagues.</p>
 
           <div class="track">
             <div class="track-label" id="phRosterValueLabel">ROSTER VALUE</div>
@@ -2172,7 +2175,7 @@
             <span class="sweats-label root-for">ROOT FOR</span>
             <span class="sweats-guide">Full Guide &rarr;</span>
           </div>
-          <div class="sweats-cards">
+          <div class="sweats-cards" id="sweatsForCards">
             <div class="sweat-card for">
               <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/bal.png" alt="BAL" onerror="this.style.display='none'">
               <div class="sweat-avatar" style="background:var(--navy)">ZF</div>
@@ -2202,7 +2205,7 @@
             <span class="sweats-label root-against">ROOT AGAINST</span>
             <span class="sweats-guide">Full Guide &rarr;</span>
           </div>
-          <div class="sweats-cards">
+          <div class="sweats-cards" id="sweatsAgainstCards">
             <div class="sweat-card against">
               <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/was.png" alt="WSH" onerror="this.style.display='none'">
               <div class="sweat-avatar" style="background:var(--navy)">TM</div>
@@ -10849,6 +10852,12 @@
       wireChips();
       updateCount();
       recomputeRootingGuide();
+
+      // Weekly Sweats on the Dashboard is just the top 3 for/against from
+      // this same computation -- shared via window so the two never drift
+      // out of sync the way the old mock values did.
+      window.__sleeperRootingRows = rowsData;
+      if (window.renderWeeklySweats) window.renderWeeklySweats();
     }
     window.renderRealRootingGuide = renderRealRootingGuide;
   })();
@@ -11303,13 +11312,20 @@
     }
 
     let cachedNflState = null;
+    let cachedNflStateAt = 0;
+    const NFL_STATE_TTL = 30 * 60 * 1000;
     async function getNflState() {
-      if (cachedNflState) return cachedNflState;
+      // Cached with a TTL rather than for the page's whole lifetime -- a tab
+      // left open across a week boundary (e.g. Tue night into Wed) would
+      // otherwise stay stuck on the old week forever, since nothing else
+      // ever invalidated this.
+      if (cachedNflState && (Date.now() - cachedNflStateAt < NFL_STATE_TTL)) return cachedNflState;
       try {
         const state = await sleeperFetch('/state/nfl');
         cachedNflState = { week: state.week || 1, season: state.season || String(new Date().getFullYear()) };
+        cachedNflStateAt = Date.now();
       } catch (e) {
-        cachedNflState = { week: 1, season: String(new Date().getFullYear()) };
+        if (!cachedNflState) cachedNflState = { week: 1, season: String(new Date().getFullYear()) };
       }
       return cachedNflState;
     }
@@ -12232,6 +12248,54 @@
     }
   }
   window.renderRealDashboard = renderRealDashboard;
+
+  const SWEAT_POS_COLOR = { QB: 'var(--red)', RB: '#3f6b4a', WR: 'var(--navy)', TE: 'var(--gold)' };
+
+  function sweatInitials(name) {
+    const parts = (name || '').split(' ').filter(Boolean);
+    return ((parts[0] ? parts[0][0] : '?') + (parts[1] ? parts[1][0] : '')).toUpperCase();
+  }
+
+  function sweatCardHtml(row, isFor) {
+    const deltaText = (row.delta > 0 ? '+' : '') + row.delta;
+    const noteParts = [];
+    if (row.for.length) noteParts.push(`${row.for.length} for`);
+    if (row.against.length) noteParts.push(`${row.against.length} vs`);
+    const posClass = row.pos.toLowerCase();
+    const teamAbbr = (row.team || '').toLowerCase();
+    const badge = teamAbbr && teamAbbr !== 'fa'
+      ? `<img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/${teamAbbr}.png" alt="${row.team}" onerror="this.style.display='none'">`
+      : '';
+    return '<div class="sweat-card ' + (isFor ? 'for' : 'against') + '">' + badge +
+      `<div class="sweat-avatar" style="background:${SWEAT_POS_COLOR[row.pos] || 'var(--muted)'}">${sweatInitials(row.name)}</div>` +
+      `<div class="sweat-pos ${posClass}">${row.pos}</div>` +
+      `<div class="sweat-name">${row.name}</div>` +
+      `<div class="sweat-count ${isFor ? 'for' : 'against'}">${deltaText} <span>${noteParts.join(' &middot; ')}</span></div>` +
+    '</div>';
+  }
+
+  // Same source data as the Rooting Guide (window.__sleeperRootingRows, set
+  // by renderRealRootingGuide) so this top-3 summary can never drift from
+  // the full guide the way the old independent mock values did.
+  function renderWeeklySweats() {
+    const forCards = document.getElementById('sweatsForCards');
+    const againstCards = document.getElementById('sweatsAgainstCards');
+    if (!forCards || !againstCards) return;
+    const rows = window.__sleeperRootingRows || [];
+    if (!rows.length) return;
+
+    const withDelta = rows.map(r => Object.assign({}, r, { delta: r.for.length - r.against.length }));
+    const forTop = withDelta.filter(r => r.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 3);
+    const againstTop = withDelta.filter(r => r.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 3);
+
+    forCards.innerHTML = forTop.length
+      ? forTop.map(r => sweatCardHtml(r, true)).join('')
+      : '<div class="placeholder"><p>No standout players to root for this week.</p></div>';
+    againstCards.innerHTML = againstTop.length
+      ? againstTop.map(r => sweatCardHtml(r, false)).join('')
+      : '<div class="placeholder"><p>No standout players to root against this week.</p></div>';
+  }
+  window.renderWeeklySweats = renderWeeklySweats;
 
   const SB_ROSTER_COLORS = ['var(--navy)', 'var(--red)', '#3f6b4a', '#1d3557', '#8a5a2b', '#5b6f5b', '#b23a5a', '#1c7a8c', '#4a3f36', '#3b4f8a', '#8a7a2f', '#6b3fa0', '#2d2d33', '#a3441f', '#2f4f7a', '#7a3f2f', '#3f3f8a', '#6b6b74'];
 
