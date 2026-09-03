@@ -11346,6 +11346,7 @@
         if (window.renderRealWaiverWire) window.renderRealWaiverWire();
         if (window.renderRealRootingGuide) window.renderRealRootingGuide();
         if (window.renderRealDraftRoom) window.renderRealDraftRoom();
+        if (window.renderRealDashboard) window.renderRealDashboard();
       } catch (err) {
         setSyncState('error', "Couldn't sync — check your connection");
       }
@@ -11450,6 +11451,7 @@
       coManagedToggle.addEventListener('change', () => {
         try { localStorage.setItem('dynastyToolIncludeCoManaged', String(coManagedToggle.checked)); } catch (e) {}
         if (window.renderRealExposures) window.renderRealExposures();
+        if (window.renderRealDashboard) window.renderRealDashboard();
       });
     }
 
@@ -11859,6 +11861,42 @@
     refreshExpBoard();
   }
   window.renderRealExposures = renderRealExposures;
+
+  // Portfolio Health and Team Strength stay on sample data -- both need a
+  // roster-value/ranking source, and per the no-third-party-valuation rule
+  // this app only ever uses real Sleeper data. Weekly Schedule also stays
+  // mock since Sleeper's public API doesn't expose an NFL schedule endpoint.
+  function renderRealDashboard() {
+    const entries = Object.values(window.sleeperLeagueData || {})
+      .filter(e => e.roster && (isCoManagedIncluded() || !e.isCoOwned));
+    if (!entries.length) return;
+
+    let wins = 0, losses = 0, ties = 0;
+    entries.forEach(e => {
+      const s = e.roster.settings || {};
+      wins += s.wins || 0;
+      losses += s.losses || 0;
+      ties += s.ties || 0;
+    });
+
+    let projWins = 0, projLosses = 0;
+    entries.forEach(e => {
+      if (!e.myMatchup || !e.oppMatchup) return;
+      const myTotal = sbMatchupProjectedTotal(e.myMatchup);
+      const oppTotal = sbMatchupProjectedTotal(e.oppMatchup);
+      if (sbWinProbability(myTotal, oppTotal) >= 50) projWins++; else projLosses++;
+    });
+
+    const recordValues = document.querySelectorAll('.record-row .record-value');
+    if (recordValues[0]) {
+      recordValues[0].innerHTML = `<span class="win">${wins}</span><span class="sep">-</span><span class="loss">${losses}</span>` +
+        (ties ? `<span class="sep">-</span><span>${ties}</span>` : '');
+    }
+    if (recordValues[1]) {
+      recordValues[1].innerHTML = `<span class="win">${projWins}</span><span class="sep">-</span><span class="loss">${projLosses}</span>`;
+    }
+  }
+  window.renderRealDashboard = renderRealDashboard;
 
   const SB_ROSTER_COLORS = ['var(--navy)', 'var(--red)', '#3f6b4a', '#1d3557', '#8a5a2b', '#5b6f5b', '#b23a5a', '#1c7a8c', '#4a3f36', '#3b4f8a', '#8a7a2f', '#6b3fa0', '#2d2d33', '#a3441f', '#2f4f7a', '#7a3f2f', '#3f3f8a', '#6b6b74'];
 
