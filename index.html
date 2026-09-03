@@ -10688,12 +10688,18 @@
     });
   }
 
-  // Simple logistic curve over the live-adjusted point differential. This is
-  // our own estimate, not a figure Sleeper provides -- calibrated so a ~10pt
-  // edge is roughly a 70/30 favorite and a ~20pt edge is roughly 90/10.
+  // Logistic curve over the live-adjusted point differential. Sleeper
+  // doesn't expose its own win-probability formula via the API, so this is
+  // still our own estimate -- but the steepness (0.027) was fit against ~18
+  // real matchups pulled straight from Sleeper's own displayed percentages
+  // (previously 0.11, which ran dramatically hotter than Sleeper's real
+  // numbers -- e.g. a 22pt edge read 93% here vs Sleeper's actual 63%).
+  // Fantasy scoring carries a lot of week-to-week variance, which is why
+  // Sleeper's real curve is this much flatter than a naive point-diff model
+  // would suggest.
   function sbWinProbability(myTotal, oppTotal) {
     const diff = myTotal - oppTotal;
-    const pct = 1 / (1 + Math.exp(-0.11 * diff));
+    const pct = 1 / (1 + Math.exp(-0.027 * diff));
     return Math.round(Math.min(99, Math.max(1, pct * 100)));
   }
 
