@@ -2731,31 +2731,31 @@
         </div>
       </div>
 
-      <div class="ld-stats">
+      <div class="ld-stats" id="ldStats">
         <div class="ld-stat-card">
           <div class="ld-stat-label">RECORD</div>
-          <div class="ld-stat-value">9-5</div>
+          <div class="ld-stat-value" id="ldRecord">9-5</div>
           <div class="ld-stat-label" style="margin-top:8px">SEED</div>
-          <div class="ld-stat-value small">2nd</div>
+          <div class="ld-stat-value small" id="ldSeed">2nd</div>
         </div>
         <div class="ld-stat-card">
           <div class="ld-stat-label">PF RANK</div>
-          <div class="ld-stat-value">4th</div>
+          <div class="ld-stat-value" id="ldPfRank">4th</div>
           <div class="ld-stat-label" style="margin-top:8px">VS #1</div>
-          <div class="ld-stat-value small">14.6</div>
+          <div class="ld-stat-value small" id="ldVsTop">14.6</div>
         </div>
         <div class="ld-stat-card">
           <div class="ld-stat-label">TRADE ACTIVITY</div>
-          <div class="roster-pill" style="margin:4px 0">ACTIVE</div>
-          <div class="ld-stat-value small">1st of 12</div>
+          <div class="roster-pill" style="margin:4px 0" id="ldTradeBadge">ACTIVE</div>
+          <div class="ld-stat-value small" id="ldTradeRank">1st of 12</div>
         </div>
         <div class="ld-stat-card wide">
-          <div class="ld-stat-label">WEEK 1 PROJECTED <span class="favored-tag" style="margin-left:6px">Favored by 71.8</span></div>
+          <div class="ld-stat-label">WEEK <span id="ldProjWeek">1</span> PROJECTED <span class="favored-tag" style="margin-left:6px" id="ldFavoredTag">Favored by 71.8</span></div>
           <div class="matchup-scores" style="margin-top:6px">
-            <span class="proj-score mine" style="font-size:22px">187.8</span>
+            <span class="proj-score mine" style="font-size:22px" id="ldProjMine">187.8</span>
             <span class="matchup-vs">vs</span>
-            <span class="proj-score theirs" style="font-size:22px">116.0</span>
-            <span class="ld-opp">jtford23</span>
+            <span class="proj-score theirs" style="font-size:22px" id="ldProjTheirs">116.0</span>
+            <span class="ld-opp" id="ldOpp">jtford23</span>
           </div>
         </div>
       </div>
@@ -11294,16 +11294,14 @@
           const users = allUsers[i] || [];
           const oppUser = oppRoster ? users.find(u => u.user_id === oppRoster.owner_id) : null;
 
+          const leagueTrades = (allTransactions[i] || []).filter(t => t && t.type === 'trade' && t.status === 'complete');
           const myTrades = myRoster
-            ? (allTransactions[i] || []).filter(t =>
-                t && t.type === 'trade' && t.status === 'complete' &&
-                (t.roster_ids || []).includes(myRoster.roster_id)
-              )
+            ? leagueTrades.filter(t => (t.roster_ids || []).includes(myRoster.roster_id))
             : [];
 
           window.sleeperLeagueData[lg.league_id] = {
             league: lg, roster: myRoster, isCoOwned, week, myMatchup, oppMatchup, oppUser,
-            allRosters: leagueRosters, users, trades: myTrades,
+            allRosters: leagueRosters, users, trades: myTrades, allTrades: leagueTrades,
           };
           return renderLeagueRow(lg, i, myRoster, isCoOwned);
         });
@@ -11393,6 +11391,23 @@
 
     const LD_POS_LABELS = { QB: 'QUARTERBACKS', RB: 'RUNNING BACKS', WR: 'WIDE RECEIVERS', TE: 'TIGHT ENDS' };
 
+    function ldOrdinal(n) {
+      const rem100 = n % 100;
+      const suffix = (rem100 >= 11 && rem100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+      return n + suffix;
+    }
+
+    // Standard competition ranking (ties share a rank, e.g. 1,2,2,4).
+    function ldRankOf(items, valueFn, targetRosterId) {
+      const sorted = [...items].sort((a, b) => valueFn(b) - valueFn(a));
+      let rank = 1;
+      for (let i = 0; i < sorted.length; i++) {
+        if (i > 0 && valueFn(sorted[i]) < valueFn(sorted[i - 1])) rank = i + 1;
+        if (sorted[i].roster_id === targetRosterId) return rank;
+      }
+      return sorted.length;
+    }
+
     async function renderRealLeagueDetail(leagueId) {
       const ldColumns = document.getElementById('ldColumns');
       const entry = window.sleeperLeagueData && window.sleeperLeagueData[leagueId];
@@ -11402,6 +11417,69 @@
         ldColumns.innerHTML = '<div class="ld-loading">Could not find your roster in this league.</div>';
         return;
       }
+
+      const allRosters = entry.allRosters || [];
+      const pfOf = r => {
+        const s = r.settings || {};
+        return (s.fpts || 0) + (s.fpts_decimal || 0) / 100;
+      };
+      const winsOf = r => (r.settings && r.settings.wins) || 0;
+
+      const ldRecordEl = document.getElementById('ldRecord');
+      const ldSeedEl = document.getElementById('ldSeed');
+      const ldPfRankEl = document.getElementById('ldPfRank');
+      const ldVsTopEl = document.getElementById('ldVsTop');
+      const ldTradeBadgeEl = document.getElementById('ldTradeBadge');
+      const ldTradeRankEl = document.getElementById('ldTradeRank');
+      const ldFavoredTagEl = document.getElementById('ldFavoredTag');
+      const ldProjMineEl = document.getElementById('ldProjMine');
+      const ldProjTheirsEl = document.getElementById('ldProjTheirs');
+      const ldOppEl = document.getElementById('ldOpp');
+      const ldProjWeekEl = document.getElementById('ldProjWeek');
+
+      if (allRosters.length) {
+        const s = entry.roster.settings || {};
+        if (ldRecordEl) ldRecordEl.textContent = `${s.wins || 0}-${s.losses || 0}${s.ties ? '-' + s.ties : ''}`;
+        if (ldSeedEl) ldSeedEl.textContent = ldOrdinal(ldRankOf(allRosters, winsOf, entry.roster.roster_id));
+
+        const pfRank = ldRankOf(allRosters, pfOf, entry.roster.roster_id);
+        if (ldPfRankEl) ldPfRankEl.textContent = ldOrdinal(pfRank);
+        if (ldVsTopEl) {
+          const topPf = Math.max(...allRosters.map(pfOf));
+          const myPf = pfOf(entry.roster);
+          ldVsTopEl.textContent = pfRank === 1 ? 'Leader' : `-${(topPf - myPf).toFixed(1)}`;
+        }
+
+        const tradeCounts = allRosters.map(r => ({
+          roster_id: r.roster_id,
+          count: (entry.allTrades || []).filter(t => (t.roster_ids || []).includes(r.roster_id)).length,
+        }));
+        const mine = tradeCounts.find(t => t.roster_id === entry.roster.roster_id);
+        const tradeRank = ldRankOf(tradeCounts, t => t.count, entry.roster.roster_id);
+        if (ldTradeRankEl) ldTradeRankEl.textContent = `${ldOrdinal(tradeRank)} of ${allRosters.length}`;
+        if (ldTradeBadgeEl) {
+          ldTradeBadgeEl.textContent = (!mine || mine.count === 0) ? 'QUIET' : (tradeRank <= Math.ceil(allRosters.length / 2) ? 'ACTIVE' : 'QUIET');
+        }
+      }
+
+      if (ldProjWeekEl) ldProjWeekEl.textContent = String(entry.week || 1);
+      if (entry.myMatchup && entry.oppMatchup) {
+        const myTotal = sbMatchupProjectedTotal(entry.myMatchup);
+        const oppTotal = sbMatchupProjectedTotal(entry.oppMatchup);
+        if (ldProjMineEl) ldProjMineEl.textContent = myTotal.toFixed(1);
+        if (ldProjTheirsEl) ldProjTheirsEl.textContent = oppTotal.toFixed(1);
+        if (ldOppEl) ldOppEl.textContent = entry.oppUser ? (entry.oppUser.display_name || entry.oppUser.username) : '—';
+        if (ldFavoredTagEl) {
+          const margin = Math.abs(myTotal - oppTotal).toFixed(1);
+          ldFavoredTagEl.textContent = myTotal >= oppTotal ? `Favored by ${margin}` : `Underdog by ${margin}`;
+        }
+      } else {
+        if (ldProjMineEl) ldProjMineEl.textContent = '—';
+        if (ldProjTheirsEl) ldProjTheirsEl.textContent = '—';
+        if (ldOppEl) ldOppEl.textContent = '—';
+        if (ldFavoredTagEl) ldFavoredTagEl.textContent = 'No matchup yet';
+      }
+
       let dict;
       try {
         dict = await getPlayerDict();
