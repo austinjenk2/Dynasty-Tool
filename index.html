@@ -10525,6 +10525,18 @@
     return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap), 0);
   }
 
+  // True only if at least one starter in the matchup has either a recorded
+  // score or a projection -- lets callers show an honest "no data" state
+  // instead of a fabricated 0.0/50% when neither is available (e.g. the
+  // unofficial projections endpoint has nothing for a selected past/future
+  // week and the games haven't been played).
+  function sbMatchupHasData(matchup, projMap) {
+    if (!matchup) return false;
+    const starters = (matchup.starters || []).filter(id => id && id !== '0');
+    const pointsMap = matchup.players_points || {};
+    return starters.some(id => pointsMap[id] != null || sbProjectionFor(id, projMap) != null);
+  }
+
   // Simple logistic curve over the live-adjusted point differential. This is
   // our own estimate, not a figure Sleeper provides -- calibrated so a ~10pt
   // edge is roughly a 70/30 favorite and a ~20pt edge is roughly 90/10.
@@ -11472,7 +11484,7 @@
       }
 
       if (ldProjWeekEl) ldProjWeekEl.textContent = String(entry.week || 1);
-      if (entry.myMatchup && entry.oppMatchup) {
+      if (entry.myMatchup && entry.oppMatchup && (sbMatchupHasData(entry.myMatchup) || sbMatchupHasData(entry.oppMatchup))) {
         const myTotal = sbMatchupProjectedTotal(entry.myMatchup);
         const oppTotal = sbMatchupProjectedTotal(entry.oppMatchup);
         if (ldProjMineEl) ldProjMineEl.textContent = myTotal.toFixed(1);
@@ -11482,6 +11494,11 @@
           const margin = Math.abs(myTotal - oppTotal).toFixed(1);
           ldFavoredTagEl.textContent = myTotal >= oppTotal ? `Favored by ${margin}` : `Underdog by ${margin}`;
         }
+      } else if (entry.myMatchup && entry.oppMatchup) {
+        if (ldProjMineEl) ldProjMineEl.textContent = '—';
+        if (ldProjTheirsEl) ldProjTheirsEl.textContent = '—';
+        if (ldOppEl) ldOppEl.textContent = entry.oppUser ? (entry.oppUser.display_name || entry.oppUser.username) : '—';
+        if (ldFavoredTagEl) ldFavoredTagEl.textContent = 'No projections available';
       } else {
         if (ldProjMineEl) ldProjMineEl.textContent = '—';
         if (ldProjTheirsEl) ldProjTheirsEl.textContent = '—';
@@ -12063,14 +12080,18 @@
       if (myMatchup) {
         withMatchup++;
         totalPts += myPts;
-        const myProj = sbMatchupProjectedTotal(myMatchup, projMap);
-        const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap);
-        const winPct = sbWinProbability(myProj, oppProj);
-        if (winPct >= 55) { favoredCount++; badgeClass = 'sb-badge-good'; }
-        else if (winPct <= 45) { badgeClass = 'sb-badge-bad'; }
-        else { badgeClass = 'sb-badge-close'; }
-        badgeText = `${winPct}% Win Prob`;
-        metaExtra = ` &middot; proj ${myProj.toFixed(1)}-${oppProj.toFixed(1)}`;
+        if (sbMatchupHasData(myMatchup, projMap) || sbMatchupHasData(oppMatchup, projMap)) {
+          const myProj = sbMatchupProjectedTotal(myMatchup, projMap);
+          const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap);
+          const winPct = sbWinProbability(myProj, oppProj);
+          if (winPct >= 55) { favoredCount++; badgeClass = 'sb-badge-good'; }
+          else if (winPct <= 45) { badgeClass = 'sb-badge-bad'; }
+          else { badgeClass = 'sb-badge-close'; }
+          badgeText = `${winPct}% Win Prob`;
+          metaExtra = ` &middot; proj ${myProj.toFixed(1)}-${oppProj.toFixed(1)}`;
+        } else {
+          badgeText = 'No Projections Available';
+        }
       }
 
       return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}">
