@@ -9455,7 +9455,7 @@
       <div class="pm-league-list" id="pmLeagueList"></div>
       <div class="pm-show-all" id="pmShowAll" hidden>&#128230; Show All Leagues</div>
     </div>
-    <div class="pm-panel" data-pm-panel="trades" hidden><div class="placeholder"><h3>Trades</h3><p>This section is being built.</p></div></div>
+    <div class="pm-panel" data-pm-panel="trades" hidden><div id="pmTradesList"></div></div>
   </div>
 </div>
 
@@ -11947,6 +11947,7 @@
       if (!p || !EXP_POS_COLOR[p.position]) return null;
       const info = exposureMap[id];
       return {
+        id,
         name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
         team: p.team || 'FA',
         pos: p.position,
@@ -11966,7 +11967,7 @@
     const posRankCounter = {};
     expGrid.innerHTML = rows.map((r, i) => {
       const posClass = r.pos.toLowerCase();
-      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="" data-leagues="${r.leagues.join('|')}">
+      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}">
           <div class="exp-rank">${i + 1}</div>
           <div class="exp-team-icon">${r.team}</div>
           <div class="exp-avatar-wrap">
@@ -11982,7 +11983,7 @@
     expListBody.innerHTML = rows.map((r, i) => {
       const posClass = r.pos.toLowerCase();
       posRankCounter[r.pos] = (posRankCounter[r.pos] || 0) + 1;
-      return `<div class="exp-list-row" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="" data-leagues="${r.leagues.join('|')}">
+      return `<div class="exp-list-row" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}">
           <div class="exp-list-player">
             <div class="exp-list-avatar exp-${posClass}">${expInitials(r.name)}</div>
             <span class="exp-list-name">${r.name}</span>
@@ -12230,6 +12231,41 @@
   const pmLeagueList = document.getElementById('pmLeagueList');
   const pmShowAll = document.getElementById('pmShowAll');
 
+  function pmOwnerName(entry, rosterId) {
+    const roster = (entry.allRosters || []).find(r => r.roster_id === rosterId);
+    if (!roster) return null;
+    const user = (entry.users || []).find(u => u.user_id === roster.owner_id);
+    return user ? (user.display_name || user.username) : null;
+  }
+
+  function pmBuildTradesHtml(playerId) {
+    if (!playerId) return '<div class="placeholder"><h3>Trades</h3><p>Connect a Sleeper account to see trade history.</p></div>';
+    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && (e.allTrades || []).length);
+    const rows = [];
+    entries.forEach(entry => {
+      entry.allTrades.forEach(t => {
+        const acquiredRosterId = t.adds ? t.adds[playerId] : undefined;
+        const droppedRosterId = t.drops ? t.drops[playerId] : undefined;
+        if (acquiredRosterId == null && droppedRosterId == null) return;
+        rows.push({
+          date: t.created || 0,
+          league: entry.league.name,
+          acquiredName: acquiredRosterId != null ? (pmOwnerName(entry, acquiredRosterId) || 'Unknown manager') : null,
+          droppedName: droppedRosterId != null ? (pmOwnerName(entry, droppedRosterId) || 'Unknown manager') : null,
+        });
+      });
+    });
+    if (!rows.length) return '<div class="placeholder"><h3>Trades</h3><p>No trades found for this player in your connected leagues.</p></div>';
+    rows.sort((a, b) => b.date - a.date);
+    return '<div class="pm-league-list">' + rows.map(r => {
+      const dateStr = r.date ? new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      const detail = r.acquiredName && r.droppedName
+        ? `${r.acquiredName} acquired from ${r.droppedName}`
+        : (r.acquiredName ? `${r.acquiredName} acquired` : `${r.droppedName} traded away`);
+      return `<div class="pm-league-row"><span>${r.league} &mdash; ${detail}</span><span>${dateStr}</span></div>`;
+    }).join('') + '</div>';
+  }
+
   function openPlayerModal(item) {
     const isCard = item.classList.contains('exp-card');
     const name = (isCard ? item.querySelector('.exp-name') : item.querySelector('.exp-list-name')).textContent;
@@ -12238,6 +12274,10 @@
     const pos = item.dataset.pos;
     const pct = Number(item.dataset.pct);
     const leagues = item.dataset.leagues ? item.dataset.leagues.split('|') : [];
+    const playerId = item.dataset.playerId || '';
+
+    const pmTradesList = document.getElementById('pmTradesList');
+    if (pmTradesList) pmTradesList.innerHTML = pmBuildTradesHtml(playerId);
 
     pmAvatar.style.background = avatarEl.style.background || 'var(--faint)';
     pmAvatar.textContent = avatarEl.textContent;
