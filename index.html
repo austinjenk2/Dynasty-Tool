@@ -9448,7 +9448,7 @@
   <div class="pm-body">
     <div class="pm-panel" data-pm-panel="overview" hidden><div class="placeholder"><h3>Overview</h3><p>This section is being built.</p></div></div>
     <div class="pm-panel" data-pm-panel="ranks" hidden><div class="placeholder"><h3>Paul's Ranks</h3><p>This section is being built.</p></div></div>
-    <div class="pm-panel" data-pm-panel="gamelog" hidden><div class="placeholder"><h3>Game Log</h3><p>This section is being built.</p></div></div>
+    <div class="pm-panel" data-pm-panel="gamelog" hidden><div id="pmGameLogList"></div></div>
     <div class="pm-panel" data-pm-panel="contract" hidden><div class="placeholder"><h3>Contract</h3><p>This section is being built.</p></div></div>
     <div class="pm-panel" data-pm-panel="exposure">
       <div class="pm-exp-head">EXPOSURE &middot; <b id="pmExpFrac"></b> Leagues &middot; <b id="pmExpPct"></b></div>
@@ -12266,6 +12266,60 @@
     }).join('') + '</div>';
   }
 
+  window.__sleeperMatchupCache = window.__sleeperMatchupCache || {};
+
+  async function pmFetchWeekMatchup(leagueId, week, rosterId) {
+    const cacheKey = `${leagueId}_${week}`;
+    let matchups = window.__sleeperMatchupCache[cacheKey];
+    if (!matchups) {
+      try {
+        matchups = await window.sleeperFetch(`/league/${leagueId}/matchups/${week}`);
+      } catch (err) {
+        matchups = [];
+      }
+      window.__sleeperMatchupCache[cacheKey] = matchups;
+    }
+    return (matchups || []).find(m => m.roster_id === rosterId) || null;
+  }
+
+  let pmGameLogToken = 0;
+  async function renderPmGameLog(playerId) {
+    const pmGameLogList = document.getElementById('pmGameLogList');
+    if (!pmGameLogList) return;
+    if (!playerId || !window.sleeperFetch) {
+      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>Connect a Sleeper account to see weekly scoring.</p></div>';
+      return;
+    }
+    const entry = Object.values(window.sleeperLeagueData || {})
+      .find(e => e.roster && (e.roster.players || []).includes(playerId));
+    if (!entry) {
+      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No roster data for this player.</p></div>';
+      return;
+    }
+
+    const myToken = ++pmGameLogToken;
+    pmGameLogList.innerHTML = '<div class="ld-loading">Loading game log…</div>';
+
+    const currentWeek = entry.week || 1;
+    const weeks = [];
+    for (let w = 1; w <= currentWeek; w++) weeks.push(w);
+
+    const rows = await Promise.all(weeks.map(async (w) => {
+      if (w === entry.week && entry.myMatchup) {
+        const pts = (entry.myMatchup.players_points || {})[playerId];
+        return { week: w, pts: pts != null ? Number(pts) : null };
+      }
+      const matchup = await pmFetchWeekMatchup(entry.league.league_id, w, entry.roster.roster_id);
+      const pts = matchup ? (matchup.players_points || {})[playerId] : null;
+      return { week: w, pts: pts != null ? Number(pts) : null };
+    }));
+
+    if (myToken !== pmGameLogToken) return; // a newer player was opened meanwhile
+    pmGameLogList.innerHTML = '<div class="pm-league-list">' + rows.map(r =>
+      `<div class="pm-league-row"><span>Week ${r.week}</span><span>${r.pts != null ? r.pts.toFixed(1) + ' pts' : '&mdash;'}</span></div>`
+    ).join('') + '</div>';
+  }
+
   function openPlayerModal(item) {
     const isCard = item.classList.contains('exp-card');
     const name = (isCard ? item.querySelector('.exp-name') : item.querySelector('.exp-list-name')).textContent;
@@ -12275,9 +12329,12 @@
     const pct = Number(item.dataset.pct);
     const leagues = item.dataset.leagues ? item.dataset.leagues.split('|') : [];
     const playerId = item.dataset.playerId || '';
+    playerModal.dataset.playerId = playerId;
 
     const pmTradesList = document.getElementById('pmTradesList');
     if (pmTradesList) pmTradesList.innerHTML = pmBuildTradesHtml(playerId);
+    const pmGameLogList = document.getElementById('pmGameLogList');
+    if (pmGameLogList) pmGameLogList.innerHTML = '';
 
     pmAvatar.style.background = avatarEl.style.background || 'var(--faint)';
     pmAvatar.textContent = avatarEl.textContent;
@@ -12325,6 +12382,10 @@
       tab.classList.add('active');
       const target = tab.dataset.pmTab;
       document.querySelectorAll('.pm-panel').forEach(p => { p.hidden = p.dataset.pmPanel !== target; });
+      if (target === 'gamelog') {
+        const pmGameLogList = document.getElementById('pmGameLogList');
+        if (pmGameLogList && !pmGameLogList.innerHTML) renderPmGameLog(playerModal.dataset.playerId);
+      }
     });
   });
 
