@@ -2061,9 +2061,9 @@
               <div class="week-menu" id="scheduleWeekMenu" hidden></div>
             </div>
           </div>
-          <p class="sweats-sub">Every game this week, in kickoff order.</p>
+          <p class="sweats-sub" id="scheduleSub">Every game this week, in kickoff order.</p>
 
-          <div class="schedule-groups">
+          <div class="schedule-groups" id="scheduleGroups">
 
             <div class="schedule-chip">
               <div class="schedule-time">THU 8:15 PM</div>
@@ -11202,6 +11202,16 @@
       return res.json();
     }
 
+    // The undocumented projections endpoint lives at the API root, not under
+    // /v1/ like every other endpoint -- sleeperFetch() would silently 404 on
+    // it (caught and swallowed as "no projections available"), which is why
+    // projections/win-prob never actually loaded on any week.
+    async function sleeperFetchRoot(path) {
+      const res = await fetch('https://api.sleeper.app' + path);
+      if (!res.ok) throw new Error('Sleeper API ' + res.status + ' on ' + path);
+      return res.json();
+    }
+
     function getSavedUser() {
       try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (e) { return null; }
     }
@@ -11386,15 +11396,32 @@
 
     async function getWeekProjections(season, week) {
       try {
-        const list = await sleeperFetch(
+        const list = await sleeperFetchRoot(
           `/projections/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
         );
         const map = {};
+        // Best-effort: this same payload often carries each player's real
+        // opponent/kickoff for the week alongside their projection. Captured
+        // defensively -- if the field names differ or are missing, the
+        // schedule/opponent UI that reads this just falls back to nothing
+        // instead of breaking sync.
+        const games = {};
         (list || []).forEach(p => {
-          if (!p || !p.player_id || !p.stats) return;
-          const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std;
-          if (pts != null) map[p.player_id] = Number(pts);
+          if (!p || !p.player_id) return;
+          if (p.stats) {
+            const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std;
+            if (pts != null) map[p.player_id] = Number(pts);
+          }
+          if (p.team && p.opponent && !games[p.team]) {
+            const isAway = String(p.opponent).startsWith('@');
+            games[p.team] = {
+              opponent: String(p.opponent).replace('@', ''),
+              isAway,
+              date: p.date || (p.metadata && p.metadata.game_time) || null,
+            };
+          }
         });
+        window.__sleeperGameInfo = games;
         return map;
       } catch (e) {
         // Unofficial/undocumented endpoint -- if it's unavailable or its shape
@@ -11517,6 +11544,7 @@
         if (window.renderRealMyAdp) window.renderRealMyAdp();
         if (window.renderRealDashboard) window.renderRealDashboard();
         if (window.renderRealNotebook) window.renderRealNotebook();
+        if (window.renderRealSchedule) window.renderRealSchedule();
       } catch (err) {
         setSyncState('error', "Couldn't sync — check your connection");
       }
@@ -12314,6 +12342,62 @@
     }
   }
   window.renderRealDashboard = renderRealDashboard;
+
+  // Best-effort real schedule, built from the opponent/date fields the
+  // projections payload sometimes carries per player (see getWeekProjections).
+  // If that data isn't there (endpoint shape differs, or nothing loaded yet)
+  // this just leaves the existing schedule content alone rather than
+  // clearing it out.
+  function formatGameWhen(dateStr) {
+    if (!dateStr) return 'TBD';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr).toUpperCase();
+    const hasTime = /T\d{2}:\d{2}/.test(String(dateStr)) || String(dateStr).includes(':');
+    return hasTime
+      ? d.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }).toUpperCase()
+      : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
+  }
+
+  function renderRealSchedule() {
+    const container = document.getElementById('scheduleGroups');
+    const sub = document.getElementById('scheduleSub');
+    if (!container) return;
+    const gameInfo = window.__sleeperGameInfo || {};
+    const teams = Object.keys(gameInfo);
+    if (!teams.length) return;
+
+    const seen = new Set();
+    const games = [];
+    teams.forEach(team => {
+      const info = gameInfo[team];
+      if (!info || !info.opponent) return;
+      const key = [team, info.opponent].sort().join('-');
+      if (seen.has(key)) return;
+      seen.add(key);
+      const away = info.isAway ? team : (gameInfo[info.opponent] && gameInfo[info.opponent].isAway ? info.opponent : team);
+      const home = away === team ? info.opponent : team;
+      games.push({ away, home, date: info.date });
+    });
+    if (!games.length) return;
+
+    games.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const anyRealTime = games.some(g => g.date && /T\d{2}:\d{2}/.test(String(g.date)));
+    if (sub) sub.textContent = anyRealTime ? 'Every game this week, in kickoff order.' : 'Every game this week (kickoff times not available from Sleeper).';
+
+    container.innerHTML = games.map(g => {
+      const awayLower = g.away.toLowerCase();
+      const homeLower = g.home.toLowerCase();
+      return '<div class="schedule-chip">' +
+        `<div class="schedule-time">${formatGameWhen(g.date)}</div>` +
+        '<div class="schedule-row">' +
+          `<div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/${awayLower}.png" alt="${g.away}" onerror="this.style.display='none'"><span>${g.away}</span></div>` +
+          '<span class="schedule-at">@</span>' +
+          `<div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/${homeLower}.png" alt="${g.home}" onerror="this.style.display='none'"><span>${g.home}</span></div>` +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+  window.renderRealSchedule = renderRealSchedule;
 
   const SWEAT_POS_COLOR = { QB: 'var(--red)', RB: '#3f6b4a', WR: 'var(--navy)', TE: 'var(--gold)' };
 
