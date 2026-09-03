@@ -10498,8 +10498,8 @@
     return ((parts[0] ? parts[0][0] : '?') + (parts[1] ? parts[1][0] : '')).toUpperCase();
   }
 
-  function sbProjectionFor(id) {
-    const proj = window.__sleeperProjections || {};
+  function sbProjectionFor(id, projMap) {
+    const proj = projMap || window.__sleeperProjections || {};
     return proj[id] != null ? Number(proj[id]) : null;
   }
 
@@ -10508,17 +10508,21 @@
   // an approximation -- a real 0-point stat line looks identical to "hasn't
   // played yet" -- but it's the best signal available without live per-game
   // status from Sleeper's public API.
-  function sbEffectivePoints(id, pointsMap) {
+  // projMap is optional -- pass it to score against a specific (non-current)
+  // week's projections, e.g. when the Scoreboard week selector picks a week
+  // other than the live one; omitted, it falls back to the current week's
+  // cached projections.
+  function sbEffectivePoints(id, pointsMap, projMap) {
     if (pointsMap && pointsMap[id] != null) return Number(pointsMap[id]);
-    const proj = sbProjectionFor(id);
+    const proj = sbProjectionFor(id, projMap);
     return proj != null ? proj : 0;
   }
 
-  function sbMatchupProjectedTotal(matchup) {
+  function sbMatchupProjectedTotal(matchup, projMap) {
     if (!matchup) return 0;
     const starters = (matchup.starters || []).filter(id => id && id !== '0');
     const pointsMap = matchup.players_points || {};
-    return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap), 0);
+    return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap), 0);
   }
 
   // Simple logistic curve over the live-adjusted point differential. This is
@@ -10530,7 +10534,7 @@
     return Math.round(Math.min(99, Math.max(1, pct * 100)));
   }
 
-  function sbLineupRowsHtml(matchup, dict) {
+  function sbLineupRowsHtml(matchup, dict, projMap) {
     if (!matchup) {
       return '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:16px 0">No matchup data yet</td></tr>';
     }
@@ -10546,7 +10550,7 @@
       const team = p ? (p.team || 'FA') : '';
       const posClass = pos.toLowerCase();
       const pts = pointsMap[id] != null ? Number(pointsMap[id]).toFixed(1) : '&mdash;';
-      const proj = sbProjectionFor(id);
+      const proj = sbProjectionFor(id, projMap);
       const projText = proj != null ? proj.toFixed(1) : '&mdash;';
       return '<tr>' +
         '<td class="sb-exp-player">' +
@@ -10560,7 +10564,7 @@
     }).join('');
   }
 
-  async function openRealSbExpand(card, entry) {
+  async function openRealSbExpand(card, entry, override) {
     const panel = document.createElement('div');
     panel.className = 'sb-expand';
     panel.innerHTML = '<div class="ld-loading">Loading lineups…</div>';
@@ -10574,6 +10578,10 @@
       panel.innerHTML = '<div class="ld-loading">Could not load player data from Sleeper.</div>';
       return;
     }
+
+    const myMatchup = override ? override.myMatchup : entry.myMatchup;
+    const oppMatchup = override ? override.oppMatchup : entry.oppMatchup;
+    const projMap = override ? override.projections : null;
 
     const cardLogo = card.querySelector('.sb-card-logo');
     const badge = card.querySelector('.sb-badge');
@@ -10593,12 +10601,12 @@
         '<div class="sb-lineup-col">' +
           '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
           '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
-          `<tbody>${sbLineupRowsHtml(entry.myMatchup, dict)}</tbody></table>` +
+          `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap)}</tbody></table>` +
         '</div>' +
         '<div class="sb-lineup-col">' +
           '<div class="sb-lineup-label sb-lineup-label-opp">OPPONENT LINEUP</div>' +
           '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
-          `<tbody>${sbLineupRowsHtml(entry.oppMatchup, dict)}</tbody></table>` +
+          `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap)}</tbody></table>` +
         '</div>' +
       '</div>';
   }
@@ -10617,7 +10625,8 @@
       const leagueId = card.dataset.sleeperLeagueId;
       const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
       if (entry && window.sleeperGetPlayerDict) {
-        openRealSbExpand(card, entry);
+        const override = window.__sleeperScoreboardOverride ? window.__sleeperScoreboardOverride.byLeague[leagueId] : null;
+        openRealSbExpand(card, entry, override);
         return;
       }
 
@@ -11519,6 +11528,8 @@
     }
     window.renderRealLeagueDetail = renderRealLeagueDetail;
     window.sleeperGetPlayerDict = getPlayerDict;
+    window.sleeperFetch = sleeperFetch;
+    window.sleeperGetWeekProjections = getWeekProjections;
 
     const coManagedToggle = document.getElementById('coManagedToggle');
     if (coManagedToggle) {
@@ -11571,8 +11582,45 @@
 
   setupWeekDropdown('weekSelect', 'weekMenu', 'weekSelectLabel');
   setupWeekDropdown('scheduleWeekSelect', 'scheduleWeekMenu', 'scheduleWeekLabel');
+
+  // Refetches real matchups + that week's projections for every connected
+  // league so picking a past/future week on the Scoreboard shows that
+  // week's actual data instead of just relabeling the current week's cards.
+  async function loadScoreboardWeek(week) {
+    if (!window.sleeperFetch) return;
+    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+    if (!entries.length) return;
+    const w = Number(week);
+
+    const byLeagueList = await Promise.all(entries.map(async (entry) => {
+      try {
+        const matchups = await window.sleeperFetch(`/league/${entry.league.league_id}/matchups/${w}`);
+        const myMatchup = matchups.find(m => m.roster_id === entry.roster.roster_id) || null;
+        const oppMatchup = myMatchup
+          ? matchups.find(m => m.matchup_id === myMatchup.matchup_id && m.roster_id !== entry.roster.roster_id)
+          : null;
+        const oppRoster = oppMatchup ? (entry.allRosters || []).find(r => r.roster_id === oppMatchup.roster_id) : null;
+        const oppUser = oppRoster ? (entry.users || []).find(u => u.user_id === oppRoster.owner_id) : null;
+        return { leagueId: entry.league.league_id, myMatchup, oppMatchup, oppUser };
+      } catch (err) {
+        return { leagueId: entry.league.league_id, myMatchup: null, oppMatchup: null, oppUser: null };
+      }
+    }));
+
+    let projections = {};
+    if (window.sleeperGetWeekProjections) {
+      try { projections = await window.sleeperGetWeekProjections(entries[0].league.season, w); } catch (err) {}
+    }
+
+    const byLeague = {};
+    byLeagueList.forEach(r => { byLeague[r.leagueId] = r; });
+    window.__sleeperScoreboardOverride = { week: w, projections, byLeague };
+    if (window.renderRealScoreboard) window.renderRealScoreboard();
+  }
+
   setupWeekDropdown('sbWeekSelect', 'sbWeekMenu', 'sbWeekLabel', (week) => {
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
+    loadScoreboardWeek(week);
   });
 
   document.querySelectorAll('.ww-toggle-group').forEach(group => {
@@ -11991,24 +12039,32 @@
     const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
     if (!entries.length) return;
 
+    const override = window.__sleeperScoreboardOverride || null;
+
     let totalPts = 0, favoredCount = 0, withMatchup = 0;
     sbGrid.innerHTML = entries.map((entry, i) => {
+      const ov = override ? override.byLeague[entry.league.league_id] : null;
+      const myMatchup = ov ? ov.myMatchup : entry.myMatchup;
+      const oppMatchup = ov ? ov.oppMatchup : entry.oppMatchup;
+      const oppUser = ov ? ov.oppUser : entry.oppUser;
+      const projMap = override ? override.projections : null;
+
       const color = SB_ROSTER_COLORS[i % SB_ROSTER_COLORS.length];
       const initials = sbLeagueInitials(entry.league.name);
-      const myPts = entry.myMatchup ? (entry.myMatchup.points || 0) : 0;
-      const oppPts = entry.oppMatchup ? (entry.oppMatchup.points || 0) : 0;
-      const oppName = entry.oppUser
-        ? (entry.oppUser.display_name || entry.oppUser.username || 'Opponent')
-        : (entry.myMatchup ? 'TBD' : 'No matchup yet');
+      const myPts = myMatchup ? (myMatchup.points || 0) : 0;
+      const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
+      const oppName = oppUser
+        ? (oppUser.display_name || oppUser.username || 'Opponent')
+        : (myMatchup ? 'TBD' : 'No matchup yet');
 
       let badgeClass = 'sb-badge-close';
       let badgeText = 'No matchup yet';
       let metaExtra = '';
-      if (entry.myMatchup) {
+      if (myMatchup) {
         withMatchup++;
         totalPts += myPts;
-        const myProj = sbMatchupProjectedTotal(entry.myMatchup);
-        const oppProj = sbMatchupProjectedTotal(entry.oppMatchup);
+        const myProj = sbMatchupProjectedTotal(myMatchup, projMap);
+        const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap);
         const winPct = sbWinProbability(myProj, oppProj);
         if (winPct >= 55) { favoredCount++; badgeClass = 'sb-badge-good'; }
         else if (winPct <= 45) { badgeClass = 'sb-badge-bad'; }
@@ -12035,7 +12091,7 @@
     const optimalDivider = document.getElementById('sbStatOptimalDivider');
     const winsValue = document.getElementById('sbStatWinsValue');
     const winsLabel = document.getElementById('sbStatWinsLabel');
-    const week = entries[0].week || 1;
+    const week = override ? override.week : (entries[0].week || 1);
     if (ptsValue) ptsValue.textContent = totalPts.toFixed(1);
     if (ptsLabel) ptsLabel.innerHTML = `WEEK <span class="sb-week-num">${week}</span> PTS SO FAR`;
     if (optimalStat) optimalStat.hidden = true;
