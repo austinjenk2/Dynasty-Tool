@@ -11405,8 +11405,8 @@
         const oppName = oppUser ? (oppUser.display_name || oppUser.username || 'Opponent') : 'TBD';
         const hasData = sbMatchupHasData(myMatchup) || sbMatchupHasData(oppMatchup);
         const myProj = hasData ? sbMatchupProjectedTotal(myMatchup) : 0;
+        const oppProj = hasData ? sbMatchupProjectedTotal(oppMatchup) : 0;
         if (hasData) {
-          const oppProj = sbMatchupProjectedTotal(oppMatchup);
           const margin = Math.abs(myProj - oppProj).toFixed(1);
           favoredTagText = myProj >= oppProj ? `Favored by ${margin}` : `Underdog by ${margin}`;
         } else {
@@ -11414,8 +11414,13 @@
         }
         weeklyProjText = hasData ? myProj.toFixed(1) : '&mdash;';
         row.dataset.weekly = hasData ? String(myProj) : '0';
+        // Headline score is the live-adjusted total (real points once
+        // recorded, projection until then), not the raw matchup.points --
+        // which sits at Sleeper's pre-filled 0 for everyone until kickoff.
+        const scoreMine = hasData ? myProj : myPts;
+        const scoreTheirs = hasData ? oppProj : oppPts;
         matchupHtml =
-          `<div class="matchup-scores"><span class="proj-score mine">${myPts.toFixed(1)}</span><span class="matchup-vs">vs</span><span class="proj-score theirs">${oppPts.toFixed(1)}</span></div>` +
+          `<div class="matchup-scores"><span class="proj-score mine">${scoreMine.toFixed(1)}</span><span class="matchup-vs">vs</span><span class="proj-score theirs">${scoreTheirs.toFixed(1)}</span></div>` +
           `<div class="favored-tag">vs ${oppName} &middot; ${favoredTagText}</div>`;
       } else {
         row.dataset.weekly = '0';
@@ -11937,10 +11942,10 @@
       const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
       const oppName = oppUser ? (oppUser.display_name || oppUser.username || 'Opponent') : 'TBD';
       const hasData = sbMatchupHasData(myMatchup, projMap) || sbMatchupHasData(oppMatchup, projMap);
-      let favoredTagText, weeklyProjText, myProj = 0;
+      let favoredTagText, weeklyProjText, myProj = 0, oppProj = 0;
       if (hasData) {
         myProj = sbMatchupProjectedTotal(myMatchup, projMap);
-        const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap);
+        oppProj = sbMatchupProjectedTotal(oppMatchup, projMap);
         const margin = Math.abs(myProj - oppProj).toFixed(1);
         favoredTagText = myProj >= oppProj ? `Favored by ${margin}` : `Underdog by ${margin}`;
         weeklyProjText = myProj.toFixed(1);
@@ -11952,8 +11957,12 @@
       row.dataset.weekly = hasData ? String(myProj) : '0';
       if (weeklyCell) weeklyCell.innerHTML = weeklyProjText;
       if (matchupCell) {
+        // Headline score is the live-adjusted total (real points once
+        // recorded, projection until then), not the raw matchup.points.
+        const scoreMine = hasData ? myProj : myPts;
+        const scoreTheirs = hasData ? oppProj : oppPts;
         matchupCell.innerHTML =
-          `<div class="matchup-scores"><span class="proj-score mine">${myPts.toFixed(1)}</span><span class="matchup-vs">vs</span><span class="proj-score theirs">${oppPts.toFixed(1)}</span></div>` +
+          `<div class="matchup-scores"><span class="proj-score mine">${scoreMine.toFixed(1)}</span><span class="matchup-vs">vs</span><span class="proj-score theirs">${scoreTheirs.toFixed(1)}</span></div>` +
           `<div class="favored-tag">vs ${oppName} &middot; ${favoredTagText}</div>`;
       }
     }));
@@ -12762,7 +12771,6 @@
       const color = SB_ROSTER_COLORS[i % SB_ROSTER_COLORS.length];
       const initials = sbLeagueInitials(entry.league.name);
       const myPts = myMatchup ? (myMatchup.points || 0) : 0;
-      const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
       const oppName = oppUser
         ? (oppUser.display_name || oppUser.username || 'Opponent')
         : (myMatchup ? 'TBD' : 'No matchup yet');
@@ -12770,19 +12778,30 @@
       let badgeClass = 'sb-badge-close';
       let badgeText = 'No matchup yet';
       let metaExtra = '';
+      // The headline score is the live-adjusted total (real points once
+      // recorded, projection until then) -- not the raw matchup.points,
+      // which just sits at Sleeper's pre-filled 0 for everyone until
+      // kickoff and made every card read "0.0 vs 0.0" even with a real
+      // projection available.
+      let scoreMine = myPts, scoreTheirs = 0;
       if (myMatchup) {
-        withMatchup++;
         totalPts += myPts;
         if (sbMatchupHasData(myMatchup, projMap) || sbMatchupHasData(oppMatchup, projMap)) {
+          withMatchup++;
           const myProj = sbMatchupProjectedTotal(myMatchup, projMap);
           const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap);
+          scoreMine = myProj;
+          scoreTheirs = oppProj;
           const winPct = sbWinProbability(myProj, oppProj);
-          if (winPct >= 55) { favoredCount++; badgeClass = 'sb-badge-good'; }
-          else if (winPct <= 45) { badgeClass = 'sb-badge-bad'; }
+          // Same favorite/underdog split used everywhere else (Dashboard's
+          // Projected Weekly Record included) -- no separate "close game"
+          // threshold here, so the counts can't disagree between pages.
+          if (winPct > 50) { favoredCount++; badgeClass = 'sb-badge-good'; }
+          else if (winPct < 50) { badgeClass = 'sb-badge-bad'; }
           else { badgeClass = 'sb-badge-close'; }
           badgeText = `${winPct}% Win Prob`;
-          metaExtra = ` &middot; proj ${myProj.toFixed(1)}-${oppProj.toFixed(1)}`;
         } else {
+          scoreTheirs = oppMatchup ? (oppMatchup.points || 0) : 0;
           badgeText = 'No Projections Available';
         }
       }
@@ -12793,7 +12812,7 @@
             <div class="sb-card-name">${entry.league.name}</div>
             <div class="sb-card-meta">vs ${oppName}${metaExtra}</div>
           </div>
-          <div class="sb-card-score"><span class="sb-score-mine">${myPts.toFixed(1)}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${oppPts.toFixed(1)}</span></div>
+          <div class="sb-card-score"><span class="sb-score-mine">${scoreMine.toFixed(1)}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${scoreTheirs.toFixed(1)}</span></div>
           <div class="sb-badge ${badgeClass}">${badgeText}</div>
           <div class="sb-chevron">&#9662;</div>
         </div>`;
