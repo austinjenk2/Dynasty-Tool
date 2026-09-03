@@ -1564,7 +1564,11 @@
     font-weight: 600;
     color: var(--muted);
     white-space: nowrap;
+    cursor: pointer;
   }
+  .notebook-filter.active { border-color: var(--ink); color: var(--ink); }
+  .roster-pill.notebook-pill-unset { cursor: pointer; color: var(--faint); }
+  .roster-pill.notebook-pill { cursor: pointer; }
   .notebook-list {
     flex: 1 1 auto;
     min-height: 0;
@@ -9464,7 +9468,7 @@
   <div class="notebook-head">
     <div>
       <div class="notebook-title">Notebook</div>
-      <div class="notebook-sub">0 of 18 leagues annotated</div>
+      <div class="notebook-sub" id="notebookSub">0 of 18 leagues annotated</div>
     </div>
     <div class="notebook-close" id="notebookClose">&#10005;</div>
   </div>
@@ -9472,12 +9476,12 @@
   <div class="notebook-toolbar">
     <div class="notebook-search">
       <span>&#128269;</span>
-      <input type="text" placeholder="Search leagues...">
+      <input type="text" placeholder="Search leagues..." id="notebookSearchInput">
     </div>
-    <div class="notebook-filter">With Notes</div>
+    <div class="notebook-filter" id="notebookFilterBtn">With Notes</div>
   </div>
 
-  <div class="notebook-list">
+  <div class="notebook-list" id="notebookList">
 
     <div class="notebook-item expanded">
       <div class="notebook-item-head">
@@ -10975,11 +10979,46 @@
   notebookClose.addEventListener('click', closeNotebook);
   notebookOverlay.addEventListener('click', closeNotebook);
 
-  document.querySelectorAll('.notebook-item-head').forEach(head => {
-    head.addEventListener('click', () => {
-      head.parentElement.classList.toggle('expanded');
+  const notebookListEl = document.getElementById('notebookList');
+  if (notebookListEl) {
+    notebookListEl.addEventListener('click', (e) => {
+      const head = e.target.closest('.notebook-item-head');
+      if (head) { head.parentElement.classList.toggle('expanded'); return; }
+      const pill = e.target.closest('.notebook-pill, .notebook-pill-unset');
+      if (pill && window.notebookCycleRosterType) window.notebookCycleRosterType(pill);
     });
-  });
+    notebookListEl.addEventListener('input', (e) => {
+      const textarea = e.target.closest('.notebook-textarea');
+      if (!textarea || !window.notebookSaveNote) return;
+      window.notebookSaveNote(textarea);
+    });
+  }
+
+  const notebookSearchInput = document.getElementById('notebookSearchInput');
+  if (notebookSearchInput) {
+    notebookSearchInput.addEventListener('input', () => {
+      const q = notebookSearchInput.value.trim().toLowerCase();
+      document.querySelectorAll('#notebookList .notebook-item').forEach(item => {
+        const name = item.querySelector('.notebook-name').textContent.toLowerCase();
+        item.style.display = !q || name.includes(q) ? '' : 'none';
+      });
+    });
+  }
+  let notebookFilterActive = false;
+  const notebookFilterBtn = document.getElementById('notebookFilterBtn');
+  if (notebookFilterBtn) {
+    notebookFilterBtn.addEventListener('click', () => {
+      notebookFilterActive = !notebookFilterActive;
+      notebookFilterBtn.classList.toggle('active', notebookFilterActive);
+      const store = window.notebookGetStore ? window.notebookGetStore() : {};
+      document.querySelectorAll('#notebookList .notebook-item').forEach(item => {
+        if (!notebookFilterActive) { item.style.display = ''; return; }
+        const id = item.dataset.leagueId;
+        const hasNote = store[id] && store[id].note && store[id].note.trim();
+        item.style.display = hasNote ? '' : 'none';
+      });
+    });
+  }
 
   const sortSelect = document.getElementById('sortSelect');
   const sortMenu = document.getElementById('sortMenu');
@@ -11375,6 +11414,7 @@
         if (window.renderRealRootingGuide) window.renderRealRootingGuide();
         if (window.renderRealDraftRoom) window.renderRealDraftRoom();
         if (window.renderRealDashboard) window.renderRealDashboard();
+        if (window.renderRealNotebook) window.renderRealNotebook();
       } catch (err) {
         setSyncState('error', "Couldn't sync — check your connection");
       }
@@ -11556,6 +11596,7 @@
     window.sleeperGetPlayerDict = getPlayerDict;
     window.sleeperFetch = sleeperFetch;
     window.sleeperGetWeekProjections = getWeekProjections;
+    window.sleeperScoringLabel = scoringLabel;
 
     const coManagedToggle = document.getElementById('coManagedToggle');
     if (coManagedToggle) {
@@ -11567,6 +11608,7 @@
         try { localStorage.setItem('dynastyToolIncludeCoManaged', String(coManagedToggle.checked)); } catch (e) {}
         if (window.renderRealExposures) window.renderRealExposures();
         if (window.renderRealDashboard) window.renderRealDashboard();
+        if (window.renderRealNotebook) window.renderRealNotebook();
       });
     }
 
@@ -12059,6 +12101,103 @@
     if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
     return (words[0][0] + words[1][0]).toUpperCase();
   }
+
+  // Notebook: real connected leagues, with notes and a manual roster-type
+  // tag persisted locally. There's no valuation source to auto-classify a
+  // roster as contending/rebuilding, so unlike the mock this is user-set
+  // only -- no fabricated "Auto" classification.
+  const NOTEBOOK_KEY = 'dynastyToolNotebookNotes';
+  const NOTEBOOK_ROSTER_CYCLE = [null, 'favorite', 'upside', 'fragile', 'rebuild'];
+  const NOTEBOOK_ROSTER_LABEL = { favorite: 'FAVORITE', upside: 'UPSIDE', fragile: 'FRAGILE', rebuild: 'REBUILD' };
+
+  function notebookGetStore() {
+    try { return JSON.parse(localStorage.getItem(NOTEBOOK_KEY) || '{}'); } catch (e) { return {}; }
+  }
+  window.notebookGetStore = notebookGetStore;
+
+  function notebookSetEntry(leagueId, patch) {
+    const store = notebookGetStore();
+    store[leagueId] = Object.assign({}, store[leagueId], patch);
+    try { localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(store)); } catch (e) {}
+    return store[leagueId];
+  }
+
+  function notebookEscape(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function notebookPillHtml(rosterType) {
+    if (!rosterType) return '<span class="roster-pill notebook-pill-unset">SET TYPE</span>';
+    const cls = rosterType === 'favorite' ? '' : ' ' + rosterType;
+    return `<span class="roster-pill${cls} notebook-pill">${NOTEBOOK_ROSTER_LABEL[rosterType]}</span>`;
+  }
+
+  function updateNotebookSub() {
+    const notebookSub = document.getElementById('notebookSub');
+    if (!notebookSub) return;
+    const store = notebookGetStore();
+    const items = document.querySelectorAll('#notebookList .notebook-item');
+    let annotated = 0;
+    items.forEach(item => {
+      const entry = store[item.dataset.leagueId];
+      if (entry && entry.note && entry.note.trim()) annotated++;
+    });
+    notebookSub.textContent = `${annotated} of ${items.length} leagues annotated`;
+  }
+
+  window.notebookCycleRosterType = function (pill) {
+    const item = pill.closest('.notebook-item');
+    if (!item) return;
+    const leagueId = item.dataset.leagueId;
+    const store = notebookGetStore();
+    const current = (store[leagueId] || {}).rosterType || null;
+    const next = NOTEBOOK_ROSTER_CYCLE[(NOTEBOOK_ROSTER_CYCLE.indexOf(current) + 1) % NOTEBOOK_ROSTER_CYCLE.length];
+    notebookSetEntry(leagueId, { rosterType: next });
+    pill.outerHTML = notebookPillHtml(next);
+  };
+
+  window.notebookSaveNote = function (textarea) {
+    const item = textarea.closest('.notebook-item');
+    if (!item) return;
+    notebookSetEntry(item.dataset.leagueId, { note: textarea.value });
+    updateNotebookSub();
+  };
+
+  function renderRealNotebook() {
+    const notebookList = document.getElementById('notebookList');
+    if (!notebookList) return;
+    const entries = Object.values(window.sleeperLeagueData || {})
+      .filter(e => e.roster && (isCoManagedIncluded() || !e.isCoOwned));
+    if (!entries.length) return;
+
+    const store = notebookGetStore();
+    notebookList.innerHTML = entries.map((entry, i) => {
+      const color = SB_ROSTER_COLORS[i % SB_ROSTER_COLORS.length];
+      const initials = sbLeagueInitials(entry.league.name);
+      const meta = window.sleeperScoringLabel ? window.sleeperScoringLabel(entry.league) : '';
+      const saved = store[entry.league.league_id] || {};
+      return '<div class="notebook-item" data-league-id="' + entry.league.league_id + '">' +
+        '<div class="notebook-item-head">' +
+          `<div class="notebook-logo" style="background:${color}">${initials}</div>` +
+          '<div>' +
+            `<div class="notebook-name">${entry.league.name}</div>` +
+            `<div class="notebook-meta">${meta}</div>` +
+          '</div>' +
+          '<div class="notebook-chevron">&#9662;</div>' +
+        '</div>' +
+        '<div class="notebook-body">' +
+          `<textarea class="notebook-textarea" placeholder="Reminders, league quirks, trade partners, what you're doing with this roster...">${notebookEscape(saved.note)}</textarea>` +
+          '<div class="notebook-roster-row">' +
+            '<span class="notebook-roster-label">ROSTER TYPE</span>' +
+            notebookPillHtml(saved.rosterType) +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    updateNotebookSub();
+  }
+  window.renderRealNotebook = renderRealNotebook;
 
   function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
