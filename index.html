@@ -12369,7 +12369,38 @@
     return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   }
 
-  function renderRealSchedule() {
+  // ESPN abbreviations differ from Sleeper's for a couple of teams.
+  const ESPN_TEAM_ABBR_FIX = { WSH: 'WAS' };
+
+  // ESPN's public scoreboard API is unofficial but widely used for exactly
+  // this (real per-game kickoff times) and is reachable directly from a
+  // browser. Used only as an overlay on top of the matchups Sleeper already
+  // gave us -- if this fails or its shape changes, the schedule just falls
+  // back to date-only instead of breaking.
+  async function getEspnKickoffTimes(week, season) {
+    try {
+      const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}&year=${season}&seasontype=2`);
+      if (!res.ok) throw new Error('ESPN ' + res.status);
+      const data = await res.json();
+      const map = {};
+      (data.events || []).forEach(ev => {
+        const comp = ev.competitions && ev.competitions[0];
+        if (!comp) return;
+        const when = comp.date || ev.date;
+        if (!when) return;
+        (comp.competitors || []).forEach(c => {
+          const abbr = c.team && c.team.abbreviation;
+          if (!abbr) return;
+          map[ESPN_TEAM_ABBR_FIX[abbr] || abbr] = when;
+        });
+      });
+      return map;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  async function renderRealSchedule() {
     const container = document.getElementById('scheduleGroups');
     const sub = document.getElementById('scheduleSub');
     if (!container) return;
@@ -12391,24 +12422,36 @@
     });
     if (!games.length) return;
 
-    // Only a calendar date comes back from Sleeper here, not a kickoff hour,
-    // so games on the same day (e.g. the Sunday 1pm/4pm slate) sort together
-    // by matchup rather than claiming an exact order we don't have.
+    const firstEntry = Object.values(window.sleeperLeagueData || {}).find(e => e.roster);
+    const kickoffs = firstEntry
+      ? await getEspnKickoffTimes(firstEntry.week, firstEntry.league.season)
+      : {};
+    let anyKickoff = false;
+    games.forEach(g => {
+      const iso = kickoffs[g.away] || kickoffs[g.home];
+      if (iso) {
+        const d = new Date(iso);
+        if (!isNaN(d.getTime())) { g.kickoff = d; anyKickoff = true; }
+      }
+    });
+
     games.sort((a, b) => {
-      const at = a.date ? a.date.getTime() : Infinity;
-      const bt = b.date ? b.date.getTime() : Infinity;
+      const at = (a.kickoff || a.date) ? (a.kickoff || a.date).getTime() : Infinity;
+      const bt = (b.kickoff || b.date) ? (b.kickoff || b.date).getTime() : Infinity;
       return at - bt || a.away.localeCompare(b.away);
     });
-    if (sub) sub.textContent = "Every game this week, in date order (Sleeper doesn't give us exact kickoff times).";
+    sub && (sub.textContent = anyKickoff
+      ? 'Every game this week, in kickoff order.'
+      : "Every game this week, in date order (exact kickoff times aren't available).");
 
     container.innerHTML = games.map(g => {
       const awayLower = g.away.toLowerCase();
       const homeLower = g.home.toLowerCase();
-      const dateLabel = g.date
-        ? g.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()
-        : 'DATE TBD';
+      const timeLabel = g.kickoff
+        ? g.kickoff.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }).toUpperCase()
+        : (g.date ? g.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase() : 'DATE TBD');
       return '<div class="schedule-chip">' +
-        `<div class="schedule-time">${dateLabel}</div>` +
+        `<div class="schedule-time">${timeLabel}</div>` +
         '<div class="schedule-row">' +
           `<div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/${awayLower}.png" alt="${g.away}" onerror="this.style.display='none'"><span>${g.away}</span></div>` +
           '<span class="schedule-at">@</span>' +
