@@ -164,9 +164,11 @@
   .panel-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    align-items: start;
+    align-items: stretch;
     gap: 20px;
   }
+  #teamStrengthPanel { display: flex; flex-direction: column; }
+  #teamStrengthScatterWrap { flex: 1; min-height: 340px; aspect-ratio: unset; }
   @media (max-width: 980px) {
     .panel-grid { grid-template-columns: 1fr; }
   }
@@ -2142,9 +2144,9 @@
 
       </div>
 
-      <div class="panel">
+      <div class="panel" id="teamStrengthPanel">
         <h2>Team Strength</h2>
-        <div class="scatter-wrap">
+        <div class="scatter-wrap" id="teamStrengthScatterWrap">
           <div class="scatter-quads">
             <div style="display:flex;align-items:flex-start">Overachieving</div>
             <div style="display:flex;align-items:flex-start;justify-content:flex-end;text-align:right">Contending &amp; Stacked</div>
@@ -10870,16 +10872,41 @@
 
     rgBtn.addEventListener('click', () => { rgPanel.hidden = !rgPanel.hidden; });
 
-    async function renderRealRootingGuide() {
+    async function renderRealRootingGuide(overrideWeek) {
       if (!window.sleeperGetPlayerDict) return;
-      const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.myMatchup && e.oppMatchup);
-      if (!entries.length) return;
+      const allEntries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+      if (!allEntries.length) return;
+      const currentWeek = allEntries[0].week;
+      const week = overrideWeek || currentWeek;
+      const isCurrentWeek = week === currentWeek;
+
       let dict;
       try {
         dict = await window.sleeperGetPlayerDict();
       } catch (err) {
         return;
       }
+
+      // A week other than the currently-synced one needs its own real
+      // starters/opponent-starters fetched per league -- otherwise this
+      // just reused window.sleeperLeagueData's cached current-week
+      // matchups regardless of which week was picked in the dropdown.
+      const entries = [];
+      await Promise.all(allEntries.map(async (entry) => {
+        let myMatchup, oppMatchup;
+        if (isCurrentWeek) {
+          myMatchup = entry.myMatchup;
+          oppMatchup = entry.oppMatchup;
+        } else if (typeof sleeperGetWeekMatchups === 'function') {
+          const matchups = await sleeperGetWeekMatchups(entry.league.league_id, week);
+          myMatchup = matchups.find(m => m.roster_id === entry.roster.roster_id) || null;
+          oppMatchup = myMatchup
+            ? matchups.find(m => m.matchup_id === myMatchup.matchup_id && m.roster_id !== entry.roster.roster_id)
+            : null;
+        }
+        if (myMatchup && oppMatchup) entries.push({ league: entry.league, myMatchup, oppMatchup });
+      }));
+      if (!entries.length) return;
 
       const byPlayer = {};
       entries.forEach(entry => {
@@ -11456,8 +11483,12 @@
         const map = {};
         (list || []).forEach(p => {
           if (!p || !p.player_id || !p.stats) return;
-          const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std ?? p.stats.pts
-            ?? p.pts_ppr ?? p.pts_half_ppr ?? p.pts_std;
+          // Deliberately not falling back to a bare "pts" key -- a generic
+          // field like that risks silently matching something unrelated
+          // that happens to be 0 for most players (which previously slipped
+          // through every null-check downstream and showed as a fake
+          // "0.0 projection" instead of an honest "no data").
+          const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std ?? p.pts_ppr ?? p.pts_half_ppr ?? p.pts_std;
           if (pts != null) map[p.player_id] = Number(pts);
         });
         // Best-effort: this same payload also carries each player's real
@@ -11961,6 +11992,7 @@
     byLeagueList.forEach(r => { byLeague[r.leagueId] = r; });
     window.__sleeperScoreboardOverride = { week: w, projections, byLeague };
     if (window.renderRealScoreboard) window.renderRealScoreboard();
+    if (window.renderRealRootingGuide) window.renderRealRootingGuide(w);
   }
 
   setupWeekDropdown('sbWeekSelect', 'sbWeekMenu', 'sbWeekLabel', (week) => {
@@ -12357,7 +12389,10 @@
       if (!sbMatchupHasData(e.myMatchup) && !sbMatchupHasData(e.oppMatchup)) return;
       const myTotal = sbMatchupProjectedTotal(e.myMatchup);
       const oppTotal = sbMatchupProjectedTotal(e.oppMatchup);
-      if (sbWinProbability(myTotal, oppTotal) >= 50) projWins++; else projLosses++;
+      const pct = sbWinProbability(myTotal, oppTotal);
+      if (pct > 50) projWins++;
+      else if (pct < 50) projLosses++;
+      // an exact 50/50 toss-up counts as neither a favorite nor an underdog
     });
 
     const recordValues = document.querySelectorAll('.record-row .record-value');
