@@ -6409,7 +6409,7 @@
     </div>
 
     <div data-dr-view="myadp" class="dr-view">
-      <div class="placeholder"><h3>My ADP</h3><p>Coming soon &mdash; this will compare your actual draft picks against the market once a real ADP source is wired in.</p></div>
+      <div id="myAdpContainer"><div class="placeholder"><h3>My ADP</h3><p>Connect a Sleeper account to see your own draft picks across leagues.</p></div></div>
     </div>
 
     <div data-dr-view="war" class="dr-view">
@@ -10139,6 +10139,60 @@
     }
     window.renderRealDraftRoom = renderRealDraftRoom;
 
+    // "My ADP" is your own average draft position for a player across your
+    // leagues' real drafts -- not compared against a market ADP, since this
+    // app has no honest source for one. Different from Market ADP by design.
+    function renderRealMyAdp() {
+      const container = document.getElementById('myAdpContainer');
+      if (!container) return;
+      const draftEntries = Object.values(window.sleeperLeagueData || {})
+        .filter(e => e.roster && e.draftId && window.__sleeperDraftCache && window.__sleeperDraftCache[e.draftId]);
+      if (!draftEntries.length) return;
+
+      const byPlayer = {};
+      draftEntries.forEach(entry => {
+        const cached = window.__sleeperDraftCache[entry.draftId];
+        (cached.picks || []).filter(p => p.roster_id === entry.roster.roster_id && p.player_id).forEach(p => {
+          byPlayer[p.player_id] = byPlayer[p.player_id] || { picks: [], metadata: p.metadata };
+          byPlayer[p.player_id].picks.push({ league: entry.league.name, pickNo: p.pick_no || 0 });
+        });
+      });
+
+      const rows = Object.keys(byPlayer).map(id => {
+        const info = byPlayer[id];
+        const meta = info.metadata || {};
+        const pos = meta.position || '';
+        if (!['QB', 'RB', 'WR', 'TE'].includes(pos)) return null;
+        const avgPick = info.picks.reduce((sum, p) => sum + p.pickNo, 0) / info.picks.length;
+        return {
+          name: [meta.first_name, meta.last_name].filter(Boolean).join(' ') || id,
+          pos, team: meta.team || 'FA', avgPick, count: info.picks.length,
+        };
+      }).filter(Boolean);
+
+      if (!rows.length) {
+        container.innerHTML = '<div class="placeholder"><h3>My ADP</h3><p>No draft picks found yet across your connected leagues.</p></div>';
+        return;
+      }
+      rows.sort((a, b) => a.avgPick - b.avgPick);
+
+      container.innerHTML = '<div class="adp-grid">' + rows.map((r, i) => {
+        const posClass = r.pos.toLowerCase();
+        const color = DR_ROSTER_COLORS[i % DR_ROSTER_COLORS.length];
+        return `<div class="adp-card adp-${posClass}" data-pos="${r.pos}" data-name="${r.name}">` +
+          `<span class="adp-rank">${i + 1}</span>` +
+          `<span class="adp-team-icon">${r.team}</span>` +
+          '<div class="adp-avatar-wrap">' +
+            `<div class="adp-avatar" style="background:${color}">${drInitials(r.name)}</div>` +
+            `<span class="adp-pos-badge adp-${posClass}">${r.pos}</span>` +
+          '</div>' +
+          `<div class="adp-name">${r.name}</div>` +
+          `<div class="adp-sub-row"><span class="adp-posrank adp-${posClass}">Pick ${r.avgPick.toFixed(1)}</span><span class="adp-value">${r.count} league${r.count === 1 ? '' : 's'}</span></div>` +
+        '</div>';
+      }).join('') + '</div>';
+    }
+    window.renderRealMyAdp = renderRealMyAdp;
+
     async function renderRealDraftBoard(draftId, row) {
       const cached = window.__sleeperDraftCache && window.__sleeperDraftCache[draftId];
       const entry = Object.values(window.sleeperLeagueData || {}).find(e => e.draftId === draftId);
@@ -11460,6 +11514,7 @@
         if (window.renderRealWaiverWire) window.renderRealWaiverWire();
         if (window.renderRealRootingGuide) window.renderRealRootingGuide();
         if (window.renderRealDraftRoom) window.renderRealDraftRoom();
+        if (window.renderRealMyAdp) window.renderRealMyAdp();
         if (window.renderRealDashboard) window.renderRealDashboard();
         if (window.renderRealNotebook) window.renderRealNotebook();
       } catch (err) {
