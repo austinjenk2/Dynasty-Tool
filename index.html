@@ -10577,18 +10577,23 @@
     return proj[id] != null ? Number(proj[id]) : null;
   }
 
-  // A player who already has a recorded point value (even 0.0) is treated as
-  // having played; otherwise we fall back to their weekly projection. This is
-  // an approximation -- a real 0-point stat line looks identical to "hasn't
-  // played yet" -- but it's the best signal available without live per-game
-  // status from Sleeper's public API.
+  // Sleeper pre-fills players_points with a real 0 for every starter before
+  // anyone has actually played -- indistinguishable from a genuine 0-point
+  // outing. A nonzero recorded score is trustworthy and always wins; a
+  // recorded 0 is ambiguous, so a real projection is preferred over it when
+  // one exists, and the 0 is only used as a last resort with nothing better
+  // to go on. This means a player who truly scores exactly 0 in a completed
+  // game can still show their pre-game projection instead -- an accepted
+  // tradeoff, since there's no live per-game status from Sleeper's public
+  // API to tell the two cases apart.
   // projMap is optional -- pass it to score against a specific (non-current)
   // week's projections, e.g. when the Scoreboard week selector picks a week
   // other than the live one; omitted, it falls back to the current week's
   // cached projections.
   function sbEffectivePoints(id, pointsMap, projMap) {
-    if (pointsMap && pointsMap[id] != null) return Number(pointsMap[id]);
+    const recorded = pointsMap ? pointsMap[id] : null;
     const proj = sbProjectionFor(id, projMap);
+    if (recorded != null && (Number(recorded) !== 0 || proj == null)) return Number(recorded);
     return proj != null ? proj : 0;
   }
 
