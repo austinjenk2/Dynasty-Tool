@@ -2719,22 +2719,22 @@
 
       <div class="ld-header">
         <div class="ld-header-left">
-          <div class="ld-rank">1</div>
-          <div class="ld-avatar" style="background:var(--navy)">EE</div>
+          <div class="ld-rank" id="ldRank">1</div>
+          <div class="ld-avatar" id="ldAvatar" style="background:var(--navy)">EE</div>
           <div>
-            <div class="ld-name">AusJ2</div>
-            <div class="ld-meta">0-0 &middot; 19 leagues</div>
+            <div class="ld-name" id="ldName">AusJ2</div>
+            <div class="ld-meta" id="ldMeta">0-0 &middot; 19 leagues</div>
           </div>
-          <div class="roster-pill" style="margin-left:8px">FAVORITE</div>
+          <div class="roster-pill" id="ldRosterPill" style="margin-left:8px">FAVORITE</div>
         </div>
         <div class="ld-tags">
-          <span class="ld-tag">CON <b>1st</b></span>
-          <span class="ld-tag">VAL <b>1st</b></span>
-          <span class="ld-tag">QB <b>3rd</b></span>
-          <span class="ld-tag">RB <b>4th</b></span>
-          <span class="ld-tag">WR <b>1st</b></span>
-          <span class="ld-tag">TE <b>10th</b></span>
-          <span class="ld-tag">PLAYOFF <b>1st</b></span>
+          <span class="ld-tag">CON <b id="ldConRank">1st</b></span>
+          <span class="ld-tag" id="ldValTag" hidden>VAL <b>1st</b></span>
+          <span class="ld-tag" id="ldQbTag" hidden>QB <b>3rd</b></span>
+          <span class="ld-tag" id="ldRbTag" hidden>RB <b>4th</b></span>
+          <span class="ld-tag" id="ldWrTag" hidden>WR <b>1st</b></span>
+          <span class="ld-tag" id="ldTeTag" hidden>TE <b>10th</b></span>
+          <span class="ld-tag" id="ldPlayoffTag" hidden>PLAYOFF <b>1st</b></span>
         </div>
       </div>
 
@@ -11554,10 +11554,21 @@
       const ldOppEl = document.getElementById('ldOpp');
       const ldProjWeekEl = document.getElementById('ldProjWeek');
 
+      const ldRankEl = document.getElementById('ldRank');
+      const ldMetaEl = document.getElementById('ldMeta');
+      const ldConRankEl = document.getElementById('ldConRank');
+
       if (allRosters.length) {
         const s = entry.roster.settings || {};
         if (ldRecordEl) ldRecordEl.textContent = `${s.wins || 0}-${s.losses || 0}${s.ties ? '-' + s.ties : ''}`;
-        if (ldSeedEl) ldSeedEl.textContent = ldOrdinal(ldRankOf(allRosters, winsOf, entry.roster.roster_id));
+        const seedRank = ldRankOf(allRosters, winsOf, entry.roster.roster_id);
+        if (ldSeedEl) ldSeedEl.textContent = ldOrdinal(seedRank);
+        if (ldRankEl) ldRankEl.textContent = String(seedRank);
+        if (ldConRankEl) ldConRankEl.textContent = ldOrdinal(seedRank);
+        if (ldMetaEl) {
+          const teams = entry.league.total_rosters || allRosters.length;
+          ldMetaEl.textContent = `${s.wins || 0}-${s.losses || 0} · ${teams} teams`;
+        }
 
         const pfRank = ldRankOf(allRosters, pfOf, entry.roster.roster_id);
         if (ldPfRankEl) ldPfRankEl.textContent = ldOrdinal(pfRank);
