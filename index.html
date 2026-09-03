@@ -9903,35 +9903,46 @@
     return matches;
   }
 
-  document.querySelectorAll('.schedule-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
+  const scheduleGroupsEl = document.getElementById('scheduleGroups');
+  if (scheduleGroupsEl) {
+    // Delegated (not bound per-chip at load) since renderRealSchedule()
+    // rebuilds these chips from real data on every sync.
+    scheduleGroupsEl.addEventListener('click', (e) => {
+      const chip = e.target.closest('.schedule-chip');
+      if (!chip) return;
       const existing = chip.nextElementSibling;
       const isOpen = existing && existing.classList.contains('schedule-expand');
       document.querySelectorAll('.schedule-expand').forEach(el => el.remove());
       if (isOpen) return;
 
-      const teamCodes = Array.from(chip.querySelectorAll('.schedule-team span')).map(s => s.textContent.trim());
-      const matches = getRootingDeltasForTeams(teamCodes);
       const expand = document.createElement('div');
       expand.className = 'schedule-expand';
-      if (matches.length === 0) {
-        expand.innerHTML = '<p class="schedule-expand-count">No plus/minus exposure for you in this game.</p>';
+      if (scheduleGroupsEl.dataset.currentWeek === '0') {
+        // .rg-row data reflects this week's actual starters, so a
+        // different week's schedule can't show an accurate exposure match.
+        expand.innerHTML = '<p class="schedule-expand-count">Exposure preview is only available for the current week.</p>';
       } else {
-        const chips = matches.map(m => {
-          const cls = m.delta > 0 ? 'schedule-expand-pos' : 'schedule-expand-neg';
-          const sign = m.delta > 0 ? '+' : '';
-          return `<span class="schedule-expand-chip">${m.name} <b class="${cls}">${sign}${m.delta}</b></span>`;
-        }).join('');
-        expand.innerHTML =
-          `<p class="schedule-expand-count">${matches.length} player${matches.length > 1 ? 's' : ''} affect your exposure in this game</p>` +
-          `<div class="schedule-expand-chips">${chips}</div>` +
-          `<a class="schedule-expand-guide">Full Rooting Guide &rarr;</a>`;
+        const teamCodes = Array.from(chip.querySelectorAll('.schedule-team span')).map(s => s.textContent.trim());
+        const matches = getRootingDeltasForTeams(teamCodes);
+        if (matches.length === 0) {
+          expand.innerHTML = '<p class="schedule-expand-count">No plus/minus exposure for you in this game.</p>';
+        } else {
+          const chips = matches.map(m => {
+            const cls = m.delta > 0 ? 'schedule-expand-pos' : 'schedule-expand-neg';
+            const sign = m.delta > 0 ? '+' : '';
+            return `<span class="schedule-expand-chip">${m.name} <b class="${cls}">${sign}${m.delta}</b></span>`;
+          }).join('');
+          expand.innerHTML =
+            `<p class="schedule-expand-count">${matches.length} player${matches.length > 1 ? 's' : ''} affect your exposure in this game</p>` +
+            `<div class="schedule-expand-chips">${chips}</div>` +
+            `<a class="schedule-expand-guide">Full Rooting Guide &rarr;</a>`;
+        }
       }
       chip.after(expand);
       const guideLink = expand.querySelector('.schedule-expand-guide');
       if (guideLink) guideLink.addEventListener('click', () => goToRootingGuide());
     });
-  });
+  }
 
   (function initDraftRoom() {
     const drSubtabs = document.querySelectorAll('.dr-subtab');
@@ -11403,39 +11414,57 @@
       return cachedNflState;
     }
 
+    function extractGameInfo(list) {
+      const games = {};
+      (list || []).forEach(p => {
+        if (p && p.team && p.opponent && !games[p.team]) {
+          const isAway = String(p.opponent).startsWith('@');
+          games[p.team] = {
+            opponent: String(p.opponent).replace('@', ''),
+            isAway,
+            date: p.date || (p.metadata && p.metadata.game_time) || null,
+          };
+        }
+      });
+      return games;
+    }
+
     async function getWeekProjections(season, week) {
       try {
         const list = await sleeperFetchRoot(
           `/projections/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
         );
         const map = {};
-        // Best-effort: this same payload often carries each player's real
-        // opponent/kickoff for the week alongside their projection. Captured
-        // defensively -- if the field names differ or are missing, the
-        // schedule/opponent UI that reads this just falls back to nothing
-        // instead of breaking sync.
-        const games = {};
         (list || []).forEach(p => {
-          if (!p || !p.player_id) return;
-          if (p.stats) {
-            const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std ?? p.stats.pts
-              ?? p.pts_ppr ?? p.pts_half_ppr ?? p.pts_std;
-            if (pts != null) map[p.player_id] = Number(pts);
-          }
-          if (p.team && p.opponent && !games[p.team]) {
-            const isAway = String(p.opponent).startsWith('@');
-            games[p.team] = {
-              opponent: String(p.opponent).replace('@', ''),
-              isAway,
-              date: p.date || (p.metadata && p.metadata.game_time) || null,
-            };
-          }
+          if (!p || !p.player_id || !p.stats) return;
+          const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std ?? p.stats.pts
+            ?? p.pts_ppr ?? p.pts_half_ppr ?? p.pts_std;
+          if (pts != null) map[p.player_id] = Number(pts);
         });
-        window.__sleeperGameInfo = games;
+        // Best-effort: this same payload also carries each player's real
+        // opponent/date for the week alongside their projection. Captured
+        // defensively -- if the field names differ or are missing, the
+        // schedule UI that reads this just falls back to nothing instead of
+        // breaking sync.
+        window.__sleeperGameInfo = extractGameInfo(list);
         return map;
       } catch (e) {
         // Unofficial/undocumented endpoint -- if it's unavailable or its shape
         // changed, just render without projections instead of failing sync.
+        return {};
+      }
+    }
+
+    // Used to look up a different week's schedule (team/opponent pairings
+    // only, not points) without touching the current week's cached
+    // projections that other parts of the app depend on.
+    async function getGameInfoForWeek(season, week) {
+      try {
+        const list = await sleeperFetchRoot(
+          `/projections/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
+        );
+        return extractGameInfo(list);
+      } catch (e) {
         return {};
       }
     }
@@ -11748,6 +11777,7 @@
     window.sleeperFetch = sleeperFetch;
     window.sleeperGetWeekProjections = getWeekProjections;
     window.sleeperScoringLabel = scoringLabel;
+    window.sleeperGetGameInfoForWeek = getGameInfoForWeek;
 
     const coManagedToggle = document.getElementById('coManagedToggle');
     if (coManagedToggle) {
@@ -11875,7 +11905,9 @@
   }
 
   setupWeekDropdown('weekSelect', 'weekMenu', 'weekSelectLabel', (week) => { loadLeaguesWeek(week); });
-  setupWeekDropdown('scheduleWeekSelect', 'scheduleWeekMenu', 'scheduleWeekLabel');
+  setupWeekDropdown('scheduleWeekSelect', 'scheduleWeekMenu', 'scheduleWeekLabel', (week) => {
+    if (window.renderRealSchedule) window.renderRealSchedule(Number(week));
+  });
 
   // Refetches real matchups + that week's projections for every connected
   // league so picking a past/future week on the Scoreboard shows that
@@ -12400,13 +12432,42 @@
     }
   }
 
-  async function renderRealSchedule() {
+  window.__sleeperScheduleCache = window.__sleeperScheduleCache || {};
+
+  async function renderRealSchedule(overrideWeek) {
     const container = document.getElementById('scheduleGroups');
     const sub = document.getElementById('scheduleSub');
     if (!container) return;
-    const gameInfo = window.__sleeperGameInfo || {};
+    const firstEntry = Object.values(window.sleeperLeagueData || {}).find(e => e.roster);
+    if (!firstEntry) return;
+
+    const currentWeek = firstEntry.week;
+    const week = overrideWeek || currentWeek;
+    const season = firstEntry.league.season;
+    const isCurrentWeek = week === currentWeek;
+
+    let gameInfo;
+    if (isCurrentWeek) {
+      gameInfo = window.__sleeperGameInfo || {};
+    } else {
+      const cacheKey = `${season}_${week}`;
+      if (!window.__sleeperScheduleCache[cacheKey]) {
+        window.__sleeperScheduleCache[cacheKey] = window.sleeperGetGameInfoForWeek
+          ? await window.sleeperGetGameInfoForWeek(season, week)
+          : {};
+      }
+      gameInfo = window.__sleeperScheduleCache[cacheKey];
+    }
+
+    const scheduleWeekLabel = document.getElementById('scheduleWeekLabel');
+    if (scheduleWeekLabel) scheduleWeekLabel.textContent = String(week);
+    container.dataset.currentWeek = isCurrentWeek ? '1' : '0';
+
     const teams = Object.keys(gameInfo);
-    if (!teams.length) return;
+    if (!teams.length) {
+      container.innerHTML = '<div class="placeholder"><p>No schedule data available for this week.</p></div>';
+      return;
+    }
 
     const seen = new Set();
     const games = [];
@@ -12420,12 +12481,12 @@
       const home = away === team ? info.opponent : team;
       games.push({ away, home, date: parseCalendarDate(info.date) });
     });
-    if (!games.length) return;
+    if (!games.length) {
+      container.innerHTML = '<div class="placeholder"><p>No schedule data available for this week.</p></div>';
+      return;
+    }
 
-    const firstEntry = Object.values(window.sleeperLeagueData || {}).find(e => e.roster);
-    const kickoffs = firstEntry
-      ? await getEspnKickoffTimes(firstEntry.week, firstEntry.league.season)
-      : {};
+    const kickoffs = await getEspnKickoffTimes(week, season);
     let anyKickoff = false;
     games.forEach(g => {
       const iso = kickoffs[g.away] || kickoffs[g.home];
@@ -12450,7 +12511,7 @@
       const timeLabel = g.kickoff
         ? g.kickoff.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }).toUpperCase()
         : (g.date ? g.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase() : 'DATE TBD');
-      return '<div class="schedule-chip">' +
+      return `<div class="schedule-chip" data-away="${g.away}" data-home="${g.home}">` +
         `<div class="schedule-time">${timeLabel}</div>` +
         '<div class="schedule-row">' +
           `<div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/${awayLower}.png" alt="${g.away}" onerror="this.style.display='none'"><span>${g.away}</span></div>` +
