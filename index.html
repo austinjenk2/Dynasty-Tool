@@ -12183,6 +12183,7 @@
     let projWins = 0, projLosses = 0;
     entries.forEach(e => {
       if (!e.myMatchup || !e.oppMatchup) return;
+      if (!sbMatchupHasData(e.myMatchup) && !sbMatchupHasData(e.oppMatchup)) return;
       const myTotal = sbMatchupProjectedTotal(e.myMatchup);
       const oppTotal = sbMatchupProjectedTotal(e.oppMatchup);
       if (sbWinProbability(myTotal, oppTotal) >= 50) projWins++; else projLosses++;
