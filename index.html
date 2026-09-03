@@ -10777,7 +10777,20 @@
     const evenListEl = document.querySelector('.rg-panel-even .rg-list');
     if (!rgBtn || !rgPanel || !rgChipsEl || !forListEl || !againstListEl || !evenListEl) return;
 
-    const rgBlacklist = new Set();
+    const RG_BLACKLIST_KEY = 'dynastyToolRootingBlacklist';
+    function loadRgBlacklist() {
+      try { return new Set(JSON.parse(localStorage.getItem(RG_BLACKLIST_KEY) || '[]')); }
+      catch (e) { return new Set(); }
+    }
+    function saveRgBlacklist() {
+      try { localStorage.setItem(RG_BLACKLIST_KEY, JSON.stringify(Array.from(rgBlacklist))); }
+      catch (e) {}
+    }
+
+    // Persisted so a league you excluded stays excluded across syncs --
+    // renderRealRootingGuide() rebuilds these chips on every 60s poll, and
+    // used to always reset them all back to included.
+    const rgBlacklist = loadRgBlacklist();
     let rgRows = Array.from(document.querySelectorAll('.rg-row')).map(el => ({
       el,
       forAll: (el.dataset.for || '').split(' &middot; ').filter(Boolean),
@@ -10798,6 +10811,7 @@
             chip.classList.remove('active');
             chip.classList.add('excluded');
           }
+          saveRgBlacklist();
           updateCount();
           recomputeRootingGuide();
         });
@@ -10805,7 +10819,7 @@
     }
 
     rgChipsEl.innerHTML = allLeagues.map(name =>
-      `<span class="rg-league-chip active" data-league="${name}">${name}</span>`
+      `<span class="rg-league-chip${rgBlacklist.has(name) ? ' excluded' : ' active'}" data-league="${name}">${name}</span>`
     ).join('');
     wireChips();
 
@@ -10919,9 +10933,14 @@
       });
 
       rgLeagueNames = entries.map(e => e.league.name).sort();
-      rgBlacklist.clear();
+      // Prune any blacklisted league that's no longer connected, but leave
+      // exclusions for leagues that are still around -- this rebuild runs
+      // every sync and used to wipe the blacklist every time.
+      const currentNames = new Set(rgLeagueNames);
+      Array.from(rgBlacklist).forEach(name => { if (!currentNames.has(name)) rgBlacklist.delete(name); });
+      saveRgBlacklist();
       rgChipsEl.innerHTML = rgLeagueNames.map(name =>
-        `<span class="rg-league-chip active" data-league="${name}">${name}</span>`
+        `<span class="rg-league-chip${rgBlacklist.has(name) ? ' excluded' : ' active'}" data-league="${name}">${name}</span>`
       ).join('');
       wireChips();
       updateCount();
