@@ -539,7 +539,7 @@
   .sb-score-mine { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--navy); }
   .sb-score-vs { font-size: 10px; color: var(--faint); margin: 0 4px; }
   .sb-score-theirs { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--ink); }
-  .sb-live-score { font-size: 11px; color: var(--faint); margin-top: 2px; }
+  .sb-live-score { font-size: 13px; font-weight: 700; color: var(--muted); margin-top: 2px; }
   .sb-badge {
     flex-shrink: 0;
     font-size: 11px;
@@ -1170,6 +1170,9 @@
   .settings-row + .settings-row { border-top: 1px solid var(--border-soft); }
   .settings-label { font-size: 14px; font-weight: 700; color: var(--ink); }
   .settings-sub { font-size: 12px; color: var(--muted); margin-top: 4px; max-width: 520px; }
+  .settings-panel + .settings-panel { margin-top: 16px; }
+  .settings-panel > .settings-label { padding-top: 18px; }
+  .settings-panel > .rg-leagues-chips { padding-bottom: 18px; }
   .toggle-switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
   .toggle-switch input { opacity: 0; width: 0; height: 0; }
   .toggle-slider {
@@ -1341,7 +1344,7 @@
   .proj-score.mine { color: var(--navy); }
   .proj-score.theirs { color: var(--ink); }
   .matchup-vs { font-family: 'Source Sans 3', sans-serif; font-size: 10px; color: var(--faint); font-weight: 600; }
-  .matchup-live-score { font-size: 10.5px; color: var(--faint); }
+  .matchup-live-score { font-size: 13px; font-weight: 700; color: var(--muted); }
   .favored-tag {
     align-self: flex-start;
     font-size: 9.5px;
@@ -2832,6 +2835,12 @@
       </div>
 
       <div data-sb-view="scoreboard" class="sb-view is-active">
+        <div class="rg-leagues-toggle" id="sbTankBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="sbTankCount">(18 of 18)</span></div>
+        <div class="rg-leagues-panel" id="sbTankPanel" hidden>
+          <p class="rg-leagues-note">Uncheck a league to leave it off the Scoreboard entirely and out of these stats -- separate from the Rooting Guide's own list. Stays off until you check it back on here.</p>
+          <div class="rg-leagues-chips" id="sbTankChips"></div>
+        </div>
+
         <div class="sb-stats" id="sbStats">
           <div class="sb-stat" id="sbStatPts">
             <div class="sb-stat-value sb-cyan" id="sbStatPtsValue">2655</div>
@@ -9427,6 +9436,12 @@
         </label>
       </div>
     </div>
+
+    <div class="settings-panel">
+      <div class="settings-label">Blacklisted Leagues</div>
+      <div class="settings-sub">Turn a league off entirely and it disappears everywhere in the app -- Leagues, Exposures, Scoreboard, Trades, Waiver Wire, Rooting Guide, Draft Room, Dashboard, the league count up top, all of it -- as if it were never connected. Turn it back on here to bring it back.</div>
+      <div class="rg-leagues-chips" id="blacklistChips" style="margin-top:12px"></div>
+    </div>
   </div>
 
 </div>
@@ -10600,9 +10615,54 @@
     return proj != null ? proj : 0;
   }
 
-  function sbMatchupProjectedTotal(matchup, projMap) {
+  const SB_SLOT_ELIGIBLE = {
+    QB: ['QB'], RB: ['RB'], WR: ['WR'], TE: ['TE'], K: ['K'], DEF: ['DEF'],
+    FLEX: ['RB', 'WR', 'TE'],
+    SUPER_FLEX: ['QB', 'RB', 'WR', 'TE'],
+    WRRB_FLEX: ['RB', 'WR'],
+    REC_FLEX: ['WR', 'TE'],
+  };
+
+  // A starter slot the manager hasn't filled in yet comes back from Sleeper
+  // as "0" in matchup.starters. Left alone, that slot silently contributes
+  // nothing to the projected total -- but a manager who simply hasn't set
+  // their lineup yet will fill it before kickoff, almost always with
+  // whichever eligible bench player projects highest. This predicts that
+  // pick (using the real player dict + real projections, never a guess at
+  // value) so an unset lineup doesn't understate a team's real projection.
+  // Falls back to just the filled starters when the league's roster slot
+  // order or the player dictionary isn't available yet.
+  function sbEffectiveStarters(matchup, league, projMap) {
+    const raw = (matchup && matchup.starters) || [];
+    const filled = raw.filter(id => id && id !== '0');
+    if (filled.length === raw.length) return filled;
+    const playerDict = window.__sleeperPlayerDict;
+    if (!league || !league.roster_positions || !playerDict || !matchup.players) return filled;
+
+    const startSlots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+    const usedIds = new Set(filled);
+    const bench = matchup.players.filter(id => id && !usedIds.has(id));
+    const chosen = new Set();
+
+    return raw.map((id, i) => {
+      if (id && id !== '0') return id;
+      const eligible = SB_SLOT_ELIGIBLE[startSlots[i]] || null;
+      let best = null, bestProj = -Infinity;
+      bench.forEach(pid => {
+        if (chosen.has(pid)) return;
+        const p = playerDict[pid];
+        if (!p || (eligible && !eligible.includes(p.position))) return;
+        const proj = sbProjectionFor(pid, projMap);
+        if (proj != null && proj > bestProj) { bestProj = proj; best = pid; }
+      });
+      if (best) chosen.add(best);
+      return best;
+    }).filter(Boolean);
+  }
+
+  function sbMatchupProjectedTotal(matchup, projMap, league) {
     if (!matchup) return 0;
-    const starters = (matchup.starters || []).filter(id => id && id !== '0');
+    const starters = sbEffectiveStarters(matchup, league, projMap);
     const pointsMap = matchup.players_points || {};
     return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap), 0);
   }
@@ -10612,9 +10672,9 @@
   // instead of a fabricated 0.0/50% when neither is available (e.g. the
   // unofficial projections endpoint has nothing for a selected past/future
   // week and the games haven't been played).
-  function sbMatchupHasData(matchup, projMap) {
+  function sbMatchupHasData(matchup, projMap, league) {
     if (!matchup) return false;
-    const starters = (matchup.starters || []).filter(id => id && id !== '0');
+    const starters = sbEffectiveStarters(matchup, league, projMap);
     const pointsMap = matchup.players_points || {};
     // Sleeper pre-fills players_points with 0 for every starter before
     // anyone has actually played, so a recorded 0 alone doesn't prove real
@@ -11406,9 +11466,9 @@
         const myPts = myMatchup.points || 0;
         const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
         const oppName = oppUser ? (oppUser.display_name || oppUser.username || 'Opponent') : 'TBD';
-        const hasData = sbMatchupHasData(myMatchup) || sbMatchupHasData(oppMatchup);
-        const myProj = hasData ? sbMatchupProjectedTotal(myMatchup) : 0;
-        const oppProj = hasData ? sbMatchupProjectedTotal(oppMatchup) : 0;
+        const hasData = sbMatchupHasData(myMatchup, null, league) || sbMatchupHasData(oppMatchup, null, league);
+        const myProj = hasData ? sbMatchupProjectedTotal(myMatchup, null, league) : 0;
+        const oppProj = hasData ? sbMatchupProjectedTotal(oppMatchup, null, league) : 0;
         if (hasData) {
           const margin = Math.abs(myProj - oppProj).toFixed(1);
           favoredTagText = myProj >= oppProj ? `Favored by ${margin}` : `Underdog by ${margin}`;
@@ -11542,6 +11602,12 @@
           if (leagues && leagues.length) break;
         }
         leagues = leagues || [];
+        // Full unfiltered list kept for the Settings blacklist UI, which
+        // needs to show (and let you re-enable) leagues that are currently
+        // blacklisted -- those won't be in `leagues` after the filter below.
+        window.__sleeperAllLeagues = leagues;
+        const blacklist = getLeagueBlacklist();
+        if (blacklist.size) leagues = leagues.filter(lg => !blacklist.has(lg.league_id));
 
         const { week, season } = await getNflState();
         // A completed week's transactions never change, so they're cached
@@ -11646,6 +11712,18 @@
         if (window.renderRealDashboard) window.renderRealDashboard();
         if (window.renderRealNotebook) window.renderRealNotebook();
         if (window.renderRealSchedule) window.renderRealSchedule();
+        renderLeagueBlacklistSettings();
+
+        // Warm the player dict for the empty-lineup-slot projection fill
+        // (sbEffectiveStarters) -- it's normally only fetched lazily when a
+        // League Detail/Exposures view needs it, but the Scoreboard/Leagues
+        // pages need it too now and are usually the first thing seen.
+        if (window.sleeperGetPlayerDict && !window.__sleeperPlayerDict) {
+          window.sleeperGetPlayerDict().then(() => {
+            if (window.renderRealScoreboard) window.renderRealScoreboard();
+            if (window.renderRealDashboard) window.renderRealDashboard();
+          }).catch(() => {});
+        }
       } catch (err) {
         setSyncState('error', "Couldn't sync — check your connection");
       }
@@ -11776,9 +11854,9 @@
 
       const ldLiveScoreEl = document.getElementById('ldLiveScore');
       if (ldProjWeekEl) ldProjWeekEl.textContent = String(entry.week || 1);
-      if (entry.myMatchup && entry.oppMatchup && (sbMatchupHasData(entry.myMatchup) || sbMatchupHasData(entry.oppMatchup))) {
-        const myTotal = sbMatchupProjectedTotal(entry.myMatchup);
-        const oppTotal = sbMatchupProjectedTotal(entry.oppMatchup);
+      if (entry.myMatchup && entry.oppMatchup && (sbMatchupHasData(entry.myMatchup, null, entry.league) || sbMatchupHasData(entry.oppMatchup, null, entry.league))) {
+        const myTotal = sbMatchupProjectedTotal(entry.myMatchup, null, entry.league);
+        const oppTotal = sbMatchupProjectedTotal(entry.oppMatchup, null, entry.league);
         if (ldProjMineEl) ldProjMineEl.textContent = myTotal.toFixed(1);
         if (ldProjTheirsEl) ldProjTheirsEl.textContent = oppTotal.toFixed(1);
         if (ldOppEl) ldOppEl.textContent = entry.oppUser ? (entry.oppUser.display_name || entry.oppUser.username) : '—';
@@ -11815,14 +11893,29 @@
 
       const starters = new Set((entry.roster.starters || []).filter(id => id && id !== '0'));
       const playerIds = (entry.roster.players || []).filter(id => id && id !== '0');
+
+      // Sleeper's starters array is positional against the league's starting
+      // slot order (roster_positions minus bench/IR/taxi), so the slot a
+      // given starter actually occupies -- FLEX, SUPER_FLEX, etc, not just
+      // their real position -- can be read off by matching index.
+      const startSlots = (entry.league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+      const LD_SLOT_LABEL = { FLEX: 'FLEX', SUPER_FLEX: 'SFLEX', WRRB_FLEX: 'FLEX', REC_FLEX: 'FLEX' };
+      const slotByPlayerId = {};
+      (entry.roster.starters || []).forEach((id, i) => {
+        if (id && id !== '0') slotByPlayerId[id] = LD_SLOT_LABEL[startSlots[i]] || startSlots[i];
+      });
+
       const groups = { QB: [], RB: [], WR: [], TE: [] };
       playerIds.forEach(id => {
         const p = dict[id];
         if (!p || !groups[p.position]) return;
+        const proj = sbProjectionFor(id);
         groups[p.position].push({
           name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
           team: p.team || 'FA',
           isStarter: starters.has(id),
+          slotLabel: slotByPlayerId[id] || p.position,
+          proj,
         });
       });
       Object.keys(groups).forEach(pos => {
@@ -11833,10 +11926,11 @@
         const posClass = pos.toLowerCase();
         const playerRows = groups[pos].map(p =>
           '<div class="ld-player">' +
-            `<span class="ld-pos ${posClass}">${p.isStarter ? pos : ''}</span>` +
+            `<span class="ld-pos ${posClass}">${p.isStarter ? p.slotLabel : ''}</span>` +
             (p.isStarter ? '<span class="ld-star">&#9733;</span>' : '') +
             `<span class="ld-pname">${p.name}</span>` +
             `<span class="ld-pteam">${p.team}</span>` +
+            `<span class="ld-pnum">${p.proj != null ? p.proj.toFixed(1) : '&mdash;'}<br><i>PROJ</i></span>` +
           '</div>'
         ).join('') || '<div class="ld-player"><span class="ld-pname" style="color:var(--faint)">None rostered</span></div>';
         return `<div class="ld-col"><div class="ld-col-head ${posClass}">${LD_POS_LABELS[pos]}</div>${playerRows}</div>`;
@@ -11845,6 +11939,7 @@
     window.renderRealLeagueDetail = renderRealLeagueDetail;
     window.sleeperGetPlayerDict = getPlayerDict;
     window.sleeperFetch = sleeperFetch;
+    window.sleeperReloadData = loadSleeperData;
     window.sleeperGetWeekProjections = getWeekProjections;
     window.sleeperScoringLabel = scoringLabel;
     window.sleeperGetGameInfoForWeek = getGameInfoForWeek;
@@ -11951,11 +12046,11 @@
       const myPts = myMatchup.points || 0;
       const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
       const oppName = oppUser ? (oppUser.display_name || oppUser.username || 'Opponent') : 'TBD';
-      const hasData = sbMatchupHasData(myMatchup, projMap) || sbMatchupHasData(oppMatchup, projMap);
+      const hasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
       let favoredTagText, weeklyProjText, myProj = 0, oppProj = 0;
       if (hasData) {
-        myProj = sbMatchupProjectedTotal(myMatchup, projMap);
-        oppProj = sbMatchupProjectedTotal(oppMatchup, projMap);
+        myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league);
+        oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
         const margin = Math.abs(myProj - oppProj).toFixed(1);
         favoredTagText = myProj >= oppProj ? `Favored by ${margin}` : `Underdog by ${margin}`;
         weeklyProjText = myProj.toFixed(1);
@@ -12286,6 +12381,46 @@
     } catch (e) { return true; }
   }
 
+  // A fully blacklisted league (Settings page) is excluded before it's ever
+  // fetched into window.sleeperLeagueData -- unlike the co-managed toggle or
+  // the Rooting Guide/Scoreboard "tanking" lists, which just filter what an
+  // already-loaded league counts toward, this makes the league invisible
+  // everywhere in the app, as if it were never connected at all.
+  const LEAGUE_BLACKLIST_KEY = 'dynastyToolLeagueBlacklist';
+  function getLeagueBlacklist() {
+    try { return new Set(JSON.parse(localStorage.getItem(LEAGUE_BLACKLIST_KEY) || '[]')); }
+    catch (e) { return new Set(); }
+  }
+  function saveLeagueBlacklist(set) {
+    try { localStorage.setItem(LEAGUE_BLACKLIST_KEY, JSON.stringify(Array.from(set))); } catch (e) {}
+  }
+
+  function renderLeagueBlacklistSettings() {
+    const chipsEl = document.getElementById('blacklistChips');
+    if (!chipsEl) return;
+    const allLeagues = window.__sleeperAllLeagues || [];
+    if (!allLeagues.length) return;
+    const blacklist = getLeagueBlacklist();
+    const sorted = [...allLeagues].sort((a, b) => a.name.localeCompare(b.name));
+
+    chipsEl.innerHTML = sorted.map(lg =>
+      `<span class="rg-league-chip${blacklist.has(lg.league_id) ? ' excluded' : ' active'}" data-league-id="${lg.league_id}">${lg.name}</span>`
+    ).join('');
+    chipsEl.querySelectorAll('.rg-league-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const id = chip.dataset.leagueId;
+        if (blacklist.has(id)) { blacklist.delete(id); chip.classList.add('active'); chip.classList.remove('excluded'); }
+        else { blacklist.add(id); chip.classList.remove('active'); chip.classList.add('excluded'); }
+        saveLeagueBlacklist(blacklist);
+        // A blacklist change needs the full leagues list re-filtered and
+        // everything re-fetched/re-rendered from scratch, same as a fresh
+        // connect -- simplest correct way to make a league disappear (or
+        // reappear) everywhere at once.
+        if (window.sleeperReloadData) window.sleeperReloadData();
+      });
+    });
+  }
+
   async function renderRealExposures() {
     if (!expGrid || !expListBody || !window.sleeperGetPlayerDict) return;
     const includeCoManaged = isCoManagedIncluded();
@@ -12409,9 +12544,9 @@
     let projWins = 0, projLosses = 0;
     entries.forEach(e => {
       if (!e.myMatchup || !e.oppMatchup) return;
-      if (!sbMatchupHasData(e.myMatchup) && !sbMatchupHasData(e.oppMatchup)) return;
-      const myTotal = sbMatchupProjectedTotal(e.myMatchup);
-      const oppTotal = sbMatchupProjectedTotal(e.oppMatchup);
+      if (!sbMatchupHasData(e.myMatchup, null, e.league) && !sbMatchupHasData(e.oppMatchup, null, e.league)) return;
+      const myTotal = sbMatchupProjectedTotal(e.myMatchup, null, e.league);
+      const oppTotal = sbMatchupProjectedTotal(e.oppMatchup, null, e.league);
       const pct = sbWinProbability(myTotal, oppTotal);
       if (pct > 50) projWins++;
       else if (pct < 50) projLosses++;
@@ -12761,10 +12896,58 @@
   }
   window.renderRealNotebook = renderRealNotebook;
 
+  // A Scoreboard-only "tanking teams" exclusion list -- separate localStorage
+  // key from the Rooting Guide's own list, so excluding a league here (e.g.
+  // a team you've given up on this season) doesn't affect what you root for.
+  const SB_TANK_KEY = 'dynastyToolScoreboardTankList';
+  function sbGetTankList() {
+    try { return new Set(JSON.parse(localStorage.getItem(SB_TANK_KEY) || '[]')); }
+    catch (e) { return new Set(); }
+  }
+  function sbSaveTankList(set) {
+    try { localStorage.setItem(SB_TANK_KEY, JSON.stringify(Array.from(set))); } catch (e) {}
+  }
+
+  function renderSbTankChips() {
+    const chipsEl = document.getElementById('sbTankChips');
+    const countEl = document.getElementById('sbTankCount');
+    if (!chipsEl) return;
+    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+    if (!entries.length) return;
+    const tankList = sbGetTankList();
+    const names = entries.map(e => e.league.name).sort();
+    const currentNames = new Set(names);
+    Array.from(tankList).forEach(n => { if (!currentNames.has(n)) tankList.delete(n); });
+    sbSaveTankList(tankList);
+
+    chipsEl.innerHTML = names.map(name =>
+      `<span class="rg-league-chip${tankList.has(name) ? ' excluded' : ' active'}" data-league="${name}">${name}</span>`
+    ).join('');
+    chipsEl.querySelectorAll('.rg-league-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const league = chip.dataset.league;
+        if (tankList.has(league)) { tankList.delete(league); chip.classList.add('active'); chip.classList.remove('excluded'); }
+        else { tankList.add(league); chip.classList.remove('active'); chip.classList.add('excluded'); }
+        sbSaveTankList(tankList);
+        if (countEl) countEl.textContent = `(${names.length - tankList.size} of ${names.length})`;
+        if (window.renderRealScoreboard) window.renderRealScoreboard();
+      });
+    });
+    if (countEl) countEl.textContent = `(${names.length - tankList.size} of ${names.length})`;
+  }
+
+  const sbTankBtn = document.getElementById('sbTankBtn');
+  const sbTankPanelEl = document.getElementById('sbTankPanel');
+  if (sbTankBtn && sbTankPanelEl) {
+    sbTankBtn.addEventListener('click', () => { sbTankPanelEl.hidden = !sbTankPanelEl.hidden; });
+  }
+
   function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
     if (!sbGrid) return;
-    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+    renderSbTankChips();
+    const tankList = sbGetTankList();
+    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && !tankList.has(e.league.name));
     if (!entries.length) return;
 
     const override = window.__sleeperScoreboardOverride || null;
@@ -12791,11 +12974,11 @@
       let headlineMine = null, headlineTheirs = null;
       if (myMatchup) {
         totalPts += myPts;
-        hasData = sbMatchupHasData(myMatchup, projMap) || sbMatchupHasData(oppMatchup, projMap);
+        hasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
         if (hasData) {
           withMatchup++;
-          const myProj = sbMatchupProjectedTotal(myMatchup, projMap);
-          const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap);
+          const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league);
+          const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
           headlineMine = myProj;
           headlineTheirs = oppProj;
           const winPct = sbWinProbability(myProj, oppProj);
