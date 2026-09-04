@@ -576,9 +576,8 @@
   .sb-exp-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .sb-exp-meta .sb-delta { color: var(--green); }
   .sb-exp-right { text-align: right; flex-shrink: 0; }
-  .sb-exp-score { margin-bottom: 6px; }
-  .sb-orig-score { font-size: 10.5px; font-weight: 600; color: var(--faint); margin-top: 2px; }
-  .sb-exp-score .sb-score-mine, .sb-exp-score .sb-score-theirs { font-size: 18px; }
+  .sb-exp-scoreline { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; font-weight: 600; color: var(--ink); margin: 10px 0 16px; }
+  .sb-exp-scoreline .sb-exp-score-item i { font-style: normal; color: var(--faint); font-weight: 600; margin-left: 3px; }
 
   .sb-lineups-cols { display: flex; justify-content: flex-start; gap: 40px; }
   .sb-lineup-col { flex: 0 1 auto; min-width: 0; }
@@ -711,6 +710,8 @@
 
   .rg-row { border: 1px solid var(--border-soft); border-radius: 6px; cursor: pointer; }
   .rg-row:hover { border-color: var(--border); }
+  .rg-expand { padding: 12px; margin-top: -1px; background: var(--bg); border: 1px solid var(--border-soft); border-top: none; border-radius: 0 0 6px 6px; }
+  .rg-expand .pm-league-row { padding: 9px 12px; font-size: 12.5px; }
   .rg-row-main { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
   .rg-delta { width: 24px; flex-shrink: 0; font-weight: 800; font-size: 13px; text-align: right; }
   .rg-delta-pos { color: var(--green); }
@@ -1253,7 +1254,7 @@
   .sort-option.active { color: var(--green); }
   .league-head-row {
     display: grid;
-    grid-template-columns: 2.3fr 2fr 1fr 0.85fr 0.7fr 0.9fr 0.8fr 24px;
+    grid-template-columns: 2.3fr 2fr 1fr 0.85fr 0.7fr 0.9fr 0.9fr 0.8fr 24px;
     gap: 10px;
     padding: 0 18px 8px;
     font-size: 9.5px;
@@ -1307,7 +1308,7 @@
   .league-list { display: flex; flex-direction: column; gap: 8px; }
   .league-row {
     display: grid;
-    grid-template-columns: 2.3fr 2fr 1fr 0.85fr 0.7fr 0.9fr 0.8fr 24px;
+    grid-template-columns: 2.3fr 2fr 1fr 0.85fr 0.7fr 0.9fr 0.9fr 0.8fr 24px;
     gap: 10px;
     align-items: center;
     background: var(--surface);
@@ -2285,6 +2286,7 @@
           <div class="sort-option active" data-sort="weekly">Weekly Points</div>
           <div class="sort-option" data-sort="roster">Roster Type</div>
           <div class="sort-option" data-sort="record">Record</div>
+          <div class="sort-option" data-sort="contending">Contending Rank</div>
           <div class="sort-option" data-sort="playoffs">Playoff Odds</div>
           <div class="sort-option" data-sort="newest">Newest</div>
           <div class="sort-option" data-sort="oldest">Oldest</div>
@@ -2303,6 +2305,7 @@
       <span class="sortable-head" data-sort="record">RECORD</span>
       <span class="sortable-head" data-sort="value">ROSTER VALUE</span>
       <span class="sortable-head" data-sort="weekly">WEEKLY PROJ.</span>
+      <span class="sortable-head" data-sort="contending">CONTENDING RANK</span>
       <span class="sortable-head" data-sort="playoffs">PLAYOFF ODDS</span>
       <span></span>
     </div>
@@ -9530,28 +9533,6 @@
   </div>
 </div>
 
-<div class="player-modal" id="rgPlayerModal" hidden>
-  <div class="pm-header">
-    <div class="pm-avatar" id="rgPmAvatar"></div>
-    <div class="pm-title">
-      <div class="pm-name" id="rgPmName"></div>
-      <div class="pm-meta">
-        <span class="pm-pos-badge" id="rgPmPosBadge"></span>
-        <span class="pm-meta-text" id="rgPmMetaText"></span>
-      </div>
-    </div>
-    <div class="pm-actions">
-      <div class="pm-close" id="rgPmClose">&#10005;</div>
-    </div>
-  </div>
-  <div class="pm-body">
-    <div class="pm-exp-head">STARTING FOR YOU &middot; <b id="rgPmForCount"></b> Leagues</div>
-    <div class="pm-league-list" id="rgPmForList"></div>
-    <div class="pm-exp-head" style="margin-top:20px">STARTING AGAINST YOU &middot; <b id="rgPmAgainstCount"></b> Leagues</div>
-    <div class="pm-league-list" id="rgPmAgainstList"></div>
-  </div>
-</div>
-
 <div class="notebook-overlay" id="notebookOverlay" hidden></div>
 <div class="notebook-panel" id="notebookPanel" hidden>
   <div class="notebook-head">
@@ -9974,8 +9955,9 @@
   function getRootingDeltasForTeams(teamCodes) {
     const matches = [];
     document.querySelectorAll('.rg-row').forEach(row => {
-      const teamEl = row.querySelector('.rg-team');
-      if (!teamEl || !teamCodes.includes(teamEl.textContent.trim())) return;
+      // .rg-team holds a team logo image now, not the abbreviation text, so
+      // this has to read the row's own data-team instead of scraping text.
+      if (!row.dataset.team || !teamCodes.includes(row.dataset.team)) return;
       const deltaEl = row.querySelector('.rg-delta');
       const nameEl = row.querySelector('.rg-name');
       if (!deltaEl || !nameEl) return;
@@ -10702,7 +10684,22 @@
       const statsMap = window.__sleeperProjectionStats || {};
       const stats = statsMap[id];
       if (stats) {
-        const custom = league ? sbCustomScoreFor(stats, league.scoring_settings) : null;
+        // Sleeper's own scoring computation applies position-bonus keys
+        // (bonus_rec_te/wr/rb -- how TE Premium etc. actually gets scored)
+        // against the plain reception count, but the raw projection payload
+        // doesn't always carry that bonus key pre-computed for every player.
+        // Missing it entirely made sbCustomScoreFor silently skip the term,
+        // undercounting any league with a premium/bonus scoring rule
+        // configured. Backfill it from `rec` whenever the league scores
+        // that bonus and the stats object doesn't already have it.
+        const playerDict = window.__sleeperPlayerDict;
+        const pos = playerDict && playerDict[id] ? playerDict[id].position : null;
+        const bonusKey = pos ? `bonus_rec_${pos.toLowerCase()}` : null;
+        const effectiveStats = (bonusKey && stats[bonusKey] == null && stats.rec != null &&
+          league && league.scoring_settings && league.scoring_settings[bonusKey] != null)
+          ? Object.assign({}, stats, { [bonusKey]: stats.rec })
+          : stats;
+        const custom = league ? sbCustomScoreFor(effectiveStats, league.scoring_settings) : null;
         if (custom != null) return custom;
         // Fallback when the league's scoring_settings didn't line up with
         // any category in the projection (e.g. league context missing) --
@@ -10782,6 +10779,69 @@
       return best;
     }).filter(Boolean);
   }
+
+  // "Contending rank" -- what a team's weekly projection would be if they
+  // started their own best possible lineup, not necessarily who they
+  // actually have starting. Same greedy highest-projection-per-slot
+  // approach as sbEffectiveStarters, but run over the roster's full player
+  // list instead of just filling empty slots, so a team gets credit for
+  // depth on the bench too. Ranked against the other real rosters in the
+  // same league -- this is a projection-week snapshot, not a season-long
+  // strength score.
+  function sbOptimalLineupTotal(playerIds, league) {
+    const playerDict = window.__sleeperPlayerDict;
+    if (!league || !league.roster_positions || !playerDict) return null;
+    const startSlots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+    const pool = (playerIds || []).filter(id => id && id !== '0');
+    const chosen = new Set();
+    let total = 0;
+    startSlots.forEach(slot => {
+      const eligible = SB_SLOT_ELIGIBLE[slot];
+      if (!eligible) return;
+      let best = null, bestProj = -Infinity;
+      pool.forEach(pid => {
+        if (chosen.has(pid)) return;
+        const p = playerDict[pid];
+        if (!p || !eligible.includes(p.position)) return;
+        const proj = sbProjectionFor(pid, null, league);
+        if (proj != null && proj > bestProj) { bestProj = proj; best = pid; }
+      });
+      if (best) { chosen.add(best); total += bestProj; }
+    });
+    return total;
+  }
+
+  function sbContendingRank(entry) {
+    const allRosters = entry.allRosters || [];
+    if (allRosters.length < 2 || !entry.roster) return null;
+    const totals = allRosters.map(r => ({
+      rosterId: r.roster_id,
+      total: sbOptimalLineupTotal(r.players, entry.league),
+    }));
+    if (totals.some(t => t.total == null)) return null;
+    const sorted = [...totals].sort((a, b) => b.total - a.total);
+    const rank = sorted.findIndex(t => t.rosterId === entry.roster.roster_id) + 1;
+    return { rank, of: allRosters.length };
+  }
+
+  function sbOrdinal(n) {
+    const rem100 = n % 100;
+    const suffix = (rem100 >= 11 && rem100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+    return n + suffix;
+  }
+
+  function renderContendingRanks() {
+    document.querySelectorAll('.league-row[data-sleeper-league-id]').forEach(row => {
+      const entry = window.sleeperLeagueData && window.sleeperLeagueData[row.dataset.sleeperLeagueId];
+      const cell = row.querySelector('[data-contending-cell]');
+      if (!entry || !cell) return;
+      const result = sbContendingRank(entry);
+      if (!result) return;
+      cell.textContent = `${sbOrdinal(result.rank)} of ${result.of}`;
+      row.dataset.contending = String(result.rank);
+    });
+  }
+  window.renderContendingRanks = renderContendingRanks;
 
   function sbMatchupProjectedTotal(matchup, projMap, league) {
     if (!matchup) return 0;
@@ -10944,11 +11004,11 @@
       const myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj);
       const oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj);
       scoreHtml =
-        `<span class="sb-score-mine">${myProj.toFixed(1)}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${oppProj.toFixed(1)}</span>` +
-        `<div class="sb-live-score">${myPts.toFixed(1)} vs ${oppPts.toFixed(1)} live</div>` +
-        `<div class="sb-orig-score">Started at ${myOrig.toFixed(1)} vs ${oppOrig.toFixed(1)}</div>`;
+        `<span class="sb-exp-score-item"><b>${myProj.toFixed(1)}</b> vs <b>${oppProj.toFixed(1)}</b> <i>proj</i></span>` +
+        `<span class="sb-exp-score-item">${myPts.toFixed(1)} vs ${oppPts.toFixed(1)} <i>live</i></span>` +
+        `<span class="sb-exp-score-item">${myOrig.toFixed(1)} vs ${oppOrig.toFixed(1)} <i>started at</i></span>`;
     } else {
-      scoreHtml = card.querySelector('.sb-card-score').innerHTML;
+      scoreHtml = `<span class="sb-exp-score-item">${card.querySelector('.sb-card-score').textContent}</span>`;
     }
     panel.innerHTML =
       '<div class="sb-exp-header">' +
@@ -10958,10 +11018,10 @@
           `<div class="sb-exp-meta">${card.querySelector('.sb-card-meta').innerHTML}</div>` +
         '</div>' +
         '<div class="sb-exp-right">' +
-          `<div class="sb-exp-score">${scoreHtml}</div>` +
           `<div class="sb-badge ${badge.className.replace('sb-badge', '').trim()}">${badge.textContent}</div>` +
         '</div>' +
       '</div>' +
+      `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
       '<div class="sb-lineups-cols">' +
         '<div class="sb-lineup-col">' +
           '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
@@ -11019,17 +11079,6 @@
     });
   }
 
-  const rgPlayerModal = document.getElementById('rgPlayerModal');
-  const rgPmAvatar = document.getElementById('rgPmAvatar');
-  const rgPmName = document.getElementById('rgPmName');
-  const rgPmPosBadge = document.getElementById('rgPmPosBadge');
-  const rgPmMetaText = document.getElementById('rgPmMetaText');
-  const rgPmForCount = document.getElementById('rgPmForCount');
-  const rgPmAgainstCount = document.getElementById('rgPmAgainstCount');
-  const rgPmForList = document.getElementById('rgPmForList');
-  const rgPmAgainstList = document.getElementById('rgPmAgainstList');
-  const rgPmClose = document.getElementById('rgPmClose');
-
   function rgLeagueRowsHtml(leagues) {
     if (!leagues.length) return '<div class="pm-league-row" style="cursor:default"><span style="color:var(--faint);font-weight:500">None this week</span></div>';
     return leagues.map(name =>
@@ -11037,39 +11086,38 @@
     ).join('');
   }
 
-  function openRgPlayerModal(row) {
-    if (!rgPlayerModal) return;
-    const name = row.dataset.name || '';
-    const team = row.dataset.team || '';
-    const pos = row.dataset.pos || '';
-    const playerId = row.dataset.playerId || '';
+  // Inline expand under the clicked row (not a full-screen takeover) so you
+  // can still scroll and open other players' league lists on the same page
+  // without having to back out first.
+  function rgExpandHtml(row) {
     const forLeagues = (row.dataset.for || '').split(' &middot; ').filter(Boolean);
     const againstLeagues = (row.dataset.against || '').split(' &middot; ').filter(Boolean);
-
-    if (rgPmAvatar) rgPmAvatar.innerHTML = `<img src="${sbHeadshotUrl(playerId)}" alt="" onerror="this.remove()">`;
-    if (rgPmName) rgPmName.textContent = name;
-    if (rgPmPosBadge) { rgPmPosBadge.textContent = pos; rgPmPosBadge.className = 'pm-pos-badge pm-' + pos.toLowerCase(); }
-    if (rgPmMetaText) rgPmMetaText.textContent = team;
-    if (rgPmForCount) rgPmForCount.textContent = String(forLeagues.length);
-    if (rgPmAgainstCount) rgPmAgainstCount.textContent = String(againstLeagues.length);
-    if (rgPmForList) rgPmForList.innerHTML = rgLeagueRowsHtml(forLeagues);
-    if (rgPmAgainstList) rgPmAgainstList.innerHTML = rgLeagueRowsHtml(againstLeagues);
-
-    rgPlayerModal.hidden = false;
-    window.scrollTo(0, 0);
+    return (
+      `<div class="pm-exp-head" style="text-align:left;margin-bottom:8px">STARTING FOR YOU &middot; <b>${forLeagues.length}</b> Leagues</div>` +
+      `<div class="pm-league-list">${rgLeagueRowsHtml(forLeagues)}</div>` +
+      `<div class="pm-exp-head" style="text-align:left;margin:16px 0 8px">STARTING AGAINST YOU &middot; <b>${againstLeagues.length}</b> Leagues</div>` +
+      `<div class="pm-league-list">${rgLeagueRowsHtml(againstLeagues)}</div>`
+    );
   }
 
   document.addEventListener('click', (e) => {
-    const leagueRow = e.target.closest('#rgPlayerModal .pm-league-row[data-league]');
+    const leagueRow = e.target.closest('.rg-expand .pm-league-row[data-league]');
     if (leagueRow) {
-      rgPlayerModal.hidden = true;
       goToLeagueDetail(leagueRow.dataset.league);
       return;
     }
+    if (e.target.closest('.rg-expand')) return;
     const row = e.target.closest('.rg-row');
-    if (row) { openRgPlayerModal(row); return; }
+    if (!row) return;
+    const existing = row.nextElementSibling;
+    const isOpen = existing && existing.classList.contains('rg-expand');
+    document.querySelectorAll('.rg-expand').forEach(el => el.remove());
+    if (isOpen) return;
+    const expand = document.createElement('div');
+    expand.className = 'rg-expand';
+    expand.innerHTML = rgExpandHtml(row);
+    row.after(expand);
   });
-  if (rgPmClose) rgPmClose.addEventListener('click', () => { rgPlayerModal.hidden = true; });
 
   (function initRootingLeaguesBlacklist() {
     const allLeagues = [
@@ -11495,6 +11543,9 @@
         case 'playoffs':
           primary = Number(b.dataset.playoff) - Number(a.dataset.playoff);
           break;
+        case 'contending':
+          primary = Number(a.dataset.contending) - Number(b.dataset.contending);
+          break;
         case 'oldest':
           primary = idxB - idxA;
           break;
@@ -11739,6 +11790,7 @@
       }
       row.dataset.playoff = '0';
       row.dataset.wins = String(wins);
+      row.dataset.contending = '999';
 
       const rosterTypeCellHtml = isCoOwned
         ? '<div class="roster-pill">CO-MANAGED</div>'
@@ -11754,6 +11806,7 @@
         `<div class="col-center">${wins}-${losses}</div>` +
         '<div class="col-center">&mdash;</div>' +
         `<div class="col-center">${weeklyProjText}</div>` +
+        '<div class="col-center" data-contending-cell>&mdash;</div>' +
         '<div class="col-center">&mdash;</div>' +
         '<div class="row-chevron">&#9662;</div>';
       return row;
@@ -11966,6 +12019,7 @@
         if (window.renderRealNotebook) window.renderRealNotebook();
         if (window.renderRealSchedule) window.renderRealSchedule();
         renderLeagueBlacklistSettings();
+        if (window.renderContendingRanks) window.renderContendingRanks();
 
         // Warm the player dict for the empty-lineup-slot projection fill
         // (sbEffectiveStarters) -- it's normally only fetched lazily when a
@@ -11975,6 +12029,7 @@
           window.sleeperGetPlayerDict().then(() => {
             if (window.renderRealScoreboard) window.renderRealScoreboard();
             if (window.renderRealDashboard) window.renderRealDashboard();
+            if (window.renderContendingRanks) window.renderContendingRanks();
           }).catch(() => {});
         }
       } catch (err) {
