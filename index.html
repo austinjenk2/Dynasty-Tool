@@ -168,7 +168,7 @@
     gap: 20px;
   }
   #teamStrengthPanel { display: flex; flex-direction: column; }
-  #teamStrengthScatterWrap { flex: 1; min-height: 340px; aspect-ratio: unset; }
+  #teamStrengthScatterWrap { min-height: 200px; max-height: 260px; aspect-ratio: unset; }
   @media (max-width: 980px) {
     .panel-grid { grid-template-columns: 1fr; }
   }
@@ -435,6 +435,12 @@
   .ph-dc-bar-fill.ph-dc-round-3 { background: var(--gold); }
   .ph-dc-bar-fill.ph-dc-round-4 { background: #7c5cbf; }
   .ph-dc-value { width: 40px; flex-shrink: 0; text-align: right; font-weight: 700; font-size: 14px; color: var(--ink); }
+
+  .dash-exp { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-soft); }
+  .dash-exp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .dash-exp-head h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.6px; color: var(--faint); margin: 0; }
+  .dash-exp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  @media (max-width: 560px) { .dash-exp-grid { grid-template-columns: repeat(2, 1fr); } }
 
   /* Team strength scatter */
   .scatter-wrap { position: relative; width: 100%; aspect-ratio: 1 / 0.62; }
@@ -2192,7 +2198,7 @@
             <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
           </div>
 
-          <div class="track">
+          <div class="track" id="phPointProjTrack">
             <div class="track-label" id="phPointProjLabel">POINT PROJECTION</div>
             <div class="track-bar-row" id="phPointProjRow">
               <div class="track-bar-bg"></div>
@@ -2329,6 +2335,13 @@
           <div class="scatter-tooltip" id="scatterTooltip" hidden></div>
         </div>
         <div class="scatter-axis-label">Value Rank (x) vs. Contending Rank (y) &mdash; all connected teams</div>
+
+        <div class="dash-exp" id="dashHighestExposures" hidden>
+          <div class="dash-exp-head">
+            <h3>HIGHEST EXPOSURES</h3>
+          </div>
+          <div class="dash-exp-grid" id="dashHighestExposuresGrid"></div>
+        </div>
       </div>
 
     </div>
@@ -11536,20 +11549,12 @@
     });
   });
 
-  const scatterDots = document.querySelectorAll('.scatter-dot');
+  // Team Strength dots are rendered fresh from real data every sync
+  // (renderTeamStrength), so this binds delegated listeners on the wrap
+  // once instead of per-dot -- survives the wrap's contents being replaced.
+  const scatterWrapEl = document.getElementById('teamStrengthScatterWrap');
   const scatterTooltip = document.getElementById('scatterTooltip');
-  const scatterLeagueStats = {
-    'Empire Entertainment': { value: 1, contending: 1 },
-    'OTTOMAN': { value: 1, contending: 2 },
-    'StatChasers BestBall & Chill 5.0': { value: 2, contending: 1 },
-    'Blitz Dynasty Football': { value: 3, contending: 4 },
-    'Dynasty Is Life': { value: 4, contending: 3 },
-    "The Doctor's": { value: 5, contending: 6 },
-    'BDGE Dynasty League 53': { value: 4, contending: 9 },
-    'Grandpa Phil': { value: 10, contending: 11 },
-    'Dynasty - Globo Gym v Avg Joes': { value: 11, contending: 10 },
-    'PURPLE PEOPLE': { value: 8, contending: 2 },
-  };
+  window.__scatterLeagueStats = window.__scatterLeagueStats || {};
   let scatterPinned = false;
 
   function scatterOrdinal(n) {
@@ -11558,9 +11563,10 @@
     return n + suffix;
   }
   function scatterStatsLine(name) {
-    const s = scatterLeagueStats[name];
+    const s = window.__scatterLeagueStats[name];
     if (!s) return '';
-    return `${scatterOrdinal(s.value)} of 12 value &middot; ${scatterOrdinal(s.contending)} of 12 contending`;
+    const valuePart = s.value ? `${scatterOrdinal(s.value)} of ${s.valueOf} value &middot; ` : '';
+    return `${valuePart}${scatterOrdinal(s.rank)} of ${s.of} contending`;
   }
   function scatterShowPreview(dot) {
     const leagues = dot.dataset.leagues.split(',').map(s => s.trim());
@@ -11588,27 +11594,32 @@
     scatterTooltip.hidden = false;
   }
 
-  scatterDots.forEach(dot => {
-    dot.addEventListener('mouseenter', () => {
-      if (scatterPinned) return;
+  if (scatterWrapEl) {
+    scatterWrapEl.addEventListener('mouseover', (e) => {
+      const dot = e.target.closest('.scatter-dot');
+      if (!dot || scatterPinned) return;
       scatterShowPreview(dot);
     });
-    dot.addEventListener('mouseleave', () => {
-      if (scatterPinned) return;
+    scatterWrapEl.addEventListener('mouseout', (e) => {
+      const dot = e.target.closest('.scatter-dot');
+      if (!dot || scatterPinned) return;
       scatterTooltip.hidden = true;
     });
-    dot.addEventListener('click', (e) => {
+    scatterWrapEl.addEventListener('click', (e) => {
+      const dot = e.target.closest('.scatter-dot');
+      if (!dot) return;
       e.stopPropagation();
       const leagues = dot.dataset.leagues.split(',').map(s => s.trim());
+      const dots = scatterWrapEl.querySelectorAll('.scatter-dot');
       if (leagues.length === 1) {
         scatterPinned = false;
-        scatterDots.forEach(d => d.classList.remove('is-active'));
+        dots.forEach(d => d.classList.remove('is-active'));
         scatterTooltip.hidden = true;
         goToLeagueDetail(leagues[0]);
         return;
       }
       const already = scatterPinned && dot.classList.contains('is-active');
-      scatterDots.forEach(d => d.classList.remove('is-active'));
+      dots.forEach(d => d.classList.remove('is-active'));
       if (already) {
         scatterPinned = false;
         scatterTooltip.hidden = true;
@@ -11618,10 +11629,10 @@
       scatterPinned = true;
       scatterShowChooser(dot);
     });
-  });
+  }
   document.addEventListener('click', () => {
     scatterPinned = false;
-    scatterDots.forEach(d => d.classList.remove('is-active'));
+    if (scatterWrapEl) scatterWrapEl.querySelectorAll('.scatter-dot').forEach(d => d.classList.remove('is-active'));
     scatterTooltip.hidden = true;
   });
   scatterTooltip.addEventListener('click', (e) => {
@@ -11629,7 +11640,7 @@
     if (!leagueEl) return;
     e.stopPropagation();
     scatterPinned = false;
-    scatterDots.forEach(d => d.classList.remove('is-active'));
+    if (scatterWrapEl) scatterWrapEl.querySelectorAll('.scatter-dot').forEach(d => d.classList.remove('is-active'));
     scatterTooltip.hidden = true;
     goToLeagueDetail(leagueEl.dataset.leagueName);
   });
@@ -13229,15 +13240,20 @@
       const rank = sortedDesc.findIndex(t => t.rosterId === e.roster.roster_id) + 1;
       pointProjPcts.push(((totals.length - rank) / (totals.length - 1)) * 100);
     });
+    const phPointProjTrack = document.getElementById('phPointProjTrack');
+    if (phPointProjTrack) phPointProjTrack.hidden = getSiteMode() === 'dynasty';
     renderDotTrack('phPointProjRow', pointProjPcts);
 
     // Contending Rank: same optimal-lineup rank shown on the Leagues page,
     // as a percentile per league.
     const contendingPcts = [];
+    const contendingByLeague = [];
     entries.forEach(e => {
       const result = sbContendingRank(e);
       if (!result || result.of < 2) return;
-      contendingPcts.push(((result.of - result.rank) / (result.of - 1)) * 100);
+      const pct = ((result.of - result.rank) / (result.of - 1)) * 100;
+      contendingByLeague.push({ league: e.league.name, pct, rank: result.rank, of: result.of });
+      contendingPcts.push(pct);
     });
     const phContendingTrack = document.getElementById('phContendingTrack');
     if (phContendingTrack) phContendingTrack.hidden = contendingPcts.length === 0;
@@ -13266,6 +13282,8 @@
     renderDotTrack('phLastSeasonRow', lastSeasonPcts);
 
     renderDraftCapital(entries);
+    renderTeamStrength(contendingByLeague);
+    renderHighestExposures();
   }
   window.renderRealDashboard = renderRealDashboard;
 
@@ -13299,6 +13317,89 @@
     label.style.left = Math.max(1, Math.min(99, avg)) + '%';
     label.textContent = 'AVG';
     row.appendChild(label);
+  }
+
+  // Team Strength: Y axis (Contending Rank) is now real, one dot per
+  // league. X axis (Value Rank) has no real source yet -- every dot sits
+  // flush on the y-axis for now (left edge) so the quadrant layout and
+  // dot-rendering plumbing are already in place; swapping in a real x
+  // value later is a one-line change once there's a roster-value source.
+  function renderTeamStrength(contendingByLeague) {
+    const wrap = document.getElementById('teamStrengthScatterWrap');
+    if (!wrap) return;
+    wrap.querySelectorAll('.scatter-dot').forEach(el => el.remove());
+    window.__scatterLeagueStats = {};
+    if (!contendingByLeague.length) return;
+
+    const tooltip = document.getElementById('scatterTooltip');
+    contendingByLeague.forEach(item => {
+      window.__scatterLeagueStats[item.league] = { rank: item.rank, of: item.of, value: null, valueOf: null };
+      const dot = document.createElement('div');
+      dot.className = 'scatter-dot';
+      dot.dataset.leagues = item.league;
+      dot.style.left = '3%';
+      dot.style.top = Math.max(2, Math.min(98, 100 - item.pct)) + '%';
+      dot.style.background = pctToColor(item.pct);
+      wrap.insertBefore(dot, tooltip);
+    });
+  }
+
+  // Top exposure players, dynasty mode only -- same computation as the
+  // Exposures page (real roster counts across your connected leagues),
+  // just the top handful shown as a compact preview on the Dashboard.
+  function renderHighestExposures() {
+    const section = document.getElementById('dashHighestExposures');
+    const gridEl = document.getElementById('dashHighestExposuresGrid');
+    if (!section || !gridEl) return;
+    const dict = window.__sleeperPlayerDict;
+    if (getSiteMode() !== 'dynasty' || !dict) { section.hidden = true; return; }
+
+    const includeCoManaged = isCoManagedIncluded();
+    const leagueEntries = Object.values(window.sleeperLeagueData || {})
+      .filter(e => e.roster && (includeCoManaged || !e.isCoOwned));
+    if (!leagueEntries.length) { section.hidden = true; return; }
+
+    const totalLeagues = leagueEntries.length;
+    const exposureMap = {};
+    leagueEntries.forEach(entry => {
+      const players = (entry.roster.players || []).filter(id => id && id !== '0');
+      players.forEach(id => {
+        if (!exposureMap[id]) exposureMap[id] = { count: 0 };
+        exposureMap[id].count++;
+      });
+    });
+
+    const EXP_POS_COLOR = { QB: 'var(--red)', RB: 'var(--green)', WR: 'var(--blue)', TE: 'var(--gold)' };
+    const rows = Object.keys(exposureMap).map(id => {
+      const p = dict[id];
+      if (!p || !EXP_POS_COLOR[p.position]) return null;
+      return {
+        id,
+        name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
+        team: p.team || 'FA',
+        pos: p.position,
+        count: exposureMap[id].count,
+        pct: Math.round((exposureMap[id].count / totalLeagues) * 100),
+      };
+    }).filter(Boolean);
+
+    if (!rows.length) { section.hidden = true; return; }
+    rows.sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name));
+
+    section.hidden = false;
+    gridEl.innerHTML = rows.slice(0, 9).map(r => {
+      const posClass = r.pos.toLowerCase();
+      return `<div class="exp-card exp-${posClass}">
+          <div class="exp-team-icon"><img src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" loading="lazy" onerror="this.remove()"></div>
+          <div class="exp-avatar-wrap">
+            <div class="exp-avatar"><img src="${sbHeadshotUrl(r.id)}" alt="" loading="lazy" onerror="this.remove()"></div>
+            <span class="exp-pos-badge exp-${posClass}">${r.pos}</span>
+          </div>
+          <div class="exp-name">${r.name}</div>
+          <div class="exp-pct-row"><span class="exp-pct exp-${posClass}">${r.pct}%</span><span class="exp-frac">${r.count}/${totalLeagues}</span></div>
+          <div class="exp-bar exp-${posClass}" style="width:${r.pct}%"></div>
+        </div>`;
+    }).join('');
   }
 
   // Real future draft-pick ownership, dynasty mode only -- for each of the
