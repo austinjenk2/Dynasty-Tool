@@ -606,10 +606,9 @@
 
   .sb-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
-  @media (max-width: 1000px) { .sb-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 680px) { .sb-grid { grid-template-columns: 1fr; } }
 
   .sb-group-header {
@@ -848,7 +847,31 @@
   .rg-league-check-actions span { font-size: 11px; font-weight: 700; color: var(--blue); cursor: pointer; }
   .rg-league-check-actions span:hover { text-decoration: underline; }
   .rg-league-check-row { display: flex; align-items: center; gap: 9px; padding: 6px 2px; font-size: 12.5px; font-weight: 600; color: var(--ink); cursor: pointer; }
-  .rg-league-check-row input[type="checkbox"] { width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; accent-color: var(--ink); }
+  .rg-league-check-row input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    background: #fff;
+    position: relative;
+  }
+  .rg-league-check-row input[type="checkbox"]:checked { background: var(--ink); border-color: var(--ink); }
+  .rg-league-check-row input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 4.5px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
   .rg-league-check-row.is-unchecked { color: var(--faint); }
 
   .rg-columns { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
@@ -3133,7 +3156,7 @@
         <div class="sb-stats" id="sbStats">
           <div class="sb-stat" id="sbStatPts">
             <div class="sb-stat-value sb-cyan" id="sbStatPtsValue">2655</div>
-            <div class="sb-stat-label" id="sbStatPtsLabel">WEEK <span class="sb-week-num">1</span> PROJ PTS</div>
+            <div class="sb-stat-label" id="sbStatPtsLabel">PTS VS OPPONENTS</div>
           </div>
           <div class="sb-stat-divider" id="sbStatOptimalDivider"></div>
           <div class="sb-stat" id="sbStatOptimal">
@@ -3142,8 +3165,8 @@
           </div>
           <div class="sb-stat-divider"></div>
           <div class="sb-stat" id="sbStatRecord">
-            <div class="sb-stat-value" id="sbStatRecordValue">0.0-0.0</div>
-            <div class="sb-stat-label">PROJECTED WEEKLY RECORD</div>
+            <div class="sb-stat-value" id="sbStatRecordValue">0.0  -  0.0</div>
+            <div class="sb-stat-label">PROJECTED RECORD</div>
           </div>
           <div class="sb-stat-divider"></div>
           <div class="sb-stat" id="sbStatWins">
@@ -11857,7 +11880,7 @@
           primary = Number(a.dataset.value) - Number(b.dataset.value);
           break;
         case 'weekly':
-          primary = Number(a.dataset.weekly) - Number(b.dataset.weekly);
+          primary = Number(b.dataset.weekly) - Number(a.dataset.weekly);
           break;
         case 'roster':
           primary = rosterOrder[a.dataset.roster] - rosterOrder[b.dataset.roster];
@@ -14126,14 +14149,14 @@
     const winsLabel = document.getElementById('sbStatWinsLabel');
     const recordValue = document.getElementById('sbStatRecordValue');
     const week = override ? override.week : (entries[0].week || 1);
-    if (ptsValue) ptsValue.textContent = `${totalPts.toFixed(1)} - ${oppTotalPts.toFixed(1)}`;
-    if (ptsLabel) ptsLabel.innerHTML = `WEEK <span class="sb-week-num">${week}</span> PTS VS OPPONENTS`;
+    if (ptsValue) ptsValue.textContent = `${totalPts.toFixed(1)}  -  ${oppTotalPts.toFixed(1)}`;
+    if (ptsLabel) ptsLabel.innerHTML = `PTS VS OPPONENTS`;
     if (optimalStat) optimalStat.hidden = true;
     if (optimalDivider) optimalDivider.hidden = true;
     // Exact decimal record: each matchup contributes its own win% as a
     // fraction of a win (e.g. 63% win prob = 0.63 wins, 0.37 losses)
     // instead of rounding every matchup to a binary favorite/underdog.
-    if (recordValue) recordValue.textContent = `${projWinSum.toFixed(2)}-${projLossSum.toFixed(2)}`;
+    if (recordValue) recordValue.textContent = `${projWinSum.toFixed(2)}  -  ${projLossSum.toFixed(2)}`;
     if (winsValue) winsValue.textContent = `${favoredCount} of ${withMatchup}`;
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
