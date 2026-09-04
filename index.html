@@ -10590,7 +10590,25 @@
     return ((parts[0] ? parts[0][0] : '?') + (parts[1] ? parts[1][0] : '')).toUpperCase();
   }
 
-  function sbProjectionFor(id, projMap) {
+  // A player's projection depends on the league's own scoring format (PPR/
+  // Half-PPR/Standard) -- the flat map only ever carried the full-PPR
+  // number, which drifted from Sleeper's own displayed projection for any
+  // league not scored full PPR. window.__sleeperProjectionStats carries the
+  // full per-player stat line so the correct number can be picked per
+  // league. Only applies to the current week's global projections -- a
+  // week picked via a selector still uses the flat (PPR-only) projMap, a
+  // known smaller gap in that less-common path.
+  function sbProjectionFor(id, projMap, league) {
+    if (!projMap) {
+      const statsMap = window.__sleeperProjectionStats || {};
+      const stats = statsMap[id];
+      if (stats) {
+        const rec = league && league.scoring_settings ? league.scoring_settings.rec : undefined;
+        let val = rec === 0 ? stats.pts_std : rec === 0.5 ? stats.pts_half_ppr : rec === 1 ? stats.pts_ppr : null;
+        if (val == null) val = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
+        if (val != null) return Number(val);
+      }
+    }
     const proj = projMap || window.__sleeperProjections || {};
     return proj[id] != null ? Number(proj[id]) : null;
   }
@@ -10608,9 +10626,9 @@
   // week's projections, e.g. when the Scoreboard week selector picks a week
   // other than the live one; omitted, it falls back to the current week's
   // cached projections.
-  function sbEffectivePoints(id, pointsMap, projMap) {
+  function sbEffectivePoints(id, pointsMap, projMap, league) {
     const recorded = pointsMap ? pointsMap[id] : null;
-    const proj = sbProjectionFor(id, projMap);
+    const proj = sbProjectionFor(id, projMap, league);
     if (recorded != null && (Number(recorded) !== 0 || proj == null)) return Number(recorded);
     return proj != null ? proj : 0;
   }
@@ -10652,7 +10670,7 @@
         if (chosen.has(pid)) return;
         const p = playerDict[pid];
         if (!p || (eligible && !eligible.includes(p.position))) return;
-        const proj = sbProjectionFor(pid, projMap);
+        const proj = sbProjectionFor(pid, projMap, league);
         if (proj != null && proj > bestProj) { bestProj = proj; best = pid; }
       });
       if (best) chosen.add(best);
@@ -10664,7 +10682,7 @@
     if (!matchup) return 0;
     const starters = sbEffectiveStarters(matchup, league, projMap);
     const pointsMap = matchup.players_points || {};
-    return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap), 0);
+    return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league), 0);
   }
 
   // True only if at least one starter in the matchup has either a recorded
@@ -10684,7 +10702,7 @@
     return starters.some(id => {
       const pts = pointsMap[id];
       if (pts != null && Number(pts) !== 0) return true;
-      return sbProjectionFor(id, projMap) != null;
+      return sbProjectionFor(id, projMap, league) != null;
     });
   }
 
@@ -10703,11 +10721,16 @@
     return Math.round(Math.min(99, Math.max(1, pct * 100)));
   }
 
-  function sbLineupRowsHtml(matchup, dict, projMap) {
+  function sbLineupRowsHtml(matchup, dict, projMap, league) {
     if (!matchup) {
       return '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:16px 0">No matchup data yet</td></tr>';
     }
-    const starters = (matchup.starters || []).filter(id => id && id !== '0');
+    // Includes the same predicted fill-in for an unset lineup slot that the
+    // matchup total uses (sbEffectiveStarters), so this table's player count
+    // matches what was actually added into the score instead of silently
+    // dropping the empty slot's row.
+    const rawStarters = new Set((matchup.starters || []).filter(id => id && id !== '0'));
+    const starters = sbEffectiveStarters(matchup, league, projMap);
     const pointsMap = matchup.players_points || {};
     if (!starters.length) {
       return '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:16px 0">No starters set yet</td></tr>';
@@ -10718,14 +10741,15 @@
       const pos = p ? (p.position || '') : '';
       const team = p ? (p.team || 'FA') : '';
       const posClass = pos.toLowerCase();
+      const predicted = !rawStarters.has(id);
       const pts = pointsMap[id] != null ? Number(pointsMap[id]).toFixed(1) : '&mdash;';
-      const proj = sbProjectionFor(id, projMap);
+      const proj = sbProjectionFor(id, projMap, league);
       const projText = proj != null ? proj.toFixed(1) : '&mdash;';
       return '<tr>' +
         '<td class="sb-exp-player">' +
           `<span class="sb-exp-pos sb-pos-${posClass}">${pos}</span>` +
           `<span class="sb-exp-avatar" style="background:${SB_POS_COLOR[posClass] || 'var(--muted)'}">${sbInitials(name)}</span>` +
-          `<span class="sb-exp-info"><span class="sb-exp-pname">${name}</span><span class="sb-exp-psub">${pos} &middot; ${team}</span></span>` +
+          `<span class="sb-exp-info"><span class="sb-exp-pname">${name}</span><span class="sb-exp-psub">${pos} &middot; ${team}${predicted ? ' &middot; predicted' : ''}</span></span>` +
         '</td>' +
         `<td class="sb-exp-pts">${pts}</td>` +
         `<td class="sb-exp-proj">${projText}</td>` +
@@ -10770,12 +10794,12 @@
         '<div class="sb-lineup-col">' +
           '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
           '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
-          `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap)}</tbody></table>` +
+          `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap, entry.league)}</tbody></table>` +
         '</div>' +
         '<div class="sb-lineup-col">' +
           '<div class="sb-lineup-label sb-lineup-label-opp">OPPONENT LINEUP</div>' +
           '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
-          `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap)}</tbody></table>` +
+          `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league)}</tbody></table>` +
         '</div>' +
       '</div>';
   }
@@ -11559,6 +11583,7 @@
           `/projections/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
         );
         const map = {};
+        const statsMap = {};
         (list || []).forEach(p => {
           if (!p || !p.player_id || !p.stats) return;
           // Deliberately not falling back to a bare "pts" key -- a generic
@@ -11568,6 +11593,11 @@
           // "0.0 projection" instead of an honest "no data").
           const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std ?? p.pts_ppr ?? p.pts_half_ppr ?? p.pts_std;
           if (pts != null) map[p.player_id] = Number(pts);
+          // Full per-player stat line, kept so callers can pick the number
+          // matching a specific league's actual scoring format (PPR/Half-
+          // PPR/Standard) instead of always using full PPR -- see
+          // sbProjectionFor().
+          statsMap[p.player_id] = p.stats;
         });
         // Best-effort: this same payload also carries each player's real
         // opponent/date for the week alongside their projection. Captured
@@ -11575,6 +11605,7 @@
         // schedule UI that reads this just falls back to nothing instead of
         // breaking sync.
         window.__sleeperGameInfo = extractGameInfo(list);
+        window.__sleeperProjectionStats = statsMap;
         return map;
       } catch (e) {
         // Unofficial/undocumented endpoint -- if it's unavailable or its shape
@@ -11915,7 +11946,7 @@
       playerIds.forEach(id => {
         const p = dict[id];
         if (!p || !groups[p.position]) return;
-        const proj = sbProjectionFor(id);
+        const proj = sbProjectionFor(id, null, entry.league);
         groups[p.position].push({
           name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
           team: p.team || 'FA',
@@ -12580,8 +12611,8 @@
       if (!e.allMatchups || !e.allMatchups.length) return;
       const totals = e.allMatchups
         .filter(m => m && m.roster_id != null)
-        .map(m => ({ rosterId: m.roster_id, total: sbMatchupProjectedTotal(m) }));
-      if (totals.length < 2 || !e.allMatchups.some(m => sbMatchupHasData(m))) return;
+        .map(m => ({ rosterId: m.roster_id, total: sbMatchupProjectedTotal(m, null, e.league) }));
+      if (totals.length < 2 || !e.allMatchups.some(m => sbMatchupHasData(m, null, e.league))) return;
       const myTotal = totals.find(t => t.rosterId === e.roster.roster_id);
       if (!myTotal) return;
       const sortedDesc = [...totals].sort((a, b) => b.total - a.total);
