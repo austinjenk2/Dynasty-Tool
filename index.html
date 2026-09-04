@@ -626,6 +626,16 @@
     font-weight: 700;
     font-size: 11px;
     color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .sb-exp-avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
   }
   .sb-exp-info { min-width: 0; }
   .sb-exp-pname { font-weight: 700; font-size: 14px; }
@@ -1497,7 +1507,24 @@
   .ld-ptag { font-size: 8px; font-weight: 700; color: var(--faint); border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; }
   .ld-pname { flex: 1; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ld-via { font-weight: 500; font-style: normal; color: var(--faint); font-size: 9.5px; }
-  .ld-pteam { font-size: 9.5px; color: var(--faint); font-weight: 600; }
+  .ld-pteam { font-size: 9.5px; color: var(--faint); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
+  .ld-avatar {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--border-soft);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7.5px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .ld-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .ld-team-logo { width: 12px; height: 12px; object-fit: contain; }
   .ld-pnum { font-size: 10.5px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1.2; }
   .ld-pnum i { font-style: normal; font-size: 7.5px; font-weight: 600; color: var(--faint); }
   .ld-loading { grid-column: 1 / -1; text-align: center; color: var(--faint); font-size: 13px; padding: 30px 0; }
@@ -10596,6 +10623,19 @@
     return ((parts[0] ? parts[0][0] : '?') + (parts[1] ? parts[1][0] : '')).toUpperCase();
   }
 
+  // Sleeper's own CDN -- same headshot/logo assets its own app and web
+  // client use, so this stays within the real-Sleeper-data-only rule.
+  // Not every player_id has a real headshot (rookies days after the draft,
+  // DEF/K, free agents), so every <img> using these falls back to hiding
+  // itself on error and letting the colored initials/team-abbr text behind
+  // it show through instead.
+  function sbHeadshotUrl(playerId) {
+    return playerId ? `https://sleepercdn.com/content/nfl/players/thumb/${playerId}.jpg` : '';
+  }
+  function sbTeamLogoUrl(team) {
+    return team && team !== 'FA' ? `https://sleepercdn.com/images/team_logos/nfl/${team.toLowerCase()}.png` : '';
+  }
+
   // A player's projection depends on the league's own scoring format (PPR/
   // Half-PPR/Standard) -- the flat map only ever carried the full-PPR
   // number, which drifted from Sleeper's own displayed projection for any
@@ -10807,7 +10847,7 @@
       return '<tr>' +
         '<td class="sb-exp-player">' +
           `<span class="sb-exp-pos sb-pos-${posClass}">${pos}</span>` +
-          `<span class="sb-exp-avatar" style="background:${SB_POS_COLOR[posClass] || 'var(--muted)'}">${sbInitials(name)}</span>` +
+          `<span class="sb-exp-avatar" style="background:${SB_POS_COLOR[posClass] || 'var(--muted)'}">${sbInitials(name)}<img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>` +
           `<span class="sb-exp-info"><span class="sb-exp-pname">${name}</span><span class="sb-exp-psub">${pos} &middot; ${team}${predicted ? ' &middot; predicted' : ''}</span></span>` +
         '</td>' +
         `<td class="sb-exp-pts">${pts}</td>` +
@@ -12010,6 +12050,7 @@
         if (!p || !groups[p.position]) return;
         const proj = sbProjectionFor(id, null, entry.league);
         groups[p.position].push({
+          id,
           name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
           team: p.team || 'FA',
           isStarter: starters.has(id),
@@ -12027,8 +12068,9 @@
           '<div class="ld-player">' +
             `<span class="ld-pos ${posClass}">${p.isStarter ? p.slotLabel : ''}</span>` +
             (p.isStarter ? '<span class="ld-star">&#9733;</span>' : '') +
+            `<span class="ld-avatar">${sbInitials(p.name)}<img src="${sbHeadshotUrl(p.id)}" alt="" loading="lazy" onerror="this.remove()"></span>` +
             `<span class="ld-pname">${p.name}</span>` +
-            `<span class="ld-pteam">${p.team}</span>` +
+            `<span class="ld-pteam"><img class="ld-team-logo" src="${sbTeamLogoUrl(p.team)}" alt="" loading="lazy" onerror="this.remove()">${p.team}</span>` +
             `<span class="ld-pnum">${p.proj != null ? p.proj.toFixed(1) : '&mdash;'}<br><i>PROJ</i></span>` +
           '</div>'
         ).join('') || '<div class="ld-player"><span class="ld-pname" style="color:var(--faint)">None rostered</span></div>';
