@@ -392,7 +392,8 @@
   .ph-draft-capital { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border-soft); }
   .ph-draft-capital-head { font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; color: var(--faint); margin-bottom: 14px; }
   .ph-draft-capital-head span { font-weight: 500; text-transform: none; letter-spacing: 0; margin-left: 4px; }
-  .ph-draft-capital-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .ph-draft-capital-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 560px) { .ph-draft-capital-cols { grid-template-columns: 1fr; } }
   .ph-dc-season { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 15px; color: var(--ink); margin-bottom: 10px; }
   .ph-dc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .ph-dc-round { width: 26px; flex-shrink: 0; font-size: 12px; color: var(--muted); font-weight: 600; }
@@ -13191,7 +13192,7 @@
     if (!dynastyEntries.length) { section.hidden = true; return; }
 
     const currentSeason = Number(dynastyEntries[0].league.season) || new Date().getFullYear();
-    const futureSeasons = [currentSeason + 1, currentSeason + 2];
+    const futureSeasons = [currentSeason + 1, currentSeason + 2, currentSeason + 3];
     const maxRounds = 4;
     const roundLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
 
