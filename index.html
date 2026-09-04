@@ -606,7 +606,7 @@
 
   .sb-layout { display: flex; gap: 22px; align-items: flex-start; }
   .sb-main-col { flex: 1; min-width: 0; }
-  .sb-field-col { width: 300px; flex-shrink: 0; }
+  .sb-field-col { width: 380px; flex-shrink: 0; }
   @media (max-width: 1100px) {
     .sb-layout { flex-direction: column; }
     .sb-field-col { width: 100%; }
@@ -638,47 +638,44 @@
   .field-wrap {
     display: flex;
     flex-direction: column;
-    border-radius: 8px;
+    border-radius: 3px;
     overflow: hidden;
-    border: 3px solid #fff;
-    box-shadow: 0 0 0 1px var(--border-soft);
+    border: 9px solid #fff;
+    box-shadow: 0 0 0 1px #cfcfc7, 0 6px 18px -6px rgba(0,0,0,0.3);
   }
   .field-endzone {
-    height: 40px;
+    height: 34px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    background: #1f5c34;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
+    background: #0f3d22;
+    position: relative;
   }
-  .field-goalpost { width: 30px; height: 20px; flex-shrink: 0; }
+  .field-goalpost { width: 34px; height: 24px; flex-shrink: 0; }
   .field-goalpost.field-goalpost-flip { transform: scaleY(-1); }
   .field-turf {
     position: relative;
-    height: 380px;
-    background: repeating-linear-gradient(to top, #2f8a4e 0, #2f8a4e 10%, #37944f 10%, #37944f 20%);
+    height: clamp(440px, 62vh, 720px);
+    background: repeating-linear-gradient(to top, #2d8449 0, #2d8449 10%, #368f52 10%, #368f52 20%);
   }
-  .field-hash { position: absolute; top: 0; bottom: 0; width: 1px; background: repeating-linear-gradient(to top, rgba(255,255,255,0.55) 0 6px, transparent 6px 16px); }
-  .field-hash-left { left: 18%; }
-  .field-hash-right { right: 18%; }
-  .field-yardline { position: absolute; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.85); transform: translateY(50%); }
+  .field-hash { position: absolute; top: 0; bottom: 0; width: 1px; background: repeating-linear-gradient(to top, rgba(255,255,255,0.6) 0 6px, transparent 6px 16px); }
+  .field-hash-left { left: 40%; }
+  .field-hash-right { right: 40%; }
+  .field-yardline { position: absolute; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.9); transform: translateY(50%); }
   .field-yardline.field-50 { height: 3px; background: #fff; }
-  .field-yardline span {
+  .field-yardline span.fl-num {
     position: absolute;
-    left: 50%;
     top: 50%;
-    transform: translate(-50%, -50%);
-    background: transparent;
-    color: rgba(255,255,255,0.9);
-    font-size: 11px;
+    transform: translateY(-50%);
+    color: rgba(255,255,255,0.92);
+    font-size: 15px;
     font-weight: 800;
+    font-style: italic;
     text-shadow: 0 1px 2px rgba(0,0,0,0.35);
   }
+  .field-yardline span.fl-left { left: 8%; }
+  .field-yardline span.fl-right { right: 8%; }
   .field-ball-pos {
     position: absolute;
     left: 50%;
@@ -3493,7 +3490,7 @@
         </div>
         </div>
 
-        <div class="sb-field-col">
+        <div class="sb-field-col" id="sbFieldCol" hidden>
           <div class="field-panel" id="sbFieldPanel">
             <div class="field-panel-head">
               <div class="field-panel-title" id="sbFieldLabel">Your Week Overall</div>
@@ -3501,21 +3498,20 @@
             </div>
             <div class="field-wrap">
               <div class="field-endzone field-endzone-opp">
-                <span>OPPONENT</span>
                 <svg class="field-goalpost" viewBox="0 0 40 26" aria-hidden="true"><path d="M6 26 V10 M34 26 V10 M6 10 H34 M6 10 L2 2 M34 10 L38 2" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
               </div>
               <div class="field-turf">
                 <div class="field-hash field-hash-left"></div>
                 <div class="field-hash field-hash-right"></div>
-                <div class="field-yardline" style="bottom:10%"><span>10</span></div>
-                <div class="field-yardline" style="bottom:20%"><span>20</span></div>
-                <div class="field-yardline" style="bottom:30%"><span>30</span></div>
-                <div class="field-yardline" style="bottom:40%"><span>40</span></div>
-                <div class="field-yardline field-50" style="bottom:50%"><span>50</span></div>
-                <div class="field-yardline" style="bottom:60%"><span>40</span></div>
-                <div class="field-yardline" style="bottom:70%"><span>30</span></div>
-                <div class="field-yardline" style="bottom:80%"><span>20</span></div>
-                <div class="field-yardline" style="bottom:90%"><span>10</span></div>
+                <div class="field-yardline" style="bottom:10%"><span class="fl-num fl-left">10</span><span class="fl-num fl-right">10</span></div>
+                <div class="field-yardline" style="bottom:20%"><span class="fl-num fl-left">20</span><span class="fl-num fl-right">20</span></div>
+                <div class="field-yardline" style="bottom:30%"><span class="fl-num fl-left">30</span><span class="fl-num fl-right">30</span></div>
+                <div class="field-yardline" style="bottom:40%"><span class="fl-num fl-left">40</span><span class="fl-num fl-right">40</span></div>
+                <div class="field-yardline field-50" style="bottom:50%"><span class="fl-num fl-left">50</span><span class="fl-num fl-right">50</span></div>
+                <div class="field-yardline" style="bottom:60%"><span class="fl-num fl-left">40</span><span class="fl-num fl-right">40</span></div>
+                <div class="field-yardline" style="bottom:70%"><span class="fl-num fl-left">30</span><span class="fl-num fl-right">30</span></div>
+                <div class="field-yardline" style="bottom:80%"><span class="fl-num fl-left">20</span><span class="fl-num fl-right">20</span></div>
+                <div class="field-yardline" style="bottom:90%"><span class="fl-num fl-left">10</span><span class="fl-num fl-right">10</span></div>
                 <div class="field-delta" id="sbFieldDelta"></div>
                 <div class="field-ball-pos" id="sbFieldBallPos" style="bottom:50%">
                   <span class="field-ball" id="sbFieldBall">&#127944;</span>
@@ -3523,7 +3519,6 @@
               </div>
               <div class="field-endzone field-endzone-you">
                 <svg class="field-goalpost field-goalpost-flip" viewBox="0 0 40 26" aria-hidden="true"><path d="M6 26 V10 M34 26 V10 M6 10 H34 M6 10 L2 2 M34 10 L38 2" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
-                <span>YOU</span>
               </div>
             </div>
             <div class="field-yard-text" id="sbFieldYardText">Midfield</div>
@@ -14229,29 +14224,28 @@
   let __sbFieldDeltaTimer = null;
   function getSbFieldTarget() {
     const openCard = document.querySelector('#sbGrid .sb-card.is-open');
-    if (openCard) {
-      const wp = Number(openCard.dataset.winpct);
-      return {
-        key: openCard.dataset.sleeperLeagueId || openCard.dataset.name || 'open',
-        label: openCard.dataset.name || 'This Matchup',
-        winPct: wp >= 0 ? wp : null,
-      };
-    }
-    const cards = Array.from(document.querySelectorAll('#sbGrid .sb-card'));
-    const withData = cards.filter(c => Number(c.dataset.winpct) >= 0);
-    if (!withData.length) return { key: 'overall', label: 'Your Week Overall', winPct: null };
-    const avg = withData.reduce((sum, c) => sum + Number(c.dataset.winpct), 0) / withData.length;
-    return { key: 'overall', label: 'Your Week Overall', winPct: avg };
+    if (!openCard) return null;
+    const wp = Number(openCard.dataset.winpct);
+    return {
+      key: openCard.dataset.sleeperLeagueId || openCard.dataset.name || 'open',
+      label: openCard.dataset.name || 'This Matchup',
+      winPct: wp >= 0 ? wp : null,
+    };
   }
   function updateFootballField() {
+    const fieldCol = document.getElementById('sbFieldCol');
     const panel = document.getElementById('sbFieldPanel');
     const ballPos = document.getElementById('sbFieldBallPos');
-    if (!panel || !ballPos) return;
+    if (!fieldCol || !panel || !ballPos) return;
+    const target = getSbFieldTarget();
+    // Only shown once you've clicked into a matchup -- stays out of the
+    // way on the main Scoreboard list.
+    fieldCol.hidden = !target;
+    if (!target) return;
     const labelEl = document.getElementById('sbFieldLabel');
     const pctEl = document.getElementById('sbFieldPct');
     const yardEl = document.getElementById('sbFieldYardText');
     const deltaEl = document.getElementById('sbFieldDelta');
-    const target = getSbFieldTarget();
     if (labelEl) labelEl.textContent = target.label;
     if (target.winPct == null) {
       if (pctEl) pctEl.textContent = '--';
