@@ -612,6 +612,26 @@
   @media (max-width: 1000px) { .sb-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 680px) { .sb-grid { grid-template-columns: 1fr; } }
 
+  .sb-group-header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 2px;
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--border);
+  }
+  .sb-group-header:first-child { margin-top: 0; }
+  .sb-group-count { font-size: 11px; font-weight: 700; color: var(--faint); text-transform: none; letter-spacing: 0; }
+  .sb-group-header.sb-group-good { color: var(--green); border-bottom-color: var(--green); }
+  .sb-group-header.sb-group-close { color: var(--gold); border-bottom-color: var(--gold); }
+  .sb-group-header.sb-group-bad { color: var(--red); border-bottom-color: var(--red); }
+  .sb-group-header.sb-group-none { color: var(--faint); border-bottom-color: var(--border); }
+
   .sb-card {
     display: flex;
     align-items: center;
@@ -3139,6 +3159,7 @@
             <div class="sort-option" data-sort="az">A&ndash;Z</div>
             <div class="sort-option" data-sort="winpct">Win Probability</div>
             <div class="sort-option" data-sort="score">Highest Score</div>
+            <div class="sort-option" data-sort="category">Win Category</div>
           </div>
         </div>
 
@@ -14142,7 +14163,41 @@
   function applySbSort() {
     const sbGrid = document.getElementById('sbGrid');
     if (!sbGrid) return;
+    sbGrid.querySelectorAll('.sb-group-header').forEach(h => h.remove());
     const cards = Array.from(sbGrid.querySelectorAll('.sb-card'));
+
+    if (sbSortCriterion === 'category') {
+      // Same >=60% / 40-60% / <40% thresholds used everywhere else for
+      // favorite/close/underdog coloring, just grouped into vertically
+      // stacked sections instead of a single sorted list.
+      const groups = { win: [], coin: [], loss: [], none: [] };
+      cards.forEach(card => {
+        const wp = Number(card.dataset.winpct);
+        if (wp < 0) groups.none.push(card);
+        else if (wp >= 60) groups.win.push(card);
+        else if (wp < 40) groups.loss.push(card);
+        else groups.coin.push(card);
+      });
+      const byWinPct = (a, b) => (Number(b.dataset.winpct) - Number(a.dataset.winpct)) * sbSortDir || (Number(a.dataset.order) - Number(b.dataset.order));
+      groups.win.sort(byWinPct);
+      groups.coin.sort(byWinPct);
+      groups.loss.sort(byWinPct);
+      groups.none.sort((a, b) => Number(a.dataset.order) - Number(b.dataset.order));
+      const appendGroup = (label, colorClass, arr) => {
+        if (!arr.length) return;
+        const header = document.createElement('div');
+        header.className = 'sb-group-header ' + colorClass;
+        header.innerHTML = `<span>${label}</span><span class="sb-group-count">${arr.length}</span>`;
+        sbGrid.appendChild(header);
+        arr.forEach(card => sbGrid.appendChild(card));
+      };
+      appendGroup('Probable Win', 'sb-group-good', groups.win);
+      appendGroup('Coin Flip', 'sb-group-close', groups.coin);
+      appendGroup('Probable Loss', 'sb-group-bad', groups.loss);
+      appendGroup('No Projections Yet', 'sb-group-none', groups.none);
+      return;
+    }
+
     cards.sort((a, b) => {
       const orderA = Number(a.dataset.order), orderB = Number(b.dataset.order);
       let primary;
