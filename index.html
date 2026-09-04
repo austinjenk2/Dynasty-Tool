@@ -168,7 +168,7 @@
     gap: 20px;
   }
   #teamStrengthPanel { display: flex; flex-direction: column; }
-  #teamStrengthScatterWrap { min-height: 200px; max-height: 260px; aspect-ratio: unset; }
+  #teamStrengthScatterWrap { flex: 1; min-height: 280px; aspect-ratio: unset; }
   @media (max-width: 980px) {
     .panel-grid { grid-template-columns: 1fr; }
   }
@@ -441,6 +441,63 @@
   .dash-exp-head h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.6px; color: var(--faint); margin: 0; }
   .dash-exp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   @media (max-width: 560px) { .dash-exp-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .dash-exp-card {
+    position: relative;
+    background: var(--surface);
+    border: 1.5px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 8px 6px 10px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .dash-exp-card.dash-exp-qb { border-color: var(--red); }
+  .dash-exp-card.dash-exp-rb { border-color: var(--green); }
+  .dash-exp-card.dash-exp-wr { border-color: var(--blue); }
+  .dash-exp-card.dash-exp-te { border-color: var(--gold); }
+  .dash-exp-team-icon {
+    position: absolute;
+    top: 5px; right: 5px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .dash-exp-team-icon img { width: 70%; height: 70%; object-fit: contain; }
+  .dash-exp-avatar-wrap { position: relative; width: 48px; height: 48px; margin: 10px auto 8px; }
+  .dash-exp-avatar { width: 100%; height: 100%; border-radius: 50%; background: var(--border-soft); overflow: hidden; }
+  .dash-exp-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dash-exp-pos-badge {
+    position: absolute;
+    bottom: -3px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 7.5px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 8px;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .dash-exp-pos-badge.dash-exp-qb { background: var(--red); }
+  .dash-exp-pos-badge.dash-exp-rb { background: var(--green); }
+  .dash-exp-pos-badge.dash-exp-wr { background: var(--blue); }
+  .dash-exp-pos-badge.dash-exp-te { background: var(--gold); }
+  .dash-exp-name { font-size: 10.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dash-exp-pct-row { display: flex; align-items: baseline; justify-content: center; gap: 4px; margin-top: 2px; }
+  .dash-exp-pct { font-size: 14px; font-weight: 800; }
+  .dash-exp-pct.dash-exp-qb { color: var(--red); }
+  .dash-exp-pct.dash-exp-rb { color: var(--green); }
+  .dash-exp-pct.dash-exp-wr { color: var(--blue); }
+  .dash-exp-pct.dash-exp-te { color: var(--gold); }
+  .dash-exp-frac { font-size: 9px; color: var(--faint); font-weight: 600; }
+  .dash-exp-bar-bg { height: 3px; border-radius: 2px; background: var(--border-soft); margin-top: 6px; overflow: hidden; }
+  .dash-exp-bar-fill { height: 100%; border-radius: 2px; }
+  .dash-exp-bar-fill.dash-exp-qb { background: var(--red); }
+  .dash-exp-bar-fill.dash-exp-rb { background: var(--green); }
+  .dash-exp-bar-fill.dash-exp-wr { background: var(--blue); }
+  .dash-exp-bar-fill.dash-exp-te { background: var(--gold); }
 
   /* Team strength scatter */
   .scatter-wrap { position: relative; width: 100%; aspect-ratio: 1 / 0.62; }
@@ -13384,20 +13441,26 @@
     }).filter(Boolean);
 
     if (!rows.length) { section.hidden = true; return; }
-    rows.sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name));
+
+    // Top 3 per position (QB/RB/WR/TE, in that order) instead of one
+    // overall top-N list, so every position group gets its own spotlight.
+    const byPos = { QB: [], RB: [], WR: [], TE: [] };
+    rows.forEach(r => byPos[r.pos].push(r));
+    const top = ['QB', 'RB', 'WR', 'TE'].flatMap(pos =>
+      byPos[pos].sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name)).slice(0, 3));
 
     section.hidden = false;
-    gridEl.innerHTML = rows.slice(0, 9).map(r => {
+    gridEl.innerHTML = top.map(r => {
       const posClass = r.pos.toLowerCase();
-      return `<div class="exp-card exp-${posClass}">
-          <div class="exp-team-icon"><img src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" loading="lazy" onerror="this.remove()"></div>
-          <div class="exp-avatar-wrap">
-            <div class="exp-avatar"><img src="${sbHeadshotUrl(r.id)}" alt="" loading="lazy" onerror="this.remove()"></div>
-            <span class="exp-pos-badge exp-${posClass}">${r.pos}</span>
+      return `<div class="dash-exp-card dash-exp-${posClass}">
+          <div class="dash-exp-team-icon"><img src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" loading="lazy" onerror="this.remove()"></div>
+          <div class="dash-exp-avatar-wrap">
+            <div class="dash-exp-avatar"><img src="${sbHeadshotUrl(r.id)}" alt="" loading="lazy" onerror="this.remove()"></div>
+            <span class="dash-exp-pos-badge dash-exp-${posClass}">${r.pos}</span>
           </div>
-          <div class="exp-name">${r.name}</div>
-          <div class="exp-pct-row"><span class="exp-pct exp-${posClass}">${r.pct}%</span><span class="exp-frac">${r.count}/${totalLeagues}</span></div>
-          <div class="exp-bar exp-${posClass}" style="width:${r.pct}%"></div>
+          <div class="dash-exp-name">${r.name}</div>
+          <div class="dash-exp-pct-row"><span class="dash-exp-pct dash-exp-${posClass}">${r.pct}%</span><span class="dash-exp-frac">${r.count}/${totalLeagues}</span></div>
+          <div class="dash-exp-bar-bg"><div class="dash-exp-bar-fill dash-exp-${posClass}" style="width:${r.pct}%"></div></div>
         </div>`;
     }).join('');
   }
