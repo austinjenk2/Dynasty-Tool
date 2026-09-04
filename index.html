@@ -604,12 +604,114 @@
   .sb-stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: var(--muted); margin-top: 6px; }
   .sb-stat-divider { width: 1px; height: 34px; background: var(--border); }
 
+  .sb-layout { display: flex; gap: 22px; align-items: flex-start; }
+  .sb-main-col { flex: 1; min-width: 0; }
+  .sb-field-col { width: 300px; flex-shrink: 0; }
+  @media (max-width: 1100px) {
+    .sb-layout { flex-direction: column; }
+    .sb-field-col { width: 100%; }
+  }
+
   .sb-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
   @media (max-width: 680px) { .sb-grid { grid-template-columns: 1fr; } }
+
+  /* Win-probability football field -- ball position is the tracked
+     matchup's projected win% mapped straight onto the 0-100 yard scale
+     (63% win prob = standing at the 37, i.e. 63 yards from your own goal
+     line). Tracks whichever sb-card is open, or the average across all
+     of them when none is. */
+  .field-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    position: sticky;
+    top: 16px;
+  }
+  .field-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .field-panel-title { font-size: 11px; font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .field-panel-pct { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 700; color: var(--ink); flex-shrink: 0; }
+  .field-wrap {
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 1px var(--border-soft);
+  }
+  .field-endzone {
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #1f5c34;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+  }
+  .field-goalpost { width: 30px; height: 20px; flex-shrink: 0; }
+  .field-goalpost.field-goalpost-flip { transform: scaleY(-1); }
+  .field-turf {
+    position: relative;
+    height: 380px;
+    background: repeating-linear-gradient(to top, #2f8a4e 0, #2f8a4e 10%, #37944f 10%, #37944f 20%);
+  }
+  .field-hash { position: absolute; top: 0; bottom: 0; width: 1px; background: repeating-linear-gradient(to top, rgba(255,255,255,0.55) 0 6px, transparent 6px 16px); }
+  .field-hash-left { left: 18%; }
+  .field-hash-right { right: 18%; }
+  .field-yardline { position: absolute; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.85); transform: translateY(50%); }
+  .field-yardline.field-50 { height: 3px; background: #fff; }
+  .field-yardline span {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: transparent;
+    color: rgba(255,255,255,0.9);
+    font-size: 11px;
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+  }
+  .field-ball-pos {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: bottom 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .field-ball {
+    display: block;
+    font-size: 22px;
+    transform: translateY(50%) rotate(-8deg);
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+    animation: fieldBallBob 2.4s ease-in-out infinite;
+  }
+  @keyframes fieldBallBob {
+    0%, 100% { transform: translateY(50%) rotate(-8deg); }
+    50% { transform: translateY(calc(50% - 5px)) rotate(8deg); }
+  }
+  .field-delta {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, -160%);
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+    opacity: 0;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+  }
+  .field-delta.field-delta-show { opacity: 1; }
+  .field-delta.field-delta-pos { color: #8ef0a8; }
+  .field-delta.field-delta-neg { color: #ff9b9b; }
+  .field-yard-text { text-align: center; font-size: 11.5px; font-weight: 700; color: var(--muted); margin-top: 8px; }
 
   .sb-group-header {
     grid-column: 1 / -1;
@@ -3145,6 +3247,8 @@
       </div>
 
       <div data-sb-view="scoreboard" class="sb-view is-active">
+       <div class="sb-layout">
+        <div class="sb-main-col">
         <div class="rg-leagues-dropdown">
           <div class="rg-leagues-toggle" id="sbTankBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="sbTankCount">(18 of 18)</span></div>
           <div class="rg-leagues-panel" id="sbTankPanel" hidden>
@@ -3385,6 +3489,46 @@
             <div class="sb-badge sb-badge-good">Favored by 22.3</div>
             <div class="sb-chevron">&#9662;</div>
           </div>
+
+        </div>
+        </div>
+
+        <div class="sb-field-col">
+          <div class="field-panel" id="sbFieldPanel">
+            <div class="field-panel-head">
+              <div class="field-panel-title" id="sbFieldLabel">Your Week Overall</div>
+              <div class="field-panel-pct" id="sbFieldPct">--%</div>
+            </div>
+            <div class="field-wrap">
+              <div class="field-endzone field-endzone-opp">
+                <span>OPPONENT</span>
+                <svg class="field-goalpost" viewBox="0 0 40 26" aria-hidden="true"><path d="M6 26 V10 M34 26 V10 M6 10 H34 M6 10 L2 2 M34 10 L38 2" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+              </div>
+              <div class="field-turf">
+                <div class="field-hash field-hash-left"></div>
+                <div class="field-hash field-hash-right"></div>
+                <div class="field-yardline" style="bottom:10%"><span>10</span></div>
+                <div class="field-yardline" style="bottom:20%"><span>20</span></div>
+                <div class="field-yardline" style="bottom:30%"><span>30</span></div>
+                <div class="field-yardline" style="bottom:40%"><span>40</span></div>
+                <div class="field-yardline field-50" style="bottom:50%"><span>50</span></div>
+                <div class="field-yardline" style="bottom:60%"><span>40</span></div>
+                <div class="field-yardline" style="bottom:70%"><span>30</span></div>
+                <div class="field-yardline" style="bottom:80%"><span>20</span></div>
+                <div class="field-yardline" style="bottom:90%"><span>10</span></div>
+                <div class="field-delta" id="sbFieldDelta"></div>
+                <div class="field-ball-pos" id="sbFieldBallPos" style="bottom:50%">
+                  <span class="field-ball" id="sbFieldBall">&#127944;</span>
+                </div>
+              </div>
+              <div class="field-endzone field-endzone-you">
+                <svg class="field-goalpost field-goalpost-flip" viewBox="0 0 40 26" aria-hidden="true"><path d="M6 26 V10 M34 26 V10 M6 10 H34 M6 10 L2 2 M34 10 L38 2" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+                <span>YOU</span>
+              </div>
+            </div>
+            <div class="field-yard-text" id="sbFieldYardText">Midfield</div>
+          </div>
+        </div>
 
         </div>
 
@@ -11355,6 +11499,7 @@
       if (e.target.closest('.sb-expand')) {
         document.querySelectorAll('.sb-expand').forEach(el => el.remove());
         document.querySelectorAll('.sb-card.is-open').forEach(el => el.classList.remove('is-open'));
+        if (window.updateFootballField) window.updateFootballField();
         return;
       }
       const card = e.target.closest('.sb-card');
@@ -11363,13 +11508,14 @@
       const alreadyOpen = openExpand && openExpand.classList.contains('sb-expand');
       document.querySelectorAll('.sb-expand').forEach(el => el.remove());
       document.querySelectorAll('.sb-card.is-open').forEach(el => el.classList.remove('is-open'));
-      if (alreadyOpen) return;
+      if (alreadyOpen) { if (window.updateFootballField) window.updateFootballField(); return; }
 
       const leagueId = card.dataset.sleeperLeagueId;
       const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
       if (entry && window.sleeperGetPlayerDict) {
         const override = window.__sleeperScoreboardOverride ? window.__sleeperScoreboardOverride.byLeague[leagueId] : null;
         openRealSbExpand(card, entry, override);
+        if (window.updateFootballField) window.updateFootballField();
         return;
       }
 
@@ -11387,6 +11533,7 @@
 
       card.after(panel);
       card.classList.add('is-open');
+      if (window.updateFootballField) window.updateFootballField();
     });
   }
 
@@ -14073,6 +14220,76 @@
     document.addEventListener('click', () => { sbTankPanelEl.hidden = true; });
   }
 
+  // Football-field win-probability tracker: mirrors whichever sb-card is
+  // currently open (or the average across all of them when none is) onto
+  // a 0-100 yard scale -- 63% win prob sits at the 63-yard line, i.e. the
+  // opponent's 37. Re-run after every render/poll and every card
+  // open/close so the ball is always showing the right matchup.
+  const __sbFieldPrevPct = {};
+  let __sbFieldDeltaTimer = null;
+  function getSbFieldTarget() {
+    const openCard = document.querySelector('#sbGrid .sb-card.is-open');
+    if (openCard) {
+      const wp = Number(openCard.dataset.winpct);
+      return {
+        key: openCard.dataset.sleeperLeagueId || openCard.dataset.name || 'open',
+        label: openCard.dataset.name || 'This Matchup',
+        winPct: wp >= 0 ? wp : null,
+      };
+    }
+    const cards = Array.from(document.querySelectorAll('#sbGrid .sb-card'));
+    const withData = cards.filter(c => Number(c.dataset.winpct) >= 0);
+    if (!withData.length) return { key: 'overall', label: 'Your Week Overall', winPct: null };
+    const avg = withData.reduce((sum, c) => sum + Number(c.dataset.winpct), 0) / withData.length;
+    return { key: 'overall', label: 'Your Week Overall', winPct: avg };
+  }
+  function updateFootballField() {
+    const panel = document.getElementById('sbFieldPanel');
+    const ballPos = document.getElementById('sbFieldBallPos');
+    if (!panel || !ballPos) return;
+    const labelEl = document.getElementById('sbFieldLabel');
+    const pctEl = document.getElementById('sbFieldPct');
+    const yardEl = document.getElementById('sbFieldYardText');
+    const deltaEl = document.getElementById('sbFieldDelta');
+    const target = getSbFieldTarget();
+    if (labelEl) labelEl.textContent = target.label;
+    if (target.winPct == null) {
+      if (pctEl) pctEl.textContent = '--';
+      if (yardEl) yardEl.textContent = 'No projections yet';
+      ballPos.style.bottom = '50%';
+      return;
+    }
+    const pct = Math.max(2, Math.min(98, target.winPct));
+    if (pctEl) pctEl.textContent = `${Math.round(target.winPct)}%`;
+    if (yardEl) {
+      const rounded = Math.round(target.winPct);
+      yardEl.textContent = rounded === 50 ? 'Ball on the 50 -- midfield'
+        : rounded > 50 ? `Ball on the opponent's ${100 - rounded}`
+        : `Ball on your own ${rounded}`;
+    }
+    ballPos.style.bottom = `${pct}%`;
+
+    const prev = __sbFieldPrevPct[target.key];
+    __sbFieldPrevPct[target.key] = target.winPct;
+    if (prev != null && deltaEl) {
+      const delta = Math.round(target.winPct - prev);
+      if (delta !== 0) {
+        deltaEl.textContent = `${delta > 0 ? '+' : ''}${delta} YDS`;
+        deltaEl.className = 'field-delta ' + (delta > 0 ? 'field-delta-pos' : 'field-delta-neg');
+        deltaEl.style.bottom = `${pct}%`;
+        // Force reflow so the fade-in retriggers even if the class list
+        // didn't actually change (e.g. two gains in a row).
+        deltaEl.classList.remove('field-delta-show');
+        void deltaEl.offsetWidth;
+        deltaEl.classList.add('field-delta-show');
+        clearTimeout(__sbFieldDeltaTimer);
+        __sbFieldDeltaTimer = setTimeout(() => deltaEl.classList.remove('field-delta-show'), 2800);
+      }
+    }
+  }
+  window.updateFootballField = updateFootballField;
+  updateFootballField();
+
   function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
     if (!sbGrid) return;
@@ -14189,6 +14406,7 @@
         openRealSbExpand(newCard, reopenEntry, reopenOverride);
       }
     }
+    updateFootballField();
   }
   window.renderRealScoreboard = renderRealScoreboard;
 
