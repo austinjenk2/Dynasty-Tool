@@ -10598,11 +10598,46 @@
   // league. Only applies to the current week's global projections -- a
   // week picked via a selector still uses the flat (PPR-only) projMap, a
   // known smaller gap in that less-common path.
+  // Categories that describe the stat line itself rather than contributing
+  // points -- summing these against scoring_settings would be meaningless
+  // (there's no matching scoring_settings entry for most, but a couple of
+  // names collide, e.g. "gp").
+  const SB_NON_SCORING_STAT_KEYS = new Set(['gp', 'gs', 'gms_active']);
+
+  // Sleeper computes a player's fantasy points as a linear combination of
+  // their raw projected stat categories (pass_yd, rec, bonus_rec_te, etc.)
+  // weighted by the league's own scoring_settings -- the same mechanism
+  // that produces the pts_ppr/pts_half_ppr/pts_std presets for the three
+  // standard formats. Recomputing it this way (rather than just picking a
+  // preset) is what actually captures TEP, bonus thresholds, and any other
+  // custom scoring a league has configured, since it uses the league's
+  // real per-category point values instead of guessing which preset is
+  // closest.
+  function sbCustomScoreFor(stats, scoringSettings) {
+    if (!stats || !scoringSettings) return null;
+    let total = 0, matched = false;
+    Object.keys(scoringSettings).forEach(key => {
+      if (SB_NON_SCORING_STAT_KEYS.has(key)) return;
+      const weight = scoringSettings[key];
+      const statVal = stats[key];
+      if (typeof weight !== 'number' || statVal == null) return;
+      total += Number(statVal) * weight;
+      matched = true;
+    });
+    return matched ? total : null;
+  }
+
   function sbProjectionFor(id, projMap, league) {
     if (!projMap) {
       const statsMap = window.__sleeperProjectionStats || {};
       const stats = statsMap[id];
       if (stats) {
+        const custom = league ? sbCustomScoreFor(stats, league.scoring_settings) : null;
+        if (custom != null) return custom;
+        // Fallback when the league's scoring_settings didn't line up with
+        // any category in the projection (e.g. league context missing) --
+        // pick the preset matching the league's PPR value, defaulting to
+        // full PPR.
         const rec = league && league.scoring_settings ? league.scoring_settings.rec : undefined;
         let val = rec === 0 ? stats.pts_std : rec === 0.5 ? stats.pts_half_ppr : rec === 1 ? stats.pts_ppr : null;
         if (val == null) val = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
