@@ -464,8 +464,8 @@
     display: flex; align-items: center; justify-content: center;
   }
   .dash-exp-team-icon img { width: 100%; height: 100%; object-fit: contain; }
-  .dash-exp-avatar-wrap { position: relative; width: 48px; height: 48px; margin: 10px auto 8px; }
-  .dash-exp-avatar { width: 100%; height: 100%; border-radius: 50%; background: var(--border-soft); overflow: hidden; }
+  .dash-exp-avatar-wrap { position: relative; width: 58px; height: 58px; margin: 10px auto 8px; }
+  .dash-exp-avatar { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; }
   .dash-exp-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .dash-exp-pos-badge {
     position: absolute;
@@ -3176,13 +3176,13 @@
         </div>
 
         <div class="sort-dropdown" style="display:flex;justify-content:flex-end;margin-bottom:10px">
-          <div class="sort-select" id="sbSortSelect"><span id="sbSortSelectLabel">Sleeper Order</span> <span>&#9662;</span></div>
+          <div class="sort-select" id="sbSortSelect"><span id="sbSortSelectLabel">Win Category</span> <span>&#9662;</span></div>
           <div class="sort-menu" id="sbSortMenu" hidden style="left:auto;right:0">
-            <div class="sort-option active" data-sort="sleeper">Sleeper Order</div>
+            <div class="sort-option" data-sort="sleeper">Sleeper Order</div>
             <div class="sort-option" data-sort="az">A&ndash;Z</div>
             <div class="sort-option" data-sort="winpct">Win Probability</div>
             <div class="sort-option" data-sort="score">Highest Score</div>
-            <div class="sort-option" data-sort="category">Win Category</div>
+            <div class="sort-option active" data-sort="category">Win Category</div>
           </div>
         </div>
 
@@ -11671,9 +11671,11 @@
       const currentNames = new Set(rgLeagueNames);
       Array.from(rgBlacklist).forEach(name => { if (!currentNames.has(name)) rgBlacklist.delete(name); });
       saveRgBlacklist();
-      rgChipsEl.innerHTML = rgLeagueNames.map(name =>
-        `<span class="rg-league-chip${rgBlacklist.has(name) ? ' excluded' : ' active'}" data-league="${name}">${name}</span>`
-      ).join('');
+      rgChipsEl.innerHTML =
+        '<div class="rg-league-check-actions"><span data-check-action="all">Select All</span><span data-check-action="none">Deselect All</span></div>' +
+        rgLeagueNames.map(name =>
+          `<label class="rg-league-check-row${rgBlacklist.has(name) ? ' is-unchecked' : ''}"><input type="checkbox" data-league="${name}" ${rgBlacklist.has(name) ? '' : 'checked'}><span>${name}</span></label>`
+        ).join('');
       wireChips();
       updateCount();
       recomputeRootingGuide();
@@ -11939,6 +11941,19 @@
     }
     sortableHeads.forEach(h => h.classList.toggle('active', h.dataset.sort === criterion));
     updateSortArrows();
+    sortLeagues(criterion, currentSortDir);
+  }
+
+  // Re-applies whatever sort is currently selected without flipping its
+  // direction -- unlike selectSort(), which toggles direction when called
+  // again with the same criterion (that's meant for clicking the same
+  // header/option twice). Every real-data sync rebuilds the league rows
+  // from scratch, so this is what keeps e.g. Weekly Points sorted
+  // highest-first after every 60s poll instead of flipping ascending each
+  // time the same criterion got passed back in.
+  function reapplySort() {
+    const criterion = currentSortCriterion || 'weekly';
+    if (!currentSortCriterion) { currentSortCriterion = criterion; currentSortDir = 1; }
     sortLeagues(criterion, currentSortDir);
   }
 
@@ -12377,7 +12392,7 @@
 
         leagueList.innerHTML = '';
         rows.forEach(r => leagueList.appendChild(r));
-        selectSort(currentSortCriterion || 'sleeper');
+        reapplySort();
 
         if (leagueCountChip) leagueCountChip.textContent = `${leagues.length} League${leagues.length === 1 ? '' : 's'}`;
         lastSyncedAt = Date.now();
@@ -14180,7 +14195,7 @@
   // Persists across re-renders (every 60s poll rebuilds sbGrid's innerHTML
   // from scratch) so the chosen sort order sticks instead of resetting back
   // to Sleeper order on every sync.
-  let sbSortCriterion = 'sleeper';
+  let sbSortCriterion = 'category';
   let sbSortDir = 1;
 
   function applySbSort() {
