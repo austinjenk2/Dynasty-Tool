@@ -439,6 +439,8 @@
   .dash-exp { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-soft); }
   .dash-exp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .dash-exp-head h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.6px; color: var(--faint); margin: 0; }
+  .dash-exp-head .sort-select { height: 28px; padding: 0 10px; font-size: 11.5px; }
+  .dash-exp-note { font-size: 10.5px; color: var(--faint); font-style: italic; margin: -6px 0 10px; }
   .dash-exp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   @media (max-width: 560px) { .dash-exp-grid { grid-template-columns: repeat(2, 1fr); } }
 
@@ -2396,7 +2398,19 @@
         <div class="dash-exp" id="dashHighestExposures" hidden>
           <div class="dash-exp-head">
             <h3>HIGHEST EXPOSURES</h3>
+            <div class="sort-dropdown" id="dashExpFilterDropdown">
+              <div class="sort-select" id="dashExpFilterSelect"><span id="dashExpFilterLabel">All Players</span> <span>&#9662;</span></div>
+              <div class="sort-menu" id="dashExpFilterMenu" hidden style="left:auto;right:0">
+                <div class="sort-option active" data-filter="all">All Players</div>
+                <div class="sort-option" data-filter="top50">Top 50</div>
+                <div class="sort-option" data-filter="top100">Top 100</div>
+                <div class="sort-option" data-filter="top150">Top 150</div>
+                <div class="sort-option" data-filter="top200">Top 200</div>
+                <div class="sort-option" data-filter="rookies">Rookies Only</div>
+              </div>
+            </div>
           </div>
+          <p class="dash-exp-note" id="dashExpFilterNote" hidden>Player value rankings aren't available yet, so this is showing every player -- Top N will filter to real rankings once that data exists.</p>
           <div class="dash-exp-grid" id="dashHighestExposuresGrid"></div>
         </div>
       </div>
@@ -13404,6 +13418,28 @@
   // Top exposure players, dynasty mode only -- same computation as the
   // Exposures page (real roster counts across your connected leagues),
   // just the top handful shown as a compact preview on the Dashboard.
+  let dashExpFilter = 'all';
+  const dashExpFilterSelect = document.getElementById('dashExpFilterSelect');
+  const dashExpFilterMenu = document.getElementById('dashExpFilterMenu');
+  const dashExpFilterLabel = document.getElementById('dashExpFilterLabel');
+  if (dashExpFilterSelect && dashExpFilterMenu) {
+    dashExpFilterSelect.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dashExpFilterMenu.hidden = !dashExpFilterMenu.hidden;
+    });
+    dashExpFilterMenu.querySelectorAll('.sort-option').forEach(option => {
+      option.addEventListener('click', () => {
+        dashExpFilter = option.dataset.filter;
+        dashExpFilterMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+        option.classList.add('active');
+        if (dashExpFilterLabel) dashExpFilterLabel.textContent = option.textContent;
+        dashExpFilterMenu.hidden = true;
+        renderHighestExposures();
+      });
+    });
+    document.addEventListener('click', () => { dashExpFilterMenu.hidden = true; });
+  }
+
   function renderHighestExposures() {
     const section = document.getElementById('dashHighestExposures');
     const gridEl = document.getElementById('dashHighestExposuresGrid');
@@ -13427,7 +13463,7 @@
     });
 
     const EXP_POS_COLOR = { QB: 'var(--red)', RB: 'var(--green)', WR: 'var(--blue)', TE: 'var(--gold)' };
-    const rows = Object.keys(exposureMap).map(id => {
+    let rows = Object.keys(exposureMap).map(id => {
       const p = dict[id];
       if (!p || !EXP_POS_COLOR[p.position]) return null;
       return {
@@ -13437,10 +13473,27 @@
         pos: p.position,
         count: exposureMap[id].count,
         pct: Math.round((exposureMap[id].count / totalLeagues) * 100),
+        isRookie: p.years_exp === 0,
       };
     }).filter(Boolean);
 
     if (!rows.length) { section.hidden = true; return; }
+
+    // "Top 50/100/150/200" is meant to scope this to real player-value
+    // rankings once that data exists -- there's no real valuation source
+    // yet, so those options currently show everyone (with a note saying
+    // so) rather than silently truncating to a fabricated ranking.
+    // "Rookies Only" already has a real field to filter on (years_exp).
+    const filter = dashExpFilter;
+    const noteEl = document.getElementById('dashExpFilterNote');
+    if (filter === 'rookies') {
+      rows = rows.filter(r => r.isRookie);
+      if (noteEl) noteEl.hidden = true;
+    } else if (filter !== 'all') {
+      if (noteEl) noteEl.hidden = false;
+    } else if (noteEl) {
+      noteEl.hidden = true;
+    }
 
     // Top 3 per position (QB/RB/WR/TE, in that order) instead of one
     // overall top-N list, so every position group gets its own spotlight.
@@ -13450,6 +13503,10 @@
       byPos[pos].sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name)).slice(0, 3));
 
     section.hidden = false;
+    if (!top.length) {
+      gridEl.innerHTML = '<div class="exp-loading" style="grid-column:1/-1">No players match this filter.</div>';
+      return;
+    }
     gridEl.innerHTML = top.map(r => {
       const posClass = r.pos.toLowerCase();
       return `<div class="dash-exp-card dash-exp-${posClass}">
