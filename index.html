@@ -243,6 +243,7 @@
   .schedule-team { display: flex; align-items: center; gap: 4px; }
   .schedule-team img { width: 16px; height: 16px; object-fit: contain; }
   .schedule-score { margin-left: 3px; font-weight: 800; color: var(--ink); }
+  .schedule-ball { font-size: 11px; }
   .schedule-time-live { color: var(--red); }
   .schedule-at { color: var(--faint); font-size: 11px; font-weight: 700; }
   .schedule-chip { cursor: pointer; }
@@ -320,12 +321,8 @@
   .sweat-badge.team {
     position: absolute;
     top: 8px; right: 8px;
-    width: 20px; height: 20px;
+    width: 28px; height: 28px;
     object-fit: contain;
-    background: #fff;
-    border-radius: 4px;
-    padding: 2px;
-    box-shadow: 0 0 0 1px var(--border);
   }
   .sweat-avatar {
     width: 48px; height: 48px;
@@ -471,18 +468,9 @@
   }
   .sb-subtabs { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
   .sb-subtabs-left { display: flex; gap: 22px; }
-  #sbWeekDropdown .week-select { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-  .sb-subtab {
-    color: var(--muted);
-    font-weight: 700;
-    font-size: 14px;
-    text-decoration: none;
-    padding-bottom: 10px;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-  }
-  .sb-subtab:hover:not(.active) { color: var(--ink); }
-  .sb-subtab.active { color: var(--ink); border-bottom-color: var(--red); }
+  #sbWeekDropdown .week-select, #rgWeekDropdown .week-select { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  #sbWeekDropdown .week-select span, #rgWeekDropdown .week-select span { font-size: 16px; }
+  #sbWeekDropdown .week-select > span:last-child, #rgWeekDropdown .week-select > span:last-child { font-size: 11px; }
   .sb-view { display: none; }
   .sb-view.is-active { display: block; }
 
@@ -577,6 +565,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    overflow: hidden;
     font-weight: 700;
     font-size: 13px;
     color: #fff;
@@ -590,7 +580,7 @@
   .sb-orig-score { font-size: 10.5px; font-weight: 600; color: var(--faint); margin-top: 2px; }
   .sb-exp-score .sb-score-mine, .sb-exp-score .sb-score-theirs { font-size: 18px; }
 
-  .sb-lineups-cols { display: flex; justify-content: center; gap: 40px; }
+  .sb-lineups-cols { display: flex; justify-content: flex-start; gap: 40px; }
   .sb-lineup-col { flex: 0 1 auto; min-width: 0; }
   @media (max-width: 800px) { .sb-lineups-cols { flex-direction: column; align-items: stretch; } }
   .sb-lineup-label { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 8px; }
@@ -667,6 +657,8 @@
 
   /* Rooting Guide */
   .rg-header { text-align: center; margin-bottom: 18px; }
+  .rg-header-top { display: flex; align-items: center; justify-content: center; gap: 16px; position: relative; }
+  .rg-header-top .week-dropdown { position: absolute; right: 0; text-align: left; }
   .rg-header h2 { font-family: 'Source Serif 4', serif; font-size: 22px; margin: 0 0 6px; }
   .rg-header p { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
   .rg-leagues-toggle {
@@ -736,7 +728,8 @@
   .rg-pos.sb-pos-wr { color: var(--blue); background: rgba(47,111,163,0.12); }
   .rg-pos.sb-pos-te { color: var(--gold); background: #f6efe0; }
   .rg-name { font-weight: 700; font-size: 13px; }
-  .rg-team { font-size: 12px; color: var(--muted); }
+  .rg-team { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; }
+  .rg-team-logo { width: 18px; height: 18px; object-fit: contain; }
   .rg-note { margin-left: auto; flex-shrink: 0; font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
   .rg-note-for { color: var(--green); }
   .rg-note-vs { color: var(--red); }
@@ -1043,17 +1036,17 @@
     position: absolute;
     top: 6px;
     right: 6px;
-    width: 22px;
-    height: 22px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    background: var(--navy);
+    background: var(--surface);
     border: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
   }
-  .exp-team-icon img { width: 68%; height: 68%; object-fit: contain; }
+  .exp-team-icon img { width: 82%; height: 82%; object-fit: contain; }
   .exp-avatar-wrap { position: relative; margin: 18px auto 12px; width: 72%; }
   .exp-avatar {
     width: 100%;
@@ -1788,7 +1781,7 @@
     color: var(--ink);
     white-space: nowrap;
   }
-  .record-value .win { color: var(--navy); }
+  .record-value .win { color: var(--green); }
   .record-value .sep { color: var(--faint); font-weight: 500; margin: 0 4px; }
   .record-value .loss { color: var(--red); }
 
@@ -1894,7 +1887,7 @@
   .dr-roster-section-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 10px 0 8px; }
   .dr-roster-players { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 12px; }
   .dr-roster-player { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--border-soft); border-radius: 6px; font-size: 12.5px; }
-  .dr-roster-avatar { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; background: var(--surface); overflow: hidden; }
+  .dr-roster-avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; background: var(--surface); overflow: hidden; }
   .dr-roster-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .dr-roster-pos { width: 24px; font-size: 10px; font-weight: 800; color: #fff; border-radius: 4px; text-align: center; padding: 2px 0; flex-shrink: 0; }
   .dr-roster-pos.dr-pos-qb { background: var(--red); }
@@ -2006,7 +1999,8 @@
   <div class="section-tabs" id="sectionNav">
     <a class="section-tab active" data-section="dashboard">Dashboard</a>
     <a class="section-tab" data-section="leagues">Leagues</a>
-    <a class="section-tab" data-section="lineups">Lineups</a>
+    <a class="section-tab" data-section="lineups">Scoreboard</a>
+    <a class="section-tab" data-section="rooting">Rooting Guide</a>
     <a class="section-tab" data-section="waiver">Waiver Wire</a>
     <a class="section-tab" data-section="draft">Draft Room</a>
     <a class="section-tab" data-section="exposures">Exposures</a>
@@ -2855,8 +2849,7 @@
     <div class="sb-page">
       <div class="sb-subtabs" id="sbSubtabs">
         <div class="sb-subtabs-left">
-          <a class="sb-subtab active" data-sb-tab="scoreboard">Scoreboard</a>
-          <a class="sb-subtab" data-sb-tab="rooting">Rooting Guide</a>
+          <h1 style="margin:0">Scoreboard</h1>
         </div>
         <span class="week-dropdown" id="sbWeekDropdown">
           <span class="week-select" id="sbWeekSelect">WEEK <span id="sbWeekLabel">1</span> <span>&#9662;</span></span>
@@ -3344,9 +3337,18 @@
         </template>
       </div>
 
-      <div data-sb-view="rooting" class="sb-view">
+
+    </div>
+  </div>
+      <div data-view="rooting">
         <div class="rg-header">
-          <h2>Week <span class="sb-week-num">1</span> Rooting Guide</h2>
+          <div class="rg-header-top">
+            <h2>Week <span class="sb-week-num">1</span> Rooting Guide</h2>
+            <span class="week-dropdown" id="rgWeekDropdown">
+              <span class="week-select" id="rgWeekSelect">WEEK <span id="rgWeekLabel">1</span> <span>&#9662;</span></span>
+              <span class="week-menu" id="rgWeekMenu" hidden></span>
+            </span>
+          </div>
           <p>Your starters versus your opponents across all scheduled matchups. Tap a player for the league list.</p>
           <div class="rg-leagues-toggle" id="rgLeaguesBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="rgLeaguesCount">(18 of 18)</span></div>
         </div>
@@ -4294,9 +4296,6 @@
           </div>
         </div>
       </div>
-
-    </div>
-  </div>
   <div data-view="waiver">
     <div class="page-title">
       <h1>Waiver Manager</h1>
@@ -9965,9 +9964,7 @@
     window.scrollTo(0, 0);
   }
   function goToRootingGuide() {
-    goToSection('lineups');
-    document.querySelectorAll('.sb-subtab').forEach(t => t.classList.toggle('active', t.dataset.sbTab === 'rooting'));
-    document.querySelectorAll('[data-sb-view]').forEach(v => v.classList.toggle('is-active', v.dataset.sbView === 'rooting'));
+    goToSection('rooting');
   }
   document.querySelectorAll('.sweats-guide').forEach(link => {
     link.style.cursor = 'pointer';
@@ -10633,17 +10630,6 @@
     window.renderRealTrades = renderRealTrades;
   })();
 
-  const sbSubtabs = document.querySelectorAll('.sb-subtab');
-  const sbViews = document.querySelectorAll('[data-sb-view]');
-  sbSubtabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      sbSubtabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const target = tab.dataset.sbTab;
-      sbViews.forEach(v => v.classList.toggle('is-active', v.dataset.sbView === target));
-    });
-  });
-
   const sbLineupTemplate = document.getElementById('sbLineupTemplate');
   const SB_POS_COLOR = { qb: 'var(--red)', rb: 'var(--green)', wr: 'var(--blue)', te: 'var(--gold)' };
 
@@ -10993,6 +10979,13 @@
   const sbGridEl = document.getElementById('sbGrid');
   if (sbGridEl) {
     sbGridEl.addEventListener('click', (e) => {
+      // Clicking anywhere in the open lineup panel closes it -- no more
+      // hunting for the tiny chevron to back out.
+      if (e.target.closest('.sb-expand')) {
+        document.querySelectorAll('.sb-expand').forEach(el => el.remove());
+        document.querySelectorAll('.sb-card.is-open').forEach(el => el.classList.remove('is-open'));
+        return;
+      }
       const card = e.target.closest('.sb-card');
       if (!card) return;
       const openExpand = card.nextElementSibling;
@@ -11272,7 +11265,7 @@
             `<span class="rg-delta ${deltaClass}">${deltaText}</span>` +
             `<span class="rg-pos sb-pos-${posClass}">${r.pos}</span>` +
             `<span class="rg-name">${r.name}</span>` +
-            `<span class="rg-team">${r.team}</span>` +
+            `<span class="rg-team"><img class="rg-team-logo" src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" title="${r.team}" loading="lazy" onerror="var p=this.parentNode;this.remove();p.textContent='${r.team}'"></span>` +
             `<span class="rg-note">${noteParts.join(' &middot; ')}</span>` +
           '</div>';
         return { el, forAll: r.for.slice(), againstAll: r.against.slice() };
@@ -12396,12 +12389,20 @@
     byLeagueList.forEach(r => { byLeague[r.leagueId] = r; });
     window.__sleeperScoreboardOverride = { week: w, projections, byLeague };
     if (window.renderRealScoreboard) window.renderRealScoreboard();
-    if (window.renderRealRootingGuide) window.renderRealRootingGuide(w);
   }
 
   setupWeekDropdown('sbWeekSelect', 'sbWeekMenu', 'sbWeekLabel', (week) => {
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
     loadScoreboardWeek(week);
+  });
+
+  // Rooting Guide is its own top-level section now (used to be a Scoreboard
+  // subtab sharing one week control) -- it gets its own dropdown, and
+  // renderRealRootingGuide already knows how to fetch an arbitrary week's
+  // matchups on its own, no scoreboard override needed here.
+  setupWeekDropdown('rgWeekSelect', 'rgWeekMenu', 'rgWeekLabel', (week) => {
+    document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
+    if (window.renderRealRootingGuide) window.renderRealRootingGuide(Number(week));
   });
 
   document.querySelectorAll('.ww-toggle-group').forEach(group => {
@@ -12737,10 +12738,16 @@
     });
 
     const EXP_POS_COLOR = { QB: 'var(--red)', RB: 'var(--green)', WR: 'var(--blue)', TE: 'var(--gold)' };
+    // The Rookie/2nd Year filter chips match against a draft-class year, but
+    // real player data doesn't carry one -- Sleeper's years_exp (0 = rookie,
+    // 1 = second year) does, so derive the same year label from that
+    // instead of leaving it blank forever.
+    const currentSeason = Number((leagueEntries[0] && leagueEntries[0].league.season) || new Date().getFullYear());
     const rows = Object.keys(exposureMap).map(id => {
       const p = dict[id];
       if (!p || !EXP_POS_COLOR[p.position]) return null;
       const info = exposureMap[id];
+      const yearTag = p.years_exp === 0 ? String(currentSeason) : (p.years_exp === 1 ? String(currentSeason - 1) : '');
       return {
         id,
         name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
@@ -12749,6 +12756,7 @@
         count: info.count,
         pct: Math.round((info.count / totalLeagues) * 100),
         leagues: info.leagues,
+        yearTag,
       };
     }).filter(Boolean);
 
@@ -12757,7 +12765,7 @@
     const posRankCounter = {};
     expGrid.innerHTML = rows.map((r, i) => {
       const posClass = r.pos.toLowerCase();
-      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}" data-team="${r.team}">
+      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}" data-team="${r.team}">
           <div class="exp-rank">${i + 1}</div>
           <div class="exp-team-icon"><img src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" title="${r.team}" loading="lazy" onerror="this.remove()"></div>
           <div class="exp-avatar-wrap">
@@ -12773,7 +12781,7 @@
     expListBody.innerHTML = rows.map((r, i) => {
       const posClass = r.pos.toLowerCase();
       posRankCounter[r.pos] = (posRankCounter[r.pos] || 0) + 1;
-      return `<div class="exp-list-row" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}">
+      return `<div class="exp-list-row" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}">
           <div class="exp-list-player">
             <div class="exp-list-avatar"><img src="${sbHeadshotUrl(r.id)}" alt="" loading="lazy" onerror="this.remove()"></div>
             <span class="exp-list-name">${r.name}</span>
@@ -12913,6 +12921,7 @@
         if (!comp) return;
         const when = comp.date || ev.date;
         const statusType = comp.status && comp.status.type;
+        const possessionTeamId = comp.situation ? comp.situation.possession : null;
         (comp.competitors || []).forEach(c => {
           const abbr = c.team && c.team.abbreviation;
           if (!abbr) return;
@@ -12921,6 +12930,7 @@
             score: c.score != null ? Number(c.score) : null,
             state: statusType ? statusType.state : null,
             detail: statusType ? statusType.shortDetail : null,
+            hasBall: !!(possessionTeamId && c.team && String(c.team.id) === String(possessionTeamId)),
           };
         });
       });
@@ -12999,6 +13009,8 @@
       const homeInfo = espnGames[g.home];
       if (awayInfo && awayInfo.score != null) g.awayScore = awayInfo.score;
       if (homeInfo && homeInfo.score != null) g.homeScore = homeInfo.score;
+      if (awayInfo && awayInfo.hasBall) g.possession = 'away';
+      if (homeInfo && homeInfo.hasBall) g.possession = 'home';
     });
 
     games.sort((a, b) => {
@@ -13021,14 +13033,17 @@
       const timeLabel = isFinal ? 'FINAL' : (isLive ? (g.detail || 'LIVE') : kickoffLabel);
       const timeClass = isLive ? ' schedule-time-live' : '';
       const showScore = (isLive || isFinal) && g.awayScore != null && g.homeScore != null;
+      const ballIcon = '<span class="schedule-ball" title="Has the ball">&#127944;</span>';
+      const awayBallHtml = isLive && g.possession === 'away' ? ballIcon : '';
+      const homeBallHtml = isLive && g.possession === 'home' ? ballIcon : '';
       const awayScoreHtml = showScore ? `<span class="schedule-score">${g.awayScore}</span>` : '';
       const homeScoreHtml = showScore ? `<span class="schedule-score">${g.homeScore}</span>` : '';
       return `<div class="schedule-chip" data-away="${g.away}" data-home="${g.home}">` +
         `<div class="schedule-time${timeClass}">${timeLabel}</div>` +
         '<div class="schedule-row">' +
-          `<div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/${awayLower}.png" alt="${g.away}" onerror="this.style.display='none'"><span>${g.away}</span>${awayScoreHtml}</div>` +
+          `<div class="schedule-team">${awayBallHtml}<img src="https://sleepercdn.com/images/team_logos/nfl/${awayLower}.png" alt="${g.away}" onerror="this.style.display='none'"><span>${g.away}</span>${awayScoreHtml}</div>` +
           '<span class="schedule-at">@</span>' +
-          `<div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/${homeLower}.png" alt="${g.home}" onerror="this.style.display='none'"><span>${g.home}</span>${homeScoreHtml}</div>` +
+          `<div class="schedule-team">${homeBallHtml}<img src="https://sleepercdn.com/images/team_logos/nfl/${homeLower}.png" alt="${g.home}" onerror="this.style.display='none'"><span>${g.home}</span>${homeScoreHtml}</div>` +
         '</div>' +
       '</div>';
     }).join('');
@@ -13249,6 +13264,13 @@
     const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && !tankList.has(e.league.name));
     if (!entries.length) return;
 
+    // The 60s poll rebuilds this whole grid from scratch, which used to
+    // silently collapse whatever matchup a person had open (it felt like
+    // the page randomly "kicked you back out"). Remember what was open and
+    // re-open the same one on the same league's new card after rebuilding.
+    const openCardEl = sbGrid.querySelector('.sb-card.is-open');
+    const openLeagueId = openCardEl ? openCardEl.dataset.sleeperLeagueId : null;
+
     const override = window.__sleeperScoreboardOverride || null;
 
     let totalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0;
@@ -13339,6 +13361,16 @@
     if (sbWeekLabel) sbWeekLabel.textContent = week;
 
     applySbSort();
+
+    if (openLeagueId) {
+      const newCard = sbGrid.querySelector(`.sb-card[data-sleeper-league-id="${openLeagueId}"]`);
+      const reopenEntry = window.sleeperLeagueData && window.sleeperLeagueData[openLeagueId];
+      if (newCard && reopenEntry) {
+        newCard.classList.add('is-open');
+        const reopenOverride = override ? override.byLeague[openLeagueId] : null;
+        openRealSbExpand(newCard, reopenEntry, reopenOverride);
+      }
+    }
   }
   window.renderRealScoreboard = renderRealScoreboard;
 
