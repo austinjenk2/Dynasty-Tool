@@ -10751,8 +10751,15 @@
   // Sleeper's real curve is this much flatter than a naive point-diff model
   // would suggest.
   function sbWinProbability(myTotal, oppTotal) {
+    // Sleeper doesn't expose its real win% formula. Fit against ~18 real
+    // Sleeper-displayed win% + point-total pairs showed a flat logistic
+    // slope (k) underfits: implied k trends from ~0.022 at small point
+    // diffs up to ~0.035 at diffs of 100+. Ramp k with |diff| instead of
+    // using one constant to track that curve more closely across the range.
     const diff = myTotal - oppTotal;
-    const pct = 1 / (1 + Math.exp(-0.027 * diff));
+    const absDiff = Math.abs(diff);
+    const k = 0.022 + Math.min(1, absDiff / 100) * (0.035 - 0.022);
+    const pct = 1 / (1 + Math.exp(-k * diff));
     return Math.round(Math.min(99, Math.max(1, pct * 100)));
   }
 
@@ -11991,7 +11998,7 @@
         });
       });
       Object.keys(groups).forEach(pos => {
-        groups[pos].sort((a, b) => Number(b.isStarter) - Number(a.isStarter));
+        groups[pos].sort((a, b) => (Number(b.isStarter) - Number(a.isStarter)) || ((b.proj || 0) - (a.proj || 0)));
       });
 
       ldColumns.innerHTML = Object.keys(groups).map(pos => {
