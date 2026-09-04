@@ -604,14 +604,6 @@
   .sb-stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: var(--muted); margin-top: 6px; }
   .sb-stat-divider { width: 1px; height: 34px; background: var(--border); }
 
-  .sb-layout { display: flex; gap: 22px; align-items: flex-start; }
-  .sb-main-col { flex: 1; min-width: 0; }
-  .sb-field-col { width: 380px; flex-shrink: 0; }
-  @media (max-width: 1100px) {
-    .sb-layout { flex-direction: column; }
-    .sb-field-col { width: 100%; }
-  }
-
   .sb-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -619,18 +611,19 @@
   }
   @media (max-width: 680px) { .sb-grid { grid-template-columns: 1fr; } }
 
-  /* Win-probability football field -- ball position is the tracked
-     matchup's projected win% mapped straight onto the 0-100 yard scale
-     (63% win prob = standing at the 37, i.e. 63 yards from your own goal
-     line). Tracks whichever sb-card is open, or the average across all
-     of them when none is. */
+  /* Win-probability football field -- lives inside the matchup expand
+     panel, right where the lineup tables leave blank space, and only
+     exists while that matchup is open. Ball position is the matchup's
+     live projected win% mapped straight onto the 0-100 yard scale (63%
+     win prob = standing at the 37, i.e. the opponent's 37). */
+  .sb-exp-body { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
   .field-panel {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 14px;
-    position: sticky;
-    top: 16px;
+    width: 320px;
+    flex-shrink: 0;
   }
   .field-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
   .field-panel-title { font-size: 11px; font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -656,7 +649,7 @@
   .field-goalpost.field-goalpost-flip { transform: scaleY(-1); }
   .field-turf {
     position: relative;
-    height: clamp(440px, 62vh, 720px);
+    height: 460px;
     background: repeating-linear-gradient(to top, #2d8449 0, #2d8449 10%, #368f52 10%, #368f52 20%);
   }
   .field-hash { position: absolute; top: 0; bottom: 0; width: 1px; background: repeating-linear-gradient(to top, rgba(255,255,255,0.6) 0 6px, transparent 6px 16px); }
@@ -3244,8 +3237,6 @@
       </div>
 
       <div data-sb-view="scoreboard" class="sb-view is-active">
-       <div class="sb-layout">
-        <div class="sb-main-col">
         <div class="rg-leagues-dropdown">
           <div class="rg-leagues-toggle" id="sbTankBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="sbTankCount">(18 of 18)</span></div>
           <div class="rg-leagues-panel" id="sbTankPanel" hidden>
@@ -3486,44 +3477,6 @@
             <div class="sb-badge sb-badge-good">Favored by 22.3</div>
             <div class="sb-chevron">&#9662;</div>
           </div>
-
-        </div>
-        </div>
-
-        <div class="sb-field-col" id="sbFieldCol" hidden>
-          <div class="field-panel" id="sbFieldPanel">
-            <div class="field-panel-head">
-              <div class="field-panel-title" id="sbFieldLabel">Your Week Overall</div>
-              <div class="field-panel-pct" id="sbFieldPct">--%</div>
-            </div>
-            <div class="field-wrap">
-              <div class="field-endzone field-endzone-opp">
-                <svg class="field-goalpost" viewBox="0 0 40 26" aria-hidden="true"><path d="M6 26 V10 M34 26 V10 M6 10 H34 M6 10 L2 2 M34 10 L38 2" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
-              </div>
-              <div class="field-turf">
-                <div class="field-hash field-hash-left"></div>
-                <div class="field-hash field-hash-right"></div>
-                <div class="field-yardline" style="bottom:10%"><span class="fl-num fl-left">10</span><span class="fl-num fl-right">10</span></div>
-                <div class="field-yardline" style="bottom:20%"><span class="fl-num fl-left">20</span><span class="fl-num fl-right">20</span></div>
-                <div class="field-yardline" style="bottom:30%"><span class="fl-num fl-left">30</span><span class="fl-num fl-right">30</span></div>
-                <div class="field-yardline" style="bottom:40%"><span class="fl-num fl-left">40</span><span class="fl-num fl-right">40</span></div>
-                <div class="field-yardline field-50" style="bottom:50%"><span class="fl-num fl-left">50</span><span class="fl-num fl-right">50</span></div>
-                <div class="field-yardline" style="bottom:60%"><span class="fl-num fl-left">40</span><span class="fl-num fl-right">40</span></div>
-                <div class="field-yardline" style="bottom:70%"><span class="fl-num fl-left">30</span><span class="fl-num fl-right">30</span></div>
-                <div class="field-yardline" style="bottom:80%"><span class="fl-num fl-left">20</span><span class="fl-num fl-right">20</span></div>
-                <div class="field-yardline" style="bottom:90%"><span class="fl-num fl-left">10</span><span class="fl-num fl-right">10</span></div>
-                <div class="field-delta" id="sbFieldDelta"></div>
-                <div class="field-ball-pos" id="sbFieldBallPos" style="bottom:50%">
-                  <span class="field-ball" id="sbFieldBall">&#127944;</span>
-                </div>
-              </div>
-              <div class="field-endzone field-endzone-you">
-                <svg class="field-goalpost field-goalpost-flip" viewBox="0 0 40 26" aria-hidden="true"><path d="M6 26 V10 M34 26 V10 M6 10 H34 M6 10 L2 2 M34 10 L38 2" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
-              </div>
-            </div>
-            <div class="field-yard-text" id="sbFieldYardText">Midfield</div>
-          </div>
-        </div>
 
         </div>
 
@@ -11434,6 +11387,78 @@
     }).join('');
   }
 
+  // Remembers each league's last-seen win% so the field can animate from
+  // the old ball position to the new one instead of just teleporting there
+  // on every open/poll refresh.
+  const __sbFieldPrevPct = {};
+  function sbFieldPanelHtml(startPct) {
+    const clamped = Math.max(2, Math.min(98, startPct));
+    return (
+      '<div class="field-panel">' +
+        '<div class="field-panel-head">' +
+          '<div class="field-panel-title field-panel-pct-label">Win Probability</div>' +
+          '<div class="field-panel-pct field-panel-pct-value">--%</div>' +
+        '</div>' +
+        '<div class="field-wrap">' +
+          '<div class="field-endzone field-endzone-opp">' +
+            '<svg class="field-goalpost" viewBox="0 0 40 26" aria-hidden="true"><path d="M6 26 V10 M34 26 V10 M6 10 H34 M6 10 L2 2 M34 10 L38 2" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>' +
+          '</div>' +
+          '<div class="field-turf">' +
+            '<div class="field-hash field-hash-left"></div>' +
+            '<div class="field-hash field-hash-right"></div>' +
+            [10, 20, 30, 40, 50, 40, 30, 20, 10].map((n, i) =>
+              `<div class="field-yardline${n === 50 ? ' field-50' : ''}" style="bottom:${(i + 1) * 10}%"><span class="fl-num fl-left">${n}</span><span class="fl-num fl-right">${n}</span></div>`
+            ).join('') +
+            '<div class="field-delta"></div>' +
+            `<div class="field-ball-pos" style="bottom:${clamped}%">` +
+              '<span class="field-ball">&#127944;</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="field-endzone field-endzone-you">' +
+            '<svg class="field-goalpost field-goalpost-flip" viewBox="0 0 40 26" aria-hidden="true"><path d="M6 26 V10 M34 26 V10 M6 10 H34 M6 10 L2 2 M34 10 L38 2" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>' +
+          '</div>' +
+        '</div>' +
+        '<div class="field-yard-text">No projections yet</div>' +
+      '</div>'
+    );
+  }
+  // Sets the field's real numbers/position after insertion (rather than
+  // baking the final position into the HTML string) so the ball animates
+  // from wherever it was last time into its new spot instead of just
+  // appearing there.
+  function animateSbFieldPanel(panelEl, leagueKey, winPct) {
+    const fieldPanel = panelEl.querySelector('.field-panel');
+    if (!fieldPanel) return;
+    const ballPos = fieldPanel.querySelector('.field-ball-pos');
+    const pctLabel = fieldPanel.querySelector('.field-panel-pct-value');
+    const yardEl = fieldPanel.querySelector('.field-yard-text');
+    const deltaEl = fieldPanel.querySelector('.field-delta');
+    if (winPct == null) return;
+    const prev = __sbFieldPrevPct[leagueKey];
+    __sbFieldPrevPct[leagueKey] = winPct;
+    const pct = Math.max(2, Math.min(98, winPct));
+    if (pctLabel) pctLabel.textContent = `${Math.round(winPct)}%`;
+    if (yardEl) {
+      const rounded = Math.round(winPct);
+      yardEl.textContent = rounded === 50 ? "Ball on the 50 -- midfield"
+        : rounded > 50 ? `Ball on the opponent's ${100 - rounded}`
+        : `Ball on your own ${rounded}`;
+    }
+    requestAnimationFrame(() => {
+      if (ballPos) ballPos.style.bottom = `${pct}%`;
+      if (prev != null && deltaEl) {
+        const delta = Math.round(winPct - prev);
+        if (delta !== 0) {
+          deltaEl.textContent = `${delta > 0 ? '+' : ''}${delta} YDS`;
+          deltaEl.className = 'field-delta ' + (delta > 0 ? 'field-delta-pos' : 'field-delta-neg');
+          deltaEl.style.bottom = `${pct}%`;
+          requestAnimationFrame(() => deltaEl.classList.add('field-delta-show'));
+          setTimeout(() => deltaEl.classList.remove('field-delta-show'), 2800);
+        }
+      }
+    });
+  }
+
   async function openRealSbExpand(card, entry, override) {
     const panel = document.createElement('div');
     panel.className = 'sb-expand';
@@ -11456,6 +11481,7 @@
     const week = override ? override.week : entry.week;
     const expHasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
     let scoreHtml;
+    let winPct = null;
     if (expHasData) {
       const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league);
       const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
@@ -11463,6 +11489,7 @@
       const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
       const myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj);
       const oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj);
+      winPct = sbWinProbability(myProj, oppProj);
       scoreHtml =
         `<span class="sb-exp-score-item"><b>${myProj.toFixed(1)}</b> vs <b>${oppProj.toFixed(1)}</b> <i>proj</i></span>` +
         `<span class="sb-exp-score-item">${myPts.toFixed(1)} vs ${oppPts.toFixed(1)} <i>live</i></span>` +
@@ -11470,20 +11497,26 @@
     } else {
       scoreHtml = `<span class="sb-exp-score-item">${card.querySelector('.sb-card-score').textContent}</span>`;
     }
+    const fieldKey = entry.league.league_id;
+    const startPct = winPct != null ? (__sbFieldPrevPct[fieldKey] != null ? __sbFieldPrevPct[fieldKey] : winPct) : 50;
     panel.innerHTML =
       `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
-      '<div class="sb-lineups-cols">' +
-        '<div class="sb-lineup-col">' +
-          '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
-          '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
-          `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
+      '<div class="sb-exp-body">' +
+        '<div class="sb-lineups-cols">' +
+          '<div class="sb-lineup-col">' +
+            '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
+            '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+            `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
+          '</div>' +
+          '<div class="sb-lineup-col">' +
+            '<div class="sb-lineup-label sb-lineup-label-opp">OPPONENT LINEUP</div>' +
+            '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+            `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
+          '</div>' +
         '</div>' +
-        '<div class="sb-lineup-col">' +
-          '<div class="sb-lineup-label sb-lineup-label-opp">OPPONENT LINEUP</div>' +
-          '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
-          `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
-        '</div>' +
+        sbFieldPanelHtml(startPct) +
       '</div>';
+    animateSbFieldPanel(panel, fieldKey, winPct);
   }
 
   const sbGridEl = document.getElementById('sbGrid');
@@ -11494,7 +11527,6 @@
       if (e.target.closest('.sb-expand')) {
         document.querySelectorAll('.sb-expand').forEach(el => el.remove());
         document.querySelectorAll('.sb-card.is-open').forEach(el => el.classList.remove('is-open'));
-        if (window.updateFootballField) window.updateFootballField();
         return;
       }
       const card = e.target.closest('.sb-card');
@@ -11503,14 +11535,13 @@
       const alreadyOpen = openExpand && openExpand.classList.contains('sb-expand');
       document.querySelectorAll('.sb-expand').forEach(el => el.remove());
       document.querySelectorAll('.sb-card.is-open').forEach(el => el.classList.remove('is-open'));
-      if (alreadyOpen) { if (window.updateFootballField) window.updateFootballField(); return; }
+      if (alreadyOpen) return;
 
       const leagueId = card.dataset.sleeperLeagueId;
       const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
       if (entry && window.sleeperGetPlayerDict) {
         const override = window.__sleeperScoreboardOverride ? window.__sleeperScoreboardOverride.byLeague[leagueId] : null;
         openRealSbExpand(card, entry, override);
-        if (window.updateFootballField) window.updateFootballField();
         return;
       }
 
@@ -11528,7 +11559,6 @@
 
       card.after(panel);
       card.classList.add('is-open');
-      if (window.updateFootballField) window.updateFootballField();
     });
   }
 
@@ -14215,75 +14245,6 @@
     document.addEventListener('click', () => { sbTankPanelEl.hidden = true; });
   }
 
-  // Football-field win-probability tracker: mirrors whichever sb-card is
-  // currently open (or the average across all of them when none is) onto
-  // a 0-100 yard scale -- 63% win prob sits at the 63-yard line, i.e. the
-  // opponent's 37. Re-run after every render/poll and every card
-  // open/close so the ball is always showing the right matchup.
-  const __sbFieldPrevPct = {};
-  let __sbFieldDeltaTimer = null;
-  function getSbFieldTarget() {
-    const openCard = document.querySelector('#sbGrid .sb-card.is-open');
-    if (!openCard) return null;
-    const wp = Number(openCard.dataset.winpct);
-    return {
-      key: openCard.dataset.sleeperLeagueId || openCard.dataset.name || 'open',
-      label: openCard.dataset.name || 'This Matchup',
-      winPct: wp >= 0 ? wp : null,
-    };
-  }
-  function updateFootballField() {
-    const fieldCol = document.getElementById('sbFieldCol');
-    const panel = document.getElementById('sbFieldPanel');
-    const ballPos = document.getElementById('sbFieldBallPos');
-    if (!fieldCol || !panel || !ballPos) return;
-    const target = getSbFieldTarget();
-    // Only shown once you've clicked into a matchup -- stays out of the
-    // way on the main Scoreboard list.
-    fieldCol.hidden = !target;
-    if (!target) return;
-    const labelEl = document.getElementById('sbFieldLabel');
-    const pctEl = document.getElementById('sbFieldPct');
-    const yardEl = document.getElementById('sbFieldYardText');
-    const deltaEl = document.getElementById('sbFieldDelta');
-    if (labelEl) labelEl.textContent = target.label;
-    if (target.winPct == null) {
-      if (pctEl) pctEl.textContent = '--';
-      if (yardEl) yardEl.textContent = 'No projections yet';
-      ballPos.style.bottom = '50%';
-      return;
-    }
-    const pct = Math.max(2, Math.min(98, target.winPct));
-    if (pctEl) pctEl.textContent = `${Math.round(target.winPct)}%`;
-    if (yardEl) {
-      const rounded = Math.round(target.winPct);
-      yardEl.textContent = rounded === 50 ? 'Ball on the 50 -- midfield'
-        : rounded > 50 ? `Ball on the opponent's ${100 - rounded}`
-        : `Ball on your own ${rounded}`;
-    }
-    ballPos.style.bottom = `${pct}%`;
-
-    const prev = __sbFieldPrevPct[target.key];
-    __sbFieldPrevPct[target.key] = target.winPct;
-    if (prev != null && deltaEl) {
-      const delta = Math.round(target.winPct - prev);
-      if (delta !== 0) {
-        deltaEl.textContent = `${delta > 0 ? '+' : ''}${delta} YDS`;
-        deltaEl.className = 'field-delta ' + (delta > 0 ? 'field-delta-pos' : 'field-delta-neg');
-        deltaEl.style.bottom = `${pct}%`;
-        // Force reflow so the fade-in retriggers even if the class list
-        // didn't actually change (e.g. two gains in a row).
-        deltaEl.classList.remove('field-delta-show');
-        void deltaEl.offsetWidth;
-        deltaEl.classList.add('field-delta-show');
-        clearTimeout(__sbFieldDeltaTimer);
-        __sbFieldDeltaTimer = setTimeout(() => deltaEl.classList.remove('field-delta-show'), 2800);
-      }
-    }
-  }
-  window.updateFootballField = updateFootballField;
-  updateFootballField();
-
   function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
     if (!sbGrid) return;
@@ -14400,7 +14361,6 @@
         openRealSbExpand(newCard, reopenEntry, reopenOverride);
       }
     }
-    updateFootballField();
   }
   window.renderRealScoreboard = renderRealScoreboard;
 
