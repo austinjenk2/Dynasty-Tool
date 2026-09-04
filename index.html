@@ -1852,7 +1852,8 @@
   .dr-grid-col { display: flex; flex-direction: column; gap: 8px; width: 132px; flex-shrink: 0; }
   .dr-grid-team-head { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 4px; cursor: pointer; border-radius: 6px; border: 1.5px solid transparent; }
   .dr-grid-team-head:hover, .dr-grid-team-head.is-active { border-color: var(--ink); background: var(--surface); }
-  .dr-team-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .dr-team-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; position: relative; overflow: hidden; }
+  .dr-team-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .dr-team-name { font-size: 11px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
 
   .dr-pick {
@@ -10175,6 +10176,15 @@
       return drUserName(entry, roster.owner_id);
     }
 
+    // Real manager profile photo from Sleeper's avatar CDN (same one used
+    // for league logos), keyed off the roster's owner user object.
+    function drRosterOwnerAvatarImg(entry, rosterId) {
+      const roster = (entry.allRosters || []).find(r => r.roster_id === rosterId);
+      const user = roster ? (entry.users || []).find(u => u.user_id === roster.owner_id) : null;
+      if (!user || !user.avatar) return '';
+      return `<img src="https://sleepercdn.com/avatars/thumbs/${user.avatar}" alt="" loading="lazy" onerror="this.remove()">`;
+    }
+
     function drStatusMeta(status) {
       if (status === 'complete') return { cls: 'dr-status-complete', label: 'COMPLETE' };
       if (status === 'drafting') return { cls: 'dr-status-live', label: 'LIVE' };
@@ -10343,7 +10353,7 @@
         }
         return '<div class="dr-grid-col">' +
           '<div class="dr-grid-team-head" data-team="' + originalRosterId + '">' +
-            '<div class="dr-team-avatar" style="background:' + headColor + '">' + drInitials(headName) + '</div>' +
+            '<div class="dr-team-avatar" style="background:' + headColor + '">' + drInitials(headName) + drRosterOwnerAvatarImg(entry, originalRosterId) + '</div>' +
             '<div class="dr-team-name">' + headName + '</div>' +
           '</div>' +
           rowsHtml.join('') +
