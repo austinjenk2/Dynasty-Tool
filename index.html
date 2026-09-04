@@ -389,6 +389,17 @@
     margin-top: 4px;
   }
 
+  .ph-draft-capital { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border-soft); }
+  .ph-draft-capital-head { font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; color: var(--faint); margin-bottom: 14px; }
+  .ph-draft-capital-head span { font-weight: 500; text-transform: none; letter-spacing: 0; margin-left: 4px; }
+  .ph-draft-capital-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .ph-dc-season { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 15px; color: var(--ink); margin-bottom: 10px; }
+  .ph-dc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .ph-dc-round { width: 26px; flex-shrink: 0; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .ph-dc-bar-bg { flex: 1; height: 8px; border-radius: 4px; background: var(--border-soft); position: relative; overflow: hidden; }
+  .ph-dc-bar-fill { position: absolute; inset: 0; width: 0; background: var(--blue); border-radius: 4px; }
+  .ph-dc-value { width: 40px; flex-shrink: 0; text-align: right; font-weight: 700; font-size: 14px; color: var(--ink); }
+
   /* Team strength scatter */
   .scatter-wrap { position: relative; width: 100%; aspect-ratio: 1 / 0.62; }
   .scatter-quads {
@@ -2149,6 +2160,11 @@
               <div class="track-marker" id="phPointProjMarker" style="left:0%" hidden></div>
             </div>
             <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
+          </div>
+
+          <div class="ph-draft-capital" id="phDraftCapital" hidden>
+            <div class="ph-draft-capital-head">DRAFT CAPITAL <span>avg picks per league</span></div>
+            <div class="ph-draft-capital-cols" id="phDraftCapitalCols"></div>
           </div>
         </div>
 
@@ -12038,7 +12054,7 @@
         window.__sleeperTransactionsCache = window.__sleeperTransactionsCache || {};
         const tradeWeeks = [];
         for (let w = 0; w <= week; w++) tradeWeeks.push(w);
-        const [rosters, allMatchups, allUsers, projections, allTransactions, trendingAdds] = await Promise.all([
+        const [rosters, allMatchups, allUsers, projections, allTransactions, trendingAdds, allTradedPicks] = await Promise.all([
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/matchups/${week}`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
@@ -12055,6 +12071,12 @@
             })).then(arrs => arrs.flat())
           )),
           sleeperFetch('/players/nfl/trending/add?lookback_hours=24&limit=25').catch(() => []),
+          // Future draft-pick ownership (Draft Capital) only matters for
+          // real dynasty/keeper leagues -- redraft leagues don't carry
+          // picks forward, so skip the fetch for those entirely.
+          Promise.all(leagues.map(lg => sbLeagueIsDynasty(lg)
+            ? sleeperFetch(`/league/${lg.league_id}/traded_picks`).catch(() => [])
+            : Promise.resolve([]))),
         ]);
         window.__sleeperProjections = projections;
         window.__sleeperTrendingAdds = trendingAdds;
@@ -12086,6 +12108,7 @@
           window.sleeperLeagueData[lg.league_id] = {
             league: lg, roster: myRoster, isCoOwned, week, myMatchup, oppMatchup, oppUser,
             allRosters: leagueRosters, users, trades: myTrades, allTrades: leagueTrades, allMatchups: matchups,
+            tradedPicks: allTradedPicks[i] || [],
           };
           return renderLeagueRow(lg, i, myRoster, isCoOwned, myMatchup, oppMatchup, oppUser);
         });
@@ -13146,8 +13169,61 @@
       if (phPointProjFill) phPointProjFill.style.width = '0%';
       if (phPointProjMarker) phPointProjMarker.hidden = true;
     }
+
+    renderDraftCapital(entries);
   }
   window.renderRealDashboard = renderRealDashboard;
+
+  // Real future draft-pick ownership, dynasty mode only -- for each of the
+  // next two draft classes, how many picks (per round) you actually own
+  // right now across your dynasty/keeper leagues, worked out from Sleeper's
+  // real traded_picks records (a pick with no trade record is still owned
+  // by whoever originally had it). Averaged per league since some leagues
+  // run more/fewer rounds or you've traded for extra picks in some but not
+  // others.
+  function renderDraftCapital(allEntries) {
+    const section = document.getElementById('phDraftCapital');
+    const colsEl = document.getElementById('phDraftCapitalCols');
+    if (!section || !colsEl) return;
+    if (getSiteMode() !== 'dynasty') { section.hidden = true; return; }
+
+    const dynastyEntries = allEntries.filter(e => sbLeagueIsDynasty(e.league));
+    if (!dynastyEntries.length) { section.hidden = true; return; }
+
+    const currentSeason = Number(dynastyEntries[0].league.season) || new Date().getFullYear();
+    const futureSeasons = [currentSeason + 1, currentSeason + 2];
+    const maxRounds = 4;
+    const roundLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+
+    section.hidden = false;
+    colsEl.innerHTML = futureSeasons.map(season => {
+      const rows = [];
+      for (let round = 1; round <= maxRounds; round++) {
+        let total = 0;
+        dynastyEntries.forEach(e => {
+          const myRosterId = e.roster.roster_id;
+          const tradedPicks = e.tradedPicks || [];
+          (e.allRosters || []).forEach(r => {
+            const tp = tradedPicks.find(p =>
+              Number(p.season) === season && p.round === round && p.roster_id === r.roster_id);
+            const ownerRosterId = tp ? tp.owner_id : r.roster_id;
+            if (ownerRosterId === myRosterId) total++;
+          });
+        });
+        const avg = total / dynastyEntries.length;
+        rows.push({ round, avg });
+      }
+      const maxAvg = Math.max(1, ...rows.map(r => r.avg));
+      const rowsHtml = rows.map(r =>
+        `<div class="ph-dc-row">` +
+          `<span class="ph-dc-round">${roundLabels[r.round]}</span>` +
+          `<div class="ph-dc-bar-bg"><div class="ph-dc-bar-fill" style="width:${Math.min(100, (r.avg / maxAvg) * 100)}%"></div></div>` +
+          `<span class="ph-dc-value">${r.avg.toFixed(2)}</span>` +
+        `</div>`
+      ).join('');
+      return `<div><div class="ph-dc-season">${season}</div>${rowsHtml}</div>`;
+    }).join('');
+  }
 
   // Best-effort real schedule, built from the opponent/date fields the
   // projections payload sometimes carries per player (see getWeekProjections).
