@@ -9970,6 +9970,34 @@
   }
 
   const scheduleGroupsEl = document.getElementById('scheduleGroups');
+  function openScheduleExpand(chip) {
+    const expand = document.createElement('div');
+    expand.className = 'schedule-expand';
+    if (scheduleGroupsEl.dataset.currentWeek === '0') {
+      // .rg-row data reflects this week's actual starters, so a
+      // different week's schedule can't show an accurate exposure match.
+      expand.innerHTML = '<p class="schedule-expand-count">Exposure preview is only available for the current week.</p>';
+    } else {
+      const teamCodes = Array.from(chip.querySelectorAll('.schedule-team span')).map(s => s.textContent.trim());
+      const matches = getRootingDeltasForTeams(teamCodes);
+      if (matches.length === 0) {
+        expand.innerHTML = '<p class="schedule-expand-count">No plus/minus exposure for you in this game.</p>';
+      } else {
+        const chips = matches.map(m => {
+          const cls = m.delta > 0 ? 'schedule-expand-pos' : 'schedule-expand-neg';
+          const sign = m.delta > 0 ? '+' : '';
+          return `<span class="schedule-expand-chip">${m.name} <b class="${cls}">${sign}${m.delta}</b></span>`;
+        }).join('');
+        expand.innerHTML =
+          `<p class="schedule-expand-count">${matches.length} player${matches.length > 1 ? 's' : ''} affect your exposure in this game</p>` +
+          `<div class="schedule-expand-chips">${chips}</div>` +
+          `<a class="schedule-expand-guide">Full Rooting Guide &rarr;</a>`;
+      }
+    }
+    chip.after(expand);
+    const guideLink = expand.querySelector('.schedule-expand-guide');
+    if (guideLink) guideLink.addEventListener('click', () => goToRootingGuide());
+  }
   if (scheduleGroupsEl) {
     // Delegated (not bound per-chip at load) since renderRealSchedule()
     // rebuilds these chips from real data on every sync.
@@ -9980,33 +10008,7 @@
       const isOpen = existing && existing.classList.contains('schedule-expand');
       document.querySelectorAll('.schedule-expand').forEach(el => el.remove());
       if (isOpen) return;
-
-      const expand = document.createElement('div');
-      expand.className = 'schedule-expand';
-      if (scheduleGroupsEl.dataset.currentWeek === '0') {
-        // .rg-row data reflects this week's actual starters, so a
-        // different week's schedule can't show an accurate exposure match.
-        expand.innerHTML = '<p class="schedule-expand-count">Exposure preview is only available for the current week.</p>';
-      } else {
-        const teamCodes = Array.from(chip.querySelectorAll('.schedule-team span')).map(s => s.textContent.trim());
-        const matches = getRootingDeltasForTeams(teamCodes);
-        if (matches.length === 0) {
-          expand.innerHTML = '<p class="schedule-expand-count">No plus/minus exposure for you in this game.</p>';
-        } else {
-          const chips = matches.map(m => {
-            const cls = m.delta > 0 ? 'schedule-expand-pos' : 'schedule-expand-neg';
-            const sign = m.delta > 0 ? '+' : '';
-            return `<span class="schedule-expand-chip">${m.name} <b class="${cls}">${sign}${m.delta}</b></span>`;
-          }).join('');
-          expand.innerHTML =
-            `<p class="schedule-expand-count">${matches.length} player${matches.length > 1 ? 's' : ''} affect your exposure in this game</p>` +
-            `<div class="schedule-expand-chips">${chips}</div>` +
-            `<a class="schedule-expand-guide">Full Rooting Guide &rarr;</a>`;
-        }
-      }
-      chip.after(expand);
-      const guideLink = expand.querySelector('.schedule-expand-guide');
-      if (guideLink) guideLink.addEventListener('click', () => goToRootingGuide());
+      openScheduleExpand(chip);
     });
   }
 
@@ -11100,6 +11102,13 @@
     );
   }
 
+  function openRgExpand(row) {
+    const expand = document.createElement('div');
+    expand.className = 'rg-expand';
+    expand.innerHTML = rgExpandHtml(row);
+    row.after(expand);
+  }
+
   document.addEventListener('click', (e) => {
     const leagueRow = e.target.closest('.rg-expand .pm-league-row[data-league]');
     if (leagueRow) {
@@ -11113,10 +11122,7 @@
     const isOpen = existing && existing.classList.contains('rg-expand');
     document.querySelectorAll('.rg-expand').forEach(el => el.remove());
     if (isOpen) return;
-    const expand = document.createElement('div');
-    expand.className = 'rg-expand';
-    expand.innerHTML = rgExpandHtml(row);
-    row.after(expand);
+    openRgExpand(row);
   });
 
   (function initRootingLeaguesBlacklist() {
@@ -11291,6 +11297,16 @@
         };
       }).filter(Boolean);
 
+      // Every 60s poll rebuilds these rows from scratch, which used to
+      // silently close whatever player's league list a person had open --
+      // same "randomly kicks you out" bug fixed for the Scoreboard and
+      // Weekly Schedule expand panels. Remember which player was open and
+      // reopen the same one on their new row after rebuilding.
+      const openExpandEl = document.querySelector('.rg-row + .rg-expand');
+      const openPlayerId = openExpandEl && openExpandEl.previousElementSibling
+        ? openExpandEl.previousElementSibling.dataset.playerId
+        : null;
+
       document.querySelectorAll('.rg-row').forEach(el => el.remove());
       rgRows = rowsData.map(r => {
         const delta = r.for.length - r.against.length;
@@ -11332,6 +11348,11 @@
       wireChips();
       updateCount();
       recomputeRootingGuide();
+
+      if (openPlayerId) {
+        const newRow = document.querySelector(`.rg-row[data-player-id="${openPlayerId}"]`);
+        if (newRow) openRgExpand(newRow);
+      }
 
       // Weekly Sweats on the Dashboard is just the top 3 for/against from
       // this same computation -- shared via window so the two never drift
@@ -13004,6 +13025,16 @@
     const firstEntry = Object.values(window.sleeperLeagueData || {}).find(e => e.roster);
     if (!firstEntry) return;
 
+    // The 60s poll rebuilds this whole list from real data every time,
+    // which used to silently close whatever game preview a person had
+    // open -- same class of "randomly kicks you out" bug fixed for the
+    // Scoreboard's matchup expand. Remember which one was open and
+    // reopen the same matchup's preview after rebuilding.
+    const openChipEl = container.querySelector('.schedule-chip + .schedule-expand');
+    const openGame = openChipEl && openChipEl.previousElementSibling
+      ? { away: openChipEl.previousElementSibling.dataset.away, home: openChipEl.previousElementSibling.dataset.home }
+      : null;
+
     const currentWeek = firstEntry.week;
     const week = overrideWeek || currentWeek;
     const season = firstEntry.league.season;
@@ -13102,6 +13133,11 @@
         '</div>' +
       '</div>';
     }).join('');
+
+    if (openGame) {
+      const newChip = container.querySelector(`.schedule-chip[data-away="${openGame.away}"][data-home="${openGame.home}"]`);
+      if (newChip) openScheduleExpand(newChip);
+    }
   }
   window.renderRealSchedule = renderRealSchedule;
 
