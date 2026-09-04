@@ -242,6 +242,8 @@
   }
   .schedule-team { display: flex; align-items: center; gap: 4px; }
   .schedule-team img { width: 16px; height: 16px; object-fit: contain; }
+  .schedule-score { margin-left: 3px; font-weight: 800; color: var(--ink); }
+  .schedule-time-live { color: var(--red); }
   .schedule-at { color: var(--faint); font-size: 11px; font-weight: 700; }
   .schedule-chip { cursor: pointer; }
   .schedule-expand {
@@ -12838,11 +12840,11 @@
   const ESPN_TEAM_ABBR_FIX = { WSH: 'WAS' };
 
   // ESPN's public scoreboard API is unofficial but widely used for exactly
-  // this (real per-game kickoff times) and is reachable directly from a
-  // browser. Used only as an overlay on top of the matchups Sleeper already
-  // gave us -- if this fails or its shape changes, the schedule just falls
-  // back to date-only instead of breaking.
-  async function getEspnKickoffTimes(week, season) {
+  // this (real per-game kickoff times, live scores and game status) and is
+  // reachable directly from a browser. Used only as an overlay on top of
+  // the matchups Sleeper already gave us -- if this fails or its shape
+  // changes, the schedule just falls back to date-only instead of breaking.
+  async function getEspnGameData(week, season) {
     try {
       const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}&year=${season}&seasontype=2`);
       if (!res.ok) throw new Error('ESPN ' + res.status);
@@ -12852,11 +12854,16 @@
         const comp = ev.competitions && ev.competitions[0];
         if (!comp) return;
         const when = comp.date || ev.date;
-        if (!when) return;
+        const statusType = comp.status && comp.status.type;
         (comp.competitors || []).forEach(c => {
           const abbr = c.team && c.team.abbreviation;
           if (!abbr) return;
-          map[ESPN_TEAM_ABBR_FIX[abbr] || abbr] = when;
+          map[ESPN_TEAM_ABBR_FIX[abbr] || abbr] = {
+            when,
+            score: c.score != null ? Number(c.score) : null,
+            state: statusType ? statusType.state : null,
+            detail: statusType ? statusType.shortDetail : null,
+          };
         });
       });
       return map;
@@ -12919,14 +12926,21 @@
       return;
     }
 
-    const kickoffs = await getEspnKickoffTimes(week, season);
+    const espnGames = await getEspnGameData(week, season);
     let anyKickoff = false;
     games.forEach(g => {
-      const iso = kickoffs[g.away] || kickoffs[g.home];
-      if (iso) {
-        const d = new Date(iso);
+      const info = espnGames[g.away] || espnGames[g.home];
+      if (!info) return;
+      if (info.when) {
+        const d = new Date(info.when);
         if (!isNaN(d.getTime())) { g.kickoff = d; anyKickoff = true; }
       }
+      g.state = info.state;
+      g.detail = info.detail;
+      const awayInfo = espnGames[g.away];
+      const homeInfo = espnGames[g.home];
+      if (awayInfo && awayInfo.score != null) g.awayScore = awayInfo.score;
+      if (homeInfo && homeInfo.score != null) g.homeScore = homeInfo.score;
     });
 
     games.sort((a, b) => {
@@ -12941,15 +12955,22 @@
     container.innerHTML = games.map(g => {
       const awayLower = g.away.toLowerCase();
       const homeLower = g.home.toLowerCase();
-      const timeLabel = g.kickoff
+      const kickoffLabel = g.kickoff
         ? g.kickoff.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }).toUpperCase()
         : (g.date ? g.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase() : 'DATE TBD');
+      const isLive = g.state === 'in';
+      const isFinal = g.state === 'post';
+      const timeLabel = isFinal ? 'FINAL' : (isLive ? (g.detail || 'LIVE') : kickoffLabel);
+      const timeClass = isLive ? ' schedule-time-live' : '';
+      const showScore = (isLive || isFinal) && g.awayScore != null && g.homeScore != null;
+      const awayScoreHtml = showScore ? `<span class="schedule-score">${g.awayScore}</span>` : '';
+      const homeScoreHtml = showScore ? `<span class="schedule-score">${g.homeScore}</span>` : '';
       return `<div class="schedule-chip" data-away="${g.away}" data-home="${g.home}">` +
-        `<div class="schedule-time">${timeLabel}</div>` +
+        `<div class="schedule-time${timeClass}">${timeLabel}</div>` +
         '<div class="schedule-row">' +
-          `<div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/${awayLower}.png" alt="${g.away}" onerror="this.style.display='none'"><span>${g.away}</span></div>` +
+          `<div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/${awayLower}.png" alt="${g.away}" onerror="this.style.display='none'"><span>${g.away}</span>${awayScoreHtml}</div>` +
           '<span class="schedule-at">@</span>' +
-          `<div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/${homeLower}.png" alt="${g.home}" onerror="this.style.display='none'"><span>${g.home}</span></div>` +
+          `<div class="schedule-team"><img src="https://sleepercdn.com/images/team_logos/nfl/${homeLower}.png" alt="${g.home}" onerror="this.style.display='none'"><span>${g.home}</span>${homeScoreHtml}</div>` +
         '</div>' +
       '</div>';
     }).join('');
