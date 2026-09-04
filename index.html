@@ -1355,6 +1355,7 @@
     padding: 2px 7px;
   }
   .favored-tag.underdog { color: var(--red); background: var(--red-bg); }
+  .favored-tag.close { color: var(--gold); background: #f6efe0; }
   .roster-pill {
     justify-self: center;
     font-size: 10px;
@@ -2850,6 +2851,11 @@
           <div class="sb-stat" id="sbStatOptimal">
             <div class="sb-stat-value sb-green">99%</div>
             <div class="sb-stat-label">OF OPTIMAL STARTED</div>
+          </div>
+          <div class="sb-stat-divider"></div>
+          <div class="sb-stat" id="sbStatRecord">
+            <div class="sb-stat-value" id="sbStatRecordValue">0.0-0.0</div>
+            <div class="sb-stat-label">PROJECTED WEEKLY RECORD</div>
           </div>
           <div class="sb-stat-divider"></div>
           <div class="sb-stat" id="sbStatWins">
@@ -10763,6 +10769,17 @@
     return Math.round(Math.min(99, Math.max(1, pct * 100)));
   }
 
+  // >60% win prob reads as a real favorite (green), <40% a real underdog
+  // (red), and everything in between is a true toss-up (yellow) -- used
+  // everywhere a "Favored by/Underdog by" tag is shown so close games
+  // don't get colored as confidently as blowouts.
+  function sbFavoredTagClass(myTotal, oppTotal) {
+    const winPct = sbWinProbability(myTotal, oppTotal);
+    if (winPct > 60) return '';
+    if (winPct < 40) return ' underdog';
+    return ' close';
+  }
+
   function sbLineupRowsHtml(matchup, dict, projMap, league) {
     if (!matchup) {
       return '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:16px 0">No matchup data yet</td></tr>';
@@ -11541,9 +11558,11 @@
         const hasData = sbMatchupHasData(myMatchup, null, league) || sbMatchupHasData(oppMatchup, null, league);
         const myProj = hasData ? sbMatchupProjectedTotal(myMatchup, null, league) : 0;
         const oppProj = hasData ? sbMatchupProjectedTotal(oppMatchup, null, league) : 0;
+        let favoredTagClass = '';
         if (hasData) {
           const margin = Math.abs(myProj - oppProj).toFixed(1);
           favoredTagText = myProj >= oppProj ? `Favored by ${margin}` : `Underdog by ${margin}`;
+          favoredTagClass = sbFavoredTagClass(myProj, oppProj);
         } else {
           favoredTagText = 'No projections available';
         }
@@ -11555,7 +11574,7 @@
         matchupHtml =
           `<div class="matchup-scores"><span class="proj-score mine">${hasData ? myProj.toFixed(1) : '&mdash;'}</span><span class="matchup-vs">vs</span><span class="proj-score theirs">${hasData ? oppProj.toFixed(1) : '&mdash;'}</span></div>` +
           `<div class="matchup-live-score">${myPts.toFixed(1)} vs ${oppPts.toFixed(1)} live</div>` +
-          `<div class="favored-tag">vs ${oppName} &middot; ${favoredTagText}</div>`;
+          `<div class="favored-tag${favoredTagClass}">vs ${oppName} &middot; ${favoredTagText}</div>`;
       } else {
         row.dataset.weekly = '0';
         weeklyProjText = '&mdash;';
@@ -11942,6 +11961,7 @@
         if (ldFavoredTagEl) {
           const margin = Math.abs(myTotal - oppTotal).toFixed(1);
           ldFavoredTagEl.textContent = myTotal >= oppTotal ? `Favored by ${margin}` : `Underdog by ${margin}`;
+          ldFavoredTagEl.className = `favored-tag${sbFavoredTagClass(myTotal, oppTotal)}`;
         }
         if (ldLiveScoreEl) {
           const myLive = entry.myMatchup.points || 0;
@@ -12126,12 +12146,13 @@
       const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
       const oppName = oppUser ? (oppUser.display_name || oppUser.username || 'Opponent') : 'TBD';
       const hasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
-      let favoredTagText, weeklyProjText, myProj = 0, oppProj = 0;
+      let favoredTagText, favoredTagClass = '', weeklyProjText, myProj = 0, oppProj = 0;
       if (hasData) {
         myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league);
         oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
         const margin = Math.abs(myProj - oppProj).toFixed(1);
         favoredTagText = myProj >= oppProj ? `Favored by ${margin}` : `Underdog by ${margin}`;
+        favoredTagClass = sbFavoredTagClass(myProj, oppProj);
         weeklyProjText = myProj.toFixed(1);
       } else {
         favoredTagText = 'No projections available';
@@ -12146,7 +12167,7 @@
         matchupCell.innerHTML =
           `<div class="matchup-scores"><span class="proj-score mine">${hasData ? myProj.toFixed(1) : '&mdash;'}</span><span class="matchup-vs">vs</span><span class="proj-score theirs">${hasData ? oppProj.toFixed(1) : '&mdash;'}</span></div>` +
           `<div class="matchup-live-score">${myPts.toFixed(1)} vs ${oppPts.toFixed(1)} live</div>` +
-          `<div class="favored-tag">vs ${oppName} &middot; ${favoredTagText}</div>`;
+          `<div class="favored-tag${favoredTagClass}">vs ${oppName} &middot; ${favoredTagText}</div>`;
       }
     }));
   }
@@ -13031,7 +13052,7 @@
 
     const override = window.__sleeperScoreboardOverride || null;
 
-    let totalPts = 0, favoredCount = 0, withMatchup = 0;
+    let totalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0;
     sbGrid.innerHTML = entries.map((entry, i) => {
       const ov = override ? override.byLeague[entry.league.league_id] : null;
       const myMatchup = ov ? ov.myMatchup : entry.myMatchup;
@@ -13064,8 +13085,11 @@
           // Same favorite/underdog split used everywhere else (Dashboard's
           // Projected Weekly Record included) -- no separate "close game"
           // threshold here, so the counts can't disagree between pages.
-          if (winPct > 50) { favoredCount++; badgeClass = 'sb-badge-good'; }
-          else if (winPct < 50) { badgeClass = 'sb-badge-bad'; }
+          if (winPct > 50) favoredCount++;
+          projWinSum += winPct / 100;
+          projLossSum += 1 - winPct / 100;
+          if (winPct > 60) badgeClass = 'sb-badge-good';
+          else if (winPct < 40) badgeClass = 'sb-badge-bad';
           else { badgeClass = 'sb-badge-close'; }
           badgeText = `${winPct}% Win Prob`;
         } else {
@@ -13097,11 +13121,16 @@
     const optimalDivider = document.getElementById('sbStatOptimalDivider');
     const winsValue = document.getElementById('sbStatWinsValue');
     const winsLabel = document.getElementById('sbStatWinsLabel');
+    const recordValue = document.getElementById('sbStatRecordValue');
     const week = override ? override.week : (entries[0].week || 1);
     if (ptsValue) ptsValue.textContent = totalPts.toFixed(1);
     if (ptsLabel) ptsLabel.innerHTML = `WEEK <span class="sb-week-num">${week}</span> PTS SO FAR`;
     if (optimalStat) optimalStat.hidden = true;
     if (optimalDivider) optimalDivider.hidden = true;
+    // Exact decimal record: each matchup contributes its own win% as a
+    // fraction of a win (e.g. 63% win prob = 0.63 wins, 0.37 losses)
+    // instead of rounding every matchup to a binary favorite/underdog.
+    if (recordValue) recordValue.textContent = `${projWinSum.toFixed(2)}-${projLossSum.toFixed(2)}`;
     if (winsValue) winsValue.textContent = `${favoredCount} of ${withMatchup}`;
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
