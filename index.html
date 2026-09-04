@@ -587,10 +587,12 @@
   .sb-exp-meta .sb-delta { color: var(--green); }
   .sb-exp-right { text-align: right; flex-shrink: 0; }
   .sb-exp-score { margin-bottom: 6px; }
+  .sb-orig-score { font-size: 10.5px; font-weight: 600; color: var(--faint); margin-top: 2px; }
   .sb-exp-score .sb-score-mine, .sb-exp-score .sb-score-theirs { font-size: 18px; }
 
-  .sb-lineups-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  @media (max-width: 800px) { .sb-lineups-cols { grid-template-columns: 1fr; } }
+  .sb-lineups-cols { display: flex; justify-content: center; gap: 40px; }
+  .sb-lineup-col { flex: 0 1 auto; min-width: 0; }
+  @media (max-width: 800px) { .sb-lineups-cols { flex-direction: column; align-items: stretch; } }
   .sb-lineup-label { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 8px; }
   .sb-lineup-label-you { color: var(--green); }
   .sb-lineup-label-opp { color: var(--red); }
@@ -1347,6 +1349,7 @@
   .proj-score.theirs { color: var(--ink); }
   .matchup-vs { font-family: 'Source Sans 3', sans-serif; font-size: 10px; color: var(--faint); font-weight: 600; }
   .matchup-live-score { font-size: 13px; font-weight: 700; color: var(--muted); }
+  .ld-orig-score { font-size: 10.5px; font-weight: 600; color: var(--faint); margin-top: 2px; }
   .favored-tag {
     align-self: flex-start;
     font-size: 9.5px;
@@ -1860,7 +1863,7 @@
 
   .dr-pick {
     background: var(--surface);
-    border: 1.5px solid var(--border-soft);
+    border: 2.5px solid var(--border-soft);
     border-radius: 6px;
     padding: 8px;
     height: 82px;
@@ -1874,13 +1877,14 @@
   .dr-pick.dr-team-dim { opacity: 0.3; }
   .dr-pick-num { font-size: 9.5px; font-weight: 700; color: var(--faint); float: right; }
   .dr-pick-name { font-size: 12px; font-weight: 700; color: var(--ink); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dr-pick-meta { font-size: 10px; color: var(--faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dr-pick-meta { font-size: 10px; color: var(--faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px; }
   .dr-pick-meta .dr-pos { font-weight: 800; }
   .dr-pick-meta.dr-pos-qb .dr-pos { color: var(--red); }
   .dr-pick-meta.dr-pos-rb .dr-pos { color: var(--green); }
   .dr-pick-meta.dr-pos-wr .dr-pos { color: var(--blue); }
   .dr-pick-meta.dr-pos-te .dr-pos { color: var(--gold); }
-  .dr-pick-trade { font-size: 9.5px; color: var(--faint); font-style: italic; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dr-pick-meta-logo { width: 13px; height: 13px; object-fit: contain; }
+  .dr-pick-trade { font-size: 11.5px; font-weight: 700; color: var(--ink); font-style: normal; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .dr-board-bottom { display: block; }
   .dr-roster-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
@@ -1979,7 +1983,7 @@
   .trade-col.trade-values-hidden { filter: blur(5px); }
   .trade-asset-player, .trade-asset-pick, .trade-asset-faab { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
   .trade-asset-avatar {
-    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
     background: var(--surface); overflow: hidden;
   }
   .trade-asset-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -2797,6 +2801,7 @@
             <span class="ld-opp" id="ldOpp">jtford23</span>
           </div>
           <div class="matchup-live-score" id="ldLiveScore"></div>
+          <div class="ld-orig-score" id="ldOrigScore"></div>
         </div>
       </div>
 
@@ -10349,7 +10354,8 @@
             '<div class="dr-pick ' + posClass + '" data-team="' + currentRosterId + '">' +
               '<span class="dr-pick-num">' + pickNum + '</span>' +
               '<div class="dr-pick-name">' + info.name + '</div>' +
-              '<div class="dr-pick-meta ' + posClass + '"><span class="dr-pos">' + info.pos + '</span> &middot; ' + info.team + '</div>' +
+              '<div class="dr-pick-meta ' + posClass + '"><span class="dr-pos">' + info.pos + '</span>' +
+                '<img class="dr-pick-meta-logo" src="' + sbTeamLogoUrl(info.team) + '" alt="' + info.team + '" title="' + info.team + '" loading="lazy" onerror="this.remove()"></div>' +
               (traded ? '<div class="dr-pick-trade">&rarr; ' + currentName + '</div>' : '') +
             '</div>'
           );
@@ -10941,15 +10947,32 @@
 
     const cardLogo = card.querySelector('.sb-card-logo');
     const badge = card.querySelector('.sb-badge');
+    const week = override ? override.week : entry.week;
+    const expHasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
+    let scoreHtml;
+    if (expHasData) {
+      const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league);
+      const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
+      const myPts = myMatchup ? (myMatchup.points || 0) : 0;
+      const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
+      const myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj);
+      const oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj);
+      scoreHtml =
+        `<span class="sb-score-mine">${myProj.toFixed(1)}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${oppProj.toFixed(1)}</span>` +
+        `<div class="sb-live-score">${myPts.toFixed(1)} vs ${oppPts.toFixed(1)} live</div>` +
+        `<div class="sb-orig-score">Started at ${myOrig.toFixed(1)} vs ${oppOrig.toFixed(1)}</div>`;
+    } else {
+      scoreHtml = card.querySelector('.sb-card-score').innerHTML;
+    }
     panel.innerHTML =
       '<div class="sb-exp-header">' +
-        `<div class="sb-exp-logo" style="background:${cardLogo.style.background}">${cardLogo.textContent}</div>` +
+        `<div class="sb-exp-logo" style="background:${cardLogo.style.background}">${cardLogo.innerHTML}</div>` +
         '<div class="sb-exp-title">' +
           `<div class="sb-exp-name">${card.querySelector('.sb-card-name').textContent}</div>` +
           `<div class="sb-exp-meta">${card.querySelector('.sb-card-meta').innerHTML}</div>` +
         '</div>' +
         '<div class="sb-exp-right">' +
-          `<div class="sb-exp-score">${card.querySelector('.sb-card-score').innerHTML}</div>` +
+          `<div class="sb-exp-score">${scoreHtml}</div>` +
           `<div class="sb-badge ${badge.className.replace('sb-badge', '').trim()}">${badge.textContent}</div>` +
         '</div>' +
       '</div>' +
@@ -12104,6 +12127,7 @@
       }
 
       const ldLiveScoreEl = document.getElementById('ldLiveScore');
+      const ldOrigScoreEl = document.getElementById('ldOrigScore');
       if (ldProjWeekEl) ldProjWeekEl.textContent = String(entry.week || 1);
       if (entry.myMatchup && entry.oppMatchup && (sbMatchupHasData(entry.myMatchup, null, entry.league) || sbMatchupHasData(entry.oppMatchup, null, entry.league))) {
         const myTotal = sbMatchupProjectedTotal(entry.myMatchup, null, entry.league);
@@ -12121,18 +12145,25 @@
           const oppLive = entry.oppMatchup.points || 0;
           ldLiveScoreEl.textContent = `${myLive.toFixed(1)} vs ${oppLive.toFixed(1)} live`;
         }
+        if (ldOrigScoreEl) {
+          const myOrig = origProjFor(entry.league.season, entry.week, 'teams', entry.league.league_id + '_mine', myTotal);
+          const oppOrig = origProjFor(entry.league.season, entry.week, 'teams', entry.league.league_id + '_opp', oppTotal);
+          ldOrigScoreEl.textContent = `Started at ${myOrig.toFixed(1)} vs ${oppOrig.toFixed(1)}`;
+        }
       } else if (entry.myMatchup && entry.oppMatchup) {
         if (ldProjMineEl) ldProjMineEl.textContent = '—';
         if (ldProjTheirsEl) ldProjTheirsEl.textContent = '—';
         if (ldOppEl) ldOppEl.textContent = entry.oppUser ? (entry.oppUser.display_name || entry.oppUser.username) : '—';
         if (ldFavoredTagEl) ldFavoredTagEl.textContent = 'No projections available';
         if (ldLiveScoreEl) ldLiveScoreEl.textContent = '';
+        if (ldOrigScoreEl) ldOrigScoreEl.textContent = '';
       } else {
         if (ldProjMineEl) ldProjMineEl.textContent = '—';
         if (ldProjTheirsEl) ldProjTheirsEl.textContent = '—';
         if (ldOppEl) ldOppEl.textContent = '—';
         if (ldFavoredTagEl) ldFavoredTagEl.textContent = 'No matchup yet';
         if (ldLiveScoreEl) ldLiveScoreEl.textContent = '';
+        if (ldOrigScoreEl) ldOrigScoreEl.textContent = '';
       }
 
       let dict;
