@@ -332,6 +332,8 @@
     overflow: hidden;
     margin-bottom: 4px;
   }
+  .sweat-card.for .sweat-avatar { background: var(--green-bg); }
+  .sweat-card.against .sweat-avatar { background: var(--red-bg); }
   .sweat-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .sweat-pos {
     font-size: 8px;
@@ -597,8 +599,8 @@
     padding-bottom: 8px;
     border-bottom: 1px solid var(--border-soft);
   }
-  .sb-exp-table thead th:not(:first-child) { text-align: right; width: 70px; }
-  .sb-exp-table tbody td { padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
+  .sb-exp-table thead th:not(:first-child) { text-align: right; width: 52px; }
+  .sb-exp-table tbody td { padding: 8px 0; border-bottom: 1px solid var(--border-soft); }
   .sb-exp-table tbody tr:last-child td { border-bottom: none; }
   .sb-exp-player { display: flex; align-items: center; gap: 10px; }
   .sb-exp-pos {
@@ -618,7 +620,7 @@
     width: 42px;
     height: 42px;
     border-radius: 50%;
-    background: var(--border-soft);
+    background: var(--surface);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -639,6 +641,7 @@
   .sb-exp-psub { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
   .sb-exp-pts { text-align: right; color: var(--faint); font-weight: 600; }
   .sb-exp-proj { text-align: right; color: var(--gold); font-weight: 700; }
+  .sb-exp-orig { text-align: right; color: var(--faint); font-weight: 600; font-size: 11px; }
   .sb-exp-footer { margin-top: 14px; }
   .sb-exp-full {
     display: block;
@@ -820,10 +823,10 @@
   .ww-player { display: flex; align-items: center; gap: 10px; }
   .ww-avatar {
     flex-shrink: 0;
-    width: 36px;
-    height: 36px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
-    background: var(--border-soft);
+    background: var(--bg);
     overflow: hidden;
   }
   .ww-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1046,12 +1049,12 @@
     overflow: hidden;
   }
   .exp-team-icon img { width: 68%; height: 68%; object-fit: contain; }
-  .exp-avatar-wrap { position: relative; margin: 18px auto 12px; width: 62%; }
+  .exp-avatar-wrap { position: relative; margin: 18px auto 12px; width: 72%; }
   .exp-avatar {
     width: 100%;
     aspect-ratio: 1 / 1;
     border-radius: 50%;
-    background: var(--border-soft);
+    background: var(--surface);
     overflow: hidden;
   }
   .exp-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1110,10 +1113,10 @@
   .exp-list-player { display: flex; align-items: center; gap: 12px; min-width: 0; }
   .exp-list-avatar {
     flex-shrink: 0;
-    width: 36px;
-    height: 36px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
-    background: var(--border-soft);
+    background: var(--surface);
     overflow: hidden;
   }
   .exp-list-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1338,7 +1341,6 @@
   .proj-score.theirs { color: var(--ink); }
   .matchup-vs { font-family: 'Source Sans 3', sans-serif; font-size: 10px; color: var(--faint); font-weight: 600; }
   .matchup-live-score { font-size: 13px; font-weight: 700; color: var(--muted); }
-  .ld-orig-score { font-size: 10.5px; font-weight: 600; color: var(--faint); margin-top: 2px; }
   .favored-tag {
     align-self: flex-start;
     font-size: 9.5px;
@@ -1448,7 +1450,7 @@
   .ld-columns {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    gap: 12px;
   }
   @media (max-width: 1200px) { .ld-columns { grid-template-columns: repeat(2, 1fr); } }
   .ld-col {
@@ -1475,23 +1477,23 @@
   .ld-player {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 6px 8px;
+    gap: 6px;
+    padding: 8px 10px;
     border-bottom: 1px solid var(--border-soft);
     font-size: 11.5px;
   }
   .ld-player:last-child { border-bottom: none; }
   .ld-pos {
     flex-shrink: 0;
-    min-width: 26px;
+    min-width: 32px;
     text-align: center;
-    font-size: 8px;
+    font-size: 8.5px;
     font-weight: 800;
     letter-spacing: 0.2px;
     color: #fff;
     background: var(--muted);
     border-radius: 4px;
-    padding: 2px 4px;
+    padding: 2px 5px;
   }
   .ld-pos.qb { background: var(--red); }
   .ld-pos.rb { background: var(--green); }
@@ -1502,12 +1504,9 @@
   .ld-pname { flex: 1; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ld-via { font-weight: 500; font-style: normal; color: var(--faint); font-size: 9.5px; }
   .ld-pteam { font-size: 9.5px; color: var(--faint); font-weight: 600; display: inline-flex; align-items: center; }
-  .ld-team-logo { width: 20px; height: 20px; object-fit: contain; }
-  .ld-pnum { flex-shrink: 0; text-align: right; line-height: 1.15; }
-  .ld-pnum-live { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink); }
-  .ld-pnum-live i { font-style: normal; font-size: 7px; font-weight: 600; color: var(--faint); margin-left: 2px; }
-  .ld-pnum-orig { display: block; font-size: 8.5px; font-weight: 600; color: var(--faint); }
-  .ld-pnum-orig i { font-style: normal; }
+  .ld-team-logo { width: 22px; height: 22px; object-fit: contain; }
+  .ld-pnum { font-size: 10.5px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1.2; }
+  .ld-pnum i { font-style: normal; font-size: 7.5px; font-weight: 600; color: var(--faint); }
   .ld-loading { grid-column: 1 / -1; text-align: center; color: var(--faint); font-size: 13px; padding: 30px 0; }
 
   /* Notebook panel */
@@ -1924,7 +1923,7 @@
     font-size: 7px; font-weight: 700; color: var(--faint);
   }
   .adp-avatar-wrap { position: relative; margin: 5px 0; }
-  .adp-avatar { width: 100%; aspect-ratio: 1 / 0.85; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #fff; background: var(--border-soft); overflow: hidden; }
+  .adp-avatar { width: 100%; aspect-ratio: 1 / 0.85; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #fff; background: var(--surface); overflow: hidden; }
   .adp-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .adp-pos-badge { position: absolute; bottom: 3px; right: 3px; font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 3px; color: #fff; }
   .adp-pos-badge.adp-qb { background: var(--red); }
@@ -2782,7 +2781,6 @@
             <span class="ld-opp" id="ldOpp">jtford23</span>
           </div>
           <div class="matchup-live-score" id="ldLiveScore"></div>
-          <div class="ld-orig-score" id="ldOrigScore"></div>
         </div>
       </div>
 
@@ -10832,9 +10830,9 @@
     return bucket[key];
   }
 
-  function sbLineupRowsHtml(matchup, dict, projMap, league) {
+  function sbLineupRowsHtml(matchup, dict, projMap, league, week) {
     if (!matchup) {
-      return '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:16px 0">No matchup data yet</td></tr>';
+      return '<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:16px 0">No matchup data yet</td></tr>';
     }
     // Includes the same predicted fill-in for an unset lineup slot that the
     // matchup total uses (sbEffectiveStarters), so this table's player count
@@ -10844,7 +10842,7 @@
     const starters = sbEffectiveStarters(matchup, league, projMap);
     const pointsMap = matchup.players_points || {};
     if (!starters.length) {
-      return '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:16px 0">No starters set yet</td></tr>';
+      return '<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:16px 0">No starters set yet</td></tr>';
     }
     return starters.map(id => {
       const p = dict[id];
@@ -10856,6 +10854,8 @@
       const pts = pointsMap[id] != null ? Number(pointsMap[id]).toFixed(1) : '&mdash;';
       const proj = sbProjectionFor(id, projMap, league);
       const projText = proj != null ? proj.toFixed(1) : '&mdash;';
+      const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, proj) : null;
+      const origText = origProj != null ? origProj.toFixed(1) : '&mdash;';
       return '<tr>' +
         '<td class="sb-exp-player">' +
           `<span class="sb-exp-pos sb-pos-${posClass}">${pos}</span>` +
@@ -10864,6 +10864,7 @@
         '</td>' +
         `<td class="sb-exp-pts">${pts}</td>` +
         `<td class="sb-exp-proj">${projText}</td>` +
+        `<td class="sb-exp-orig">${origText}</td>` +
       '</tr>';
     }).join('');
   }
@@ -10904,13 +10905,13 @@
       '<div class="sb-lineups-cols">' +
         '<div class="sb-lineup-col">' +
           '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
-          '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
-          `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap, entry.league)}</tbody></table>` +
+          '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+          `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
         '</div>' +
         '<div class="sb-lineup-col">' +
           '<div class="sb-lineup-label sb-lineup-label-opp">OPPONENT LINEUP</div>' +
-          '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
-          `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league)}</tbody></table>` +
+          '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+          `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
         '</div>' +
       '</div>';
   }
@@ -12004,7 +12005,6 @@
       }
 
       const ldLiveScoreEl = document.getElementById('ldLiveScore');
-      const ldOrigScoreEl = document.getElementById('ldOrigScore');
       if (ldProjWeekEl) ldProjWeekEl.textContent = String(entry.week || 1);
       if (entry.myMatchup && entry.oppMatchup && (sbMatchupHasData(entry.myMatchup, null, entry.league) || sbMatchupHasData(entry.oppMatchup, null, entry.league))) {
         const myTotal = sbMatchupProjectedTotal(entry.myMatchup, null, entry.league);
@@ -12022,25 +12022,18 @@
           const oppLive = entry.oppMatchup.points || 0;
           ldLiveScoreEl.textContent = `${myLive.toFixed(1)} vs ${oppLive.toFixed(1)} live`;
         }
-        if (ldOrigScoreEl) {
-          const myOrig = origProjFor(entry.league.season, entry.week, 'teams', entry.league.league_id + '_mine', myTotal);
-          const oppOrig = origProjFor(entry.league.season, entry.week, 'teams', entry.league.league_id + '_opp', oppTotal);
-          ldOrigScoreEl.textContent = `Started at ${myOrig.toFixed(1)} vs ${oppOrig.toFixed(1)}`;
-        }
       } else if (entry.myMatchup && entry.oppMatchup) {
         if (ldProjMineEl) ldProjMineEl.textContent = '—';
         if (ldProjTheirsEl) ldProjTheirsEl.textContent = '—';
         if (ldOppEl) ldOppEl.textContent = entry.oppUser ? (entry.oppUser.display_name || entry.oppUser.username) : '—';
         if (ldFavoredTagEl) ldFavoredTagEl.textContent = 'No projections available';
         if (ldLiveScoreEl) ldLiveScoreEl.textContent = '';
-        if (ldOrigScoreEl) ldOrigScoreEl.textContent = '';
       } else {
         if (ldProjMineEl) ldProjMineEl.textContent = '—';
         if (ldProjTheirsEl) ldProjTheirsEl.textContent = '—';
         if (ldOppEl) ldOppEl.textContent = '—';
         if (ldFavoredTagEl) ldFavoredTagEl.textContent = 'No matchup yet';
         if (ldLiveScoreEl) ldLiveScoreEl.textContent = '';
-        if (ldOrigScoreEl) ldOrigScoreEl.textContent = '';
       }
 
       let dict;
@@ -12071,7 +12064,6 @@
         const p = dict[id];
         if (!p || !groups[p.position]) return;
         const proj = sbProjectionFor(id, null, entry.league);
-        const origProj = origProjFor(entry.league.season, entry.week, 'players', id, proj);
         groups[p.position].push({
           id,
           name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
@@ -12079,7 +12071,6 @@
           isStarter: starters.has(id),
           slotLabel: starters.has(id) ? (slotByPlayerId[id] || p.position) : (taxiSet.has(id) ? 'TX' : 'BN'),
           proj,
-          origProj,
         });
       });
       Object.keys(groups).forEach(pos => {
@@ -12094,10 +12085,7 @@
             (p.isStarter ? '<span class="ld-star">&#9733;</span>' : '') +
             `<span class="ld-pname">${p.name}</span>` +
             `<span class="ld-pteam"><img class="ld-team-logo" src="${sbTeamLogoUrl(p.team)}" alt="${p.team}" title="${p.team}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span class="ld-team-abbr" style="display:none">${p.team}</span></span>` +
-            '<span class="ld-pnum">' +
-              `<span class="ld-pnum-live">${p.proj != null ? p.proj.toFixed(1) : '&mdash;'}<i>LIVE</i></span>` +
-              (p.proj != null ? `<span class="ld-pnum-orig">${p.origProj.toFixed(1)} <i>ORIG</i></span>` : '') +
-            '</span>' +
+            `<span class="ld-pnum">${p.proj != null ? p.proj.toFixed(1) : '&mdash;'}<br><i>PROJ</i></span>` +
           '</div>'
         ).join('') || '<div class="ld-player"><span class="ld-pname" style="color:var(--faint)">None rostered</span></div>';
         return `<div class="ld-col"><div class="ld-col-head ${posClass}">${LD_POS_LABELS[pos]}</div>${playerRows}</div>`;
