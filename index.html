@@ -471,7 +471,7 @@
   }
   .sb-subtabs { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
   .sb-subtabs-left { display: flex; gap: 22px; }
-  #sbWeekDropdown .week-select { font-size: 12px; margin-bottom: 8px; }
+  #sbWeekDropdown .week-select { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
   .sb-subtab {
     color: var(--muted);
     font-weight: 700;
@@ -1415,7 +1415,10 @@
     font-weight: 700;
     color: #fff;
     font-size: 14px;
+    position: relative;
+    overflow: hidden;
   }
+  .ld-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .ld-name { font-size: 15px; font-weight: 700; color: var(--ink); }
   .ld-meta { font-size: 11.5px; color: var(--faint); margin-top: 2px; }
   .ld-tags { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -2882,6 +2885,16 @@
           <div class="sb-stat" id="sbStatWins">
             <div class="sb-stat-value" id="sbStatWinsValue">14 of 18</div>
             <div class="sb-stat-label" id="sbStatWinsLabel">PROJECTED TO WIN</div>
+          </div>
+        </div>
+
+        <div class="sort-dropdown" style="display:flex;justify-content:flex-end;margin-bottom:10px">
+          <div class="sort-select" id="sbSortSelect"><span id="sbSortSelectLabel">Sleeper Order</span> <span>&#9662;</span></div>
+          <div class="sort-menu" id="sbSortMenu" hidden style="left:auto;right:0">
+            <div class="sort-option active" data-sort="sleeper">Sleeper Order</div>
+            <div class="sort-option" data-sort="az">A&ndash;Z</div>
+            <div class="sort-option" data-sort="winpct">Win Probability</div>
+            <div class="sort-option" data-sort="score">Highest Score</div>
           </div>
         </div>
 
@@ -12015,6 +12028,20 @@
       const ldColumns = document.getElementById('ldColumns');
       const entry = window.sleeperLeagueData && window.sleeperLeagueData[leagueId];
       if (!ldColumns || !entry) return;
+
+      // goToLeagueDetail() copies the row's colored-initials fallback into
+      // this header before this function ever runs (so something shows up
+      // immediately) -- overwrite it with the real Sleeper league logo here,
+      // since the row itself only carries the fallback in its plain text/
+      // background, not the <img> that may sit on top of it.
+      const ldAvatarEl = document.getElementById('ldAvatar');
+      if (ldAvatarEl) {
+        const existingImg = ldAvatarEl.querySelector('img');
+        if (existingImg) existingImg.remove();
+        const logoHtml = sbLeagueLogoImgHtml(entry.league);
+        if (logoHtml) ldAvatarEl.insertAdjacentHTML('beforeend', logoHtml);
+      }
+
       ldColumns.innerHTML = '<div class="ld-loading">Loading roster…</div>';
       if (!entry.roster) {
         ldColumns.innerHTML = '<div class="ld-loading">Could not find your roster in this league.</div>';
@@ -13213,6 +13240,7 @@
       const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
       let hasData = false;
       let headlineMine = null, headlineTheirs = null;
+      let winPctForSort = -1;
       if (myMatchup) {
         totalPts += myPts;
         hasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
@@ -13223,6 +13251,7 @@
           headlineMine = myProj;
           headlineTheirs = oppProj;
           const winPct = sbWinProbability(myProj, oppProj);
+          winPctForSort = winPct;
           // Same favorite/underdog split used everywhere else (Dashboard's
           // Projected Weekly Record included) -- no separate "close game"
           // threshold here, so the counts can't disagree between pages.
@@ -13244,7 +13273,7 @@
         ? `<div class="sb-live-score">${myPts.toFixed(1)} vs ${oppPts.toFixed(1)} live</div>`
         : '';
 
-      return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}">
+      return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}" data-order="${i}" data-name="${entry.league.name}" data-winpct="${winPctForSort}" data-score="${hasData ? headlineMine : -1}">
           <div class="sb-card-logo" style="background:${color}">${initials}${sbLeagueLogoImgHtml(entry.league)}</div>
           <div class="sb-card-main">
             <div class="sb-card-name">${entry.league.name}</div>
@@ -13277,8 +13306,65 @@
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
     const sbWeekLabel = document.getElementById('sbWeekLabel');
     if (sbWeekLabel) sbWeekLabel.textContent = week;
+
+    applySbSort();
   }
   window.renderRealScoreboard = renderRealScoreboard;
+
+  // Persists across re-renders (every 60s poll rebuilds sbGrid's innerHTML
+  // from scratch) so the chosen sort order sticks instead of resetting back
+  // to Sleeper order on every sync.
+  let sbSortCriterion = 'sleeper';
+  let sbSortDir = 1;
+
+  function applySbSort() {
+    const sbGrid = document.getElementById('sbGrid');
+    if (!sbGrid) return;
+    const cards = Array.from(sbGrid.querySelectorAll('.sb-card'));
+    cards.sort((a, b) => {
+      const orderA = Number(a.dataset.order), orderB = Number(b.dataset.order);
+      let primary;
+      switch (sbSortCriterion) {
+        case 'az':
+          primary = a.dataset.name.localeCompare(b.dataset.name);
+          break;
+        case 'winpct':
+          primary = Number(b.dataset.winpct) - Number(a.dataset.winpct);
+          break;
+        case 'score':
+          primary = Number(b.dataset.score) - Number(a.dataset.score);
+          break;
+        case 'sleeper':
+        default:
+          primary = orderA - orderB;
+      }
+      return (primary * sbSortDir) || (orderA - orderB);
+    });
+    cards.forEach(card => sbGrid.appendChild(card));
+  }
+
+  const sbSortSelect = document.getElementById('sbSortSelect');
+  const sbSortMenu = document.getElementById('sbSortMenu');
+  const sbSortSelectLabel = document.getElementById('sbSortSelectLabel');
+  if (sbSortSelect && sbSortMenu) {
+    sbSortSelect.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sbSortMenu.hidden = !sbSortMenu.hidden;
+    });
+    sbSortMenu.querySelectorAll('.sort-option').forEach(option => {
+      option.addEventListener('click', () => {
+        const criterion = option.dataset.sort;
+        sbSortDir = criterion === sbSortCriterion ? sbSortDir * -1 : 1;
+        sbSortCriterion = criterion;
+        sbSortMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+        option.classList.add('active');
+        if (sbSortSelectLabel) sbSortSelectLabel.textContent = option.textContent;
+        sbSortMenu.hidden = true;
+        applySbSort();
+      });
+    });
+    document.addEventListener('click', () => { sbSortMenu.hidden = true; });
+  }
 
   document.querySelectorAll('.exp-group').forEach(group => {
     const chips = Array.from(group.querySelectorAll('.exp-chip'));
