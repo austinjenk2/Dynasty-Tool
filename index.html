@@ -625,33 +625,16 @@
     flex: 1;
     min-width: 360px;
   }
-  .field-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .field-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
   .field-panel-title { font-size: 11px; font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .field-panel-pct { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 700; color: var(--ink); flex-shrink: 0; }
   .field-body-row { display: flex; gap: 12px; align-items: stretch; }
   .field-body-row .field-wrap { flex: 1; min-width: 0; }
-  .field-since {
-    width: 96px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    text-align: center;
-    background: var(--bg);
-    border: 1px solid var(--border-soft);
-    border-radius: 8px;
-    padding: 12px 8px;
-  }
-  .field-since-toggle { display: flex; align-self: stretch; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-  .field-since-opt { flex: 1; padding: 3px 0; font-size: 9.5px; font-weight: 800; letter-spacing: 0.3px; color: var(--faint); cursor: pointer; background: var(--surface); }
-  .field-since-opt.active { background: var(--ink); color: #fff; }
-  .field-since-value { font-family: 'Source Serif 4', serif; font-size: 26px; font-weight: 700; line-height: 1; color: var(--muted); }
-  .field-since-value.field-since-pos { color: var(--green); }
-  .field-since-value.field-since-neg { color: var(--red); }
-  .field-since-value.field-since-flat { color: var(--muted); }
-  .field-since-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; color: var(--faint); line-height: 1.3; }
+  .field-direction { width: 48px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 6px 0; }
+  .field-dir { display: flex; flex-direction: column; align-items: center; }
+  .field-dir-arrow { font-size: 30px; line-height: 1; }
+  .field-dir-up .field-dir-arrow { color: var(--green); }
+  .field-dir-down .field-dir-arrow { color: var(--red); }
   .field-wrap {
     display: flex;
     flex-direction: column;
@@ -661,7 +644,7 @@
     box-shadow: 0 0 0 1px #cfcfc7, 0 6px 18px -6px rgba(0,0,0,0.3);
   }
   .field-endzone {
-    height: 34px;
+    height: 54px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -669,8 +652,23 @@
     background: #0f3d22;
     position: relative;
   }
-  .field-goalpost { width: 34px; height: 24px; flex-shrink: 0; }
-  .field-goalpost.field-goalpost-flip { transform: scaleY(-1); }
+  .field-team { display: flex; align-items: center; gap: 9px; max-width: 92%; }
+  .field-team-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    font-weight: 800;
+    font-size: 13px;
+  }
+  .field-team-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .field-team-name { color: #fff; font-weight: 800; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .field-turf {
     position: relative;
     height: clamp(460px, 72vh, 840px);
@@ -11415,43 +11413,16 @@
   // the old ball position to the new one instead of just teleporting there
   // on every open/poll refresh.
   const __sbFieldPrevPct = {};
-  // Shared across matchups/re-renders so picking "1H" once sticks instead
-  // of resetting back to "10M" on the next open or poll refresh.
-  let __sbFieldWindowMins = 10;
-
-  // Persisted, timestamped win% history per league so "since 10 min ago" /
-  // "since 1 hour ago" can be answered even after a page reload -- a
-  // snapshot is recorded every time this matchup's field is actually
-  // rendered (each open, and each poll refresh while it stays open).
-  const FIELD_HISTORY_KEY = 'dynastyToolFieldHistory';
-  const FIELD_HISTORY_MAX_AGE_MS = 3 * 60 * 60 * 1000; // keep 3h of samples
-  function loadFieldHistory() {
-    try { return JSON.parse(localStorage.getItem(FIELD_HISTORY_KEY) || '{}'); }
-    catch (e) { return {}; }
+  function sbFieldAvatarHtml(avatarId, fallbackText) {
+    if (avatarId) {
+      return `<img src="https://sleepercdn.com/avatars/thumbs/${avatarId}" alt="" loading="lazy" onerror="this.parentNode.textContent='${fallbackText}'">`;
+    }
+    return fallbackText;
   }
-  function saveFieldHistory(history) {
-    try { localStorage.setItem(FIELD_HISTORY_KEY, JSON.stringify(history)); } catch (e) {}
-  }
-  function recordFieldHistory(leagueId, pct) {
-    const history = loadFieldHistory();
-    const now = Date.now();
-    const list = (history[leagueId] || []).filter(s => now - s.t < FIELD_HISTORY_MAX_AGE_MS);
-    list.push({ t: now, pct });
-    history[leagueId] = list;
-    saveFieldHistory(history);
-    return list;
-  }
-  // The most recent sample at or before `minutesAgo` minutes ago -- i.e.
-  // "what your win% actually was around then", not just the nearest sample
-  // overall. Returns null if nothing goes back that far yet.
-  function fieldPctAt(list, minutesAgo) {
-    const cutoff = Date.now() - minutesAgo * 60 * 1000;
-    let best = null;
-    list.forEach(s => { if (s.t <= cutoff && (!best || s.t > best.t)) best = s; });
-    return best ? best.pct : null;
-  }
-  function sbFieldPanelHtml(startPct) {
+  function sbFieldPanelHtml(startPct, teams) {
     const clamped = Math.max(2, Math.min(98, startPct));
+    const myInitial = (teams.myName || 'Y').charAt(0).toUpperCase();
+    const oppInitial = (teams.oppName || 'O').charAt(0).toUpperCase();
     return (
       '<div class="field-panel">' +
         '<div class="field-panel-head">' +
@@ -11460,8 +11431,11 @@
         '</div>' +
         '<div class="field-body-row">' +
           '<div class="field-wrap">' +
-            '<div class="field-endzone field-endzone-opp">' +
-              '<svg class="field-goalpost" viewBox="0 0 40 26" aria-hidden="true"><path d="M6 26 V10 M34 26 V10 M6 10 H34 M6 10 L2 2 M34 10 L38 2" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>' +
+            '<div class="field-endzone field-endzone-top">' +
+              '<div class="field-team">' +
+                `<span class="field-team-avatar">${sbFieldAvatarHtml(teams.myAvatarId, myInitial)}</span>` +
+                `<span class="field-team-name">${teams.myName}</span>` +
+              '</div>' +
             '</div>' +
             '<div class="field-turf">' +
               '<div class="field-hash field-hash-left"></div>' +
@@ -11474,17 +11448,16 @@
                 '<span class="field-ball">&#127944;</span>' +
               '</div>' +
             '</div>' +
-            '<div class="field-endzone field-endzone-you">' +
-              '<svg class="field-goalpost field-goalpost-flip" viewBox="0 0 40 26" aria-hidden="true"><path d="M6 26 V10 M34 26 V10 M6 10 H34 M6 10 L2 2 M34 10 L38 2" stroke="#f2c14e" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>' +
+            '<div class="field-endzone field-endzone-bottom">' +
+              '<div class="field-team">' +
+                `<span class="field-team-avatar">${sbFieldAvatarHtml(teams.oppAvatarId, oppInitial)}</span>` +
+                `<span class="field-team-name">${teams.oppName}</span>` +
+              '</div>' +
             '</div>' +
           '</div>' +
-          '<div class="field-since">' +
-            '<div class="field-since-toggle">' +
-              `<span class="field-since-opt${__sbFieldWindowMins === 10 ? ' active' : ''}" data-mins="10">10M</span>` +
-              `<span class="field-since-opt${__sbFieldWindowMins === 60 ? ' active' : ''}" data-mins="60">1H</span>` +
-            '</div>' +
-            '<div class="field-since-value">&mdash;</div>' +
-            '<div class="field-since-label">yards<br>gained</div>' +
+          '<div class="field-direction">' +
+            '<div class="field-dir field-dir-up"><span class="field-dir-arrow">&#9650;</span></div>' +
+            '<div class="field-dir field-dir-down"><span class="field-dir-arrow">&#9660;</span></div>' +
           '</div>' +
         '</div>' +
         '<div class="field-yard-text">No projections yet</div>' +
@@ -11502,8 +11475,6 @@
     const pctLabel = fieldPanel.querySelector('.field-panel-pct-value');
     const yardEl = fieldPanel.querySelector('.field-yard-text');
     const deltaEl = fieldPanel.querySelector('.field-delta');
-    const sinceValueEl = fieldPanel.querySelector('.field-since-value');
-    const sinceOpts = fieldPanel.querySelectorAll('.field-since-opt');
     if (winPct == null) return;
     const prev = __sbFieldPrevPct[leagueKey];
     __sbFieldPrevPct[leagueKey] = winPct;
@@ -11527,33 +11498,6 @@
           setTimeout(() => deltaEl.classList.remove('field-delta-show'), 2800);
         }
       }
-    });
-
-    // "Since 10 min ago" / "since 1 hour ago" -- backed by a real
-    // timestamped history in localStorage (not just this session's poll
-    // ticks), so it still works right after a page reload.
-    const history = recordFieldHistory(leagueKey, winPct);
-    function renderSinceValue(mins) {
-      if (!sinceValueEl) return;
-      const then = fieldPctAt(history, mins);
-      if (then == null) {
-        sinceValueEl.textContent = '—';
-        sinceValueEl.className = 'field-since-value';
-        return;
-      }
-      const delta = Math.round(winPct - then);
-      sinceValueEl.textContent = `${delta > 0 ? '+' : ''}${delta}`;
-      sinceValueEl.className = 'field-since-value ' + (delta > 0 ? 'field-since-pos' : delta < 0 ? 'field-since-neg' : 'field-since-flat');
-    }
-    renderSinceValue(__sbFieldWindowMins);
-    sinceOpts.forEach(opt => {
-      opt.addEventListener('click', (e) => {
-        e.stopPropagation();
-        sinceOpts.forEach(o => o.classList.remove('active'));
-        opt.classList.add('active');
-        __sbFieldWindowMins = Number(opt.dataset.mins) || 10;
-        renderSinceValue(__sbFieldWindowMins);
-      });
     });
   }
 
@@ -11597,6 +11541,15 @@
     }
     const fieldKey = entry.league.league_id;
     const startPct = winPct != null ? (__sbFieldPrevPct[fieldKey] != null ? __sbFieldPrevPct[fieldKey] : winPct) : 50;
+    const myUser = entry.roster ? (entry.users || []).find(u => u.user_id === entry.roster.owner_id) : null;
+    const fieldOppUser = override ? override.oppUser : entry.oppUser;
+    const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const teams = {
+      myName: escHtml((myUser && (myUser.display_name || myUser.username)) || 'You'),
+      myAvatarId: myUser ? myUser.avatar : null,
+      oppName: escHtml((fieldOppUser && (fieldOppUser.display_name || fieldOppUser.username)) || 'Opponent'),
+      oppAvatarId: fieldOppUser ? fieldOppUser.avatar : null,
+    };
     panel.innerHTML =
       `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
       '<div class="sb-exp-body">' +
@@ -11612,7 +11565,7 @@
             `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
           '</div>' +
         '</div>' +
-        sbFieldPanelHtml(startPct) +
+        sbFieldPanelHtml(startPct, teams) +
       '</div>';
     animateSbFieldPanel(panel, fieldKey, winPct);
   }
