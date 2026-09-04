@@ -589,15 +589,15 @@
   .sb-stats {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 40px;
+    justify-content: space-between;
+    gap: 16px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 18px;
+    padding: 18px 32px;
     margin-bottom: 16px;
   }
-  .sb-stat { text-align: center; }
+  .sb-stat { text-align: center; flex: 1; }
   .sb-stat-value { font-family: 'Source Serif 4', serif; font-size: 26px; font-weight: 700; line-height: 1; color: var(--ink); }
   .sb-stat-value.sb-cyan { color: var(--blue); }
   .sb-stat-value.sb-green { color: var(--green); }
@@ -772,6 +772,7 @@
   .rg-header-top .week-dropdown { position: absolute; right: 0; text-align: left; }
   .rg-header h2 { font-family: 'Source Serif 4', serif; font-size: 22px; margin: 0 0 6px; }
   .rg-header p { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+  .rg-leagues-dropdown { position: relative; display: inline-block; margin-bottom: 16px; }
   .rg-leagues-toggle {
     display: inline-flex;
     align-items: center;
@@ -784,6 +785,7 @@
     font-weight: 700;
     color: var(--ink);
     cursor: pointer;
+    margin-bottom: 0;
   }
   .rg-leagues-toggle:hover { border-color: var(--muted); }
   .rg-leagues-toggle span { color: var(--faint); font-weight: 700; }
@@ -792,11 +794,21 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 16px 18px;
-    margin-bottom: 16px;
+    padding: 12px 14px;
+    margin-bottom: 0;
     text-align: left;
   }
-  .rg-leagues-note { font-size: 11.5px; color: var(--faint); font-style: italic; margin: 0 0 12px; }
+  .rg-leagues-dropdown .rg-leagues-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 30;
+    width: 320px;
+    max-height: 360px;
+    overflow-y: auto;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.14);
+  }
+  .rg-leagues-note { font-size: 11.5px; color: var(--faint); font-style: italic; margin: 0 0 10px; }
   .rg-leagues-chips { display: flex; gap: 8px; flex-wrap: wrap; }
   .rg-league-chip {
     padding: 7px 12px;
@@ -810,6 +822,14 @@
   }
   .rg-league-chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
   .rg-league-chip.excluded { background: transparent; color: var(--faint); border-color: var(--border-soft); text-decoration: line-through; }
+
+  .rg-league-checklist { display: flex; flex-direction: column; }
+  .rg-league-check-actions { display: flex; gap: 12px; padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--border-soft); }
+  .rg-league-check-actions span { font-size: 11px; font-weight: 700; color: var(--blue); cursor: pointer; }
+  .rg-league-check-actions span:hover { text-decoration: underline; }
+  .rg-league-check-row { display: flex; align-items: center; gap: 9px; padding: 6px 2px; font-size: 12.5px; font-weight: 600; color: var(--ink); cursor: pointer; }
+  .rg-league-check-row input[type="checkbox"] { width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; accent-color: var(--ink); }
+  .rg-league-check-row.is-unchecked { color: var(--faint); }
 
   .rg-columns { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
   .rg-panel { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px; min-width: 0; }
@@ -2022,21 +2042,22 @@
     overflow: hidden;
     position: relative;
   }
-  .dr-pick.dr-pos-qb { border-color: var(--red); }
-  .dr-pick.dr-pos-rb { border-color: var(--green); }
-  .dr-pick.dr-pos-wr { border-color: var(--blue); }
-  .dr-pick.dr-pos-te { border-color: var(--gold); }
+  .dr-pick.dr-pos-qb { border-color: var(--red); background: var(--red); }
+  .dr-pick.dr-pos-rb { border-color: var(--green); background: var(--green); }
+  .dr-pick.dr-pos-wr { border-color: var(--blue); background: var(--blue); }
+  .dr-pick.dr-pos-te { border-color: var(--gold); background: var(--gold); }
   .dr-pick.dr-team-dim { opacity: 0.3; }
   .dr-pick-num { font-size: 9.5px; font-weight: 700; color: var(--faint); float: right; }
   .dr-pick-name { font-size: 12px; font-weight: 700; color: var(--ink); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dr-pick.dr-pos-qb .dr-pick-num, .dr-pick.dr-pos-rb .dr-pick-num, .dr-pick.dr-pos-wr .dr-pick-num, .dr-pick.dr-pos-te .dr-pick-num { color: #fff; opacity: 0.85; }
+  .dr-pick.dr-pos-qb .dr-pick-name, .dr-pick.dr-pos-rb .dr-pick-name, .dr-pick.dr-pos-wr .dr-pick-name, .dr-pick.dr-pos-te .dr-pick-name { color: #fff; }
   .dr-pick-meta { font-size: 10px; color: var(--faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px; }
   .dr-pick-meta .dr-pos { font-weight: 800; }
-  .dr-pick-meta.dr-pos-qb .dr-pos { color: var(--red); }
-  .dr-pick-meta.dr-pos-rb .dr-pos { color: var(--green); }
-  .dr-pick-meta.dr-pos-wr .dr-pos { color: var(--blue); }
-  .dr-pick-meta.dr-pos-te .dr-pos { color: var(--gold); }
-  .dr-pick-meta-logo { width: 13px; height: 13px; object-fit: contain; }
+  .dr-pick-meta.dr-pos-qb .dr-pos, .dr-pick-meta.dr-pos-rb .dr-pos, .dr-pick-meta.dr-pos-wr .dr-pos, .dr-pick-meta.dr-pos-te .dr-pos { color: #fff; }
+  .dr-pick.dr-pos-qb .dr-pick-meta, .dr-pick.dr-pos-rb .dr-pick-meta, .dr-pick.dr-pos-wr .dr-pick-meta, .dr-pick.dr-pos-te .dr-pick-meta { color: rgba(255,255,255,0.85); }
+  .dr-pick-meta-logo { width: 13px; height: 13px; object-fit: contain; background: #fff; border-radius: 50%; padding: 1px; }
   .dr-pick-trade { font-size: 11.5px; font-weight: 700; color: var(--ink); font-style: normal; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dr-pick.dr-pos-qb .dr-pick-trade, .dr-pick.dr-pos-rb .dr-pick-trade, .dr-pick.dr-pos-wr .dr-pick-trade, .dr-pick.dr-pos-te .dr-pick-trade { color: #fff; }
 
   .dr-board-bottom { display: block; }
   .dr-roster-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
@@ -2044,17 +2065,19 @@
   .dr-roster-team { font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
   .dr-roster-value { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
   .dr-roster-section-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 10px 0 8px; }
-  .dr-roster-players { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 12px; }
+  .dr-roster-players { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px 12px; }
   .dr-roster-player { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--border-soft); border-radius: 6px; font-size: 12.5px; }
-  .dr-roster-avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; background: var(--surface); overflow: hidden; }
-  .dr-roster-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .dr-roster-pos { width: 24px; font-size: 10px; font-weight: 800; color: #fff; border-radius: 4px; text-align: center; padding: 2px 0; flex-shrink: 0; }
+  .dr-roster-avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; background: var(--surface); overflow: hidden; position: relative; }
+  .dr-roster-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; position: absolute; inset: 0; }
+  .dr-roster-pos { width: 30px; font-size: 9px; font-weight: 800; color: #fff; border-radius: 4px; text-align: center; padding: 3px 0; flex-shrink: 0; letter-spacing: 0.2px; }
   .dr-roster-pos.dr-pos-qb { background: var(--red); }
   .dr-roster-pos.dr-pos-rb { background: var(--green); }
   .dr-roster-pos.dr-pos-wr { background: var(--blue); }
   .dr-roster-pos.dr-pos-te { background: var(--gold); }
-  .dr-roster-name { flex: 1; font-weight: 600; }
-  .dr-roster-team-abbr { color: var(--faint); font-size: 11px; }
+  .dr-roster-info { flex: 1; min-width: 0; }
+  .dr-roster-name { font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dr-roster-team-abbr { color: var(--faint); font-size: 10.5px; font-weight: 600; }
+  .dr-roster-picknum { flex-shrink: 0; font-size: 10.5px; font-weight: 700; color: var(--ink); background: var(--border-soft); border: 1px solid var(--border-soft); border-radius: 5px; padding: 3px 7px; }
 
   .dr-intel-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
   .dr-intel-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
@@ -3079,10 +3102,12 @@
       </div>
 
       <div data-sb-view="scoreboard" class="sb-view is-active">
-        <div class="rg-leagues-toggle" id="sbTankBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="sbTankCount">(18 of 18)</span></div>
-        <div class="rg-leagues-panel" id="sbTankPanel" hidden>
-          <p class="rg-leagues-note">Uncheck a league to leave it off the Scoreboard entirely and out of these stats -- separate from the Rooting Guide's own list. Stays off until you check it back on here.</p>
-          <div class="rg-leagues-chips" id="sbTankChips"></div>
+        <div class="rg-leagues-dropdown">
+          <div class="rg-leagues-toggle" id="sbTankBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="sbTankCount">(18 of 18)</span></div>
+          <div class="rg-leagues-panel" id="sbTankPanel" hidden>
+            <p class="rg-leagues-note">Uncheck a league to leave it off the Scoreboard entirely and out of these stats -- separate from the Rooting Guide's own list. Stays off until you check it back on here.</p>
+            <div class="rg-league-checklist" id="sbTankChips"></div>
+          </div>
         </div>
 
         <div class="sb-stats" id="sbStats">
@@ -3571,12 +3596,14 @@
             </span>
           </div>
           <p>Your starters versus your opponents across all scheduled matchups. Tap a player for the league list.</p>
-          <div class="rg-leagues-toggle" id="rgLeaguesBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="rgLeaguesCount">(18 of 18)</span></div>
         </div>
 
-        <div class="rg-leagues-panel" id="rgLeaguesPanel" hidden>
-          <p class="rg-leagues-note">Uncheck a league to leave it out of Root For / Root Against for good &mdash; for a team you're tanking or a league you've checked out of. It stays off every week until you check it back on here.</p>
-          <div class="rg-leagues-chips" id="rgLeaguesChips"></div>
+        <div class="rg-leagues-dropdown">
+          <div class="rg-leagues-toggle" id="rgLeaguesBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="rgLeaguesCount">(18 of 18)</span></div>
+          <div class="rg-leagues-panel" id="rgLeaguesPanel" hidden>
+            <p class="rg-leagues-note">Uncheck a league to leave it out of Root For / Root Against for good &mdash; for a team you're tanking or a league you've checked out of. It stays off every week until you check it back on here.</p>
+            <div class="rg-league-checklist" id="rgLeaguesChips"></div>
+          </div>
         </div>
 
         <div class="rg-columns">
@@ -5539,38 +5566,45 @@
               <div class="dr-roster-players">
                 <div class="dr-roster-player">
                   <span class="dr-roster-pos dr-pos-qb">QB</span>
-                  <span class="dr-roster-name">Fernando Mendoza</span>
-                  <span class="dr-roster-team-abbr">LV</span>
+                  <span class="dr-roster-avatar"></span>
+                  <span class="dr-roster-info"><span class="dr-roster-name">Fernando Mendoza</span><br><span class="dr-roster-team-abbr">LV</span></span>
+                  <span class="dr-roster-picknum">1.06</span>
                 </div>
                 <div class="dr-roster-player">
                   <span class="dr-roster-pos dr-pos-rb">RB</span>
-                  <span class="dr-roster-name">Nicholas Singleton</span>
-                  <span class="dr-roster-team-abbr">TEN</span>
+                  <span class="dr-roster-avatar"></span>
+                  <span class="dr-roster-info"><span class="dr-roster-name">Nicholas Singleton</span><br><span class="dr-roster-team-abbr">TEN</span></span>
+                  <span class="dr-roster-picknum">2.09</span>
                 </div>
                 <div class="dr-roster-player">
                   <span class="dr-roster-pos dr-pos-rb">RB</span>
-                  <span class="dr-roster-name">Demond Claiborne</span>
-                  <span class="dr-roster-team-abbr">NE</span>
+                  <span class="dr-roster-avatar"></span>
+                  <span class="dr-roster-info"><span class="dr-roster-name">Demond Claiborne</span><br><span class="dr-roster-team-abbr">NE</span></span>
+                  <span class="dr-roster-picknum">3.02</span>
                 </div>
                 <div class="dr-roster-player">
                   <span class="dr-roster-pos dr-pos-wr">WR</span>
-                  <span class="dr-roster-name">Jordyn Tyson</span>
-                  <span class="dr-roster-team-abbr">NO</span>
+                  <span class="dr-roster-avatar"></span>
+                  <span class="dr-roster-info"><span class="dr-roster-name">Jordyn Tyson</span><br><span class="dr-roster-team-abbr">NO</span></span>
+                  <span class="dr-roster-picknum">1.03</span>
                 </div>
                 <div class="dr-roster-player">
                   <span class="dr-roster-pos dr-pos-wr">WR</span>
-                  <span class="dr-roster-name">KC Concepcion</span>
-                  <span class="dr-roster-team-abbr">CLE</span>
+                  <span class="dr-roster-avatar"></span>
+                  <span class="dr-roster-info"><span class="dr-roster-name">KC Concepcion</span><br><span class="dr-roster-team-abbr">CLE</span></span>
+                  <span class="dr-roster-picknum">1.07</span>
                 </div>
                 <div class="dr-roster-player">
                   <span class="dr-roster-pos dr-pos-wr">WR</span>
-                  <span class="dr-roster-name">Omar Cooper</span>
-                  <span class="dr-roster-team-abbr">NYJ</span>
+                  <span class="dr-roster-avatar"></span>
+                  <span class="dr-roster-info"><span class="dr-roster-name">Omar Cooper</span><br><span class="dr-roster-team-abbr">NYJ</span></span>
+                  <span class="dr-roster-picknum">1.10</span>
                 </div>
                 <div class="dr-roster-player">
                   <span class="dr-roster-pos dr-pos-te">TE</span>
-                  <span class="dr-roster-name">Jack Endries</span>
-                  <span class="dr-roster-team-abbr">CIN</span>
+                  <span class="dr-roster-avatar"></span>
+                  <span class="dr-roster-info"><span class="dr-roster-name">Jack Endries</span><br><span class="dr-roster-team-abbr">CIN</span></span>
+                  <span class="dr-roster-picknum">4.07</span>
                 </div>
               </div>
             </div>
@@ -10606,11 +10640,12 @@
         const playersHtml = myPicks.map(pick => {
           const info = pickPlayerInfo(pick);
           const posClass = info.pos ? 'dr-pos-' + info.pos.toLowerCase() : '';
+          const pickNum = pick.round + '.' + String(pick.draft_slot).padStart(2, '0');
           return '<div class="dr-roster-player">' +
             '<span class="dr-roster-pos ' + posClass + '">' + (info.pos || '-') + '</span>' +
             '<span class="dr-roster-avatar"><img src="' + sbHeadshotUrl(pick.player_id) + '" alt="" loading="lazy" onerror="this.remove()"></span>' +
-            '<span class="dr-roster-name">' + info.name + '</span>' +
-            '<span class="dr-roster-team-abbr">' + info.team + '</span>' +
+            '<span class="dr-roster-info"><span class="dr-roster-name">' + info.name + '</span><br><span class="dr-roster-team-abbr">' + info.team + '</span></span>' +
+            '<span class="dr-roster-picknum">' + pickNum + '</span>' +
           '</div>';
         }).join('') || '<div class="dr-roster-sub">No picks yet.</div>';
         rosterPanel.querySelector('.dr-roster-players').innerHTML = playersHtml;
@@ -11235,8 +11270,6 @@
     const oppMatchup = override ? override.oppMatchup : entry.oppMatchup;
     const projMap = override ? override.projections : null;
 
-    const cardLogo = card.querySelector('.sb-card-logo');
-    const badge = card.querySelector('.sb-badge');
     const week = override ? override.week : entry.week;
     const expHasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
     let scoreHtml;
@@ -11255,16 +11288,6 @@
       scoreHtml = `<span class="sb-exp-score-item">${card.querySelector('.sb-card-score').textContent}</span>`;
     }
     panel.innerHTML =
-      '<div class="sb-exp-header">' +
-        `<div class="sb-exp-logo" style="background:${cardLogo.style.background}">${cardLogo.innerHTML}</div>` +
-        '<div class="sb-exp-title">' +
-          `<div class="sb-exp-name">${card.querySelector('.sb-card-name').textContent}</div>` +
-          `<div class="sb-exp-meta">${card.querySelector('.sb-card-meta').innerHTML}</div>` +
-        '</div>' +
-        '<div class="sb-exp-right">' +
-          `<div class="sb-badge ${badge.className.replace('sb-badge', '').trim()}">${badge.textContent}</div>` +
-        '</div>' +
-      '</div>' +
       `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
       '<div class="sb-lineups-cols">' +
         '<div class="sb-lineup-col">' +
@@ -11406,29 +11429,49 @@
     let rgLeagueNames = allLeagues;
 
     function wireChips() {
-      rgChipsEl.querySelectorAll('.rg-league-chip').forEach(chip => {
-        chip.addEventListener('click', () => {
-          const league = chip.dataset.league;
-          if (rgBlacklist.has(league)) {
-            rgBlacklist.delete(league);
-            chip.classList.add('active');
-            chip.classList.remove('excluded');
-          } else {
-            rgBlacklist.add(league);
-            chip.classList.remove('active');
-            chip.classList.add('excluded');
-          }
+      rgChipsEl.querySelectorAll('.rg-league-check-row input[type="checkbox"]').forEach(box => {
+        box.addEventListener('change', () => {
+          const league = box.dataset.league;
+          const row = box.closest('.rg-league-check-row');
+          if (box.checked) { rgBlacklist.delete(league); row.classList.remove('is-unchecked'); }
+          else { rgBlacklist.add(league); row.classList.add('is-unchecked'); }
           saveRgBlacklist();
           updateCount();
           recomputeRootingGuide();
         });
       });
+      const selectAll = rgChipsEl.querySelector('[data-check-action="all"]');
+      const selectNone = rgChipsEl.querySelector('[data-check-action="none"]');
+      if (selectAll) selectAll.addEventListener('click', () => {
+        rgBlacklist.clear();
+        saveRgBlacklist();
+        rgChipsEl.querySelectorAll('.rg-league-check-row').forEach(row => {
+          row.classList.remove('is-unchecked');
+          row.querySelector('input').checked = true;
+        });
+        updateCount();
+        recomputeRootingGuide();
+      });
+      if (selectNone) selectNone.addEventListener('click', () => {
+        allLeagues.forEach(name => rgBlacklist.add(name));
+        saveRgBlacklist();
+        rgChipsEl.querySelectorAll('.rg-league-check-row').forEach(row => {
+          row.classList.add('is-unchecked');
+          row.querySelector('input').checked = false;
+        });
+        updateCount();
+        recomputeRootingGuide();
+      });
     }
 
-    rgChipsEl.innerHTML = allLeagues.map(name =>
-      `<span class="rg-league-chip${rgBlacklist.has(name) ? ' excluded' : ' active'}" data-league="${name}">${name}</span>`
-    ).join('');
+    rgChipsEl.innerHTML =
+      '<div class="rg-league-check-actions"><span data-check-action="all">Select All</span><span data-check-action="none">Deselect All</span></div>' +
+      allLeagues.map(name =>
+        `<label class="rg-league-check-row${rgBlacklist.has(name) ? ' is-unchecked' : ''}"><input type="checkbox" data-league="${name}" ${rgBlacklist.has(name) ? '' : 'checked'}><span>${name}</span></label>`
+      ).join('');
     wireChips();
+    rgPanel.addEventListener('click', (e) => e.stopPropagation());
+    document.addEventListener('click', () => { rgPanel.hidden = true; });
 
     function updateCount() {
       const included = rgLeagueNames.length - rgBlacklist.size;
@@ -11473,7 +11516,7 @@
       buckets.even.forEach(b => evenListEl.appendChild(b.el));
     }
 
-    rgBtn.addEventListener('click', () => { rgPanel.hidden = !rgPanel.hidden; });
+    rgBtn.addEventListener('click', (e) => { e.stopPropagation(); rgPanel.hidden = !rgPanel.hidden; });
 
     async function renderRealRootingGuide(overrideWeek) {
       if (!window.sleeperGetPlayerDict) return;
@@ -13932,18 +13975,33 @@
     Array.from(tankList).forEach(n => { if (!currentNames.has(n)) tankList.delete(n); });
     sbSaveTankList(tankList);
 
-    chipsEl.innerHTML = names.map(name =>
-      `<span class="rg-league-chip${tankList.has(name) ? ' excluded' : ' active'}" data-league="${name}">${name}</span>`
-    ).join('');
-    chipsEl.querySelectorAll('.rg-league-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const league = chip.dataset.league;
-        if (tankList.has(league)) { tankList.delete(league); chip.classList.add('active'); chip.classList.remove('excluded'); }
-        else { tankList.add(league); chip.classList.remove('active'); chip.classList.add('excluded'); }
+    chipsEl.innerHTML =
+      '<div class="rg-league-check-actions"><span data-check-action="all">Select All</span><span data-check-action="none">Deselect All</span></div>' +
+      names.map(name =>
+        `<label class="rg-league-check-row${tankList.has(name) ? ' is-unchecked' : ''}"><input type="checkbox" data-league="${name}" ${tankList.has(name) ? '' : 'checked'}><span>${name}</span></label>`
+      ).join('');
+    chipsEl.querySelectorAll('.rg-league-check-row input[type="checkbox"]').forEach(box => {
+      box.addEventListener('change', () => {
+        const league = box.dataset.league;
+        const row = box.closest('.rg-league-check-row');
+        if (box.checked) { tankList.delete(league); row.classList.remove('is-unchecked'); }
+        else { tankList.add(league); row.classList.add('is-unchecked'); }
         sbSaveTankList(tankList);
         if (countEl) countEl.textContent = `(${names.length - tankList.size} of ${names.length})`;
         if (window.renderRealScoreboard) window.renderRealScoreboard();
       });
+    });
+    const selectAll = chipsEl.querySelector('[data-check-action="all"]');
+    const selectNone = chipsEl.querySelector('[data-check-action="none"]');
+    if (selectAll) selectAll.addEventListener('click', () => {
+      tankList.clear();
+      sbSaveTankList(tankList);
+      if (window.renderRealScoreboard) window.renderRealScoreboard();
+    });
+    if (selectNone) selectNone.addEventListener('click', () => {
+      names.forEach(n => tankList.add(n));
+      sbSaveTankList(tankList);
+      if (window.renderRealScoreboard) window.renderRealScoreboard();
     });
     if (countEl) countEl.textContent = `(${names.length - tankList.size} of ${names.length})`;
   }
@@ -13951,7 +14009,9 @@
   const sbTankBtn = document.getElementById('sbTankBtn');
   const sbTankPanelEl = document.getElementById('sbTankPanel');
   if (sbTankBtn && sbTankPanelEl) {
-    sbTankBtn.addEventListener('click', () => { sbTankPanelEl.hidden = !sbTankPanelEl.hidden; });
+    sbTankBtn.addEventListener('click', (e) => { e.stopPropagation(); sbTankPanelEl.hidden = !sbTankPanelEl.hidden; });
+    sbTankPanelEl.addEventListener('click', (e) => e.stopPropagation());
+    document.addEventListener('click', () => { sbTankPanelEl.hidden = true; });
   }
 
   function renderRealScoreboard() {
@@ -13971,7 +14031,7 @@
 
     const override = window.__sleeperScoreboardOverride || null;
 
-    let totalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0;
+    let totalPts = 0, oppTotalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0;
     sbGrid.innerHTML = entries.map((entry, i) => {
       const ov = override ? override.byLeague[entry.league.league_id] : null;
       const myMatchup = ov ? ov.myMatchup : entry.myMatchup;
@@ -13994,6 +14054,7 @@
       let winPctForSort = -1;
       if (myMatchup) {
         totalPts += myPts;
+        oppTotalPts += oppPts;
         hasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
         if (hasData) {
           withMatchup++;
@@ -14044,8 +14105,8 @@
     const winsLabel = document.getElementById('sbStatWinsLabel');
     const recordValue = document.getElementById('sbStatRecordValue');
     const week = override ? override.week : (entries[0].week || 1);
-    if (ptsValue) ptsValue.textContent = totalPts.toFixed(1);
-    if (ptsLabel) ptsLabel.innerHTML = `WEEK <span class="sb-week-num">${week}</span> PTS SO FAR`;
+    if (ptsValue) ptsValue.textContent = `${totalPts.toFixed(1)} - ${oppTotalPts.toFixed(1)}`;
+    if (ptsLabel) ptsLabel.innerHTML = `WEEK <span class="sb-week-num">${week}</span> PTS VS OPPONENTS`;
     if (optimalStat) optimalStat.hidden = true;
     if (optimalDivider) optimalDivider.hidden = true;
     // Exact decimal record: each matchup contributes its own win% as a
