@@ -362,7 +362,7 @@
     color: var(--faint);
     margin-bottom: 8px;
   }
-  .track-bar-row { position: relative; height: 12px; }
+  .track-bar-row { position: relative; height: 12px; margin-top: 22px; }
   .track-bar-bg {
     position: absolute; inset: 4px 0;
     background: var(--border-soft);
@@ -388,6 +388,33 @@
     color: var(--faint);
     margin-top: 4px;
   }
+  .track-dot {
+    position: absolute;
+    top: -2px;
+    width: 8px;
+    height: 16px;
+    border-radius: 3px;
+    transform: translateX(-50%);
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+  .track-avg-marker {
+    position: absolute;
+    top: -7px;
+    width: 2px;
+    height: 26px;
+    background: var(--blue);
+    transform: translateX(-50%);
+  }
+  .track-avg-label {
+    position: absolute;
+    top: -24px;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: var(--blue);
+    white-space: nowrap;
+  }
 
   .ph-draft-capital { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border-soft); }
   .ph-draft-capital-head { font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; color: var(--faint); margin-bottom: 14px; }
@@ -396,9 +423,17 @@
   @media (max-width: 560px) { .ph-draft-capital-cols { grid-template-columns: 1fr; } }
   .ph-dc-season { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 15px; color: var(--ink); margin-bottom: 10px; }
   .ph-dc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .ph-dc-round { width: 26px; flex-shrink: 0; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .ph-dc-round { width: 26px; flex-shrink: 0; font-size: 12px; font-weight: 800; }
+  .ph-dc-round.ph-dc-round-1 { color: var(--blue); }
+  .ph-dc-round.ph-dc-round-2 { color: var(--green); }
+  .ph-dc-round.ph-dc-round-3 { color: var(--gold); }
+  .ph-dc-round.ph-dc-round-4 { color: #7c5cbf; }
   .ph-dc-bar-bg { flex: 1; height: 8px; border-radius: 4px; background: var(--border-soft); position: relative; overflow: hidden; }
-  .ph-dc-bar-fill { position: absolute; inset: 0; width: 0; background: var(--blue); border-radius: 4px; }
+  .ph-dc-bar-fill { position: absolute; inset: 0; width: 0; border-radius: 4px; }
+  .ph-dc-bar-fill.ph-dc-round-1 { background: var(--blue); }
+  .ph-dc-bar-fill.ph-dc-round-2 { background: var(--green); }
+  .ph-dc-bar-fill.ph-dc-round-3 { background: var(--gold); }
+  .ph-dc-bar-fill.ph-dc-round-4 { background: #7c5cbf; }
   .ph-dc-value { width: 40px; flex-shrink: 0; text-align: right; font-weight: 700; font-size: 14px; color: var(--ink); }
 
   /* Team strength scatter */
@@ -410,7 +445,11 @@
     grid-template-rows: 1fr 1fr;
     border: 1px solid var(--border);
   }
-  .scatter-quads div { border: 1px dashed var(--border-soft); font-size: 11.5px; color: var(--faint); font-weight: 700; padding: 4px 6px; }
+  .scatter-quads div { border: 1px dashed var(--border-soft); font-size: 11.5px; font-weight: 800; letter-spacing: 0.4px; padding: 6px 8px; }
+  .scatter-quads div:nth-child(1) { background: rgba(217,164,65,0.08); color: #b8862f; }
+  .scatter-quads div:nth-child(2) { background: rgba(63,107,74,0.1); color: var(--green); }
+  .scatter-quads div:nth-child(3) { background: rgba(200,16,46,0.06); color: var(--red); }
+  .scatter-quads div:nth-child(4) { background: rgba(56,161,201,0.08); color: #2596be; }
   .scatter-dot {
     position: absolute;
     width: 15px; height: 15px;
@@ -2155,10 +2194,24 @@
 
           <div class="track">
             <div class="track-label" id="phPointProjLabel">POINT PROJECTION</div>
-            <div class="track-bar-row">
+            <div class="track-bar-row" id="phPointProjRow">
               <div class="track-bar-bg"></div>
-              <div class="track-bar-fill" id="phPointProjFill" style="width:0%"></div>
-              <div class="track-marker" id="phPointProjMarker" style="left:0%" hidden></div>
+            </div>
+            <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
+          </div>
+
+          <div class="track" id="phContendingTrack" hidden>
+            <div class="track-label">CONTENDING RANK</div>
+            <div class="track-bar-row" id="phContendingRow">
+              <div class="track-bar-bg"></div>
+            </div>
+            <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
+          </div>
+
+          <div class="track" id="phLastSeasonTrack" hidden>
+            <div class="track-label">LAST SEASON PLACEMENT</div>
+            <div class="track-bar-row" id="phLastSeasonRow">
+              <div class="track-bar-bg"></div>
             </div>
             <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
           </div>
@@ -2262,20 +2315,20 @@
         <h2>Team Strength</h2>
         <div class="scatter-wrap" id="teamStrengthScatterWrap">
           <div class="scatter-quads">
-            <div style="display:flex;align-items:flex-start">Overachieving</div>
-            <div style="display:flex;align-items:flex-start;justify-content:flex-end;text-align:right">Contending &amp; Stacked</div>
-            <div style="display:flex;align-items:flex-end">Rebuilding</div>
-            <div style="display:flex;align-items:flex-end;justify-content:flex-end;text-align:right">Underachieving</div>
+            <div style="display:flex;align-items:flex-start">Fragile</div>
+            <div style="display:flex;align-items:flex-start;justify-content:flex-end;text-align:right">Favorite</div>
+            <div style="display:flex;align-items:flex-end">Rebuild</div>
+            <div style="display:flex;align-items:flex-end;justify-content:flex-end;text-align:right">Upside</div>
           </div>
-          <div class="scatter-dot scatter-dot-multi" style="left:85%;top:12%;background:var(--red)" data-leagues="Empire Entertainment, OTTOMAN, StatChasers BestBall & Chill 5.0"></div>
-          <div class="scatter-dot scatter-dot-multi" style="left:66%;top:30%;background:var(--navy)" data-leagues="Blitz Dynasty Football, Dynasty Is Life"></div>
-          <div class="scatter-dot" style="left:56%;top:46%;background:var(--navy)" data-leagues="The Doctor's"></div>
-          <div class="scatter-dot" style="left:80%;top:64%;background:var(--gold)" data-leagues="BDGE Dynasty League 53"></div>
-          <div class="scatter-dot scatter-dot-multi" style="left:32%;top:80%;background:var(--faint)" data-leagues="Grandpa Phil, Dynasty - Globo Gym v Avg Joes"></div>
-          <div class="scatter-dot" style="left:24%;top:20%;background:#c9c6ba" data-leagues="PURPLE PEOPLE"></div>
+          <div class="scatter-dot scatter-dot-multi" style="left:85%;top:12%;background:var(--green)" data-leagues="Empire Entertainment, OTTOMAN, StatChasers BestBall & Chill 5.0"></div>
+          <div class="scatter-dot scatter-dot-multi" style="left:66%;top:30%;background:var(--green)" data-leagues="Blitz Dynasty Football, Dynasty Is Life"></div>
+          <div class="scatter-dot" style="left:56%;top:46%;background:var(--green)" data-leagues="The Doctor's"></div>
+          <div class="scatter-dot" style="left:80%;top:64%;background:#2596be" data-leagues="BDGE Dynasty League 53"></div>
+          <div class="scatter-dot scatter-dot-multi" style="left:32%;top:80%;background:var(--red)" data-leagues="Grandpa Phil, Dynasty - Globo Gym v Avg Joes"></div>
+          <div class="scatter-dot" style="left:24%;top:20%;background:#d9a441" data-leagues="PURPLE PEOPLE"></div>
           <div class="scatter-tooltip" id="scatterTooltip" hidden></div>
         </div>
-        <div class="scatter-axis-label">Roster Value (x) vs. Contending Odds (y) &mdash; all connected teams</div>
+        <div class="scatter-axis-label">Value Rank (x) vs. Contending Rank (y) &mdash; all connected teams</div>
       </div>
 
     </div>
@@ -12055,7 +12108,11 @@
         window.__sleeperTransactionsCache = window.__sleeperTransactionsCache || {};
         const tradeWeeks = [];
         for (let w = 0; w <= week; w++) tradeWeeks.push(w);
-        const [rosters, allMatchups, allUsers, projections, allTransactions, trendingAdds, allTradedPicks] = await Promise.all([
+        // A completed prior season's standings never change, so they're
+        // cached permanently across syncs, keyed by that season's own
+        // league_id -- only fetched once per league ever, not every poll.
+        window.__sleeperPrevSeasonCache = window.__sleeperPrevSeasonCache || {};
+        const [rosters, allMatchups, allUsers, projections, allTransactions, trendingAdds, allTradedPicks, allPrevRosters] = await Promise.all([
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/matchups/${week}`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
@@ -12078,6 +12135,19 @@
           Promise.all(leagues.map(lg => sbLeagueIsDynasty(lg)
             ? sleeperFetch(`/league/${lg.league_id}/traded_picks`).catch(() => [])
             : Promise.resolve([]))),
+          // Last Season Placement: real final regular-season standings
+          // (wins, then points-for as tiebreak) from the league's own
+          // previous_league_id. Doesn't account for playoff results --
+          // Sleeper doesn't expose a simple final-rank field -- so this is
+          // a best-effort real proxy, not a fabricated number.
+          Promise.all(leagues.map(async (lg) => {
+            const prevId = lg.previous_league_id;
+            if (!prevId) return null;
+            if (window.__sleeperPrevSeasonCache[prevId]) return window.__sleeperPrevSeasonCache[prevId];
+            const prevRosters = await sleeperFetch(`/league/${prevId}/rosters`).catch(() => null);
+            if (prevRosters) window.__sleeperPrevSeasonCache[prevId] = prevRosters;
+            return prevRosters;
+          })),
         ]);
         window.__sleeperProjections = projections;
         window.__sleeperTrendingAdds = trendingAdds;
@@ -12110,6 +12180,7 @@
             league: lg, roster: myRoster, isCoOwned, week, myMatchup, oppMatchup, oppUser,
             allRosters: leagueRosters, users, trades: myTrades, allTrades: leagueTrades, allMatchups: matchups,
             tradedPicks: allTradedPicks[i] || [],
+            prevSeasonRosters: allPrevRosters[i] || null,
           };
           return renderLeagueRow(lg, i, myRoster, isCoOwned, myMatchup, oppMatchup, oppUser);
         });
@@ -13145,7 +13216,7 @@
     const phRosterValueLabel = document.getElementById('phRosterValueLabel');
     if (phRosterValueLabel) phRosterValueLabel.textContent = 'ROSTER VALUE (no data source)';
 
-    let pctSum = 0, pctCount = 0;
+    const pointProjPcts = [];
     entries.forEach(e => {
       if (!e.allMatchups || !e.allMatchups.length) return;
       const totals = e.allMatchups
@@ -13156,24 +13227,79 @@
       if (!myTotal) return;
       const sortedDesc = [...totals].sort((a, b) => b.total - a.total);
       const rank = sortedDesc.findIndex(t => t.rosterId === e.roster.roster_id) + 1;
-      pctSum += ((totals.length - rank) / (totals.length - 1)) * 100;
-      pctCount++;
+      pointProjPcts.push(((totals.length - rank) / (totals.length - 1)) * 100);
     });
+    renderDotTrack('phPointProjRow', pointProjPcts);
 
-    const phPointProjFill = document.getElementById('phPointProjFill');
-    const phPointProjMarker = document.getElementById('phPointProjMarker');
-    if (pctCount > 0) {
-      const avgPct = Math.round(pctSum / pctCount);
-      if (phPointProjFill) phPointProjFill.style.width = avgPct + '%';
-      if (phPointProjMarker) { phPointProjMarker.style.left = avgPct + '%'; phPointProjMarker.hidden = false; }
-    } else {
-      if (phPointProjFill) phPointProjFill.style.width = '0%';
-      if (phPointProjMarker) phPointProjMarker.hidden = true;
-    }
+    // Contending Rank: same optimal-lineup rank shown on the Leagues page,
+    // as a percentile per league.
+    const contendingPcts = [];
+    entries.forEach(e => {
+      const result = sbContendingRank(e);
+      if (!result || result.of < 2) return;
+      contendingPcts.push(((result.of - result.rank) / (result.of - 1)) * 100);
+    });
+    const phContendingTrack = document.getElementById('phContendingTrack');
+    if (phContendingTrack) phContendingTrack.hidden = contendingPcts.length === 0;
+    renderDotTrack('phContendingRow', contendingPcts);
+
+    // Last Season Placement: real regular-season standings (wins, then
+    // points-for as tiebreak) from each league's previous_league_id.
+    const lastSeasonPcts = [];
+    entries.forEach(e => {
+      const prevRosters = e.prevSeasonRosters;
+      if (!prevRosters || prevRosters.length < 2) return;
+      const myPrevRoster = prevRosters.find(r =>
+        r.owner_id === e.roster.owner_id || (r.co_owners || []).includes(e.roster.owner_id));
+      if (!myPrevRoster) return;
+      const pfOf = r => {
+        const s = r.settings || {};
+        return (s.fpts || 0) + (s.fpts_decimal || 0) / 100;
+      };
+      const sorted = [...prevRosters].sort((a, b) =>
+        (b.settings.wins || 0) - (a.settings.wins || 0) || pfOf(b) - pfOf(a));
+      const rank = sorted.findIndex(r => r.roster_id === myPrevRoster.roster_id) + 1;
+      lastSeasonPcts.push(((prevRosters.length - rank) / (prevRosters.length - 1)) * 100);
+    });
+    const phLastSeasonTrack = document.getElementById('phLastSeasonTrack');
+    if (phLastSeasonTrack) phLastSeasonTrack.hidden = lastSeasonPcts.length === 0;
+    renderDotTrack('phLastSeasonRow', lastSeasonPcts);
 
     renderDraftCapital(entries);
   }
   window.renderRealDashboard = renderRealDashboard;
+
+  // Red at the bottom of the pack up through green at the top, one dot per
+  // league so you see the real spread instead of a single averaged bar --
+  // plus a blue AVG marker at the mean. Every value is a real percentile
+  // computed above, nothing invented for the visual.
+  function pctToColor(pct) {
+    const hue = Math.max(0, Math.min(120, pct * 1.2));
+    return `hsl(${hue}, 68%, 48%)`;
+  }
+  function renderDotTrack(rowId, pcts) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    row.querySelectorAll('.track-dot, .track-avg-marker, .track-avg-label').forEach(el => el.remove());
+    if (!pcts.length) return;
+    pcts.forEach(pct => {
+      const dot = document.createElement('div');
+      dot.className = 'track-dot';
+      dot.style.left = Math.max(1, Math.min(99, pct)) + '%';
+      dot.style.background = pctToColor(pct);
+      row.appendChild(dot);
+    });
+    const avg = pcts.reduce((s, p) => s + p, 0) / pcts.length;
+    const marker = document.createElement('div');
+    marker.className = 'track-avg-marker';
+    marker.style.left = Math.max(1, Math.min(99, avg)) + '%';
+    row.appendChild(marker);
+    const label = document.createElement('div');
+    label.className = 'track-avg-label';
+    label.style.left = Math.max(1, Math.min(99, avg)) + '%';
+    label.textContent = 'AVG';
+    row.appendChild(label);
+  }
 
   // Real future draft-pick ownership, dynasty mode only -- for each of the
   // next two draft classes, how many picks (per round) you actually own
@@ -13217,8 +13343,8 @@
       const maxAvg = Math.max(1, ...rows.map(r => r.avg));
       const rowsHtml = rows.map(r =>
         `<div class="ph-dc-row">` +
-          `<span class="ph-dc-round">${roundLabels[r.round]}</span>` +
-          `<div class="ph-dc-bar-bg"><div class="ph-dc-bar-fill" style="width:${Math.min(100, (r.avg / maxAvg) * 100)}%"></div></div>` +
+          `<span class="ph-dc-round ph-dc-round-${r.round}">${roundLabels[r.round]}</span>` +
+          `<div class="ph-dc-bar-bg"><div class="ph-dc-bar-fill ph-dc-round-${r.round}" style="width:${Math.min(100, (r.avg / maxAvg) * 100)}%"></div></div>` +
           `<span class="ph-dc-value">${r.avg.toFixed(2)}</span>` +
         `</div>`
       ).join('');
