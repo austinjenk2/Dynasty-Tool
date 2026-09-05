@@ -3313,8 +3313,8 @@
         <div class="sb-subtabs-left">
           <h1 style="margin:0">Scoreboard</h1>
           <div class="sb-view-toggle" id="sbViewToggle">
-            <button type="button" class="sb-view-toggle-btn is-active" data-view="scoreboard">Standard View</button>
-            <button type="button" class="sb-view-toggle-btn" data-view="field">Field View</button>
+            <button type="button" class="sb-view-toggle-btn is-active" data-sbv="scoreboard">Standard View</button>
+            <button type="button" class="sb-view-toggle-btn" data-sbv="field">Field View</button>
           </div>
         </div>
         <span class="week-dropdown" id="sbWeekDropdown">
@@ -11824,7 +11824,7 @@
         el.classList.toggle('is-active', el.dataset.sbView === view);
       });
       toggleEl.querySelectorAll('.sb-view-toggle-btn').forEach(btn => {
-        btn.classList.toggle('is-active', btn.dataset.view === view);
+        btn.classList.toggle('is-active', btn.dataset.sbv === view);
       });
       if (view === 'field') renderSbFieldView();
     }
@@ -11834,7 +11834,7 @@
     toggleEl.addEventListener('click', (e) => {
       const btn = e.target.closest('.sb-view-toggle-btn');
       if (!btn) return;
-      const view = btn.dataset.view;
+      const view = btn.dataset.sbv;
       try { localStorage.setItem(SB_VIEW_KEY, view); } catch (e) {}
       applyView(view);
     });
