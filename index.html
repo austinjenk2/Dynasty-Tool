@@ -579,12 +579,46 @@
     color: var(--ink);
   }
   .sb-subtabs { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
-  .sb-subtabs-left { display: flex; gap: 22px; }
+  .sb-subtabs-left { display: flex; align-items: center; gap: 22px; }
   #sbWeekDropdown .week-select, #rgWeekDropdown .week-select { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
   #sbWeekDropdown .week-select span, #rgWeekDropdown .week-select span { font-size: 16px; }
   #sbWeekDropdown .week-select > span:last-child, #rgWeekDropdown .week-select > span:last-child { font-size: 11px; }
   .sb-view { display: none; }
   .sb-view.is-active { display: block; }
+
+  /* Standard/Field view segmented toggle */
+  .sb-view-toggle { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .sb-view-toggle-btn {
+    padding: 6px 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
+    color: var(--muted); background: var(--surface); cursor: pointer; border: none;
+    border-right: 1px solid var(--border);
+  }
+  .sb-view-toggle-btn:last-child { border-right: none; }
+  .sb-view-toggle-btn.is-active { background: var(--ink); color: var(--bg); }
+
+  /* Field View -- a grid of every league's live win-probability field at
+     once, reusing the same .field-panel markup/animation as the
+     Scoreboard's matchup expand so both views always agree. */
+  .sb-field-page-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 900px) { .sb-field-page-grid { grid-template-columns: 1fr; } }
+  .sb-field-page-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .sb-field-page-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .sb-field-page-name { font-weight: 700; font-size: 14px; color: var(--ink); }
+  .sb-field-page-meta { font-size: 12px; color: var(--muted); }
+  /* A page full of these needs a shorter field than the single one shown
+     in a matchup's own expand, or scrolling through every league would be
+     unusable. */
+  .sb-field-page-card .field-turf { height: clamp(260px, 38vh, 400px); }
+  .sb-field-page-card .field-player-av { width: 28px; height: 28px; }
 
   .sb-stats {
     display: flex;
@@ -904,6 +938,11 @@
   .sb-exp-q { color: var(--gold); font-weight: 800; margin-left: 4px; }
   .sb-exp-psub { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
   .sb-exp-pts { text-align: right; color: var(--faint); font-weight: 600; }
+  .sb-exp-pts.sb-pos-qb { color: var(--red); }
+  .sb-exp-pts.sb-pos-rb { color: var(--green); }
+  .sb-exp-pts.sb-pos-wr { color: var(--blue); }
+  .sb-exp-pts.sb-pos-te { color: var(--gold); }
+  .sb-exp-pts.sb-pos-sfl { color: #7c5cbf; }
   .sb-exp-proj { text-align: right; color: var(--gold); font-weight: 700; }
   .sb-exp-orig { text-align: right; color: var(--faint); font-weight: 600; font-size: 11px; }
   .sb-exp-footer { margin-top: 14px; }
@@ -3273,11 +3312,21 @@
       <div class="sb-subtabs" id="sbSubtabs">
         <div class="sb-subtabs-left">
           <h1 style="margin:0">Scoreboard</h1>
+          <div class="sb-view-toggle" id="sbViewToggle">
+            <button type="button" class="sb-view-toggle-btn is-active" data-view="scoreboard">Standard View</button>
+            <button type="button" class="sb-view-toggle-btn" data-view="field">Field View</button>
+          </div>
         </div>
         <span class="week-dropdown" id="sbWeekDropdown">
           <span class="week-select" id="sbWeekSelect">WEEK <span id="sbWeekLabel">1</span> <span>&#9662;</span></span>
           <span class="week-menu" id="sbWeekMenu" hidden></span>
         </span>
+      </div>
+
+      <div data-sb-view="field" class="sb-view">
+        <div class="sb-field-page-grid" id="sbFieldPageGrid">
+          <div class="ld-loading">Loading fields&hellip;</div>
+        </div>
       </div>
 
       <div data-sb-view="scoreboard" class="sb-view is-active">
@@ -11424,7 +11473,7 @@
           `<span class="sb-exp-avatar"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>` +
           `<span class="sb-exp-info"><span class="sb-exp-pname">${name}</span><span class="sb-exp-psub">${pos} &middot; ${team}${predicted ? ' &middot; predicted' : ''}</span></span>` +
         '</td>' +
-        `<td class="sb-exp-pts">${pts}</td>` +
+        `<td class="sb-exp-pts sb-pos-${posClass}">${pts}</td>` +
         `<td class="sb-exp-proj">${projText}</td>` +
         `<td class="sb-exp-orig">${origText}</td>` +
       '</tr>';
@@ -11515,7 +11564,10 @@
     // QB(s) and any K/DEF share one row -- spread together (instead of
     // two independent ranges) so they can never land on top of each other.
     sbFieldSpread(groups.QB.concat(groups.OTHER), placements, 40, 60);
-    sbFieldSpread(groups.RB, placements, 40, 60);
+    // Wider band than the QB row above -- 3+ RBs packed into the same
+    // narrow 40-60 range sat close enough to overlap at smaller field
+    // sizes, so running backs get more room to spread out.
+    sbFieldSpread(groups.RB, placements, 25, 75);
     Object.keys(groups).forEach(pos => {
       groups[pos].forEach(id => { placements[id].depth = SB_FIELD_POS_DEPTH[pos]; });
     });
@@ -11630,44 +11682,28 @@
     });
   }
 
-  async function openRealSbExpand(card, entry, override) {
-    const panel = document.createElement('div');
-    panel.className = 'sb-expand';
-    panel.innerHTML = '<div class="ld-loading">Loading lineups…</div>';
-    card.after(panel);
-    card.classList.add('is-open');
-
-    let dict;
-    try {
-      dict = await window.sleeperGetPlayerDict();
-    } catch (err) {
-      panel.innerHTML = '<div class="ld-loading">Could not load player data from Sleeper.</div>';
-      return;
-    }
-
+  // Everything needed to render a league's win-probability field --
+  // shared by the Scoreboard's matchup expand (openRealSbExpand) and the
+  // standalone Field View page (renderSbFieldView) so both always show
+  // the exact same numbers/formations for a given league.
+  function sbBuildFieldContext(entry, override, dict) {
     const myMatchup = override ? override.myMatchup : entry.myMatchup;
     const oppMatchup = override ? override.oppMatchup : entry.oppMatchup;
     const projMap = override ? override.projections : null;
-
     const week = override ? override.week : entry.week;
-    const expHasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
-    let scoreHtml;
-    let winPct = null;
-    if (expHasData) {
-      const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league);
-      const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
-      const myPts = myMatchup ? (myMatchup.points || 0) : 0;
-      const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
-      const myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj);
-      const oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj);
+    const hasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
+
+    let winPct = null, myProj = null, oppProj = null, myPts = 0, oppPts = 0, myOrig = null, oppOrig = null;
+    if (hasData) {
+      myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league);
+      oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
+      myPts = myMatchup ? (myMatchup.points || 0) : 0;
+      oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
+      myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj);
+      oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj);
       winPct = sbWinProbability(myProj, oppProj);
-      scoreHtml =
-        `<span class="sb-exp-score-item"><b>${myProj.toFixed(1)}</b> vs <b>${oppProj.toFixed(1)}</b> <i>proj</i></span>` +
-        `<span class="sb-exp-score-item">${myPts.toFixed(1)} vs ${oppPts.toFixed(1)} <i>live</i></span>` +
-        `<span class="sb-exp-score-item">${myOrig.toFixed(1)} vs ${oppOrig.toFixed(1)} <i>started at</i></span>`;
-    } else {
-      scoreHtml = `<span class="sb-exp-score-item">${card.querySelector('.sb-card-score').textContent}</span>`;
     }
+
     const fieldKey = entry.league.league_id;
     const startPct = winPct != null ? (__sbFieldPrevPct[fieldKey] != null ? __sbFieldPrevPct[fieldKey] : winPct) : 50;
     const myUser = entry.roster ? (entry.users || []).find(u => u.user_id === entry.roster.owner_id) : null;
@@ -11687,6 +11723,31 @@
       oppPlacements: sbFieldFormationPlacements(fieldOppIds, dict),
       dict,
     };
+    return { myMatchup, oppMatchup, projMap, week, hasData, winPct, myProj, oppProj, myPts, oppPts, myOrig, oppOrig, teams, fieldRosters, fieldKey, startPct };
+  }
+
+  async function openRealSbExpand(card, entry, override) {
+    const panel = document.createElement('div');
+    panel.className = 'sb-expand';
+    panel.innerHTML = '<div class="ld-loading">Loading lineups…</div>';
+    card.after(panel);
+    card.classList.add('is-open');
+
+    let dict;
+    try {
+      dict = await window.sleeperGetPlayerDict();
+    } catch (err) {
+      panel.innerHTML = '<div class="ld-loading">Could not load player data from Sleeper.</div>';
+      return;
+    }
+
+    const ctx = sbBuildFieldContext(entry, override, dict);
+    const { myMatchup, oppMatchup, projMap, week, winPct, teams, fieldRosters, fieldKey, startPct } = ctx;
+    const scoreHtml = ctx.hasData
+      ? `<span class="sb-exp-score-item"><b>${ctx.myProj.toFixed(1)}</b> vs <b>${ctx.oppProj.toFixed(1)}</b> <i>proj</i></span>` +
+        `<span class="sb-exp-score-item">${ctx.myPts.toFixed(1)} vs ${ctx.oppPts.toFixed(1)} <i>live</i></span>` +
+        `<span class="sb-exp-score-item">${ctx.myOrig.toFixed(1)} vs ${ctx.oppOrig.toFixed(1)} <i>started at</i></span>`
+      : `<span class="sb-exp-score-item">${card.querySelector('.sb-card-score').textContent}</span>`;
     panel.innerHTML =
       `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
       '<div class="sb-exp-body">' +
@@ -11706,6 +11767,78 @@
       '</div>';
     animateSbFieldPanel(panel, fieldKey, winPct, fieldRosters);
   }
+
+  // Field View -- every league's own win-probability field at once, on one
+  // page, instead of having to open each matchup individually. Reuses the
+  // exact same field markup/animation/formation logic as the single-league
+  // expand (via sbBuildFieldContext) so the two views can never disagree.
+  async function renderSbFieldView() {
+    const grid = document.getElementById('sbFieldPageGrid');
+    if (!grid) return;
+    const tankList = sbGetTankList();
+    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && !tankList.has(e.league.name));
+    if (!entries.length) {
+      grid.innerHTML = '<div class="ld-loading">No leagues to show yet.</div>';
+      return;
+    }
+    let dict;
+    try {
+      dict = await window.sleeperGetPlayerDict();
+    } catch (err) {
+      grid.innerHTML = '<div class="ld-loading">Could not load player data from Sleeper.</div>';
+      return;
+    }
+    const override = window.__sleeperScoreboardOverride || null;
+
+    grid.innerHTML = entries.map(entry => {
+      const ov = override ? override.byLeague[entry.league.league_id] : null;
+      const oppUser = ov ? ov.oppUser : entry.oppUser;
+      const oppName = oppUser ? (oppUser.display_name || oppUser.username || 'Opponent') : (entry.myMatchup ? 'TBD' : 'No matchup yet');
+      return `<div class="sb-field-page-card" data-sleeper-league-id="${entry.league.league_id}">` +
+        '<div class="sb-field-page-head">' +
+          `<div class="sb-field-page-name">${entry.league.name}</div>` +
+          `<div class="sb-field-page-meta">vs ${oppName}</div>` +
+        '</div>' +
+        '<div class="sb-field-page-body"></div>' +
+      '</div>';
+    }).join('');
+
+    entries.forEach(entry => {
+      const cardEl = grid.querySelector(`.sb-field-page-card[data-sleeper-league-id="${entry.league.league_id}"]`);
+      if (!cardEl) return;
+      const bodyEl = cardEl.querySelector('.sb-field-page-body');
+      const ov = override ? override.byLeague[entry.league.league_id] : null;
+      const ctx = sbBuildFieldContext(entry, ov, dict);
+      bodyEl.innerHTML = sbFieldPanelHtml(ctx.startPct, ctx.teams);
+      animateSbFieldPanel(bodyEl, ctx.fieldKey, ctx.winPct, ctx.fieldRosters);
+    });
+  }
+  window.renderSbFieldView = renderSbFieldView;
+
+  (function initSbViewToggle() {
+    const toggleEl = document.getElementById('sbViewToggle');
+    if (!toggleEl) return;
+    const SB_VIEW_KEY = 'dynastyToolSbView';
+    function applyView(view) {
+      document.querySelectorAll('.sb-view').forEach(el => {
+        el.classList.toggle('is-active', el.dataset.sbView === view);
+      });
+      toggleEl.querySelectorAll('.sb-view-toggle-btn').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.view === view);
+      });
+      if (view === 'field') renderSbFieldView();
+    }
+    let savedView = 'scoreboard';
+    try { savedView = localStorage.getItem(SB_VIEW_KEY) || 'scoreboard'; } catch (e) {}
+    if (savedView === 'field') applyView('field');
+    toggleEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.sb-view-toggle-btn');
+      if (!btn) return;
+      const view = btn.dataset.view;
+      try { localStorage.setItem(SB_VIEW_KEY, view); } catch (e) {}
+      applyView(view);
+    });
+  })();
 
   const sbGridEl = document.getElementById('sbGrid');
   if (sbGridEl) {
@@ -14545,6 +14678,15 @@
         const reopenOverride = override ? override.byLeague[openLeagueId] : null;
         openRealSbExpand(newCard, reopenEntry, reopenOverride);
       }
+    }
+
+    // Keep Field View's numbers moving in real time too when it's the tab
+    // actually being watched -- the 60s poll that rebuilds this grid is
+    // the same one that would otherwise leave it stale until switched away
+    // and back.
+    const fieldViewEl = document.querySelector('.sb-view[data-sb-view="field"]');
+    if (fieldViewEl && fieldViewEl.classList.contains('is-active') && window.renderSbFieldView) {
+      window.renderSbFieldView();
     }
   }
   window.renderRealScoreboard = renderRealScoreboard;
