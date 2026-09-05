@@ -650,6 +650,7 @@
      exists while that matchup is open. Ball position is the matchup's
      live projected win% mapped straight onto the 0-100 yard scale (63%
      win prob = standing at the 37, i.e. the opponent's 37). */
+  .sb-exp-league-title { font-family: 'Source Serif 4', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
   .sb-exp-body { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
   .field-panel {
     background: var(--surface);
@@ -3324,6 +3325,14 @@
       </div>
 
       <div data-sb-view="field" class="sb-view">
+        <div class="sort-dropdown" style="display:flex;justify-content:flex-end;margin-bottom:10px">
+          <div class="sort-select" id="sbFieldSortSelect"><span id="sbFieldSortSelectLabel">League Order</span> <span>&#9662;</span></div>
+          <div class="sort-menu" id="sbFieldSortMenu" hidden style="left:auto;right:0">
+            <div class="sort-option active" data-field-sort="league">League Order</div>
+            <div class="sort-option" data-field-sort="best">Best Field Position</div>
+            <div class="sort-option" data-field-sort="worst">Worst Field Position</div>
+          </div>
+        </div>
         <div class="sb-field-page-grid" id="sbFieldPageGrid">
           <div class="ld-loading">Loading fields&hellip;</div>
         </div>
@@ -11749,6 +11758,7 @@
         `<span class="sb-exp-score-item">${ctx.myOrig.toFixed(1)} vs ${ctx.oppOrig.toFixed(1)} <i>started at</i></span>`
       : `<span class="sb-exp-score-item">${card.querySelector('.sb-card-score').textContent}</span>`;
     panel.innerHTML =
+      `<div class="sb-exp-league-title">${sbFieldEsc(entry.league.name)}</div>` +
       `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
       '<div class="sb-exp-body">' +
         '<div class="sb-lineups-cols">' +
@@ -11790,30 +11800,80 @@
     }
     const override = window.__sleeperScoreboardOverride || null;
 
-    grid.innerHTML = entries.map(entry => {
+    // Build each league's field context up front (once) so it can be used
+    // both for the card markup below and for sorting by field position,
+    // instead of recomputing it a second time per card.
+    const built = entries.map(entry => {
       const ov = override ? override.byLeague[entry.league.league_id] : null;
+      const ctx = sbBuildFieldContext(entry, ov, dict);
       const oppUser = ov ? ov.oppUser : entry.oppUser;
       const oppName = oppUser ? (oppUser.display_name || oppUser.username || 'Opponent') : (entry.myMatchup ? 'TBD' : 'No matchup yet');
-      return `<div class="sb-field-page-card" data-sleeper-league-id="${entry.league.league_id}">` +
+      return { entry, ctx, oppName };
+    });
+
+    grid.innerHTML = built.map(({ entry, ctx, oppName }) =>
+      `<div class="sb-field-page-card" data-sleeper-league-id="${entry.league.league_id}" data-winpct="${ctx.winPct != null ? ctx.winPct : -1}">` +
         '<div class="sb-field-page-head">' +
           `<div class="sb-field-page-name">${entry.league.name}</div>` +
           `<div class="sb-field-page-meta">vs ${oppName}</div>` +
         '</div>' +
         '<div class="sb-field-page-body"></div>' +
-      '</div>';
-    }).join('');
+      '</div>'
+    ).join('');
 
-    entries.forEach(entry => {
+    built.forEach(({ entry, ctx }) => {
       const cardEl = grid.querySelector(`.sb-field-page-card[data-sleeper-league-id="${entry.league.league_id}"]`);
       if (!cardEl) return;
       const bodyEl = cardEl.querySelector('.sb-field-page-body');
-      const ov = override ? override.byLeague[entry.league.league_id] : null;
-      const ctx = sbBuildFieldContext(entry, ov, dict);
       bodyEl.innerHTML = sbFieldPanelHtml(ctx.startPct, ctx.teams);
       animateSbFieldPanel(bodyEl, ctx.fieldKey, ctx.winPct, ctx.fieldRosters);
     });
+
+    applySbFieldSort();
   }
   window.renderSbFieldView = renderSbFieldView;
+
+  // Persists across re-renders (every renderSbFieldView rebuild) same as
+  // the Standard View's own sort criterion does.
+  let sbFieldSortCriterion = 'league';
+  function applySbFieldSort() {
+    const grid = document.getElementById('sbFieldPageGrid');
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll('.sb-field-page-card'));
+    if (sbFieldSortCriterion === 'league') return; // already in league order
+    // No matchup/projections yet (-1) always sinks to the bottom, whichever
+    // direction "best"/"worst" field position is sorted in.
+    cards.sort((a, b) => {
+      const wpA = Number(a.dataset.winpct), wpB = Number(b.dataset.winpct);
+      if (wpA < 0 && wpB < 0) return 0;
+      if (wpA < 0) return 1;
+      if (wpB < 0) return -1;
+      return sbFieldSortCriterion === 'best' ? wpB - wpA : wpA - wpB;
+    });
+    cards.forEach(card => grid.appendChild(card));
+  }
+
+  (function initSbFieldSort() {
+    const selectEl = document.getElementById('sbFieldSortSelect');
+    const menuEl = document.getElementById('sbFieldSortMenu');
+    const labelEl = document.getElementById('sbFieldSortSelectLabel');
+    if (!selectEl || !menuEl) return;
+    selectEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menuEl.hidden = !menuEl.hidden;
+    });
+    menuEl.querySelectorAll('.sort-option').forEach(option => {
+      option.addEventListener('click', () => {
+        sbFieldSortCriterion = option.dataset.fieldSort;
+        menuEl.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+        option.classList.add('active');
+        if (labelEl) labelEl.textContent = option.textContent;
+        menuEl.hidden = true;
+        applySbFieldSort();
+      });
+    });
+    document.addEventListener('click', () => { menuEl.hidden = true; });
+  })();
 
   (function initSbViewToggle() {
     const toggleEl = document.getElementById('sbViewToggle');
