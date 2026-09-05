@@ -11457,16 +11457,18 @@
     ids.forEach((id, i) => { placements[id] = { x: from + (i / (ids.length - 1)) * (to - from) }; });
   }
   // How far behind the line of scrimmage each position lines up (percent
-  // of field height, added on top of SB_FIELD_ROW_GAP) -- receivers and
-  // tight ends stay up on the line, the QB drops back a little, and the
-  // running back(s) line up deeper still, just behind the QB. Spaced far
-  // enough apart that even a single-QB/single-TE lining up on the same
-  // vertical lane never visually overlaps.
-  const SB_FIELD_POS_DEPTH = { WR: 0, TE: 9, QB: 19, RB: 31, OTHER: 19 };
+  // of field height, added on top of SB_FIELD_ROW_GAP) -- receivers stay
+  // up on the line out wide, the QB(s) sit right behind the ball like
+  // taking the snap, the TE(s) sit at that same shotgun depth just
+  // further outside the QB(s), and the running back(s) line up deepest,
+  // behind the QB(s). Spaced far enough apart that a shared vertical
+  // lane never visually overlaps.
+  const SB_FIELD_POS_DEPTH = { WR: 0, TE: 10, QB: 10, RB: 22, OTHER: 10 };
   // Assigns every real starter an (x%, depth) formation slot based on
-  // their actual position (WR/TE split wide-to-center, RB tucked in
-  // behind the QB, who sits centered just off the line) -- not their
-  // roster slot, so a FLEX filled by a WR lines up like a receiver.
+  // their actual position (not their roster slot, so a FLEX filled by a
+  // WR lines up like a receiver): receivers split out wide, QB(s)
+  // centered directly behind the ball, TE(s) just outside the QB(s) at
+  // the same depth, running back(s) centered behind the QB(s).
   function sbFieldFormationPlacements(ids, dict) {
     const groups = { QB: [], RB: [], WR: [], TE: [], OTHER: [] };
     ids.forEach(id => {
@@ -11475,13 +11477,14 @@
       groups[pos].push(id);
     });
     const placements = {};
-    sbFieldSpread(groups.WR, placements, 6, 94);
+    sbFieldSpread(groups.WR, placements, 4, 96);
+    sbFieldSpread(groups.QB, placements, 44, 56);
     // A lone TE nudges off center so it doesn't sit in the exact same
-    // vertical lane as the QB.
-    sbFieldSpread(groups.TE, placements, groups.TE.length === 1 ? 40 : 32, groups.TE.length === 1 ? 40 : 68);
-    sbFieldSpread(groups.RB, placements, 40, 60);
-    sbFieldSpread(groups.QB, placements, 50, 50);
-    sbFieldSpread(groups.OTHER, placements, 18, 82);
+    // vertical lane as the QB -- just outside the QB(s), not out with
+    // the receivers.
+    sbFieldSpread(groups.TE, placements, groups.TE.length === 1 ? 34 : 32, groups.TE.length === 1 ? 34 : 68);
+    sbFieldSpread(groups.RB, placements, 44, 56);
+    sbFieldSpread(groups.OTHER, placements, 16, 84);
     Object.keys(groups).forEach(pos => {
       groups[pos].forEach(id => { placements[id].depth = SB_FIELD_POS_DEPTH[pos]; });
     });
