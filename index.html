@@ -726,11 +726,27 @@
   }
   .field-yardline span.fl-left { left: 8%; }
   .field-yardline span.fl-right { right: 8%; }
+  /* Line of scrimmage -- a bright bar across the full width of the field
+     at the ball's exact percentage, like a broadcast overlay, so the
+     number driving everything (the win%) is legible as a real yard line
+     at a glance instead of only visible as the small ball icon. */
+  .field-los-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 3px;
+    background: #ffe14d;
+    box-shadow: 0 0 6px 1px rgba(255,225,77,0.85), 0 0 2px rgba(0,0,0,0.4);
+    transform: translateY(50%);
+    transition: bottom 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 1;
+    pointer-events: none;
+  }
   .field-ball-pos {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
     transition: bottom 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 2;
   }
   .field-ball {
     display: block;
@@ -11704,6 +11720,7 @@
               ).join('') +
               '<div class="field-team-row field-team-row-mine"></div>' +
               '<div class="field-team-row field-team-row-opp"></div>' +
+              `<div class="field-los-line" style="bottom:${clamped}%"></div>` +
               '<div class="field-delta"></div>' +
               `<div class="field-ball-pos" style="bottom:${clamped}%">` +
                 '<span class="field-ball">&#127944;</span>' +
@@ -11733,6 +11750,7 @@
     const fieldPanel = panelEl.querySelector('.field-panel');
     if (!fieldPanel) return;
     const ballPos = fieldPanel.querySelector('.field-ball-pos');
+    const losLine = fieldPanel.querySelector('.field-los-line');
     const pctLabel = fieldPanel.querySelector('.field-panel-pct-value');
     const yardEl = fieldPanel.querySelector('.field-yard-text');
     const deltaEl = fieldPanel.querySelector('.field-delta');
@@ -11762,6 +11780,7 @@
     }
     requestAnimationFrame(() => {
       if (ballPos) ballPos.style.bottom = `${pct}%`;
+      if (losLine) losLine.style.bottom = `${pct}%`;
       if (prev != null && deltaEl) {
         const delta = Math.round(winPct - prev);
         if (delta !== 0) {
