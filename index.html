@@ -11460,12 +11460,25 @@
   // sides and stacking a little further inside as more pile onto the
   // same side (so 4+ WRs don't sit on top of each other) -- never drift
   // toward the center like the other line-of-scrimmage positions do.
+  // The first 4 fill the two edges (2 per side); a 5th+ receiver stops
+  // continuing that inward stack and instead tucks in behind the pair
+  // already on its side, centered between them (marked `behind: true`
+  // so the caller drops it off the line of scrimmage).
   function sbFieldSpreadEdges(ids, placements) {
-    ids.forEach((id, i) => {
+    const onLine = ids.slice(0, 4);
+    const extra = ids.slice(4);
+    onLine.forEach((id, i) => {
       const onRight = i % 2 === 1;
       const stackIn = Math.floor(i / 2) * 9;
       const x = onRight ? 98 - stackIn : 2 + stackIn;
       placements[id] = { x: Math.max(2, Math.min(98, x)) };
+    });
+    extra.forEach((id, i) => {
+      const onRight = i % 2 === 1;
+      const sidePair = onLine.filter((_, idx) => (idx % 2 === 1) === onRight);
+      const xs = sidePair.map(pid => placements[pid].x);
+      const x = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : (onRight ? 90 : 10);
+      placements[id] = { x, behind: true };
     });
   }
   // How far behind the line of scrimmage each position lines up (percent
@@ -11507,6 +11520,7 @@
       groups[pos].forEach(id => { placements[id].depth = SB_FIELD_POS_DEPTH[pos]; });
     });
     teExtra.forEach(id => { placements[id].depth = SB_FIELD_POS_DEPTH.QB; });
+    groups.WR.forEach(id => { if (placements[id].behind) placements[id].depth = SB_FIELD_POS_DEPTH.QB; });
     return placements;
   }
   function sbFieldFormationHtml(ids, dict, placements, ballPct, sideSign) {
