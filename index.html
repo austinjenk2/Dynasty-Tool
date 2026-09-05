@@ -11605,8 +11605,15 @@
         : `Ball on your own ${rounded}`;
     }
     if (rosters) {
-      if (myRowEl) myRowEl.innerHTML = sbFieldFormationHtml(rosters.myIds, rosters.dict, rosters.myPlacements, pct, -1);
-      if (oppRowEl) oppRowEl.innerHTML = sbFieldFormationHtml(rosters.oppIds, rosters.dict, rosters.oppPlacements, pct, 1);
+      // Inside either 10-yard line there just isn't room for both full
+      // lineups to fit without stacking on the end zone -- so the
+      // defending team (the one whose end zone the ball is crowding)
+      // clears off the field entirely rather than overlapping.
+      const rounded = Math.round(winPct);
+      const insideOppTen = rounded >= 90;
+      const insideMyTen = rounded <= 10;
+      if (myRowEl) myRowEl.innerHTML = insideMyTen ? '' : sbFieldFormationHtml(rosters.myIds, rosters.dict, rosters.myPlacements, pct, -1);
+      if (oppRowEl) oppRowEl.innerHTML = insideOppTen ? '' : sbFieldFormationHtml(rosters.oppIds, rosters.dict, rosters.oppPlacements, pct, 1);
     }
     requestAnimationFrame(() => {
       if (ballPos) ballPos.style.bottom = `${pct}%`;
