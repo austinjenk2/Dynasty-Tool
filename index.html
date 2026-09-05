@@ -725,34 +725,25 @@
   .field-delta.field-delta-neg { color: #ff9b9b; }
   .field-yard-text { text-align: center; font-size: 18px; font-weight: 800; color: var(--ink); margin-top: 12px; }
 
-  /* Both starting lineups line up at the line of scrimmage like a real
-     snap formation -- horizontal rows stacked above/below the ball, not
-     side by side. Your team lines up behind the ball on your side
-     (pushing toward your end zone at the top); the opponent lines up on
-     the other side of the ball, between it and your end zone. The
-     losing side thins out near either end zone (see
-     sbFieldVisibleCounts) -- full lineup only fits while the game's
-     still competitive. */
-  .field-team-row {
-    position: absolute;
-    left: 5%;
-    right: 5%;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 5px;
-    transform: translateY(50%);
-    transition: bottom 1.4s cubic-bezier(0.22, 1, 0.36, 1);
-  }
+  /* Both full starting lineups line up in a real formation around the
+     line of scrimmage (the ball): receivers split out wide right on the
+     line, tight ends inline but still up on the line, the QB centered a
+     few yards back, and the running back(s) tucked in even deeper, just
+     behind the QB. Your team forms up on your side of the ball (pushing
+     toward your end zone at the top); the opponent forms up on the other
+     side, between the ball and your end zone. */
+  .field-team-row { position: absolute; inset: 0; }
   .field-player-av {
-    width: 24px;
-    height: 24px;
+    position: absolute;
+    transform: translate(-50%, 50%);
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     overflow: hidden;
-    flex-shrink: 0;
     background: rgba(255,255,255,0.3);
-    border: 2px solid rgba(255,255,255,0.9);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+    border: 2.5px solid rgba(255,255,255,0.9);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    transition: left 1.4s cubic-bezier(0.22, 1, 0.36, 1), bottom 1.4s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .field-player-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
@@ -11448,10 +11439,7 @@
   // team's row -- your row sits this far below the ball, the opponent's
   // this far above, so they read as two lines facing off at the snap
   // instead of stacking on top of the ball itself.
-  const SB_FIELD_ROW_GAP = 7;
-  function sbFieldRowBottom(ballPct, gap) {
-    return Math.max(0, Math.min(100, ballPct + gap));
-  }
+  const SB_FIELD_ROW_GAP = 6;
   function sbFieldEsc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
@@ -11461,40 +11449,53 @@
     }
     return fallbackText;
   }
-  // Starters ranked highest-projection-first so a truncated list (see
-  // sbFieldVisibleCounts) keeps the stars on the field and drops the
-  // bench-y end first, instead of a random cut.
-  function sbFieldSortedStarters(matchup, league, projMap) {
-    const ids = sbEffectiveStarters(matchup, league, projMap);
-    return ids.slice().sort((a, b) => (sbProjectionFor(b, projMap, league) || 0) - (sbProjectionFor(a, projMap, league) || 0));
+  // Lays a real position group out across a horizontal band (from% to
+  // to%), evenly spaced -- a single player centers in the band.
+  function sbFieldSpread(ids, placements, from, to) {
+    if (!ids.length) return;
+    if (ids.length === 1) { placements[ids[0]] = { x: (from + to) / 2 }; return; }
+    ids.forEach((id, i) => { placements[id] = { x: from + (i / (ids.length - 1)) * (to - from) }; });
   }
-  function sbFieldPlayersHtml(ids, dict) {
+  // How far behind the line of scrimmage each position lines up (percent
+  // of field height, added on top of SB_FIELD_ROW_GAP) -- receivers and
+  // tight ends stay up on the line, the QB drops back a little, and the
+  // running back(s) line up deeper still, just behind the QB. Spaced far
+  // enough apart that even a single-QB/single-TE lining up on the same
+  // vertical lane never visually overlaps.
+  const SB_FIELD_POS_DEPTH = { WR: 0, TE: 9, QB: 19, RB: 31, OTHER: 19 };
+  // Assigns every real starter an (x%, depth) formation slot based on
+  // their actual position (WR/TE split wide-to-center, RB tucked in
+  // behind the QB, who sits centered just off the line) -- not their
+  // roster slot, so a FLEX filled by a WR lines up like a receiver.
+  function sbFieldFormationPlacements(ids, dict) {
+    const groups = { QB: [], RB: [], WR: [], TE: [], OTHER: [] };
+    ids.forEach(id => {
+      const p = dict[id];
+      const pos = p && SB_FIELD_POS_DEPTH[p.position] != null ? p.position : 'OTHER';
+      groups[pos].push(id);
+    });
+    const placements = {};
+    sbFieldSpread(groups.WR, placements, 6, 94);
+    // A lone TE nudges off center so it doesn't sit in the exact same
+    // vertical lane as the QB.
+    sbFieldSpread(groups.TE, placements, groups.TE.length === 1 ? 40 : 32, groups.TE.length === 1 ? 40 : 68);
+    sbFieldSpread(groups.RB, placements, 40, 60);
+    sbFieldSpread(groups.QB, placements, 50, 50);
+    sbFieldSpread(groups.OTHER, placements, 18, 82);
+    Object.keys(groups).forEach(pos => {
+      groups[pos].forEach(id => { placements[id].depth = SB_FIELD_POS_DEPTH[pos]; });
+    });
+    return placements;
+  }
+  function sbFieldFormationHtml(ids, dict, placements, ballPct, sideSign) {
     return ids.map(id => {
+      const pl = placements[id];
+      if (!pl) return '';
+      const bottom = Math.max(0, Math.min(100, ballPct + sideSign * (SB_FIELD_ROW_GAP + pl.depth)));
       const p = dict[id];
       const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id) : id;
-      return `<span class="field-player-av" title="${sbFieldEsc(name)}"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>`;
+      return `<span class="field-player-av" style="left:${pl.x}%;bottom:${bottom}%" title="${sbFieldEsc(name)}"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>`;
     }).join('');
-  }
-  // How many of each team's starters actually fit on the field: full
-  // lineup for both sides while the game's still competitive (win% inside
-  // the safe zone -- "between the tens"), but the losing side thins out
-  // the closer the ball gets to either end zone, down to a floor of 2 so
-  // there's always someone left out there.
-  function sbFieldVisibleCounts(myTotal, oppTotal, winPct) {
-    const SAFE_LOW = 15, SAFE_HIGH = 85;
-    let extremity = 0;
-    if (winPct > SAFE_HIGH) extremity = (winPct - SAFE_HIGH) / (100 - SAFE_HIGH);
-    else if (winPct < SAFE_LOW) extremity = (SAFE_LOW - winPct) / SAFE_LOW;
-    extremity = Math.max(0, Math.min(1, extremity));
-    const losingIsMe = winPct < 50;
-    function reduced(total) {
-      const floor = Math.min(2, total);
-      return Math.max(floor, Math.round(total - extremity * (total - floor)));
-    }
-    return {
-      myCount: losingIsMe ? reduced(myTotal) : myTotal,
-      oppCount: losingIsMe ? oppTotal : reduced(oppTotal),
-    };
   }
   function sbFieldPanelHtml(startPct, teams) {
     const clamped = Math.max(2, Math.min(98, startPct));
@@ -11520,8 +11521,8 @@
               [10, 20, 30, 40, 50, 40, 30, 20, 10].map((n, i) =>
                 `<div class="field-yardline${n === 50 ? ' field-50' : ''}" style="bottom:${(i + 1) * 10}%"><span class="fl-num fl-left">${n}</span><span class="fl-num fl-right">${n}</span></div>`
               ).join('') +
-              `<div class="field-team-row field-team-row-mine" style="bottom:${sbFieldRowBottom(clamped, -SB_FIELD_ROW_GAP)}%"></div>` +
-              `<div class="field-team-row field-team-row-opp" style="bottom:${sbFieldRowBottom(clamped, SB_FIELD_ROW_GAP)}%"></div>` +
+              '<div class="field-team-row field-team-row-mine"></div>' +
+              '<div class="field-team-row field-team-row-opp"></div>' +
               '<div class="field-delta"></div>' +
               `<div class="field-ball-pos" style="bottom:${clamped}%">` +
                 '<span class="field-ball">&#127944;</span>' +
@@ -11568,14 +11569,11 @@
         : `Ball on your own ${rounded}`;
     }
     if (rosters) {
-      const counts = sbFieldVisibleCounts(rosters.myIds.length, rosters.oppIds.length, winPct);
-      if (myRowEl) myRowEl.innerHTML = sbFieldPlayersHtml(rosters.myIds.slice(0, counts.myCount), rosters.dict);
-      if (oppRowEl) oppRowEl.innerHTML = sbFieldPlayersHtml(rosters.oppIds.slice(0, counts.oppCount), rosters.dict);
+      if (myRowEl) myRowEl.innerHTML = sbFieldFormationHtml(rosters.myIds, rosters.dict, rosters.myPlacements, pct, -1);
+      if (oppRowEl) oppRowEl.innerHTML = sbFieldFormationHtml(rosters.oppIds, rosters.dict, rosters.oppPlacements, pct, 1);
     }
     requestAnimationFrame(() => {
       if (ballPos) ballPos.style.bottom = `${pct}%`;
-      if (myRowEl) myRowEl.style.bottom = `${sbFieldRowBottom(pct, -SB_FIELD_ROW_GAP)}%`;
-      if (oppRowEl) oppRowEl.style.bottom = `${sbFieldRowBottom(pct, SB_FIELD_ROW_GAP)}%`;
       if (prev != null && deltaEl) {
         const delta = Math.round(winPct - prev);
         if (delta !== 0) {
@@ -11637,9 +11635,13 @@
       oppName: sbFieldEsc((fieldOppUser && (fieldOppUser.display_name || fieldOppUser.username)) || 'Opponent'),
       oppAvatarId: fieldOppUser ? fieldOppUser.avatar : null,
     };
+    const fieldMyIds = sbEffectiveStarters(myMatchup, entry.league, projMap);
+    const fieldOppIds = sbEffectiveStarters(oppMatchup, entry.league, projMap);
     const fieldRosters = {
-      myIds: sbFieldSortedStarters(myMatchup, entry.league, projMap),
-      oppIds: sbFieldSortedStarters(oppMatchup, entry.league, projMap),
+      myIds: fieldMyIds,
+      oppIds: fieldOppIds,
+      myPlacements: sbFieldFormationPlacements(fieldMyIds, dict),
+      oppPlacements: sbFieldFormationPlacements(fieldOppIds, dict),
       dict,
     };
     panel.innerHTML =
