@@ -725,20 +725,25 @@
   .field-delta.field-delta-neg { color: #ff9b9b; }
   .field-yard-text { text-align: center; font-size: 18px; font-weight: 800; color: var(--ink); margin-top: 12px; }
 
-  /* Both starting lineups line up on either side of the ball, like a real
-     line of scrimmage. The losing side thins out near either end zone
-     (see sbFieldVisibleCounts) -- full lineup only fits while the game's
+  /* Both starting lineups line up at the line of scrimmage like a real
+     snap formation -- horizontal rows stacked above/below the ball, not
+     side by side. Your team lines up behind the ball on your side
+     (pushing toward your end zone at the top); the opponent lines up on
+     the other side of the ball, between it and your end zone. The
+     losing side thins out near either end zone (see
+     sbFieldVisibleCounts) -- full lineup only fits while the game's
      still competitive. */
   .field-team-row {
     position: absolute;
+    left: 5%;
+    right: 5%;
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    justify-content: center;
+    gap: 5px;
     transform: translateY(50%);
     transition: bottom 1.4s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .field-team-row-mine { left: 3%; right: 53%; justify-content: flex-end; }
-  .field-team-row-opp { left: 53%; right: 3%; justify-content: flex-start; }
   .field-player-av {
     width: 24px;
     height: 24px;
@@ -11439,6 +11444,14 @@
   // the old ball position to the new one instead of just teleporting there
   // on every open/poll refresh.
   const __sbFieldPrevPct = {};
+  // Vertical gap (in percent of field height) between the ball and each
+  // team's row -- your row sits this far below the ball, the opponent's
+  // this far above, so they read as two lines facing off at the snap
+  // instead of stacking on top of the ball itself.
+  const SB_FIELD_ROW_GAP = 7;
+  function sbFieldRowBottom(ballPct, gap) {
+    return Math.max(0, Math.min(100, ballPct + gap));
+  }
   function sbFieldEsc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
@@ -11507,8 +11520,8 @@
               [10, 20, 30, 40, 50, 40, 30, 20, 10].map((n, i) =>
                 `<div class="field-yardline${n === 50 ? ' field-50' : ''}" style="bottom:${(i + 1) * 10}%"><span class="fl-num fl-left">${n}</span><span class="fl-num fl-right">${n}</span></div>`
               ).join('') +
-              `<div class="field-team-row field-team-row-mine" style="bottom:${clamped}%"></div>` +
-              `<div class="field-team-row field-team-row-opp" style="bottom:${clamped}%"></div>` +
+              `<div class="field-team-row field-team-row-mine" style="bottom:${sbFieldRowBottom(clamped, -SB_FIELD_ROW_GAP)}%"></div>` +
+              `<div class="field-team-row field-team-row-opp" style="bottom:${sbFieldRowBottom(clamped, SB_FIELD_ROW_GAP)}%"></div>` +
               '<div class="field-delta"></div>' +
               `<div class="field-ball-pos" style="bottom:${clamped}%">` +
                 '<span class="field-ball">&#127944;</span>' +
@@ -11561,8 +11574,8 @@
     }
     requestAnimationFrame(() => {
       if (ballPos) ballPos.style.bottom = `${pct}%`;
-      if (myRowEl) myRowEl.style.bottom = `${pct}%`;
-      if (oppRowEl) oppRowEl.style.bottom = `${pct}%`;
+      if (myRowEl) myRowEl.style.bottom = `${sbFieldRowBottom(pct, -SB_FIELD_ROW_GAP)}%`;
+      if (oppRowEl) oppRowEl.style.bottom = `${sbFieldRowBottom(pct, SB_FIELD_ROW_GAP)}%`;
       if (prev != null && deltaEl) {
         const delta = Math.round(winPct - prev);
         if (delta !== 0) {
