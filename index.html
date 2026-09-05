@@ -947,6 +947,8 @@
   .sb-exp-table tbody td { padding: 6px 0; border-bottom: 1px solid var(--border-soft); }
   .sb-exp-table tbody td:not(:first-child) { padding-left: 10px; }
   .sb-exp-table tbody tr:last-child td { border-bottom: none; }
+  .sb-lineup-row { cursor: pointer; }
+  .sb-lineup-row:hover td { background: var(--bg); }
   .sb-exp-player { display: flex; align-items: center; gap: 8px; }
   .sb-exp-pos {
     flex-shrink: 0;
@@ -11543,7 +11545,9 @@
       const projText = proj != null ? proj.toFixed(1) : '&mdash;';
       const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, proj) : null;
       const origText = origProj != null ? origProj.toFixed(1) : '&mdash;';
-      return '<tr>' +
+      const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
+      const season = league ? league.season : '';
+      return `<tr class="sb-lineup-row" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}">` +
         '<td class="sb-exp-player">' +
           `<span class="sb-exp-pos sb-pos-${posClass}">${pos}</span>` +
           `<span class="sb-exp-avatar"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>` +
@@ -12099,6 +12103,11 @@
   document.addEventListener('click', (e) => {
     const av = e.target.closest('.field-player-av');
     if (av) { openPlayerFieldModal(av); return; }
+    // Same popup, opened from a lineup table row (Standard View's matchup
+    // expand) instead of a field headshot -- both carry the same
+    // data-player-id/pts/week/season attributes openPlayerFieldModal reads.
+    const row = e.target.closest('.sb-lineup-row');
+    if (row) { openPlayerFieldModal(row); return; }
     if (e.target.closest('.pfm-modal')) return;
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePlayerFieldModal(); });
