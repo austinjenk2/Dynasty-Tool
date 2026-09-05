@@ -11490,10 +11490,15 @@
     });
     const placements = {};
     sbFieldSpreadEdges(groups.WR, placements);
-    // A lone TE nudges off center so it doesn't sit in the exact same
-    // vertical lane as the QB -- just outside the QB(s), not out with
-    // the receivers.
-    sbFieldSpread(groups.TE, placements, groups.TE.length === 1 ? 34 : 32, groups.TE.length === 1 ? 34 : 68);
+    // Only the first two TEs actually line up on the line of scrimmage
+    // (a lone one nudges off center so it isn't in the QB's exact lane);
+    // a 3rd/4th TE would otherwise land right next to one of those two
+    // in that same front row, so they drop back a row instead, out past
+    // the QB/OTHER row rather than in it.
+    const teOnLine = groups.TE.slice(0, 2);
+    const teExtra = groups.TE.slice(2);
+    sbFieldSpread(teOnLine, placements, teOnLine.length === 1 ? 34 : 32, teOnLine.length === 1 ? 34 : 68);
+    teExtra.forEach((id, i) => { placements[id] = { x: i % 2 === 1 ? 84 : 16 }; });
     // QB(s) and any K/DEF share one row -- spread together (instead of
     // two independent ranges) so they can never land on top of each other.
     sbFieldSpread(groups.QB.concat(groups.OTHER), placements, 40, 60);
@@ -11501,6 +11506,7 @@
     Object.keys(groups).forEach(pos => {
       groups[pos].forEach(id => { placements[id].depth = SB_FIELD_POS_DEPTH[pos]; });
     });
+    teExtra.forEach(id => { placements[id].depth = SB_FIELD_POS_DEPTH.QB; });
     return placements;
   }
   function sbFieldFormationHtml(ids, dict, placements, ballPct, sideSign) {
