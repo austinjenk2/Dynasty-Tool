@@ -11211,8 +11211,15 @@
   }
 
   function sbProjectionFor(id, projMap, league) {
-    if (!projMap) {
-      const statsMap = window.__sleeperProjectionStats || {};
+    {
+      // A week-specific override (picked from a week dropdown) carries its
+      // own stats map on projMap.__statsMap; otherwise fall back to the
+      // current week's global one. Used regardless of whether a projMap
+      // was passed -- skipping this for any override used to fall straight
+      // through to the flat generic PPR/Half-PPR/Std number below, ignoring
+      // the league's actual scoring settings entirely for every non-current
+      // week.
+      const statsMap = (projMap && projMap.__statsMap) || window.__sleeperProjectionStats || {};
       const stats = statsMap[id];
       if (stats) {
         // Sleeper's own scoring computation applies position-bonus keys
@@ -12811,6 +12818,14 @@
         // breaking sync.
         window.__sleeperGameInfo = extractGameInfo(list);
         window.__sleeperProjectionStats = statsMap;
+        // Carried on the map itself (never a real Sleeper player id, so it
+        // can't collide with one) so a week picked from a week dropdown --
+        // which stores this whole map as its own override.projections,
+        // completely separate from window.__sleeperProjectionStats -- still
+        // lets sbProjectionFor compute each league's real custom scoring
+        // instead of silently falling back to a generic PPR/Half-PPR/Std
+        // number that ignores that league's actual scoring settings.
+        map.__statsMap = statsMap;
         return map;
       } catch (e) {
         // Unofficial/undocumented endpoint -- if it's unavailable or its shape
