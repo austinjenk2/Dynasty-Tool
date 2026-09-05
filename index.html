@@ -12017,67 +12017,82 @@
 
     if (!team || !week || !season) {
       gameEl.innerHTML = '<p class="pfm-empty">No real NFL team on file for this player.</p>';
-    } else {
-      try {
-        const firstEntry = Object.values(window.sleeperLeagueData || {}).find(e => e.roster);
-        const currentWeek = firstEntry ? firstEntry.week : week;
-        const [gameInfo, espnGames] = await Promise.all([
-          sbResolveGameInfoForWeek(season, week, currentWeek),
-          window.sleeperGetEspnGameData ? window.sleeperGetEspnGameData(week, season) : Promise.resolve({}),
-        ]);
-        const info = gameInfo[team];
-        if (!info || !info.opponent) {
-          gameEl.innerHTML = '<p class="pfm-empty">No schedule data for this week yet.</p>';
-        } else {
-          const opponent = info.opponent;
-          const away = info.isAway ? team : (gameInfo[opponent] && gameInfo[opponent].isAway ? opponent : team);
-          const home = away === team ? opponent : team;
-          const awayInfo = espnGames[away] || {};
-          const homeInfo = espnGames[home] || {};
-          const isLive = awayInfo.state === 'in' || homeInfo.state === 'in';
-          const isFinal = awayInfo.state === 'post' || homeInfo.state === 'post';
-          const kickoff = parseCalendarDate(info.date);
-          const kickoffLabel = kickoff
-            ? kickoff.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()
-            : 'DATE TBD';
-          const timeLabel = isFinal ? 'FINAL' : (isLive ? (awayInfo.detail || homeInfo.detail || 'LIVE') : kickoffLabel);
-          const showScore = (isLive || isFinal) && awayInfo.score != null && homeInfo.score != null;
-          const ballIcon = '<span class="pfm-ball" title="Has the ball">&#127944;</span>';
-          const awayBall = isLive && awayInfo.hasBall ? ballIcon : '';
-          const homeBall = isLive && homeInfo.hasBall ? ballIcon : '';
-          gameEl.innerHTML =
-            `<div class="pfm-game-time${isLive ? ' pfm-game-live' : ''}">${timeLabel}</div>` +
-            '<div class="pfm-game-row">' +
-              `<div class="pfm-game-team">${awayBall}<img src="https://sleepercdn.com/images/team_logos/nfl/${away.toLowerCase()}.png" alt="${away}" onerror="this.style.display='none'"><span>${away}</span>${showScore ? `<span class="pfm-game-score">${awayInfo.score}</span>` : ''}</div>` +
-              '<span class="pfm-game-at">@</span>' +
-              `<div class="pfm-game-team">${homeBall}<img src="https://sleepercdn.com/images/team_logos/nfl/${home.toLowerCase()}.png" alt="${home}" onerror="this.style.display='none'"><span>${home}</span>${showScore ? `<span class="pfm-game-score">${homeInfo.score}</span>` : ''}</div>` +
-            '</div>';
-        }
-      } catch (err) {
-        gameEl.innerHTML = '<p class="pfm-empty">Could not load this week\'s game data.</p>';
-      }
+      statsEl.innerHTML = '';
+      return;
+    }
 
-      try {
-        let stats = null, isActual = false;
-        if (window.sleeperGetWeekStats) {
-          const actual = await window.sleeperGetWeekStats(season, week);
-          if (actual && actual[id] && Object.keys(actual[id]).length) { stats = actual[id]; isActual = true; }
-        }
-        if (!stats && window.sleeperGetWeekProjections) {
-          const projMap = await window.sleeperGetWeekProjections(season, week);
-          if (projMap && projMap.__statsMap && projMap.__statsMap[id]) stats = projMap.__statsMap[id];
-        }
-        const rows = stats
-          ? Object.keys(SB_STAT_LABELS).filter(k => stats[k] != null).map(k =>
-              `<div class="pfm-stat-row"><span class="pfm-stat-label">${SB_STAT_LABELS[k]}</span><span class="pfm-stat-value">${stats[k]}</span></div>`
-            ).join('')
-          : '';
-        statsEl.innerHTML =
-          `<div class="pfm-stats-head">${stats ? (isActual ? 'STATS (ACTUAL)' : 'STATS (PROJECTED)') : 'STATS'}</div>` +
-          (rows || '<p class="pfm-empty">No stats recorded for this week yet.</p>');
-      } catch (err) {
-        statsEl.innerHTML = '<p class="pfm-empty">Could not load stats.</p>';
+    // Whether this player's own real game has started -- once it has,
+    // stats should only ever be their real recorded line, even while
+    // still mostly zeroes early in the game, never the pre-game
+    // projection quietly still showing underneath it.
+    let gameStarted = false;
+    let gameFinal = false;
+    try {
+      const firstEntry = Object.values(window.sleeperLeagueData || {}).find(e => e.roster);
+      const currentWeek = firstEntry ? firstEntry.week : week;
+      const [gameInfo, espnGames] = await Promise.all([
+        sbResolveGameInfoForWeek(season, week, currentWeek),
+        window.sleeperGetEspnGameData ? window.sleeperGetEspnGameData(week, season) : Promise.resolve({}),
+      ]);
+      const info = gameInfo[team];
+      if (!info || !info.opponent) {
+        gameEl.innerHTML = '<p class="pfm-empty">No schedule data for this week yet.</p>';
+      } else {
+        const opponent = info.opponent;
+        const away = info.isAway ? team : (gameInfo[opponent] && gameInfo[opponent].isAway ? opponent : team);
+        const home = away === team ? opponent : team;
+        const awayInfo = espnGames[away] || {};
+        const homeInfo = espnGames[home] || {};
+        const isLive = awayInfo.state === 'in' || homeInfo.state === 'in';
+        const isFinal = awayInfo.state === 'post' || homeInfo.state === 'post';
+        gameStarted = isLive || isFinal;
+        gameFinal = isFinal;
+        const kickoff = parseCalendarDate(info.date);
+        const kickoffLabel = kickoff
+          ? kickoff.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()
+          : 'DATE TBD';
+        const timeLabel = isFinal ? 'FINAL' : (isLive ? (awayInfo.detail || homeInfo.detail || 'LIVE') : kickoffLabel);
+        const showScore = gameStarted && awayInfo.score != null && homeInfo.score != null;
+        const ballIcon = '<span class="pfm-ball" title="Has the ball">&#127944;</span>';
+        const awayBall = isLive && awayInfo.hasBall ? ballIcon : '';
+        const homeBall = isLive && homeInfo.hasBall ? ballIcon : '';
+        gameEl.innerHTML =
+          `<div class="pfm-game-time${isLive ? ' pfm-game-live' : ''}">${timeLabel}</div>` +
+          '<div class="pfm-game-row">' +
+            `<div class="pfm-game-team">${awayBall}<img src="https://sleepercdn.com/images/team_logos/nfl/${away.toLowerCase()}.png" alt="${away}" onerror="this.style.display='none'"><span>${away}</span>${showScore ? `<span class="pfm-game-score">${awayInfo.score}</span>` : ''}</div>` +
+            '<span class="pfm-game-at">@</span>' +
+            `<div class="pfm-game-team">${homeBall}<img src="https://sleepercdn.com/images/team_logos/nfl/${home.toLowerCase()}.png" alt="${home}" onerror="this.style.display='none'"><span>${home}</span>${showScore ? `<span class="pfm-game-score">${homeInfo.score}</span>` : ''}</div>` +
+          '</div>';
       }
+    } catch (err) {
+      gameEl.innerHTML = '<p class="pfm-empty">Could not load this week\'s game data.</p>';
+    }
+
+    try {
+      let stats = null, isActual = false;
+      if (window.sleeperGetWeekStats) {
+        const actual = await window.sleeperGetWeekStats(season, week);
+        if (actual && actual[id] && Object.keys(actual[id]).length) { stats = actual[id]; isActual = true; }
+      }
+      // Once the player's game has actually started, their real recorded
+      // line is the only honest thing to show -- never fall back to the
+      // pre-game projection just because the live feed hasn't posted a
+      // particular category yet (or a slow game has nothing but zeroes
+      // early on).
+      if (!stats && !gameStarted && window.sleeperGetWeekProjections) {
+        const projMap = await window.sleeperGetWeekProjections(season, week);
+        if (projMap && projMap.__statsMap && projMap.__statsMap[id]) stats = projMap.__statsMap[id];
+      }
+      const rows = stats
+        ? Object.keys(SB_STAT_LABELS).filter(k => stats[k] != null).map(k =>
+            `<div class="pfm-stat-row"><span class="pfm-stat-label">${SB_STAT_LABELS[k]}</span><span class="pfm-stat-value">${stats[k]}</span></div>`
+          ).join('')
+        : '';
+      statsEl.innerHTML =
+        `<div class="pfm-stats-head">${stats ? (isActual ? (gameFinal ? 'STATS (FINAL)' : 'STATS (LIVE)') : 'STATS (PROJECTED)') : 'STATS'}</div>` +
+        (rows || `<p class="pfm-empty">${gameStarted ? 'No stats recorded yet.' : 'No stats recorded for this week yet.'}</p>`);
+    } catch (err) {
+      statsEl.innerHTML = '<p class="pfm-empty">Could not load stats.</p>';
     }
   }
 
