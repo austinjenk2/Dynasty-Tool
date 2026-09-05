@@ -11456,19 +11456,29 @@
     if (ids.length === 1) { placements[ids[0]] = { x: (from + to) / 2 }; return; }
     ids.forEach((id, i) => { placements[id] = { x: from + (i / (ids.length - 1)) * (to - from) }; });
   }
+  // Receivers split out to the true edges of the field, alternating
+  // sides and stacking a little further inside as more pile onto the
+  // same side (so 4+ WRs don't sit on top of each other) -- never drift
+  // toward the center like the other line-of-scrimmage positions do.
+  function sbFieldSpreadEdges(ids, placements) {
+    ids.forEach((id, i) => {
+      const onRight = i % 2 === 1;
+      const stackIn = Math.floor(i / 2) * 9;
+      const x = onRight ? 98 - stackIn : 2 + stackIn;
+      placements[id] = { x: Math.max(2, Math.min(98, x)) };
+    });
+  }
   // How far behind the line of scrimmage each position lines up (percent
-  // of field height, added on top of SB_FIELD_ROW_GAP) -- receivers stay
-  // up on the line out wide, the QB(s) sit right behind the ball like
-  // taking the snap, the TE(s) sit at that same shotgun depth just
-  // further outside the QB(s), and the running back(s) line up deepest,
-  // behind the QB(s). Spaced far enough apart that a shared vertical
-  // lane never visually overlaps.
-  const SB_FIELD_POS_DEPTH = { WR: 0, TE: 10, QB: 10, RB: 22, OTHER: 10 };
+  // of field height, added on top of SB_FIELD_ROW_GAP) -- receivers,
+  // quarterback(s) and tight end(s) all line up right on the line of
+  // scrimmage; only the running back(s) drop back deep, behind the QB(s).
+  const SB_FIELD_POS_DEPTH = { WR: 0, TE: 0, QB: 0, RB: 22, OTHER: 0 };
   // Assigns every real starter an (x%, depth) formation slot based on
   // their actual position (not their roster slot, so a FLEX filled by a
-  // WR lines up like a receiver): receivers split out wide, QB(s)
-  // centered directly behind the ball, TE(s) just outside the QB(s) at
-  // the same depth, running back(s) centered behind the QB(s).
+  // WR lines up like a receiver): receivers split out to the edges,
+  // QB(s) centered directly behind the ball, TE(s) just outside the
+  // QB(s) at that same line-of-scrimmage depth, running back(s) centered
+  // behind the QB(s).
   function sbFieldFormationPlacements(ids, dict) {
     const groups = { QB: [], RB: [], WR: [], TE: [], OTHER: [] };
     ids.forEach(id => {
@@ -11477,7 +11487,7 @@
       groups[pos].push(id);
     });
     const placements = {};
-    sbFieldSpread(groups.WR, placements, 4, 96);
+    sbFieldSpreadEdges(groups.WR, placements);
     sbFieldSpread(groups.QB, placements, 44, 56);
     // A lone TE nudges off center so it doesn't sit in the exact same
     // vertical lane as the QB -- just outside the QB(s), not out with
