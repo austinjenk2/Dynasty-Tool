@@ -767,7 +767,15 @@
      behind the QB. Your team forms up on your side of the ball (pushing
      toward your end zone at the top); the opponent forms up on the other
      side, between the ball and your end zone. */
-  .field-team-row { position: absolute; inset: 0; }
+  /* Both rows fully cover the turf (inset:0) so their headshots can be
+     positioned anywhere across it -- but that means whichever row comes
+     later in the DOM (opp) sits on top across the WHOLE turf, including
+     the empty areas where it has no avatar drawn, silently blocking every
+     click meant for the other row's headshots underneath it. The
+     container itself passes clicks through; only the actual avatar
+     circles opt back in. */
+  .field-team-row { position: absolute; inset: 0; pointer-events: none; }
+  .field-team-row .field-player-av { pointer-events: auto; }
   .field-player-av {
     position: absolute;
     transform: translate(-50%, 50%);
