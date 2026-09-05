@@ -12750,7 +12750,16 @@
       if (cachedNflState && (Date.now() - cachedNflStateAt < NFL_STATE_TTL)) return cachedNflState;
       try {
         const state = await sleeperFetch('/state/nfl');
-        cachedNflState = { week: state.week || 1, season: state.season || String(new Date().getFullYear()) };
+        // During the preseason (or offseason), Sleeper's own `week` field is
+        // the preseason week number, not a regular-season week -- but every
+        // fetch that uses this week (matchups, projections) hardcodes
+        // season_type=regular. Using state.week as-is during that window
+        // would pull, say, regular-season Week 3's projections while the
+        // regular season hasn't even started, showing numbers for the wrong
+        // week entirely. Default to Week 1 until Sleeper actually flips
+        // season_type to "regular".
+        const week = state.season_type === 'regular' ? (state.week || 1) : 1;
+        cachedNflState = { week, season: state.season || String(new Date().getFullYear()) };
         cachedNflStateAt = Date.now();
       } catch (e) {
         if (!cachedNflState) cachedNflState = { week: 1, season: String(new Date().getFullYear()) };
