@@ -2587,7 +2587,8 @@
   .dr-roster-postxt.dr-pos-rb { color: var(--green); }
   .dr-roster-postxt.dr-pos-wr { color: var(--blue); }
   .dr-roster-postxt.dr-pos-te { color: var(--gold); }
-  .dr-roster-picknum { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--ink); background: var(--border-soft); border: 1px solid var(--border-soft); border-radius: 5px; padding: 4px 9px; }
+  .dr-roster-picknum { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--blue); background: rgba(47,111,163,0.1); border: 1px solid rgba(47,111,163,0.25); border-radius: 5px; padding: 4px 9px; }
+  .dr-roster-value-pill { flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 4px 9px; }
 
   .dr-intel-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
   .dr-intel-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
@@ -2713,6 +2714,7 @@
   .trade-card-with b { color: var(--ink); }
   .trade-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .trade-side-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 8px; }
+  .trade-side-total { color: var(--navy); font-weight: 700; }
   .trade-col.trade-values-hidden { filter: blur(5px); }
   /* Every asset row -- player, pick, or FAAB -- gets the same bordered
      box, same height, same icon size, so a side with mixed asset types
@@ -11423,7 +11425,8 @@
           .sort((a, b) => (a.round - b.round) || (a.draft_slot - b.draft_slot));
         const myName = (drRosterOwnerName(entry, myRosterId) || 'You') + ' (You)';
         rosterPanel.querySelector('.dr-roster-team').textContent = myName;
-        rosterPanel.querySelector('.dr-roster-value').textContent = myPicks.length + ' drafted';
+        const myTotalValue = myPicks.reduce((sum, p) => sum + ppValueForPlayerId(p.player_id, dict), 0);
+        rosterPanel.querySelector('.dr-roster-value').textContent = myPicks.length + ' drafted · ' + myTotalValue.toFixed(2) + ' value';
         const sectionLabel = rosterPanel.querySelector('.dr-roster-section-label');
         if (sectionLabel) sectionLabel.textContent = 'STARTERS';
 
@@ -11454,12 +11457,14 @@
           const { pick, info } = match;
           const posClass = info.pos ? 'dr-pos-' + info.pos.toLowerCase() : '';
           const pickNum = pick.round + '.' + String(pick.draft_slot).padStart(2, '0');
+          const value = ppValueForPlayerId(pick.player_id, dict);
           return '<div class="dr-roster-player">' +
             '<span class="dr-roster-pos ' + posClass + '">' + slotLabel + '</span>' +
             '<span class="dr-roster-avatar"><img src="' + sbHeadshotUrl(pick.player_id) + '" alt="" loading="lazy" onerror="this.remove()"></span>' +
-            '<span class="dr-roster-info"><span class="dr-roster-name">' + info.name + '</span>' +
-              '<span class="dr-roster-name-picknum">' + pickNum + '</span><br>' +
+            '<span class="dr-roster-info"><span class="dr-roster-name">' + info.name + '</span><br>' +
               '<span class="dr-roster-team-abbr"><span class="dr-roster-postxt ' + posClass + '">' + info.pos + '</span> &middot; ' + info.team + '</span></span>' +
+            '<span class="dr-roster-value-pill" title="Value">' + (value != null ? value.toFixed(2) : '&mdash;') + '</span>' +
+            '<span class="dr-roster-picknum" title="Pick">' + pickNum + '</span>' +
           '</div>';
         }).join('') || '<div class="dr-roster-sub">No starting lineup configured.</div>';
         rosterPanel.querySelector('.dr-roster-players').innerHTML = rowsHtml;
@@ -11641,12 +11646,16 @@
         const gotHtml = [];
         const gaveHtml = [];
         const playerNames = [];
+        const showValue = getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league);
+        let gotValue = 0;
+        let gaveValue = 0;
 
         Object.entries(t.adds || {}).forEach(([pid, rid]) => {
           if (rid === myRosterId) {
             const asset = tradePlayerAssetHtml(pid, dict);
             gotHtml.push(asset.html);
             playerNames.push(asset.name);
+            gotValue += ppValueForPlayerId(pid, dict);
           }
         });
         Object.entries(t.drops || {}).forEach(([pid, rid]) => {
@@ -11654,11 +11663,12 @@
             const asset = tradePlayerAssetHtml(pid, dict);
             gaveHtml.push(asset.html);
             playerNames.push(asset.name);
+            gaveValue += ppValueForPlayerId(pid, dict);
           }
         });
         (t.draft_picks || []).forEach(pick => {
-          if (pick.owner_id === myRosterId) gotHtml.push(tradePickAssetHtml(pick, entry));
-          else if (pick.previous_owner_id === myRosterId) gaveHtml.push(tradePickAssetHtml(pick, entry));
+          if (pick.owner_id === myRosterId) { gotHtml.push(tradePickAssetHtml(pick, entry)); gotValue += ppPickValue(pick.round); }
+          else if (pick.previous_owner_id === myRosterId) { gaveHtml.push(tradePickAssetHtml(pick, entry)); gaveValue += ppPickValue(pick.round); }
         });
         (t.waiver_budget || []).forEach(wb => {
           if (wb.receiver === myRosterId) gotHtml.push(tradeFaabAssetHtml(wb.amount));
@@ -11684,11 +11694,11 @@
             <div class="trade-card-with">with <b>${withName}</b></div>
             <div class="trade-cols">
               <div class="trade-col">
-                <div class="trade-side-label">YOU GOT</div>
+                <div class="trade-side-label">YOU GOT${showValue ? ` <span class="trade-side-total">${gotValue.toFixed(2)} val</span>` : ''}</div>
                 ${gotHtml.join('') || '<div class="trade-asset-name" style="color:var(--faint)">Nothing</div>'}
               </div>
               <div class="trade-col">
-                <div class="trade-side-label">YOU GAVE</div>
+                <div class="trade-side-label">YOU GAVE${showValue ? ` <span class="trade-side-total">${gaveValue.toFixed(2)} val</span>` : ''}</div>
                 ${gaveHtml.join('') || '<div class="trade-asset-name" style="color:var(--faint)">Nothing</div>'}
               </div>
             </div>
@@ -13321,9 +13331,12 @@
   function scatterShowPreview(dot) {
     const leagues = dot.dataset.leagues.split(',').map(s => s.trim());
     const primary = leagues[0];
-    let html = `<div class="tt-name">${primary}</div><div class="tt-stats">${scatterStatsLine(primary)}</div>`;
+    let html;
     if (leagues.length > 1) {
-      html += `<div class="tt-overlap">+${leagues.length - 1} OVERLAPPING &middot; CLICK TO CHOOSE &rarr;</div>`;
+      html = `<div class="tt-name">${leagues.length} Leagues</div><div class="tt-stats">${scatterStatsLine(primary)}</div>` +
+        `<div class="tt-overlap">CLICK TO SEE ALL &rarr;</div>`;
+    } else {
+      html = `<div class="tt-name">${primary}</div><div class="tt-stats">${scatterStatsLine(primary)}</div>`;
     }
     scatterTooltip.classList.remove('is-chooser');
     scatterTooltip.innerHTML = html;
@@ -13421,8 +13434,13 @@
     if (!leagues.length) return;
     const statLabel = dot.dataset.statLabel;
     const primary = leagues[0];
-    let html = `<div class="tt-name">${sbFieldEsc(primary.name)}</div><div class="tt-stats">${trackStatsLine(primary, statLabel)}</div>`;
-    if (leagues.length > 1) html += `<div class="tt-overlap">+${leagues.length - 1} OVERLAPPING &middot; CLICK TO CHOOSE &rarr;</div>`;
+    let html;
+    if (leagues.length > 1) {
+      html = `<div class="tt-name">${leagues.length} Leagues</div><div class="tt-stats">${trackStatsLine(primary, statLabel)}</div>` +
+        `<div class="tt-overlap">CLICK TO SEE ALL &rarr;</div>`;
+    } else {
+      html = `<div class="tt-name">${sbFieldEsc(primary.name)}</div><div class="tt-stats">${trackStatsLine(primary, statLabel)}</div>`;
+    }
     trackTooltip.classList.remove('is-chooser');
     trackTooltip.innerHTML = html;
     trackPositionTooltip(dot);
@@ -14455,6 +14473,7 @@
         if (id && id !== '0') slotByPlayerId[id] = LD_SLOT_LABEL[startSlots[i]] || startSlots[i];
       });
 
+      const showValue = getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league);
       const groups = { QB: [], RB: [], WR: [], TE: [] };
       playerIds.forEach(id => {
         const p = dict[id];
@@ -14467,6 +14486,7 @@
           isStarter: starters.has(id),
           slotLabel: starters.has(id) ? (slotByPlayerId[id] || p.position) : (taxiSet.has(id) ? 'TX' : 'BN'),
           proj,
+          value: showValue ? ppValueForPlayerId(id, dict) : null,
         });
       });
       Object.keys(groups).forEach(pos => {
@@ -14481,6 +14501,7 @@
             (p.isStarter ? '<span class="ld-star">&#9733;</span>' : '') +
             `<span class="ld-pname">${p.name}</span>` +
             `<span class="ld-pteam"><img class="ld-team-logo" src="${sbTeamLogoUrl(p.team)}" alt="${p.team}" title="${p.team}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span class="ld-team-abbr" style="display:none">${p.team}</span></span>` +
+            (showValue ? `<span class="ld-pnum">${p.value ? p.value.toFixed(2) : '&mdash;'}<br><i>VAL</i></span>` : '') +
             `<span class="ld-pnum">${p.proj != null ? p.proj.toFixed(1) : '&mdash;'}<br><i>PROJ</i></span>` +
           '</div>'
         ).join('') || '<div class="ld-player"><span class="ld-pname" style="color:var(--faint)">None rostered</span></div>';
