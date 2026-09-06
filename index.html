@@ -2011,13 +2011,16 @@
   .ld-firsts-year { font-size: 9.5px; color: var(--faint); font-weight: 600; }
   .ld-firsts-num { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; color: var(--ink); }
   .ld-opp { font-size: 11px; font-weight: 600; color: var(--muted); margin-left: 4px; }
+  .ld-proj-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .ld-proj-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; text-align: right; }
 
   .ld-columns {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 12px;
   }
-  @media (max-width: 1200px) { .ld-columns { grid-template-columns: repeat(2, 1fr); } }
+  .ld-columns.has-picks { grid-template-columns: repeat(5, 1fr); }
+  @media (max-width: 1200px) { .ld-columns, .ld-columns.has-picks { grid-template-columns: repeat(2, 1fr); } }
   .ld-col {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -2073,6 +2076,9 @@
   .ld-pnum { font-size: 10.5px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1.2; }
   .ld-pnum i { font-style: normal; font-size: 7.5px; font-weight: 600; color: var(--faint); }
   .ld-loading { grid-column: 1 / -1; text-align: center; color: var(--faint); font-size: 13px; padding: 30px 0; }
+  .ld-pick-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); font-size: 11.5px; }
+  .ld-pick-row:last-child { border-bottom: none; }
+  .ld-pick-when { font-weight: 700; color: var(--ink); }
 
   /* Notebook panel */
   .notebook-overlay {
@@ -3540,16 +3546,22 @@
         </div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell ld-stat-cell-wide">
-          <div class="ld-stat-label">WEEK <span id="ldProjWeek">1</span> PROJECTED</div>
-          <div class="matchup-scores" style="margin-top:4px">
-            <span class="proj-score mine" id="ldProjMine">187.8</span>
-            <span class="matchup-vs">vs</span>
-            <span class="proj-score theirs" id="ldProjTheirs">116.0</span>
+          <div class="ld-proj-top">
+            <div>
+              <div class="ld-stat-label">WEEK <span id="ldProjWeek">1</span> PROJECTED</div>
+              <div class="matchup-scores" style="margin-top:4px">
+                <span class="proj-score mine" id="ldProjMine">187.8</span>
+                <span class="matchup-vs">vs</span>
+                <span class="proj-score theirs" id="ldProjTheirs">116.0</span>
+              </div>
+              <div class="ld-opp" id="ldOpp" style="margin-left:0">jtford23</div>
+            </div>
+            <div class="ld-proj-side">
+              <div class="favored-tag" id="ldFavoredTag">Favored by 71.8</div>
+              <div class="matchup-live-score" id="ldLiveScore"></div>
+              <div class="ld-orig-score" id="ldOrigScore"></div>
+            </div>
           </div>
-          <div class="ld-opp" id="ldOpp" style="margin-left:0">jtford23</div>
-          <div class="favored-tag" id="ldFavoredTag" style="margin-top:4px;display:inline-block">Favored by 71.8</div>
-          <div class="matchup-live-score" id="ldLiveScore"></div>
-          <div class="ld-orig-score" id="ldOrigScore"></div>
         </div>
       </div>
 
@@ -13834,6 +13846,61 @@
       return sorted.length;
     }
 
+    // Real future draft-pick ownership for one roster in one league, dynasty
+    // mode only -- same "walk every original slot through traded_picks"
+    // approach as the Portfolio Health Draft Capital section, just scoped to
+    // a single league/roster instead of averaged across all of them, and
+    // listing actual picks (with a "via" note for traded-in ones) instead of
+    // a per-round count. No value/price number is shown -- this app only
+    // ever surfaces real Sleeper data, and Sleeper has no such number.
+    function buildLdPicksColumn(entry, activeRoster) {
+      if (getSiteMode() !== 'dynasty' || !sbLeagueIsDynasty(entry.league)) return '';
+      const allRosters = entry.allRosters || [];
+      if (!allRosters.length) return '';
+      const tradedPicks = entry.tradedPicks || [];
+      const users = entry.users || [];
+      const currentSeason = Number(entry.league.season) || new Date().getFullYear();
+      const seasons = [currentSeason + 1, currentSeason + 2];
+      const rounds = [1, 2, 3, 4];
+      const roundLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+
+      const ownerOfSlot = (originalRosterId, season, round) => {
+        const tp = tradedPicks.find(p => Number(p.season) === season && p.round === round && p.roster_id === originalRosterId);
+        return tp ? tp.owner_id : originalRosterId;
+      };
+      const picksOwnedBy = (rosterId) => {
+        const owned = [];
+        seasons.forEach(season => {
+          rounds.forEach(round => {
+            allRosters.forEach(r => {
+              if (ownerOfSlot(r.roster_id, season, round) === rosterId) {
+                owned.push({ season, round, fromRosterId: r.roster_id });
+              }
+            });
+          });
+        });
+        return owned;
+      };
+      const nameForRoster = (rosterId) => {
+        const r = allRosters.find(r => r.roster_id === rosterId);
+        const u = r ? users.find(u => u.user_id === r.owner_id) : null;
+        return u ? (u.display_name || u.username) : null;
+      };
+
+      const myPicks = picksOwnedBy(activeRoster.roster_id);
+      const rank = ldRankOf(allRosters, r => picksOwnedBy(r.roster_id).length, activeRoster.roster_id);
+      const rowsHtml = myPicks.map(p => {
+        const isTradedIn = p.fromRosterId !== activeRoster.roster_id;
+        const via = isTradedIn ? nameForRoster(p.fromRosterId) : null;
+        return '<div class="ld-pick-row">' +
+          `<span class="ld-pick-when">${p.season} &middot; ${roundLabels[p.round]}</span>` +
+          (via ? `<span class="ld-via">via ${sbFieldEsc(via)}</span>` : '') +
+        '</div>';
+      }).join('') || '<div class="ld-pick-row"><span class="ld-pick-when" style="color:var(--faint)">No picks owned</span></div>';
+
+      return `<div class="ld-col"><div class="ld-col-head picks">PICKS <span>${ldOrdinal(rank)}</span></div>${rowsHtml}</div>`;
+    }
+
     // Every fantasy-relevant stat this page shows can be computed for any
     // roster in the league, not just the connected user's own -- this is
     // what lets the League Standings popup send you into any manager's
@@ -14054,6 +14121,10 @@
         ).join('') || '<div class="ld-player"><span class="ld-pname" style="color:var(--faint)">None rostered</span></div>';
         return `<div class="ld-col"><div class="ld-col-head ${posClass}">${LD_POS_LABELS[pos]}</div>${playerRows}</div>`;
       }).join('');
+
+      const picksHtml = buildLdPicksColumn(entry, activeRoster);
+      ldColumns.classList.toggle('has-picks', !!picksHtml);
+      if (picksHtml) ldColumns.insertAdjacentHTML('beforeend', picksHtml);
     }
     window.renderRealLeagueDetail = renderRealLeagueDetail;
 
