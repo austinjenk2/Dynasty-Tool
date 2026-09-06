@@ -1907,6 +1907,42 @@
   }
   .ld-tag b { color: var(--ink); }
 
+  /* League Standings popup -- appears under a clicked league row, listing
+     every manager in that league (not just the connected user's own
+     team). Each row reuses the same ld-header-left/ld-tags building
+     blocks as the League Detail header itself, since it's showing the
+     exact same kind of information, just one row per manager. */
+  .league-standings-expand {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 2px 2px;
+  }
+  .league-standings-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    cursor: pointer;
+  }
+  .league-standings-row:hover { border-color: var(--faint); }
+  .league-standings-row.is-me { border-color: var(--green); }
+  .league-standings-rank {
+    font-family: 'Source Serif 4', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--faint);
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .league-standings-loading { padding: 14px 0; text-align: center; color: var(--faint); font-size: 12.5px; }
+
   .ld-stats {
     display: flex;
     background: var(--surface);
@@ -10627,7 +10663,7 @@
     views.forEach(v => v.classList.toggle('is-active', v.dataset.view === name));
     window.scrollTo(0, 0);
   }
-  function goToLeagueDetail(name) {
+  function goToLeagueDetail(name, targetRosterId) {
     goToSection('leagues');
     const listView = document.getElementById('leaguesListView');
     const detailView = document.getElementById('leagueDetailView');
@@ -10650,7 +10686,7 @@
         if (ldPill && pill) { ldPill.className = pill.className; ldPill.textContent = pill.textContent; }
         if (ldRank) ldRank.textContent = String(Number(row.dataset.index) + 1);
         if (row.dataset.sleeperLeagueId && window.renderRealLeagueDetail) {
-          window.renderRealLeagueDetail(row.dataset.sleeperLeagueId);
+          window.renderRealLeagueDetail(row.dataset.sleeperLeagueId, targetRosterId);
         }
       }
     }
@@ -11785,6 +11821,27 @@
     const rem100 = n % 100;
     const suffix = (rem100 >= 11 && rem100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
     return n + suffix;
+  }
+
+  // Same optimal-lineup-projection ranking as sbContendingRank, but for
+  // every roster in the league at once (used by the League Standings
+  // popup, which needs everyone's rank, not just the connected user's).
+  function sbLeagueContendingRanks(entry) {
+    const allRosters = entry.allRosters || [];
+    if (allRosters.length < 2) return null;
+    const totals = allRosters.map(r => ({
+      rosterId: r.roster_id,
+      total: sbOptimalLineupTotal(r.players, entry.league),
+    }));
+    if (totals.some(t => t.total == null)) return null;
+    const sorted = [...totals].sort((a, b) => b.total - a.total);
+    const ranks = {};
+    let rank = 1;
+    sorted.forEach((t, i) => {
+      if (i > 0 && t.total < sorted[i - 1].total) rank = i + 1;
+      ranks[t.rosterId] = rank;
+    });
+    return { ranks, of: allRosters.length };
   }
 
   function renderContendingRanks() {
@@ -13181,7 +13238,8 @@
   leagueList.addEventListener('click', (e) => {
     const row = e.target.closest('.league-row');
     if (!row) return;
-    goToLeagueDetail(row.dataset.name);
+    if (window.openLeagueStandings) window.openLeagueStandings(row);
+    else goToLeagueDetail(row.dataset.name);
   });
   leagueBackBtn.addEventListener('click', () => {
     leagueDetailView.hidden = true;
@@ -13739,10 +13797,21 @@
       return sorted.length;
     }
 
-    async function renderRealLeagueDetail(leagueId) {
+    // Every fantasy-relevant stat this page shows can be computed for any
+    // roster in the league, not just the connected user's own -- this is
+    // what lets the League Standings popup send you into any manager's
+    // team and get the exact same page mine gets.
+    async function renderRealLeagueDetail(leagueId, targetRosterId) {
       const ldColumns = document.getElementById('ldColumns');
       const entry = window.sleeperLeagueData && window.sleeperLeagueData[leagueId];
       if (!ldColumns || !entry) return;
+
+      const allRosters = entry.allRosters || [];
+      const activeRoster = targetRosterId != null
+        ? (allRosters.find(r => r.roster_id === targetRosterId) || entry.roster)
+        : entry.roster;
+      const viewingOther = !!(activeRoster && entry.roster && activeRoster.roster_id !== entry.roster.roster_id);
+      const activeUser = activeRoster ? (entry.users || []).find(u => u.user_id === activeRoster.owner_id) : null;
 
       // goToLeagueDetail() copies the row's colored-initials fallback into
       // this header before this function ever runs (so something shows up
@@ -13758,12 +13827,11 @@
       }
 
       ldColumns.innerHTML = '<div class="ld-loading">Loading roster…</div>';
-      if (!entry.roster) {
-        ldColumns.innerHTML = '<div class="ld-loading">Could not find your roster in this league.</div>';
+      if (!activeRoster) {
+        ldColumns.innerHTML = '<div class="ld-loading">Could not find that roster in this league.</div>';
         return;
       }
 
-      const allRosters = entry.allRosters || [];
       const pfOf = r => {
         const s = r.settings || {};
         return (s.fpts || 0) + (s.fpts_decimal || 0) / 100;
@@ -13786,18 +13854,19 @@
       const ldConRankEl = document.getElementById('ldConRank');
 
       if (allRosters.length) {
-        const s = entry.roster.settings || {};
+        const s = activeRoster.settings || {};
         if (ldRecordEl) ldRecordEl.textContent = `${s.wins || 0}-${s.losses || 0}${s.ties ? '-' + s.ties : ''}`;
-        const seedRank = ldRankOf(allRosters, winsOf, entry.roster.roster_id);
+        const seedRank = ldRankOf(allRosters, winsOf, activeRoster.roster_id);
         if (ldSeedEl) ldSeedEl.textContent = ldOrdinal(seedRank);
         if (ldRankEl) ldRankEl.textContent = String(seedRank);
         if (ldConRankEl) ldConRankEl.textContent = ldOrdinal(seedRank);
         if (ldMetaEl) {
           const teams = entry.league.total_rosters || allRosters.length;
-          ldMetaEl.textContent = `${s.wins || 0}-${s.losses || 0} · ${teams} teams`;
+          const ownerLabel = viewingOther && activeUser ? `${activeUser.display_name || activeUser.username} · ` : '';
+          ldMetaEl.textContent = `${ownerLabel}${s.wins || 0}-${s.losses || 0} · ${teams} teams`;
         }
 
-        const pfRank = ldRankOf(allRosters, pfOf, entry.roster.roster_id);
+        const pfRank = ldRankOf(allRosters, pfOf, activeRoster.roster_id);
         if (ldPfRankEl) ldPfRankEl.textContent = ldOrdinal(pfRank);
         if (ldMaxPfEl) {
           // Sleeper's own "points possible" (ppts) -- what this roster
@@ -13808,39 +13877,66 @@
         }
         if (ldVsTopEl) {
           const topPf = Math.max(...allRosters.map(pfOf));
-          const myPf = pfOf(entry.roster);
+          const myPf = pfOf(activeRoster);
           ldVsTopEl.textContent = pfRank === 1 ? 'Leader' : `-${(topPf - myPf).toFixed(1)}`;
         }
+      }
+
+      // For the connected user this is exactly the matchup already fetched
+      // (entry.myMatchup/oppMatchup); for any other roster, re-derive it
+      // from that same week's full matchup list (entry.allMatchups) --
+      // the raw data was already fetched for everyone, just not resolved
+      // into a "mine vs theirs" pair for anyone but the connected user.
+      let rosterMatchup, rosterOppMatchup, rosterOppUser;
+      if (!viewingOther) {
+        rosterMatchup = entry.myMatchup;
+        rosterOppMatchup = entry.oppMatchup;
+        rosterOppUser = entry.oppUser;
+      } else {
+        const allMatchups = entry.allMatchups || [];
+        rosterMatchup = allMatchups.find(m => m.roster_id === activeRoster.roster_id) || null;
+        rosterOppMatchup = rosterMatchup
+          ? allMatchups.find(m => m.matchup_id === rosterMatchup.matchup_id && m.roster_id !== activeRoster.roster_id)
+          : null;
+        const rosterOppRoster = rosterOppMatchup ? allRosters.find(r => r.roster_id === rosterOppMatchup.roster_id) : null;
+        rosterOppUser = rosterOppRoster ? (entry.users || []).find(u => u.user_id === rosterOppRoster.owner_id) : null;
       }
 
       const ldLiveScoreEl = document.getElementById('ldLiveScore');
       const ldOrigScoreEl = document.getElementById('ldOrigScore');
       if (ldProjWeekEl) ldProjWeekEl.textContent = String(entry.week || 1);
-      if (entry.myMatchup && entry.oppMatchup && (sbMatchupHasData(entry.myMatchup, null, entry.league) || sbMatchupHasData(entry.oppMatchup, null, entry.league))) {
-        const myTotal = sbMatchupProjectedTotal(entry.myMatchup, null, entry.league);
-        const oppTotal = sbMatchupProjectedTotal(entry.oppMatchup, null, entry.league);
+      if (rosterMatchup && rosterOppMatchup && (sbMatchupHasData(rosterMatchup, null, entry.league) || sbMatchupHasData(rosterOppMatchup, null, entry.league))) {
+        const myTotal = sbMatchupProjectedTotal(rosterMatchup, null, entry.league);
+        const oppTotal = sbMatchupProjectedTotal(rosterOppMatchup, null, entry.league);
         if (ldProjMineEl) ldProjMineEl.textContent = myTotal.toFixed(1);
         if (ldProjTheirsEl) ldProjTheirsEl.textContent = oppTotal.toFixed(1);
-        if (ldOppEl) ldOppEl.textContent = entry.oppUser ? (entry.oppUser.display_name || entry.oppUser.username) : '—';
+        if (ldOppEl) ldOppEl.textContent = rosterOppUser ? (rosterOppUser.display_name || rosterOppUser.username) : '—';
         if (ldFavoredTagEl) {
           const margin = Math.abs(myTotal - oppTotal).toFixed(1);
           ldFavoredTagEl.textContent = myTotal >= oppTotal ? `Favored by ${margin}` : `Underdog by ${margin}`;
           ldFavoredTagEl.className = `favored-tag${sbFavoredTagClass(myTotal, oppTotal)}`;
         }
         if (ldLiveScoreEl) {
-          const myLive = entry.myMatchup.points || 0;
-          const oppLive = entry.oppMatchup.points || 0;
+          const myLive = rosterMatchup.points || 0;
+          const oppLive = rosterOppMatchup.points || 0;
           ldLiveScoreEl.textContent = `${myLive.toFixed(1)} vs ${oppLive.toFixed(1)} live`;
         }
         if (ldOrigScoreEl) {
-          const myOrig = origProjFor(entry.league.season, entry.week, 'teams', entry.league.league_id + '_mine', myTotal);
-          const oppOrig = origProjFor(entry.league.season, entry.week, 'teams', entry.league.league_id + '_opp', oppTotal);
+          // Keeps the connected user's own snapshot key exactly as it was
+          // (so an existing stored "started at" baseline isn't orphaned by
+          // this function now also serving other rosters) -- only a
+          // roster actually being viewed via the standings popup gets its
+          // own roster-id-scoped key.
+          const mineKey = viewingOther ? `${entry.league.league_id}_${activeRoster.roster_id}` : `${entry.league.league_id}_mine`;
+          const oppKey = viewingOther ? `${entry.league.league_id}_${activeRoster.roster_id}_opp` : `${entry.league.league_id}_opp`;
+          const myOrig = origProjFor(entry.league.season, entry.week, 'teams', mineKey, myTotal);
+          const oppOrig = origProjFor(entry.league.season, entry.week, 'teams', oppKey, oppTotal);
           ldOrigScoreEl.textContent = `Started at ${myOrig.toFixed(1)} vs ${oppOrig.toFixed(1)}`;
         }
-      } else if (entry.myMatchup && entry.oppMatchup) {
+      } else if (rosterMatchup && rosterOppMatchup) {
         if (ldProjMineEl) ldProjMineEl.textContent = '—';
         if (ldProjTheirsEl) ldProjTheirsEl.textContent = '—';
-        if (ldOppEl) ldOppEl.textContent = entry.oppUser ? (entry.oppUser.display_name || entry.oppUser.username) : '—';
+        if (ldOppEl) ldOppEl.textContent = rosterOppUser ? (rosterOppUser.display_name || rosterOppUser.username) : '—';
         if (ldFavoredTagEl) ldFavoredTagEl.textContent = 'No projections available';
         if (ldLiveScoreEl) ldLiveScoreEl.textContent = '';
         if (ldOrigScoreEl) ldOrigScoreEl.textContent = '';
@@ -13861,9 +13957,9 @@
         return;
       }
 
-      const starters = new Set((entry.roster.starters || []).filter(id => id && id !== '0'));
-      const taxiSet = new Set(entry.roster.taxi || []);
-      const playerIds = (entry.roster.players || []).filter(id => id && id !== '0');
+      const starters = new Set((activeRoster.starters || []).filter(id => id && id !== '0'));
+      const taxiSet = new Set(activeRoster.taxi || []);
+      const playerIds = (activeRoster.players || []).filter(id => id && id !== '0');
 
       // Sleeper's starters array is positional against the league's starting
       // slot order (roster_positions minus bench/IR/taxi), so the slot a
@@ -13872,7 +13968,7 @@
       const startSlots = (entry.league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
       const LD_SLOT_LABEL = { FLEX: 'FLEX', SUPER_FLEX: 'SFLEX', WRRB_FLEX: 'FLEX', REC_FLEX: 'FLEX' };
       const slotByPlayerId = {};
-      (entry.roster.starters || []).forEach((id, i) => {
+      (activeRoster.starters || []).forEach((id, i) => {
         if (id && id !== '0') slotByPlayerId[id] = LD_SLOT_LABEL[startSlots[i]] || startSlots[i];
       });
 
@@ -13909,6 +14005,138 @@
       }).join('');
     }
     window.renderRealLeagueDetail = renderRealLeagueDetail;
+
+    // League Standings popup -- clicking a league used to jump straight to
+    // the connected user's own roster with no way to see anyone else's
+    // team. Now it opens this list of every manager in the league first;
+    // clicking one of them opens the exact same League Detail page, just
+    // for that roster (via renderRealLeagueDetail's targetRosterId).
+    window.__sleeperUserLeagueCountCache = window.__sleeperUserLeagueCountCache || {};
+
+    function sbStandingsRosterType(conRank, valRank, half) {
+      if (conRank == null) return null;
+      const conGood = conRank <= half;
+      const valGood = valRank <= half;
+      if (conGood && valGood) return { label: 'FAVORITE', cls: '' };
+      if (conGood && !valGood) return { label: 'FRAGILE', cls: 'fragile' };
+      if (!conGood && valGood) return { label: 'UPSIDE', cls: 'upside' };
+      return { label: 'REBUILD', cls: 'rebuild' };
+    }
+
+    function sbBuildLeagueStandingsHtml(entry) {
+      const allRosters = entry.allRosters || [];
+      const pfOf = r => {
+        const s = r.settings || {};
+        return (s.fpts || 0) + (s.fpts_decimal || 0) / 100;
+      };
+      const conResult = sbLeagueContendingRanks(entry);
+      const half = Math.ceil(allRosters.length / 2);
+
+      const rows = allRosters.map(r => {
+        const user = (entry.users || []).find(u => u.user_id === r.owner_id);
+        const name = user ? (user.display_name || user.username || 'Unknown') : 'Unknown';
+        const wins = (r.settings && r.settings.wins) || 0;
+        const losses = (r.settings && r.settings.losses) || 0;
+        const conRank = conResult ? conResult.ranks[r.roster_id] : null;
+        const valRank = ldRankOf(allRosters, pfOf, r.roster_id);
+        const type = sbStandingsRosterType(conRank, valRank, half);
+        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar: user ? user.avatar : null, name, wins, losses, conRank, type };
+      });
+      rows.sort((a, b) => (a.conRank || 999) - (b.conRank || 999));
+
+      return rows.map((row, i) => {
+        const initial = (row.name || '?').charAt(0).toUpperCase();
+        const pillHtml = row.type
+          ? `<div class="roster-pill${row.type.cls ? ' ' + row.type.cls : ''}">${row.type.label}</div>`
+          : '<div class="roster-pill">&mdash;</div>';
+        const isMe = entry.roster && row.rosterId === entry.roster.roster_id;
+        return `<div class="league-standings-row${isMe ? ' is-me' : ''}" data-roster-id="${row.rosterId}">` +
+          '<div class="ld-header-left">' +
+            `<div class="league-standings-rank">${i + 1}</div>` +
+            `<div class="ld-avatar" style="background:var(--navy)">${sbFieldAvatarHtml(row.avatar, initial)}</div>` +
+            '<div>' +
+              `<div class="ld-name">${sbFieldEsc(row.name)}</div>` +
+              `<div class="ld-meta">${row.wins}-${row.losses} &middot; <span class="lst-league-count" data-owner-id="${row.ownerId}">…</span></div>` +
+            '</div>' +
+            pillHtml +
+          '</div>' +
+          '<div class="ld-tags">' +
+            `<span class="ld-tag">CON <b>${row.conRank != null ? ldOrdinal(row.conRank) : '—'}</b></span>` +
+            '<span class="ld-tag">VAL <b>—</b></span>' +
+            '<span class="ld-tag">QB <b>—</b></span>' +
+            '<span class="ld-tag">RB <b>—</b></span>' +
+            '<span class="ld-tag">WR <b>—</b></span>' +
+            '<span class="ld-tag">TE <b>—</b></span>' +
+            '<span class="ld-tag">PICKS <b>—</b></span>' +
+            '<span class="ld-tag">PLAYOFF <b>—</b></span>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // How many total Sleeper leagues each manager is in -- a real per-user
+    // lookup (same /user/{id}/leagues/nfl/{season} endpoint used for the
+    // connected user's own count), fetched once per owner_id and cached,
+    // since the same manager often shares several leagues with you.
+    async function sbLoadStandingsLeagueCounts(container, season) {
+      const spans = Array.from(container.querySelectorAll('.lst-league-count[data-owner-id]'));
+      const ownerIds = [...new Set(spans.map(s => s.dataset.ownerId).filter(Boolean))];
+      await Promise.all(ownerIds.map(async (ownerId) => {
+        if (window.__sleeperUserLeagueCountCache[ownerId] == null) {
+          try {
+            const leagues = await sleeperFetch(`/user/${ownerId}/leagues/nfl/${season}`);
+            window.__sleeperUserLeagueCountCache[ownerId] = Array.isArray(leagues) ? leagues.length : null;
+          } catch (err) {
+            window.__sleeperUserLeagueCountCache[ownerId] = null;
+          }
+        }
+      }));
+      spans.forEach(span => {
+        const count = window.__sleeperUserLeagueCountCache[span.dataset.ownerId];
+        span.textContent = count != null ? `${count} league${count === 1 ? '' : 's'}` : 'leagues unknown';
+      });
+    }
+
+    function closeLeagueStandings() {
+      document.querySelectorAll('.league-standings-expand').forEach(el => el.remove());
+    }
+
+    function openLeagueStandings(row) {
+      const already = row.nextElementSibling && row.nextElementSibling.classList.contains('league-standings-expand');
+      closeLeagueStandings();
+      if (already) return;
+      const leagueId = row.dataset.sleeperLeagueId;
+      const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+      if (!entry || !entry.allRosters || !entry.allRosters.length) {
+        // No real roster list to show (demo row, or data hasn't loaded
+        // yet) -- fall back to the old direct-to-your-team behavior
+        // rather than opening an empty popup.
+        goToLeagueDetail(row.dataset.name);
+        return;
+      }
+      const expand = document.createElement('div');
+      expand.className = 'league-standings-expand';
+      expand.innerHTML = sbBuildLeagueStandingsHtml(entry);
+      row.after(expand);
+      sbLoadStandingsLeagueCounts(expand, entry.league.season);
+    }
+    window.openLeagueStandings = openLeagueStandings;
+
+    document.addEventListener('click', (e) => {
+      const stRow = e.target.closest('.league-standings-row');
+      if (stRow) {
+        const expand = stRow.closest('.league-standings-expand');
+        const leagueRow = expand && expand.previousElementSibling;
+        if (leagueRow && leagueRow.classList.contains('league-row')) {
+          goToLeagueDetail(leagueRow.dataset.name, Number(stRow.dataset.rosterId));
+        }
+        return;
+      }
+      if (!e.target.closest('.league-standings-expand') && !e.target.closest('.league-row')) {
+        closeLeagueStandings();
+      }
+    });
+
     window.sleeperGetPlayerDict = getPlayerDict;
     window.sleeperFetch = sleeperFetch;
     window.sleeperReloadData = loadSleeperData;
