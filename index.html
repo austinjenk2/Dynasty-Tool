@@ -2498,46 +2498,48 @@
 
   .dr-grid-wrap { overflow-x: auto; margin-bottom: 20px; padding-bottom: 6px; }
   .dr-grid { display: flex; gap: 8px; width: max-content; }
-  .dr-grid-col { display: flex; flex-direction: column; gap: 8px; width: 132px; flex-shrink: 0; }
+  .dr-grid-col { display: flex; flex-direction: column; gap: 8px; width: 220px; flex-shrink: 0; }
   .dr-grid-team-head { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 4px; cursor: pointer; border-radius: 6px; border: 1.5px solid transparent; }
   .dr-grid-team-head:hover, .dr-grid-team-head.is-active { border-color: var(--ink); background: var(--surface); }
   .dr-team-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; position: relative; overflow: hidden; }
   .dr-team-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  .dr-team-name { font-size: 11px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+  .dr-team-name { font-size: 11px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
 
   .dr-pick {
     background: var(--surface);
     border: 2.5px solid var(--border-soft);
     border-radius: 6px;
-    padding: 8px;
-    padding-right: 46%;
-    height: 82px;
+    padding: 10px 12px;
+    height: 120px;
     overflow: hidden;
     position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
   }
-  .dr-pick-headshot {
-    position: absolute;
-    top: 0; right: 0; bottom: 0;
-    width: 44%;
-    object-fit: cover;
-    object-position: top center;
-    background: rgba(0,0,0,0.08);
+  .dr-pick-avatar {
+    width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
   }
+  .dr-pick-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .dr-pick.dr-pos-qb { border-color: var(--red); background: var(--red); }
   .dr-pick.dr-pos-rb { border-color: var(--green); background: var(--green); }
   .dr-pick.dr-pos-wr { border-color: var(--blue); background: var(--blue); }
   .dr-pick.dr-pos-te { border-color: var(--gold); background: var(--gold); }
   .dr-pick.dr-team-dim { opacity: 0.3; }
-  .dr-pick-num { font-size: 9.5px; font-weight: 700; color: var(--faint); float: right; }
-  .dr-pick-name { font-size: 12px; font-weight: 700; color: var(--ink); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dr-pick-num { position: absolute; top: 8px; right: 10px; font-size: 9.5px; font-weight: 700; color: var(--faint); }
+  .dr-pick-info { flex: 1; min-width: 0; }
+  .dr-pick-name {
+    font-size: 15px; font-weight: 800; color: var(--ink); line-height: 1.18;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
   .dr-pick.dr-pos-qb .dr-pick-num, .dr-pick.dr-pos-rb .dr-pick-num, .dr-pick.dr-pos-wr .dr-pick-num, .dr-pick.dr-pos-te .dr-pick-num { color: #fff; opacity: 0.85; }
   .dr-pick.dr-pos-qb .dr-pick-name, .dr-pick.dr-pos-rb .dr-pick-name, .dr-pick.dr-pos-wr .dr-pick-name, .dr-pick.dr-pos-te .dr-pick-name { color: #fff; }
-  .dr-pick-meta { font-size: 10px; color: var(--faint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px; }
+  .dr-pick-meta { font-size: 11px; color: var(--faint); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px; }
   .dr-pick-meta .dr-pos { font-weight: 800; }
   .dr-pick-meta.dr-pos-qb .dr-pos, .dr-pick-meta.dr-pos-rb .dr-pos, .dr-pick-meta.dr-pos-wr .dr-pos, .dr-pick-meta.dr-pos-te .dr-pos { color: #fff; }
   .dr-pick.dr-pos-qb .dr-pick-meta, .dr-pick.dr-pos-rb .dr-pick-meta, .dr-pick.dr-pos-wr .dr-pick-meta, .dr-pick.dr-pos-te .dr-pick-meta { color: rgba(255,255,255,0.85); }
   .dr-pick-meta-logo { width: 13px; height: 13px; object-fit: contain; background: #fff; border-radius: 50%; padding: 1px; }
-  .dr-pick-trade { font-size: 11.5px; font-weight: 700; color: var(--ink); font-style: normal; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dr-pick-trade { font-size: 11px; font-weight: 700; color: var(--ink); font-style: normal; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dr-pick.dr-pos-qb .dr-pick-trade, .dr-pick.dr-pos-rb .dr-pick-trade, .dr-pick.dr-pos-wr .dr-pick-trade, .dr-pick.dr-pos-te .dr-pick-trade { color: #fff; }
 
   .dr-board-bottom { display: block; }
@@ -11230,12 +11232,14 @@
           const currentName = traded ? (drRosterOwnerName(entry, currentRosterId) || 'Traded') : headName;
           rowsHtml.push(
             '<div class="dr-pick ' + posClass + '" data-team="' + currentRosterId + '">' +
-              '<img class="dr-pick-headshot" src="' + sbHeadshotUrl(pick.player_id) + '" alt="" loading="lazy" onerror="this.remove()">' +
               '<span class="dr-pick-num">' + pickNum + '</span>' +
-              '<div class="dr-pick-name">' + info.name + '</div>' +
-              '<div class="dr-pick-meta ' + posClass + '"><span class="dr-pos">' + info.pos + '</span>' +
-                '<img class="dr-pick-meta-logo" src="' + sbTeamLogoUrl(info.team) + '" alt="' + info.team + '" title="' + info.team + '" loading="lazy" onerror="this.remove()"></div>' +
-              (traded ? '<div class="dr-pick-trade">&rarr; ' + currentName + '</div>' : '') +
+              '<div class="dr-pick-avatar"><img src="' + sbHeadshotUrl(pick.player_id) + '" alt="" loading="lazy" onerror="this.remove()"></div>' +
+              '<div class="dr-pick-info">' +
+                '<div class="dr-pick-name">' + info.name + '</div>' +
+                '<div class="dr-pick-meta ' + posClass + '"><span class="dr-pos">' + info.pos + '</span>' +
+                  '<img class="dr-pick-meta-logo" src="' + sbTeamLogoUrl(info.team) + '" alt="' + info.team + '" title="' + info.team + '" loading="lazy" onerror="this.remove()"></div>' +
+                (traded ? '<div class="dr-pick-trade">&rarr; ' + currentName + '</div>' : '') +
+              '</div>' +
             '</div>'
           );
         }
