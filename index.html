@@ -7,21 +7,21 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
 <style>
   :root {
-    /* Vintage Program -- old game-day program: parchment and maroon. */
-    --bg: #ecdfc4;
-    --surface: #faf3e3;
-    --border: #d6c19c;
-    --border-soft: #e6d7b4;
-    --ink: #2b2013;
-    --muted: #7a6a4e;
-    --faint: #a3946f;
-    --red: #7a2331;
-    --navy: #4a3420;
-    --green: #4c7a3a;
-    --green-bg: #dfe7d6;
-    --gold: #a1701c;
-    --blue: #33587a;
-    --red-bg: #e9d4d3;
+    /* Stadium Night -- under-the-lights dark mode, turf-green pop. */
+    --bg: #12151c;
+    --surface: #1b202b;
+    --border: #2a3142;
+    --border-soft: #333c50;
+    --ink: #f1f3f6;
+    --muted: #9aa3b4;
+    --faint: #6b7385;
+    --red: #ff6b7a;
+    --navy: #3a6ea5;
+    --green: #3ddc84;
+    --green-bg: #173324;
+    --gold: #f0c05a;
+    --blue: #6fb3f0;
+    --red-bg: #3a2027;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -14236,6 +14236,12 @@
         const leagueId = ldStandingsListEl.dataset.leagueId;
         if (leagueId && window.renderRealLeagueDetail) {
           window.renderRealLeagueDetail(leagueId, Number(stRow.dataset.rosterId));
+          // With a full standings list sitting above it, the roster detail
+          // section can be pushed well below the fold in a bigger league --
+          // scroll it into view so clicking a manager visibly "pops up"
+          // their team instead of silently updating off-screen.
+          const rosterHeader = document.querySelector('#leagueDetailView .ld-header');
+          if (rosterHeader) rosterHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       });
     }
