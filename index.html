@@ -2441,11 +2441,42 @@
   .trade-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   @media (max-width: 1100px) { .trade-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 700px) { .trade-grid { grid-template-columns: 1fr; } }
-  .trade-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .trade-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; position: relative; }
   .trade-card.trade-row-hidden { display: none; }
   .trade-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
   .trade-card-title { font-size: 13.5px; font-weight: 700; color: var(--ink); }
   .trade-card-icons { display: flex; gap: 6px; color: var(--faint); font-size: 13px; flex-shrink: 0; }
+  .trade-icon-photo { cursor: pointer; }
+  .trade-icon-photo:hover { color: var(--ink); }
+  .trade-photo-menu {
+    position: absolute;
+    top: 36px; right: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.16);
+    padding: 6px;
+    z-index: 6;
+    min-width: 150px;
+  }
+  .trade-photo-menu-option {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border-radius: 6px;
+    font-size: 12.5px; font-weight: 600; color: var(--ink);
+    cursor: pointer; white-space: nowrap;
+  }
+  .trade-photo-menu-option:hover { background: var(--bg); }
+  .trade-photo-menu-icon { font-size: 13px; }
+  /* Only present in the off-screen clone that gets rasterized for
+     Copy Image/Save PNG -- never shown in the live card. */
+  .trade-card-watermark {
+    text-align: right;
+    margin-top: 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: var(--faint);
+  }
   .trade-card-meta { font-size: 11px; color: var(--faint); margin-top: 4px; }
   .trade-card-with { font-size: 12px; color: var(--muted); margin-top: 4px; margin-bottom: 12px; }
   .trade-card-with b { color: var(--ink); }
@@ -2483,6 +2514,9 @@
     font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
 </style>
+<!-- Rasterizes a trade card to a canvas for the "export as image" feature
+     (Trade History's camera icon) -- real, widely-used library, no key. -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -9748,7 +9782,7 @@
         <div class="trade-card" data-league="PURPLE PEOPLE" data-date="2026-08-29" data-players="CeeDee Lamb,Rhamondre Stevenson,A.J. Brown,Breece Hall">
           <div class="trade-card-head">
             <div class="trade-card-title">PURPLE PEOPLE &middot; Aug 29, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 5pt Pass TD &middot; Full PPR &middot; 0.75 TEP</div>
           <div class="trade-card-with">with <b>PaulPatterson</b></div>
@@ -9784,7 +9818,7 @@
         <div class="trade-card" data-league="Blockbuster Dynasty" data-date="2026-08-27" data-players="Ashton Jeanty">
           <div class="trade-card-head">
             <div class="trade-card-title">Blockbuster Dynasty &middot; Aug 27, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Tiered PPR (RB 0.5, WR 1, TE 1.5)</div>
           <div class="trade-card-with">with <b>Heerag</b></div>
@@ -9816,7 +9850,7 @@
         <div class="trade-card" data-league="Grandpa Phil" data-date="2026-08-26" data-players="Jordyn Tyson,Elijah Sarratt,Dalton Schultz,Makai Lemon">
           <div class="trade-card-head">
             <div class="trade-card-title">Grandpa Phil &middot; Aug 26, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>PaulPatterson</b></div>
@@ -9848,7 +9882,7 @@
         <div class="trade-card" data-league="Degens from Up Country" data-date="2026-08-23" data-players="Matt Hibner">
           <div class="trade-card-head">
             <div class="trade-card-title">Degens from Up Country &middot; Aug 23, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Prophet93</b></div>
@@ -9872,7 +9906,7 @@
         <div class="trade-card" data-league="Degens from Up Country" data-date="2026-08-21" data-players="Stefon Diggs,Marquise Brown,Malachi Fields">
           <div class="trade-card-head">
             <div class="trade-card-title">Degens from Up Country &middot; Aug 21, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Prophet93</b></div>
@@ -9900,7 +9934,7 @@
         <div class="trade-card" data-league="The Doctor's" data-date="2026-08-20" data-players="Jordyn Tyson,KC Concepcion">
           <div class="trade-card-head">
             <div class="trade-card-title">The Doctor's &middot; Aug 20, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Maxminette</b></div>
@@ -9936,7 +9970,7 @@
         <div class="trade-card" data-league="Empire Entertainment" data-date="2026-07-30" data-players="Chris Olave,Rome Odunze">
           <div class="trade-card-head">
             <div class="trade-card-title">Empire Entertainment &middot; Jul 30, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; Non-TEP</div>
           <div class="trade-card-with">with <b>okNikolai</b></div>
@@ -9964,7 +9998,7 @@
         <div class="trade-card" data-league="OTTOMAN" data-date="2026-07-18" data-players="Bo Nix,Kyler Murray">
           <div class="trade-card-head">
             <div class="trade-card-title">OTTOMAN &middot; Jul 18, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>carsonfrye12</b></div>
@@ -9992,7 +10026,7 @@
         <div class="trade-card" data-league="StatChasers BestBall & Chill 5.0" data-date="2026-06-12" data-players="Isaiah Likely,Jonnu Smith">
           <div class="trade-card-head">
             <div class="trade-card-title">StatChasers BestBall & Chill 5.0 &middot; Jun 12, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 1.0 TEP</div>
           <div class="trade-card-with">with <b>WesB69</b></div>
@@ -10020,7 +10054,7 @@
         <div class="trade-card" data-league="Blitz Dynasty Football" data-date="2026-05-05" data-players="Kyren Williams">
           <div class="trade-card-head">
             <div class="trade-card-title">Blitz Dynasty Football &middot; May 5, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>KingProfitVII</b></div>
@@ -11193,7 +11227,7 @@
         return `<div class="trade-card" data-league="${entry.league.name}" data-date="${dateIso}" data-players="${players}">
             <div class="trade-card-head">
               <div class="trade-card-title">${entry.league.name} &middot; ${dateLabel}</div>
-              <div class="trade-card-icons"><span class="trade-icon">&#128425;</span><span class="trade-icon">&#128247;</span></div>
+              <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
             </div>
             <div class="trade-card-meta">${entry.league.total_rosters || 12} Teams</div>
             <div class="trade-card-with">with <b>${withName}</b></div>
@@ -11219,6 +11253,93 @@
     }
     window.renderRealTrades = renderRealTrades;
   })();
+
+  // Trade History's camera icon -- exports a single trade card as a real
+  // PNG (copy to clipboard, or save the file), for sharing outside the
+  // app. Renders an off-screen clone of the card (icons row stripped,
+  // a small watermark added) through html2canvas rather than touching the
+  // live card, so nothing flickers on screen while it captures.
+  function closeTradePhotoMenu() {
+    const menu = document.querySelector('.trade-photo-menu');
+    if (menu) menu.remove();
+  }
+
+  async function exportTradeCardImage(cardEl, action) {
+    closeTradePhotoMenu();
+    if (typeof html2canvas !== 'function') return;
+
+    const clone = cardEl.cloneNode(true);
+    const iconsEl = clone.querySelector('.trade-card-icons');
+    if (iconsEl) iconsEl.remove();
+    const watermark = document.createElement('div');
+    watermark.className = 'trade-card-watermark';
+    watermark.textContent = 'Fantasy Tool';
+    clone.appendChild(watermark);
+
+    clone.style.position = 'fixed';
+    clone.style.top = '0';
+    clone.style.left = '-10000px';
+    clone.style.width = cardEl.getBoundingClientRect().width + 'px';
+    document.body.appendChild(clone);
+
+    try {
+      const canvas = await html2canvas(clone, {
+        backgroundColor: getComputedStyle(cardEl).backgroundColor || '#ffffff',
+        useCORS: true,
+        scale: 2,
+      });
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        if (action === 'copy') {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          } catch (err) {
+            // Clipboard image writes need a secure context and browser
+            // support -- fall back to a download so the export still
+            // isn't a dead end.
+            const link = document.createElement('a');
+            link.download = 'trade.png';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+          }
+        } else {
+          const link = document.createElement('a');
+          link.download = 'trade.png';
+          link.href = URL.createObjectURL(blob);
+          link.click();
+        }
+      }, 'image/png');
+    } catch (err) {
+      // Most likely a cross-origin headshot image without CORS headers
+      // tainting the canvas -- fail quietly rather than break the page.
+    } finally {
+      clone.remove();
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const photoIcon = e.target.closest('.trade-icon-photo');
+    if (photoIcon) {
+      const card = photoIcon.closest('.trade-card');
+      const already = card.querySelector('.trade-photo-menu');
+      closeTradePhotoMenu();
+      if (already) return; // was already open on this card -- just close it
+      const menu = document.createElement('div');
+      menu.className = 'trade-photo-menu';
+      menu.innerHTML =
+        '<div class="trade-photo-menu-option" data-action="copy"><span class="trade-photo-menu-icon">&#128203;</span>Copy Image</div>' +
+        '<div class="trade-photo-menu-option" data-action="save"><span class="trade-photo-menu-icon">&#11015;&#65039;</span>Save PNG</div>';
+      card.appendChild(menu);
+      return;
+    }
+    const option = e.target.closest('.trade-photo-menu-option');
+    if (option) {
+      const card = option.closest('.trade-card');
+      exportTradeCardImage(card, option.dataset.action === 'copy' ? 'copy' : 'save');
+      return;
+    }
+    if (!e.target.closest('.trade-photo-menu')) closeTradePhotoMenu();
+  });
 
   const sbLineupTemplate = document.getElementById('sbLineupTemplate');
   const SB_POS_COLOR = { qb: 'var(--red)', rb: 'var(--green)', wr: 'var(--blue)', te: 'var(--gold)' };
