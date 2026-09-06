@@ -2822,12 +2822,10 @@
           <h2>Portfolio Health</h2>
           <p class="ph-sub">Each bar is a percentile: where you'd rank against the other teams in your leagues this week if every league had the same number of teams (0 = last place, 100 = first place), averaged across all your connected leagues.</p>
 
-          <div class="track">
+          <div class="track" id="phRosterValueTrack">
             <div class="track-label" id="phRosterValueLabel">ROSTER VALUE</div>
-            <div class="track-bar-row">
+            <div class="track-bar-row" id="phRosterValueRow">
               <div class="track-bar-bg"></div>
-              <div class="track-bar-fill" id="phRosterValueFill" style="width:0%"></div>
-              <div class="track-marker" id="phRosterValueMarker" style="left:0%" hidden></div>
             </div>
             <div class="track-ends"><span>Last</span><span>Median</span><span>First</span></div>
           </div>
@@ -15617,10 +15615,47 @@
   }
   window.renderRealExposures = renderRealExposures;
 
-  // Portfolio Health and Team Strength stay on sample data -- both need a
-  // roster-value/ranking source, and per the no-third-party-valuation rule
-  // this app only ever uses real Sleeper data. Weekly Schedule also stays
-  // mock since Sleeper's public API doesn't expose an NFL schedule endpoint.
+  // Real dynasty player values (Pure Potential Rankings' "Base 1 Value"
+  // column, a 0-3 relative trade-value scale) -- the one non-Sleeper data
+  // source this app uses, and only ever for dynasty-mode value ranking
+  // (Team Strength's x-axis, Portfolio Health's Roster Value track, the
+  // League Detail VAL rank, etc). Keyed by a normalized player name since
+  // this list has no Sleeper player_id to join on.
+  const PP_PLAYER_VALUES = {"josh allen":3.0,"jamarr chase":2.93,"puka nacua":2.86,"drake maye":2.79,"jaxon smith-njigba":2.72,"bijan robinson":2.65,"jahmyr gibbs":2.58,"brock bowers":2.5,"jayden daniels":2.44,"ashton jeanty":2.39,"lamar jackson":2.34,"malik nabers":2.28,"caleb williams":2.23,"jeremiyah love":2.17,"drake london":2.12,"amon-ra st brown":2.06,"trey mcbride":2.0,"justin jefferson":1.98,"ceedee lamb":1.96,"joe burrow":1.93,"justin herbert":1.91,"colston loveland":1.89,"tetairoa mcmillan":1.87,"omarion hampton":1.85,"jalen hurts":1.82,"patrick mahomes":1.8,"devon achane":1.75,"jaxson dart":1.55,"trevor lawrence":1.5,"garrett wilson":1.47,"chris olave":1.45,"nico collins":1.42,"jonathan taylor":1.39,"james cook":1.37,"george pickens":1.34,"carnell tate":1.31,"brock purdy":1.29,"luther burden":1.25,"tyler warren":1.23,"bo nix":1.2,"emeka egbuka":1.18,"zay flowers":1.15,"jordyn tyson":1.13,"kenneth walker":1.1,"makai lemon":1.08,"ladd mcconkey":1.05,"jordan love":1.03,"chase brown":1.0,"breece hall":0.98,"christian mccaffrey":0.97,"aj brown":0.95,"quinshon judkins":0.94,"devonta smith":0.92,"fernando mendoza":0.91,"harold fannin":0.89,"jaylen waddle":0.88,"rashee rice":0.86,"tee higgins":0.85,"saquon barkley":0.83,"treveyon henderson":0.82,"marvin harrison":0.8,"dak prescott":0.79,"jared goff":0.77,"cam skattebo":0.75,"sam laporta":0.74,"kc concepcion":0.73,"jameson williams":0.72,"bucky irving":0.71,"tucker kraft":0.7,"tyler shough":0.69,"brian thomas":0.68,"cam ward":0.66,"rome odunze":0.65,"baker mayfield":0.64,"jadarian price":0.63,"parker washington":0.62,"kyler murray":0.61,"travis etienne":0.6,"kyren williams":0.59,"javonte williams":0.58,"bhayshul tuten":0.57,"sam darnold":0.56,"kyle pitts":0.55,"josh jacobs":0.54,"cj stroud":0.53,"kenyon sadiq":0.52,"daniel jones":0.5,"derrick henry":0.49,"christian watson":0.48,"josh downs":0.47,"matthew stafford":0.46,"jordan addison":0.44,"malik willis":0.43,"dandre swift":0.42,"jonathon brooks":0.41,"bryce young":0.4,"david montgomery":0.39,"ty simpson":0.37,"omar cooper":0.35,"terry mclaurin":0.34,"davante adams":0.33,"denzel boston":0.32,"mike evans":0.31,"rj harvey":0.3,"dalton kincaid":0.3,"oronde gadsden":0.29,"george kittle":0.29,"dezhaun stribling":0.28,"matthew golden":0.28,"xavier worthy":0.27,"alec pierce":0.27,"dj moore":0.26,"jayden reed":0.26,"michael wilson":0.26,"chris godwin":0.25,"jonah coleman":0.25,"wandale robinson":0.24,"dk metcalf":0.24,"isaiah likely":0.23,"rhamondre stevenson":0.23,"jacory croskey-merritt":0.22,"michael pittman":0.22,"quentin johnston":0.21,"jalen coker":0.21,"jaylen warren":0.21,"jake ferguson":0.2,"eli raridon":0.2,"romeo doubs":0.2,"chig okonkwo":0.19,"eli stowers":0.19,"brenton strange":0.19,"chuba hubbard":0.19,"germie bernard":0.19,"blake corum":0.18,"kyle monangai":0.18,"michael penix":0.18,"jakobi meyers":0.18,"rico dowdle":0.18,"jk dobbins":0.17,"tony pollard":0.17,"kenny gainwell":0.17,"terrance ferguson":0.17,"stefon diggs":0.17,"rachaad white":0.16,"dallas goedert":0.16,"courtland sutton":0.16,"nicholas singleton":0.16,"geno smith":0.16,"juwan johnson":0.15,"jakobi lane":0.15,"chris bell":0.15,"tua tagovailoa":0.15,"jordan mason":0.15,"travis kelce":0.14,"mark andrews":0.14,"mac jones":0.14,"zach charbonnet":0.14,"khalil shakir":0.14,"jalen mcmillan":0.14,"michael mayer":0.14,"dylan sampson":0.14,"shedeur sanders":0.13,"tank bigsby":0.13,"keaton mitchell":0.13,"tyjae spears":0.13,"emmett johnson":0.13,"mike washington":0.13,"carson beck":0.13,"woody marks":0.12,"rashid shaheed":0.12,"pat bryant":0.12,"tre harris":0.12,"antonio williams":0.12,"jayden higgins":0.12,"gunnar helm":0.12,"aj barner":0.12,"zachariah branch":0.11,"max klare":0.11,"oscar delp":0.11,"jaylin noel":0.11,"elijah sarratt":0.11,"marshawn lloyd":0.11,"aaron rodgers":0.11,"drew allar":0.1,"ricky pearsall":0.1,"chris rodriguez":0.1,"kaytron allen":0.1,"ted hurst":0.1,"tyler allgeier":0.09,"aaron jones":0.09,"brian robinson":0.09,"jj mccarthy":0.09,"jacoby brissett":0.09,"braelon allen":0.09,"jaydon blue":0.08,"demond claiborne":0.08,"adonai mitchell":0.08,"cyrus allen":0.08,"dalton schultz":0.08,"ray davis":0.07,"hunter henry":0.07,"kaelon black":0.07,"adam randall":0.07,"kayshon boutte":0.07,"deebo samuel":0.06,"tj hockenson":0.06,"troy franklin":0.06,"jordan james":0.06,"keon coleman":0.06,"justin joly":0.06,"pat freiermuth":0.05,"caleb douglas":0.05,"tyrone tracy":0.05,"isiah pacheco":0.05,"malachi fields":0.05,"elijah arroyo":0.05,"greg dulcich":0.05,"dontayvion wicks":0.05,"malik washington":0.05,"tre tucker":0.05,"ryan flournoy":0.05,"keenan allen":0.05,"tank dell":0.05,"deshaun watson":0.04,"chris brazzell":0.04,"elic ayomanor":0.04,"tory horton":0.04,"skyler bell":0.04,"jerry jeudy":0.04,"jack bech":0.04,"jalen nailor":0.04,"brandon aiyuk":0.04,"cade otton":0.04,"mason taylor":0.04,"david njoku":0.04,"brenen thompson":0.04,"jaylen wright":0.04,"kimani vidal":0.04,"seth mcgowan":0.04,"calvin ridley":0.04,"alvin kamara":0.04,"jauan jennings":0.04,"george holani":0.04,"devin neal":0.03,"dj giddens":0.03,"cade klubnik":0.03,"isaac teslaa":0.03,"kevin coleman":0.03,"kirk cousins":0.03,"tanner koziol":0.03,"matt hibner":0.03,"chimere dike":0.03,"anthony richardson":0.03,"bryce lance":0.03,"charlie kolar":0.03,"colby parkinson":0.03,"darnell washington":0.03,"darren waller":0.03,"emanuel wilson":0.03,"erick all":0.03,"jack endries":0.03,"jalen royals":0.03,"jake tonges":0.03,"james conner":0.03,"justin fields":0.03,"kaleb johnson":0.02,"kyle williams":0.02,"marcus mariota":0.02,"mike gesicki":0.02,"najee harris":0.02,"ollie gordon":0.02,"sean tucker":0.02,"tahj brooks":0.02,"taylen green":0.02,"theo johnson":0.02,"tyreek hill":0.02,"brashard smith":0.02,"cedric tillman":0.02,"cj daniels":0.02,"cole kmet":0.02,"cole payton":0.02,"darnell mooney":0.02,"eli heidenreich":0.02,"eric mcalister":0.02,"garrett nussmeier":0.02,"isaiah davis":0.02,"jmari taylor":0.02,"jalen milroe":0.02,"jarquez hunter":0.02,"jaydn ott":0.02,"joe mixon":0.01,"kendre miller":0.01,"malik benson":0.01,"marlin klein":0.01,"marvin mims":0.01,"mitchell evans":0.01,"phil mafah":0.01,"sam roush":0.01,"tai felton":0.01,"tez johnson":0.01,"trevor etienne":0.01,"trey benson":0.01,"zavion thomas":0.01};
+
+  function ppNormalizeName(name) {
+    return String(name || '').toLowerCase().replace(/[.',]/g, '').replace(/\s+/g, ' ').trim();
+  }
+  // Sleeper's full_name often carries a suffix (Jr./Sr./II/III/IV) that
+  // Pure Potential's list drops -- fall back to the suffix-stripped name
+  // before giving up.
+  function ppValueForName(name) {
+    const norm = ppNormalizeName(name);
+    if (PP_PLAYER_VALUES[norm] != null) return PP_PLAYER_VALUES[norm];
+    const stripped = norm.replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
+    if (stripped !== norm && PP_PLAYER_VALUES[stripped] != null) return PP_PLAYER_VALUES[stripped];
+    return null;
+  }
+  function ppValueForPlayerId(playerId, dict) {
+    const p = dict && dict[playerId];
+    if (!p) return null;
+    const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+    return ppValueForName(name);
+  }
+  // Total real dynasty value of every rostered player (bench included --
+  // dynasty value is about assets on hand, not just this week's lineup).
+  // Players Pure Potential doesn't rank (deep bench/practice-squad names)
+  // just contribute 0, same as an explicit low value would.
+  function ppRosterValue(roster, dict) {
+    const playerIds = (roster.players || []).filter(id => id && id !== '0');
+    return playerIds.reduce((sum, id) => sum + (ppValueForPlayerId(id, dict) || 0), 0);
+  }
+
+  // Portfolio Health and Team Strength: Roster Value now comes from the
+  // real Pure Potential value list above (dynasty mode only, per the
+  // no-fabricated-numbers rule -- redraft has no dynasty asset value to
+  // rank). Weekly Schedule stays mock since Sleeper's public API doesn't
+  // expose an NFL schedule endpoint.
   function renderRealDashboard() {
     const entries = Object.values(window.sleeperLeagueData || {})
       .filter(e => e.roster && (isCoManagedIncluded() || !e.isCoOwned));
@@ -15655,12 +15690,31 @@
       recordValues[1].innerHTML = `<span class="win">${projWins}</span><span class="sep">-</span><span class="loss">${projLosses}</span>`;
     }
 
-    // Point Projection: real percentile rank of your projected weekly total
-    // within each league (using every team's matchup, not just yours),
-    // averaged across leagues. Roster Value needs a valuation source this
-    // app doesn't have, so it stays at 0 with its marker hidden.
+    // Roster Value: real dynasty asset value (Pure Potential's list) rank
+    // per league, as a percentile -- dynasty mode only, same shape as
+    // Contending Rank below.
+    const dict = window.__sleeperPlayerDict;
+    const valueByLeague = [];
+    const valuePcts = [];
+    if (getSiteMode() === 'dynasty' && dict) {
+      entries.forEach(e => {
+        const allRosters = e.allRosters || [];
+        if (allRosters.length < 2) return;
+        const values = allRosters.map(r => ({ rosterId: r.roster_id, value: ppRosterValue(r, dict) }));
+        const myValue = values.find(v => v.rosterId === e.roster.roster_id);
+        if (!myValue) return;
+        const sortedDesc = [...values].sort((a, b) => b.value - a.value);
+        const rank = sortedDesc.findIndex(v => v.rosterId === e.roster.roster_id) + 1;
+        const pct = ((values.length - rank) / (values.length - 1)) * 100;
+        valueByLeague.push({ league: e.league.name, pct, rank, of: values.length });
+        valuePcts.push(pct);
+      });
+    }
+    const phRosterValueTrack = document.getElementById('phRosterValueTrack');
+    if (phRosterValueTrack) phRosterValueTrack.hidden = getSiteMode() !== 'dynasty';
     const phRosterValueLabel = document.getElementById('phRosterValueLabel');
-    if (phRosterValueLabel) phRosterValueLabel.textContent = 'ROSTER VALUE (no data source)';
+    if (phRosterValueLabel) phRosterValueLabel.textContent = 'ROSTER VALUE';
+    renderDotTrack('phRosterValueRow', valuePcts);
 
     const pointProjPcts = [];
     entries.forEach(e => {
@@ -15717,7 +15771,7 @@
     renderDotTrack('phLastSeasonRow', lastSeasonPcts);
 
     renderDraftCapital(entries);
-    renderTeamStrength(contendingByLeague);
+    renderTeamStrength(contendingByLeague, valueByLeague);
     renderHighestExposures();
   }
   window.renderRealDashboard = renderRealDashboard;
@@ -15754,27 +15808,50 @@
     row.appendChild(label);
   }
 
-  // Team Strength: Y axis (Contending Rank) is now real, one dot per
-  // league. X axis (Value Rank) has no real source yet -- every dot sits
-  // flush on the y-axis for now (left edge) so the quadrant layout and
-  // dot-rendering plumbing are already in place; swapping in a real x
-  // value later is a one-line change once there's a roster-value source.
-  function renderTeamStrength(contendingByLeague) {
+  // Team Strength: X = real dynasty Value Rank (Pure Potential list),
+  // Y = real Contending Rank -- a snapshot of where each team stands right
+  // now, not a per-week series. Leagues that land on (about) the same spot
+  // share one dot instead of silently stacking, same click-to-choose
+  // pattern as before.
+  function renderTeamStrength(contendingByLeague, valueByLeague) {
     const wrap = document.getElementById('teamStrengthScatterWrap');
     if (!wrap) return;
     wrap.querySelectorAll('.scatter-dot').forEach(el => el.remove());
     window.__scatterLeagueStats = {};
     if (!contendingByLeague.length) return;
 
+    const valueByName = {};
+    (valueByLeague || []).forEach(v => { valueByName[v.league] = v; });
+
+    const points = contendingByLeague.map(item => {
+      const v = valueByName[item.league];
+      window.__scatterLeagueStats[item.league] = {
+        rank: item.rank, of: item.of,
+        value: v ? v.rank : null, valueOf: v ? v.of : null,
+      };
+      const x = Math.max(2, Math.min(98, v ? v.pct : 3));
+      const y = Math.max(2, Math.min(98, 100 - item.pct));
+      return { league: item.league, x, y, pct: item.pct };
+    });
+
+    // Group by rounded position so overlapping teams show as one dot
+    // (still individually clickable through the existing chooser) rather
+    // than stacking invisibly on top of each other.
+    const groups = {};
+    points.forEach(p => {
+      const key = Math.round(p.x) + ',' + Math.round(p.y);
+      if (!groups[key]) groups[key] = { x: p.x, y: p.y, pct: p.pct, leagues: [] };
+      groups[key].leagues.push(p.league);
+    });
+
     const tooltip = document.getElementById('scatterTooltip');
-    contendingByLeague.forEach(item => {
-      window.__scatterLeagueStats[item.league] = { rank: item.rank, of: item.of, value: null, valueOf: null };
+    Object.values(groups).forEach(g => {
       const dot = document.createElement('div');
-      dot.className = 'scatter-dot';
-      dot.dataset.leagues = item.league;
-      dot.style.left = '3%';
-      dot.style.top = Math.max(2, Math.min(98, 100 - item.pct)) + '%';
-      dot.style.background = pctToColor(item.pct);
+      dot.className = 'scatter-dot' + (g.leagues.length > 1 ? ' scatter-dot-multi' : '');
+      dot.dataset.leagues = g.leagues.join(', ');
+      dot.style.left = g.x + '%';
+      dot.style.top = g.y + '%';
+      dot.style.background = pctToColor(g.pct);
       wrap.insertBefore(dot, tooltip);
     });
   }
