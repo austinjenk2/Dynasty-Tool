@@ -1836,7 +1836,11 @@
     border-radius: 6px;
     padding: 14px 18px;
     margin-bottom: 16px;
+    position: relative;
   }
+  .ld-header-icons { display: flex; gap: 6px; color: var(--faint); font-size: 14px; flex-shrink: 0; }
+  .ld-icon-photo { cursor: pointer; }
+  .ld-icon-photo:hover { color: var(--ink); }
   .ld-header-left { display: flex; align-items: center; gap: 12px; }
   .ld-rank {
     font-family: 'Source Serif 4', serif;
@@ -3365,6 +3369,9 @@
           <span class="ld-tag" id="ldWrTag" hidden>WR <b>1st</b></span>
           <span class="ld-tag" id="ldTeTag" hidden>TE <b>10th</b></span>
           <span class="ld-tag" id="ldPlayoffTag" hidden>PLAYOFF <b>1st</b></span>
+        </div>
+        <div class="ld-header-icons">
+          <span class="ld-icon ld-icon-photo" title="Export as image">&#128247;</span>
         </div>
       </div>
 
@@ -11266,33 +11273,46 @@
     window.renderRealTrades = renderRealTrades;
   })();
 
-  // Trade History's camera icon -- exports a single trade card as a real
-  // PNG (copy to clipboard, or save the file), for sharing outside the
-  // app. Renders an off-screen clone of the card (icons row stripped,
-  // a small watermark added) through html2canvas rather than touching the
-  // live card, so nothing flickers on screen while it captures.
-  function closeTradePhotoMenu() {
+  // Shared "export this card as a real image" machinery -- used by Trade
+  // History's camera icon and League Detail's camera icon alike. Renders
+  // an off-screen clone (never the live element) through html2canvas, so
+  // nothing on screen flickers while it captures, and either copies the
+  // result to the clipboard or downloads it as a PNG.
+  function closePhotoMenu() {
     const menu = document.querySelector('.trade-photo-menu');
     if (menu) menu.remove();
   }
 
-  async function exportTradeCardImage(cardEl, action) {
-    closeTradePhotoMenu();
-    if (typeof html2canvas !== 'function') return;
+  // Fires when a menu option is clicked -- set right before the menu that
+  // owns it is created, so the same delegated click listener below can
+  // serve any number of different "export this thing" features without
+  // needing to know which one is currently open.
+  let pendingPhotoExport = null;
 
-    const clone = cardEl.cloneNode(true);
-    const iconsEl = clone.querySelector('.trade-card-icons');
-    if (iconsEl) iconsEl.remove();
-    const watermark = document.createElement('div');
-    watermark.className = 'trade-card-watermark';
-    watermark.textContent = 'Fantasy Tool';
-    clone.appendChild(watermark);
+  function openPhotoMenu(anchorEl, onAction) {
+    const already = anchorEl.querySelector('.trade-photo-menu');
+    closePhotoMenu();
+    if (already) return; // was already open here -- just close it
+    pendingPhotoExport = onAction;
+    const menu = document.createElement('div');
+    menu.className = 'trade-photo-menu';
+    menu.innerHTML =
+      '<div class="trade-photo-menu-option" data-action="copy"><span class="trade-photo-menu-icon">&#128203;</span>Copy Image</div>' +
+      '<div class="trade-photo-menu-option" data-action="save"><span class="trade-photo-menu-icon">&#11015;&#65039;</span>Save PNG</div>';
+    anchorEl.appendChild(menu);
+  }
+
+  // Rasterizes `clone` (already built, not yet in the document) and either
+  // copies the PNG to the clipboard or downloads it. `referenceEl` supplies
+  // the real background color and real width to render at.
+  async function rasterizeAndExport(clone, referenceEl, filename, action) {
+    if (typeof html2canvas !== 'function') return;
 
     // Sleeper's CDN doesn't send CORS headers, so html2canvas can load
     // these <img>s fine for normal display but can't read their pixels
     // onto a canvas -- they came out blank in the exported image. Routing
     // just this clone's headshots/logos through our own same-origin proxy
-    // (api/avatar.js) sidesteps that entirely; the live card keeps hitting
+    // (api/avatar.js) sidesteps that entirely; the live page keeps hitting
     // Sleeper's CDN directly.
     const images = Array.from(clone.querySelectorAll('img'));
     images.forEach(img => {
@@ -11304,7 +11324,7 @@
     clone.style.position = 'fixed';
     clone.style.top = '0';
     clone.style.left = '-10000px';
-    clone.style.width = cardEl.getBoundingClientRect().width + 'px';
+    clone.style.width = referenceEl.getBoundingClientRect().width + 'px';
     document.body.appendChild(clone);
 
     await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
@@ -11314,7 +11334,7 @@
 
     try {
       const canvas = await html2canvas(clone, {
-        backgroundColor: getComputedStyle(cardEl).backgroundColor || '#ffffff',
+        backgroundColor: getComputedStyle(referenceEl).backgroundColor || '#ffffff',
         useCORS: true,
         scale: 2,
       });
@@ -11328,13 +11348,13 @@
             // support -- fall back to a download so the export still
             // isn't a dead end.
             const link = document.createElement('a');
-            link.download = 'trade.png';
+            link.download = filename;
             link.href = URL.createObjectURL(blob);
             link.click();
           }
         } else {
           const link = document.createElement('a');
-          link.download = 'trade.png';
+          link.download = filename;
           link.href = URL.createObjectURL(blob);
           link.click();
         }
@@ -11347,28 +11367,75 @@
     }
   }
 
+  function buildWatermark() {
+    const watermark = document.createElement('div');
+    watermark.className = 'trade-card-watermark';
+    watermark.textContent = 'Fantasy Tool';
+    return watermark;
+  }
+
+  async function exportTradeCardImage(cardEl, action) {
+    const clone = cardEl.cloneNode(true);
+    const iconsEl = clone.querySelector('.trade-card-icons');
+    if (iconsEl) iconsEl.remove();
+    clone.appendChild(buildWatermark());
+    await rasterizeAndExport(clone, cardEl, 'trade.png', action);
+  }
+
+  // League Detail's camera icon -- exports the header (league/record/
+  // rank tags, icons stripped) plus the position-group columns as one
+  // shareable card, since that combination (not any single existing
+  // element) is what's actually worth sharing.
+  async function exportLeagueDetailImage(action) {
+    const headerEl = document.querySelector('#leagueDetailView .ld-header');
+    const columnsEl = document.getElementById('ldColumns');
+    if (!headerEl || !columnsEl) return;
+
+    const card = document.createElement('div');
+    card.className = 'trade-card';
+    card.style.width = Math.max(headerEl.getBoundingClientRect().width, columnsEl.getBoundingClientRect().width) + 'px';
+
+    const headerClone = headerEl.cloneNode(true);
+    const iconsEl = headerClone.querySelector('.ld-header-icons');
+    if (iconsEl) iconsEl.remove();
+    const rankEl = headerClone.querySelector('.ld-rank');
+    if (rankEl) rankEl.remove();
+    headerClone.style.border = 'none';
+    headerClone.style.padding = '0 0 14px';
+    headerClone.style.marginBottom = '14px';
+    headerClone.style.borderBottom = '1px solid var(--border)';
+
+    const columnsClone = columnsEl.cloneNode(true);
+    columnsClone.style.marginBottom = '0';
+
+    card.appendChild(headerClone);
+    card.appendChild(columnsClone);
+    card.appendChild(buildWatermark());
+
+    await rasterizeAndExport(card, columnsEl, 'league.png', action);
+  }
+
   document.addEventListener('click', (e) => {
-    const photoIcon = e.target.closest('.trade-icon-photo');
-    if (photoIcon) {
-      const card = photoIcon.closest('.trade-card');
-      const already = card.querySelector('.trade-photo-menu');
-      closeTradePhotoMenu();
-      if (already) return; // was already open on this card -- just close it
-      const menu = document.createElement('div');
-      menu.className = 'trade-photo-menu';
-      menu.innerHTML =
-        '<div class="trade-photo-menu-option" data-action="copy"><span class="trade-photo-menu-icon">&#128203;</span>Copy Image</div>' +
-        '<div class="trade-photo-menu-option" data-action="save"><span class="trade-photo-menu-icon">&#11015;&#65039;</span>Save PNG</div>';
-      card.appendChild(menu);
+    const tradePhotoIcon = e.target.closest('.trade-icon-photo');
+    if (tradePhotoIcon) {
+      const card = tradePhotoIcon.closest('.trade-card');
+      openPhotoMenu(card, (action) => exportTradeCardImage(card, action));
+      return;
+    }
+    const ldPhotoIcon = e.target.closest('.ld-icon-photo');
+    if (ldPhotoIcon) {
+      const header = ldPhotoIcon.closest('.ld-header');
+      openPhotoMenu(header, (action) => exportLeagueDetailImage(action));
       return;
     }
     const option = e.target.closest('.trade-photo-menu-option');
     if (option) {
-      const card = option.closest('.trade-card');
-      exportTradeCardImage(card, option.dataset.action === 'copy' ? 'copy' : 'save');
+      const handler = pendingPhotoExport;
+      closePhotoMenu();
+      if (handler) handler(option.dataset.action === 'copy' ? 'copy' : 'save');
       return;
     }
-    if (!e.target.closest('.trade-photo-menu')) closeTradePhotoMenu();
+    if (!e.target.closest('.trade-photo-menu')) closePhotoMenu();
   });
 
   const sbLineupTemplate = document.getElementById('sbLineupTemplate');
