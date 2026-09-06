@@ -818,17 +818,43 @@
      from Emerald up, its own soft glow -- Ruby (30+) also gets a slow
      pulse, since that's a genuinely rare, screenshot-worthy output. */
   .field-player-av.field-tier-bronze { border-color: #cd7f32; box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 6px rgba(205,127,50,0.6); }
-  .field-player-av.field-tier-silver { border-color: #d7dbe0; box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 6px rgba(215,219,224,0.7); }
-  .field-player-av.field-tier-gold { border-color: #ffd54a; box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 8px rgba(255,213,74,0.75); }
-  .field-player-av.field-tier-emerald { border-color: #3ddc84; box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 10px 1px rgba(61,220,132,0.8); }
+  .field-player-av.field-tier-silver {
+    border-color: #d7dbe0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 6px rgba(215,219,224,0.7);
+    animation: fieldSilverPulse 3s ease-in-out infinite;
+  }
+  .field-player-av.field-tier-gold {
+    border-color: #ffd54a;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 8px rgba(255,213,74,0.75);
+    animation: fieldGoldPulse 2.4s ease-in-out infinite;
+  }
+  .field-player-av.field-tier-emerald {
+    border-color: #3ddc84;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 10px 1px rgba(61,220,132,0.8);
+    animation: fieldEmeraldPulse 2s ease-in-out infinite;
+  }
   .field-player-av.field-tier-ruby {
     border-color: #ff2d55;
     box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 12px 2px rgba(255,45,85,0.85);
-    animation: fieldRubyPulse 1.8s ease-in-out infinite;
+    animation: fieldRubyPulse 1.6s ease-in-out infinite;
+  }
+  /* Each tier up pulses faster and with a wider swing -- Silver barely
+     shimmers, Ruby pulses hard, so the glow itself communicates rarity. */
+  @keyframes fieldSilverPulse {
+    0%, 100% { box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 6px rgba(215,219,224,0.7); }
+    50% { box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 9px 1px rgba(215,219,224,0.9); }
+  }
+  @keyframes fieldGoldPulse {
+    0%, 100% { box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 8px rgba(255,213,74,0.75); }
+    50% { box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 14px 3px rgba(255,213,74,1); }
+  }
+  @keyframes fieldEmeraldPulse {
+    0%, 100% { box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 10px 1px rgba(61,220,132,0.8); }
+    50% { box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 18px 4px rgba(61,220,132,1); }
   }
   @keyframes fieldRubyPulse {
     0%, 100% { box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 12px 2px rgba(255,45,85,0.85); }
-    50% { box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 20px 5px rgba(255,45,85,1); }
+    50% { box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 22px 6px rgba(255,45,85,1); }
   }
 
   /* Player detail popup -- opened by clicking any headshot on a field */
@@ -1907,16 +1933,56 @@
   }
   .ld-tag b { color: var(--ink); }
 
-  /* League Standings popup -- appears under a clicked league row, listing
-     every manager in that league (not just the connected user's own
-     team). Each row reuses the same ld-header-left/ld-tags building
-     blocks as the League Detail header itself, since it's showing the
-     exact same kind of information, just one row per manager. */
-  .league-standings-expand {
+  /* League Detail page header -- the league itself (logo/name/settings),
+     sits above the per-roster ld-header so the page reads as "this whole
+     league", not "just my team". */
+  .ld-league-header { display: flex; align-items: center; gap: 14px; margin: 18px 0 14px; }
+  .ld-league-logo {
+    width: 48px; height: 48px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Source Serif 4', serif; font-weight: 700; color: #fff; font-size: 15px;
+    position: relative; overflow: hidden; flex-shrink: 0;
+  }
+  .ld-league-logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .ld-league-name { font-family: 'Source Serif 4', serif; font-size: 22px; font-weight: 700; color: var(--ink); }
+  .ld-league-settings { font-size: 12.5px; color: var(--faint); margin-top: 2px; }
+
+  /* Nav row + rank/search filter row -- visual scaffolding for League
+     Detail's sub-sections. Only Rank By is wired up right now; the rest
+     are placeholders for later. */
+  .ld-nav-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .ld-nav-btn {
+    flex: 1 1 160px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; display: flex; flex-direction: column; gap: 3px;
+  }
+  .ld-nav-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .ld-nav-sub { font-size: 10.5px; color: var(--faint); }
+  .ld-filter-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .ld-rankby-wrap { display: flex; align-items: center; gap: 8px; }
+  .ld-rankby-wrap label { font-size: 11px; font-weight: 700; color: var(--faint); text-transform: uppercase; letter-spacing: 0.03em; }
+  .ld-rankby-wrap select {
+    font-size: 12.5px; font-weight: 600; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+  }
+  .ld-player-search {
+    flex: 1 1 220px; font-size: 12.5px; background: var(--surface); color: var(--ink);
+    border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px;
+  }
+  .ld-player-search:disabled { color: var(--faint); cursor: not-allowed; }
+
+  /* League Standings list -- lives inside the League Detail page itself
+     (its own view, not scrollable alongside other leagues) and lists
+     every manager in the league. Each row reuses the same ld-header-left/
+     ld-tags building blocks as the roster header below, since it's
+     showing the exact same kind of information, just one row per
+     manager. Clicking a row re-renders the roster section below for
+     that manager instead of navigating anywhere. */
+  .league-standings-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 10px 2px 2px;
+    margin-bottom: 20px;
   }
   .league-standings-row {
     display: flex;
@@ -1932,6 +1998,7 @@
   }
   .league-standings-row:hover { border-color: var(--faint); }
   .league-standings-row.is-me { border-color: var(--green); }
+  .league-standings-row.is-active { box-shadow: 0 0 0 2px var(--gold) inset; }
   .league-standings-rank {
     font-family: 'Source Serif 4', serif;
     font-size: 14px;
@@ -3435,6 +3502,35 @@
 
     <div id="leagueDetailView" hidden>
       <a class="league-back" id="leagueBackBtn">&larr; Back to Leagues</a>
+
+      <div class="ld-league-header">
+        <div class="ld-league-logo" id="ldLeagueLogo" style="background:var(--navy)">TL</div>
+        <div>
+          <div class="ld-league-name" id="ldLeagueName">League</div>
+          <div class="ld-league-settings" id="ldLeagueSettings">Sleeper</div>
+        </div>
+      </div>
+
+      <div class="ld-nav-row">
+        <div class="ld-nav-btn"><span class="ld-nav-title">Records</span><span class="ld-nav-sub">Transactions &middot; League History</span></div>
+        <div class="ld-nav-btn"><span class="ld-nav-title">Settings</span><span class="ld-nav-sub">Scoring &middot; Roster &middot; League Rules</span></div>
+        <div class="ld-nav-btn"><span class="ld-nav-title">Insights</span><span class="ld-nav-sub">WAR &middot; Value &middot; Trade Activity</span></div>
+        <div class="ld-nav-btn"><span class="ld-nav-title">Waivers</span><span class="ld-nav-sub">Browse Free Agents &middot; Trending Adds</span></div>
+        <div class="ld-nav-btn"><span class="ld-nav-title">Notes</span><span class="ld-nav-sub">Your Notes &middot; Roster Type</span></div>
+      </div>
+
+      <div class="ld-filter-row">
+        <div class="ld-rankby-wrap">
+          <label for="ldStandingsRankBy">Rank By</label>
+          <select id="ldStandingsRankBy">
+            <option value="con">Contending</option>
+            <option value="val">Roster Value</option>
+          </select>
+        </div>
+        <input class="ld-player-search" type="text" placeholder="Search any player..." disabled title="Coming soon">
+      </div>
+
+      <div class="league-standings-list" id="ldStandingsList"></div>
 
       <div class="ld-header">
         <div class="ld-header-left">
@@ -13238,8 +13334,7 @@
   leagueList.addEventListener('click', (e) => {
     const row = e.target.closest('.league-row');
     if (!row) return;
-    if (window.openLeagueStandings) window.openLeagueStandings(row);
-    else goToLeagueDetail(row.dataset.name);
+    goToLeagueDetail(row.dataset.name);
   });
   leagueBackBtn.addEventListener('click', () => {
     leagueDetailView.hidden = true;
@@ -13813,6 +13908,33 @@
       const viewingOther = !!(activeRoster && entry.roster && activeRoster.roster_id !== entry.roster.roster_id);
       const activeUser = activeRoster ? (entry.users || []).find(u => u.user_id === activeRoster.owner_id) : null;
 
+      // League-level header (logo/name/settings) and the standings list of
+      // every manager -- these live above the per-roster section below,
+      // which is what makes this page read as "the whole league", not
+      // just one team.
+      const ldLeagueLogoEl = document.getElementById('ldLeagueLogo');
+      const ldLeagueNameEl = document.getElementById('ldLeagueName');
+      const ldLeagueSettingsEl = document.getElementById('ldLeagueSettings');
+      if (ldLeagueLogoEl) {
+        const logoHtml = sbLeagueLogoImgHtml(entry.league);
+        ldLeagueLogoEl.innerHTML = logoHtml || sbFieldEsc(leagueInitials(entry.league.name));
+      }
+      if (ldLeagueNameEl) ldLeagueNameEl.textContent = entry.league.name;
+      if (ldLeagueSettingsEl) ldLeagueSettingsEl.innerHTML = scoringLabel(entry.league);
+
+      const ldStandingsList = document.getElementById('ldStandingsList');
+      if (ldStandingsList) {
+        if (activeRoster && allRosters.length > 1) {
+          ldStandingsList.dataset.leagueId = leagueId;
+          const rankBySel = document.getElementById('ldStandingsRankBy');
+          const rankBy = rankBySel ? rankBySel.value : 'con';
+          ldStandingsList.innerHTML = sbBuildLeagueStandingsHtml(entry, activeRoster.roster_id, rankBy);
+          sbLoadStandingsLeagueCounts(ldStandingsList, entry.league.season);
+        } else {
+          ldStandingsList.innerHTML = '';
+        }
+      }
+
       // goToLeagueDetail() copies the row's colored-initials fallback into
       // this header before this function ever runs (so something shows up
       // immediately) -- overwrite it with the real Sleeper league logo here,
@@ -14023,7 +14145,7 @@
       return { label: 'REBUILD', cls: 'rebuild' };
     }
 
-    function sbBuildLeagueStandingsHtml(entry) {
+    function sbBuildLeagueStandingsHtml(entry, activeRosterId, sortBy) {
       const allRosters = entry.allRosters || [];
       const pfOf = r => {
         const s = r.settings || {};
@@ -14040,9 +14162,13 @@
         const conRank = conResult ? conResult.ranks[r.roster_id] : null;
         const valRank = ldRankOf(allRosters, pfOf, r.roster_id);
         const type = sbStandingsRosterType(conRank, valRank, half);
-        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar: user ? user.avatar : null, name, wins, losses, conRank, type };
+        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar: user ? user.avatar : null, name, wins, losses, conRank, valRank, type };
       });
-      rows.sort((a, b) => (a.conRank || 999) - (b.conRank || 999));
+      if (sortBy === 'val') {
+        rows.sort((a, b) => (a.valRank || 999) - (b.valRank || 999));
+      } else {
+        rows.sort((a, b) => (a.conRank || 999) - (b.conRank || 999));
+      }
 
       return rows.map((row, i) => {
         const initial = (row.name || '?').charAt(0).toUpperCase();
@@ -14050,7 +14176,8 @@
           ? `<div class="roster-pill${row.type.cls ? ' ' + row.type.cls : ''}">${row.type.label}</div>`
           : '<div class="roster-pill">&mdash;</div>';
         const isMe = entry.roster && row.rosterId === entry.roster.roster_id;
-        return `<div class="league-standings-row${isMe ? ' is-me' : ''}" data-roster-id="${row.rosterId}">` +
+        const isActive = activeRosterId != null && row.rosterId === activeRosterId;
+        return `<div class="league-standings-row${isMe ? ' is-me' : ''}${isActive ? ' is-active' : ''}" data-roster-id="${row.rosterId}">` +
           '<div class="ld-header-left">' +
             `<div class="league-standings-rank">${i + 1}</div>` +
             `<div class="ld-avatar" style="background:var(--navy)">${sbFieldAvatarHtml(row.avatar, initial)}</div>` +
@@ -14062,7 +14189,7 @@
           '</div>' +
           '<div class="ld-tags">' +
             `<span class="ld-tag">CON <b>${row.conRank != null ? ldOrdinal(row.conRank) : '—'}</b></span>` +
-            '<span class="ld-tag">VAL <b>—</b></span>' +
+            `<span class="ld-tag">VAL <b>${row.valRank != null ? ldOrdinal(row.valRank) : '—'}</b></span>` +
             '<span class="ld-tag">QB <b>—</b></span>' +
             '<span class="ld-tag">RB <b>—</b></span>' +
             '<span class="ld-tag">WR <b>—</b></span>' +
@@ -14097,45 +14224,34 @@
       });
     }
 
-    function closeLeagueStandings() {
-      document.querySelectorAll('.league-standings-expand').forEach(el => el.remove());
-    }
-
-    function openLeagueStandings(row) {
-      const already = row.nextElementSibling && row.nextElementSibling.classList.contains('league-standings-expand');
-      closeLeagueStandings();
-      if (already) return;
-      const leagueId = row.dataset.sleeperLeagueId;
-      const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
-      if (!entry || !entry.allRosters || !entry.allRosters.length) {
-        // No real roster list to show (demo row, or data hasn't loaded
-        // yet) -- fall back to the old direct-to-your-team behavior
-        // rather than opening an empty popup.
-        goToLeagueDetail(row.dataset.name);
-        return;
-      }
-      const expand = document.createElement('div');
-      expand.className = 'league-standings-expand';
-      expand.innerHTML = sbBuildLeagueStandingsHtml(entry);
-      row.after(expand);
-      sbLoadStandingsLeagueCounts(expand, entry.league.season);
-    }
-    window.openLeagueStandings = openLeagueStandings;
-
-    document.addEventListener('click', (e) => {
-      const stRow = e.target.closest('.league-standings-row');
-      if (stRow) {
-        const expand = stRow.closest('.league-standings-expand');
-        const leagueRow = expand && expand.previousElementSibling;
-        if (leagueRow && leagueRow.classList.contains('league-row')) {
-          goToLeagueDetail(leagueRow.dataset.name, Number(stRow.dataset.rosterId));
+    // The standings list now lives inside the League Detail page itself
+    // (populated by renderRealLeagueDetail), so clicking a manager's row
+    // just re-renders that same page for their roster instead of opening
+    // or closing any kind of popup.
+    const ldStandingsListEl = document.getElementById('ldStandingsList');
+    if (ldStandingsListEl) {
+      ldStandingsListEl.addEventListener('click', (e) => {
+        const stRow = e.target.closest('.league-standings-row');
+        if (!stRow) return;
+        const leagueId = ldStandingsListEl.dataset.leagueId;
+        if (leagueId && window.renderRealLeagueDetail) {
+          window.renderRealLeagueDetail(leagueId, Number(stRow.dataset.rosterId));
         }
-        return;
-      }
-      if (!e.target.closest('.league-standings-expand') && !e.target.closest('.league-row')) {
-        closeLeagueStandings();
-      }
-    });
+      });
+    }
+    const ldStandingsRankByEl = document.getElementById('ldStandingsRankBy');
+    if (ldStandingsRankByEl) {
+      ldStandingsRankByEl.addEventListener('change', () => {
+        const leagueId = ldStandingsListEl && ldStandingsListEl.dataset.leagueId;
+        const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+        if (!entry) return;
+        const currentRosterId = entry.roster ? entry.roster.roster_id : null;
+        const activeRow = ldStandingsListEl.querySelector('.league-standings-row.is-active');
+        const activeRosterId = activeRow ? Number(activeRow.dataset.rosterId) : currentRosterId;
+        ldStandingsListEl.innerHTML = sbBuildLeagueStandingsHtml(entry, activeRosterId, ldStandingsRankByEl.value);
+        sbLoadStandingsLeagueCounts(ldStandingsListEl, entry.league.season);
+      });
+    }
 
     window.sleeperGetPlayerDict = getPlayerDict;
     window.sleeperFetch = sleeperFetch;
