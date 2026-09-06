@@ -811,6 +811,25 @@
     cursor: pointer;
   }
   .field-player-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  /* Ring tiers -- the outer border color/glow scales with the player's
+     current fantasy points, so a hot game reads at a glance without
+     having to check the box score. Below 5 pts stays the plain white
+     ring (default rule above); each tier up gets a richer color and,
+     from Emerald up, its own soft glow -- Ruby (30+) also gets a slow
+     pulse, since that's a genuinely rare, screenshot-worthy output. */
+  .field-player-av.field-tier-bronze { border-color: #cd7f32; box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 6px rgba(205,127,50,0.6); }
+  .field-player-av.field-tier-silver { border-color: #d7dbe0; box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 6px rgba(215,219,224,0.7); }
+  .field-player-av.field-tier-gold { border-color: #ffd54a; box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 8px rgba(255,213,74,0.75); }
+  .field-player-av.field-tier-emerald { border-color: #3ddc84; box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 10px 1px rgba(61,220,132,0.8); }
+  .field-player-av.field-tier-ruby {
+    border-color: #ff2d55;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 12px 2px rgba(255,45,85,0.85);
+    animation: fieldRubyPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes fieldRubyPulse {
+    0%, 100% { box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 12px 2px rgba(255,45,85,0.85); }
+    50% { box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 20px 5px rgba(255,45,85,1); }
+  }
 
   /* Player detail popup -- opened by clicking any headshot on a field */
   .pfm-overlay {
@@ -12007,6 +12026,18 @@
     groups.WR.forEach(id => { if (placements[id].behind) placements[id].depth = SB_FIELD_POS_DEPTH.QB; });
     return placements;
   }
+  // Ring color tier by current fantasy points -- 0-5 stays the plain
+  // white ring (the CSS default), each bracket above gets its own color/
+  // glow, topping out at Ruby for a monster 30+ point game.
+  function sbFieldPointTierClass(pts) {
+    if (pts >= 30) return ' field-tier-ruby';
+    if (pts >= 20) return ' field-tier-emerald';
+    if (pts >= 15) return ' field-tier-gold';
+    if (pts >= 10) return ' field-tier-silver';
+    if (pts >= 5) return ' field-tier-bronze';
+    return '';
+  }
+
   function sbFieldFormationHtml(ids, dict, placements, ballPct, sideSign, pointsMap, projMap, league, week) {
     return ids.map(id => {
       const pl = placements[id];
@@ -12019,7 +12050,8 @@
       // projections context -- just the id, week, and season.
       const pts = sbEffectivePoints(id, pointsMap || {}, projMap, league);
       const season = league ? league.season : '';
-      return `<span class="field-player-av" style="left:${pl.x}%;bottom:${bottom}%" title="${sbFieldEsc(name)}" data-player-id="${id}" data-pts="${pts.toFixed(1)}" data-week="${week || ''}" data-season="${season}"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>`;
+      const tierClass = sbFieldPointTierClass(pts);
+      return `<span class="field-player-av${tierClass}" style="left:${pl.x}%;bottom:${bottom}%" title="${sbFieldEsc(name)}" data-player-id="${id}" data-pts="${pts.toFixed(1)}" data-week="${week || ''}" data-season="${season}"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>`;
     }).join('');
   }
   function sbFieldPanelHtml(startPct, teams) {
