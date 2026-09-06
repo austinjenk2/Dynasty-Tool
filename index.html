@@ -2071,6 +2071,7 @@
   .ld-ptag { font-size: 8px; font-weight: 700; color: var(--faint); border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; }
   .ld-pname { flex: 1; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ld-via { font-weight: 500; font-style: normal; color: var(--faint); font-size: 9.5px; }
+  .ld-pick-owner { font-weight: 700; color: var(--muted); font-size: 13px; }
   .ld-pteam { font-size: 9.5px; color: var(--faint); font-weight: 600; display: inline-flex; align-items: center; }
   .ld-team-logo { width: 22px; height: 22px; object-fit: contain; }
   .ld-pnum { font-size: 10.5px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1.2; }
@@ -13890,11 +13891,16 @@
       const myPicks = picksOwnedBy(activeRoster.roster_id);
       const rank = ldRankOf(allRosters, r => picksOwnedBy(r.roster_id).length, activeRoster.roster_id);
       const rowsHtml = myPicks.map(p => {
+        // p.fromRosterId is the pick's original slot (whoever's roster it
+        // would have been without a trade) -- Sleeper's traded_picks record
+        // for a given season/round/slot only ever reflects the current net
+        // owner, so this already resolves correctly even if the pick
+        // changed hands more than once before landing here.
         const isTradedIn = p.fromRosterId !== activeRoster.roster_id;
-        const via = isTradedIn ? nameForRoster(p.fromRosterId) : null;
+        const originalOwnerName = isTradedIn ? nameForRoster(p.fromRosterId) : null;
         return '<div class="ld-pick-row">' +
           `<span class="ld-pick-when">${p.season} &middot; ${roundLabels[p.round]}</span>` +
-          (via ? `<span class="ld-via">via ${sbFieldEsc(via)}</span>` : '') +
+          (originalOwnerName ? `<span class="ld-pick-owner">(${sbFieldEsc(originalOwnerName)})</span>` : '') +
         '</div>';
       }).join('') || '<div class="ld-pick-row"><span class="ld-pick-when" style="color:var(--faint)">No picks owned</span></div>';
 
