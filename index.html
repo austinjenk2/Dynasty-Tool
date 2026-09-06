@@ -3532,6 +3532,7 @@
 
       <div class="league-standings-list" id="ldStandingsList"></div>
 
+      <div id="ldRosterExpand">
       <div class="ld-header">
         <div class="ld-header-left">
           <div class="ld-rank" id="ldRank">1</div>
@@ -3639,6 +3640,7 @@
           <div class="ld-player"><span class="ld-pos te">TE</span><span class="ld-ptag">TX</span><span class="ld-pname">Jared Wiley</span><span class="ld-pteam">KC</span></div>
         </div>
 
+      </div>
       </div>
     </div>
 
@@ -13922,7 +13924,15 @@
       if (ldLeagueNameEl) ldLeagueNameEl.textContent = entry.league.name;
       if (ldLeagueSettingsEl) ldLeagueSettingsEl.innerHTML = scoringLabel(entry.league);
 
+      // The roster header/stats/columns block (#ldRosterExpand) is a single
+      // DOM node that gets physically relocated to sit directly under
+      // whichever standings row is active -- matching the "pop up under
+      // the team you click" inline-expand pattern used elsewhere in the
+      // app, instead of always living in one fixed spot below the whole
+      // list. Grab the reference before the list's innerHTML is replaced,
+      // since that would otherwise detach (not destroy) it.
       const ldStandingsList = document.getElementById('ldStandingsList');
+      const ldRosterExpandEl = document.getElementById('ldRosterExpand');
       if (ldStandingsList) {
         if (activeRoster && allRosters.length > 1) {
           ldStandingsList.dataset.leagueId = leagueId;
@@ -13930,8 +13940,11 @@
           const rankBy = rankBySel ? rankBySel.value : 'con';
           ldStandingsList.innerHTML = sbBuildLeagueStandingsHtml(entry, activeRoster.roster_id, rankBy);
           sbLoadStandingsLeagueCounts(ldStandingsList, entry.league.season);
+          const activeRow = ldRosterExpandEl && ldStandingsList.querySelector(`.league-standings-row[data-roster-id="${activeRoster.roster_id}"]`);
+          if (activeRow) activeRow.after(ldRosterExpandEl);
         } else {
           ldStandingsList.innerHTML = '';
+          if (ldRosterExpandEl && !ldRosterExpandEl.isConnected) ldStandingsList.after(ldRosterExpandEl);
         }
       }
 
@@ -14254,8 +14267,13 @@
         const currentRosterId = entry.roster ? entry.roster.roster_id : null;
         const activeRow = ldStandingsListEl.querySelector('.league-standings-row.is-active');
         const activeRosterId = activeRow ? Number(activeRow.dataset.rosterId) : currentRosterId;
+        const ldRosterExpandEl = document.getElementById('ldRosterExpand');
         ldStandingsListEl.innerHTML = sbBuildLeagueStandingsHtml(entry, activeRosterId, ldStandingsRankByEl.value);
         sbLoadStandingsLeagueCounts(ldStandingsListEl, entry.league.season);
+        if (ldRosterExpandEl && activeRosterId != null) {
+          const newActiveRow = ldStandingsListEl.querySelector(`.league-standings-row[data-roster-id="${activeRosterId}"]`);
+          if (newActiveRow) newActiveRow.after(ldRosterExpandEl);
+        }
       });
     }
 
