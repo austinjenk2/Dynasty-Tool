@@ -963,6 +963,20 @@
   .sb-lineup-label { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 8px; }
   .sb-lineup-label-you { color: var(--green); }
   .sb-lineup-label-opp { color: var(--red); }
+  .sb-last-plays-head { font-size: 10.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 16px 0 8px; }
+  .sb-last-plays { min-height: 32px; }
+  .sb-last-play {
+    display: flex; align-items: baseline; gap: 6px;
+    padding: 6px 0; border-bottom: 1px solid var(--border-soft);
+    font-size: 12px;
+  }
+  .sb-last-play:last-child { border-bottom: none; }
+  .sb-last-play-name { font-weight: 700; color: var(--ink); flex-shrink: 0; }
+  .sb-last-play-desc { color: var(--muted); flex: 1; min-width: 0; }
+  .sb-last-play-pts { font-weight: 800; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .sb-last-play-pos { color: var(--green); }
+  .sb-last-play-neg { color: var(--red); }
+  .sb-last-plays-empty { font-size: 12px; color: var(--faint); padding: 6px 0; }
   .sb-exp-table { width: auto; border-collapse: collapse; }
   .sb-exp-table thead th {
     text-align: left;
@@ -12188,16 +12202,21 @@
             '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
             '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
             `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
+            '<div class="sb-last-plays-head">LAST 5 PLAYS</div>' +
+            '<div class="sb-last-plays sb-last-plays-mine"><div class="ld-loading" style="padding:6px 0">Loading recent plays…</div></div>' +
           '</div>' +
           '<div class="sb-lineup-col">' +
             '<div class="sb-lineup-label sb-lineup-label-opp">OPPONENT LINEUP</div>' +
             '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
             `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
+            '<div class="sb-last-plays-head">LAST 5 PLAYS</div>' +
+            '<div class="sb-last-plays sb-last-plays-opp"><div class="ld-loading" style="padding:6px 0">Loading recent plays…</div></div>' +
           '</div>' +
         '</div>' +
         sbFieldPanelHtml(startPct, teams) +
       '</div>';
     animateSbFieldPanel(panel, fieldKey, winPct, fieldRosters);
+    loadSbLastPlays(panel, fieldRosters.myIds, fieldRosters.oppIds, dict, entry.league, week);
   }
 
   // Field View -- every league's own win-probability field at once, on one
@@ -14908,6 +14927,7 @@
             state: statusType ? statusType.state : null,
             detail: statusType ? statusType.shortDetail : null,
             hasBall: !!(possessionTeamId && c.team && String(c.team.id) === String(possessionTeamId)),
+            eventId: ev.id,
           };
         });
       });
@@ -14933,6 +14953,183 @@
     return data;
   }
   window.sleeperGetEspnGameData = getEspnGameDataCached;
+
+  // ---- Last 5 Plays -- real ESPN play-by-play, filtered down to plays
+  // involving one of a fantasy roster's own starters, scored against that
+  // league's actual scoring settings. ----
+
+  window.__espnPlayByPlayCache = window.__espnPlayByPlayCache || {};
+  const ESPN_PBP_TTL = 15 * 1000;
+
+  // ESPN's play text refers to players by short name ("T.Higgins"), not
+  // full name -- this converts a Sleeper player's real name to match.
+  function sbEspnShortName(fullName) {
+    const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return fullName || '';
+    return `${parts[0][0]}.${parts[parts.length - 1]}`;
+  }
+
+  async function getEspnPlayByPlay(eventId) {
+    const cached = window.__espnPlayByPlayCache[eventId];
+    if (cached && (Date.now() - cached.at < ESPN_PBP_TTL)) return cached.plays;
+    try {
+      const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${eventId}`);
+      if (!res.ok) throw new Error('ESPN ' + res.status);
+      const data = await res.json();
+      const plays = [];
+      const driveGroups = [
+        ...((data.drives && data.drives.previous) || []),
+        ...(data.drives && data.drives.current ? [data.drives.current] : []),
+      ];
+      driveGroups.forEach(drive => {
+        (drive.plays || []).forEach(play => {
+          if (!play || !play.text) return;
+          plays.push({
+            text: play.text,
+            wallclock: play.wallclock || null,
+            seq: Number(play.sequenceNumber || play.id || 0),
+          });
+        });
+      });
+      // Chronological within/between drives; sequenceNumber (when present)
+      // is the reliable tiebreaker for true play order across a game.
+      plays.sort((a, b) => a.seq - b.seq);
+      window.__espnPlayByPlayCache[eventId] = { plays, at: Date.now() };
+      return plays;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  const SB_PLAYER_NAME_RE = "[A-Z][\\w'-]*\\.[A-Z][\\w'-]*";
+
+  // Pulls a fantasy-relevant stat line out of one ESPN play-by-play text
+  // description. ESPN's play text is free-form English, not structured
+  // data -- these patterns cover the plays that actually move fantasy
+  // scores (completions, rushes, passing/rushing TDs, interceptions).
+  // Anything else (punts, kneels, penalties, incomplete passes) is
+  // intentionally left unmatched rather than guessed at.
+  function sbParsePlayEvents(text) {
+    const isTd = /touchdown/i.test(text);
+    const yardsFromWord = (raw) => {
+      if (/no gain/i.test(raw)) return 0;
+      if (/loss of/i.test(raw)) return -(Number(raw.replace(/\D/g, '')) || 0);
+      return Number(raw.replace(/[^\d.-]/g, '')) || 0;
+    };
+    // "yards"/"yard" only actually appears in ESPN's text alongside a real
+    // number or "a loss of N" -- a bare no-gain play is just "no gain"
+    // with nothing after it, so that alternative can't require the word.
+    const YARDS_PHRASE = '(?:-?\\d+ yards?|no gain|a loss of \\d+ yards?)';
+
+    let m = text.match(new RegExp(
+      `^(${SB_PLAYER_NAME_RE}) pass (?:short|deep)?\\s*(?:left|right|middle)?\\s*to (${SB_PLAYER_NAME_RE}) for (${YARDS_PHRASE})`, 'i'
+    ));
+    if (m) {
+      const yards = yardsFromWord(m[3]);
+      return [
+        { name: m[2], desc: `${yards}-yd catch${isTd ? ', TD' : ''}`, stats: { rec: 1, rec_yd: yards, rec_td: isTd ? 1 : 0 } },
+        { name: m[1], desc: `${yards}-yd pass${isTd ? ', TD' : ''}`, stats: { pass_att: 1, pass_cmp: 1, pass_yd: yards, pass_td: isTd ? 1 : 0 } },
+      ];
+    }
+
+    m = text.match(new RegExp(`^(${SB_PLAYER_NAME_RE}) rush for (${YARDS_PHRASE})`, 'i'));
+    if (m) {
+      const yards = yardsFromWord(m[2]);
+      return [{ name: m[1], desc: `${yards}-yd rush${isTd ? ', TD' : ''}`, stats: { rush_att: 1, rush_yd: yards, rush_td: isTd ? 1 : 0 } }];
+    }
+
+    m = text.match(new RegExp(`^(${SB_PLAYER_NAME_RE}) pass intercepted`, 'i'));
+    if (m) {
+      return [{ name: m[1], desc: 'INT thrown', stats: { pass_int: 1 } }];
+    }
+
+    return [];
+  }
+
+  // Builds the last 5 fantasy-relevant plays for one side of a matchup,
+  // scored using that league's own scoring settings.
+  async function sbGetLast5Plays(starterIds, dict, league, espnGames) {
+    const relevant = (starterIds || []).filter(id => {
+      const p = dict[id];
+      return p && ['QB', 'RB', 'WR', 'TE'].includes(p.position);
+    });
+    if (!relevant.length) return [];
+
+    const shortNameMap = {};
+    relevant.forEach(id => {
+      const p = dict[id];
+      const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+      shortNameMap[sbEspnShortName(full)] = id;
+    });
+
+    // Multiple starters often share the same real NFL game -- fetch each
+    // game's play-by-play once regardless of how many rostered players
+    // are in it.
+    const eventIds = new Set();
+    relevant.forEach(id => {
+      const info = espnGames[dict[id].team];
+      if (info && info.eventId) eventIds.add(info.eventId);
+    });
+    if (!eventIds.size) return [];
+
+    const gamesPlays = await Promise.all(Array.from(eventIds).map(getEspnPlayByPlay));
+
+    const found = [];
+    gamesPlays.forEach(plays => {
+      plays.forEach((play, idx) => {
+        sbParsePlayEvents(play.text).forEach(ev => {
+          const playerId = shortNameMap[ev.name];
+          if (!playerId) return;
+          const points = sbCustomScoreFor(ev.stats, league.scoring_settings);
+          if (points == null) return;
+          const p = dict[playerId];
+          const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : ev.name;
+          found.push({
+            name, desc: ev.desc, points,
+            order: play.wallclock ? new Date(play.wallclock).getTime() : idx,
+          });
+        });
+      });
+    });
+
+    found.sort((a, b) => b.order - a.order);
+    return found.slice(0, 5);
+  }
+
+  function sbLast5PlaysHtml(plays) {
+    if (!plays.length) return '<div class="sb-last-plays-empty">No recent scoring plays yet</div>';
+    return plays.map(p => {
+      const cls = p.points > 0 ? 'sb-last-play-pos' : (p.points < 0 ? 'sb-last-play-neg' : '');
+      const sign = p.points > 0 ? '+' : '';
+      return '<div class="sb-last-play">' +
+        `<span class="sb-last-play-name">${sbFieldEsc(p.name)}</span>` +
+        `<span class="sb-last-play-desc">${sbFieldEsc(p.desc)}</span>` +
+        `<span class="sb-last-play-pts ${cls}">${sign}${p.points.toFixed(1)}</span>` +
+      '</div>';
+    }).join('');
+  }
+
+  // Fills in a matchup expand panel's two "Last 5 Plays" sections --
+  // separate from the panel's main render since it needs its own (slower,
+  // multi-game) ESPN fetches and shouldn't block the lineup tables from
+  // showing immediately.
+  async function loadSbLastPlays(panel, myIds, oppIds, dict, league, week) {
+    const mineEl = panel.querySelector('.sb-last-plays-mine');
+    const oppEl = panel.querySelector('.sb-last-plays-opp');
+    if (!mineEl && !oppEl) return;
+    try {
+      const espnGames = await getEspnGameDataCached(week, league.season);
+      const [minePlays, oppPlays] = await Promise.all([
+        sbGetLast5Plays(myIds, dict, league, espnGames),
+        sbGetLast5Plays(oppIds, dict, league, espnGames),
+      ]);
+      if (mineEl) mineEl.innerHTML = sbLast5PlaysHtml(minePlays);
+      if (oppEl) oppEl.innerHTML = sbLast5PlaysHtml(oppPlays);
+    } catch (err) {
+      if (mineEl) mineEl.innerHTML = '<div class="sb-last-plays-empty">Could not load recent plays</div>';
+      if (oppEl) oppEl.innerHTML = '<div class="sb-last-plays-empty">Could not load recent plays</div>';
+    }
+  }
 
   window.__sleeperScheduleCache = window.__sleeperScheduleCache || {};
 
