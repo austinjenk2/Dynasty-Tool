@@ -903,6 +903,7 @@
   .sb-card-logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .sb-card-main { flex: 1; min-width: 0; }
   .sb-card-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sb-card-record { font-weight: 600; font-size: 11.5px; color: var(--faint); margin-left: 6px; }
   .sb-card-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .sb-card-meta .sb-delta { color: var(--green); }
   .sb-card-score { text-align: right; flex-shrink: 0; }
@@ -15119,6 +15120,8 @@
 
       const color = SB_ROSTER_COLORS[i % SB_ROSTER_COLORS.length];
       const initials = sbLeagueInitials(entry.league.name);
+      const rosterSettings = entry.roster && entry.roster.settings;
+      const recordText = rosterSettings ? `${rosterSettings.wins || 0}-${rosterSettings.losses || 0}` : null;
       const myPts = myMatchup ? (myMatchup.points || 0) : 0;
       const oppName = oppUser
         ? (oppUser.display_name || oppUser.username || 'Opponent')
@@ -15166,7 +15169,7 @@
       return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}" data-order="${i}" data-name="${entry.league.name}" data-winpct="${winPctForSort}" data-score="${hasData ? headlineMine : -1}">
           <div class="sb-card-logo" style="background:${color}">${initials}${sbLeagueLogoImgHtml(entry.league)}</div>
           <div class="sb-card-main">
-            <div class="sb-card-name">${entry.league.name}</div>
+            <div class="sb-card-name">${entry.league.name}${recordText ? `<span class="sb-card-record">${recordText}</span>` : ''}</div>
             <div class="sb-card-meta">vs ${oppName}</div>
           </div>
           <div class="sb-card-score"><span class="sb-score-mine">${hasData ? headlineMine.toFixed(1) : '&mdash;'}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${hasData ? headlineTheirs.toFixed(1) : '&mdash;'}</span>${liveScoreHtml}</div>
