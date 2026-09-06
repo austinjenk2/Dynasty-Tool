@@ -1063,6 +1063,17 @@
   .rg-leagues-toggle:hover { border-color: var(--muted); }
   .rg-leagues-toggle span { color: var(--faint); font-weight: 700; }
 
+  /* Root For/Root Against sort toggle -- roughly half the size of the
+     Tanking Teams toggle it sits beside. */
+  .rg-sort-toggle { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .rg-sort-toggle-btn {
+    padding: 4px 10px; font-size: 11px; font-weight: 700;
+    background: var(--surface); color: var(--muted); border: none;
+    border-right: 1px solid var(--border); cursor: pointer;
+  }
+  .rg-sort-toggle-btn:last-child { border-right: none; }
+  .rg-sort-toggle-btn.active { background: var(--ink); color: var(--bg); }
+
   .rg-leagues-panel {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -3371,18 +3382,14 @@
           <div class="ld-stat-value small" id="ldVsTop">14.6</div>
         </div>
         <div class="ld-stat-card">
-          <div class="ld-stat-label">TRADE ACTIVITY</div>
-          <div class="roster-pill" style="margin:4px 0" id="ldTradeBadge">ACTIVE</div>
-          <div class="ld-stat-value small" id="ldTradeRank">1st of 12</div>
-        </div>
-        <div class="ld-stat-card wide">
-          <div class="ld-stat-label">WEEK <span id="ldProjWeek">1</span> PROJECTED <span class="favored-tag" style="margin-left:6px" id="ldFavoredTag">Favored by 71.8</span></div>
+          <div class="ld-stat-label">WEEK <span id="ldProjWeek">1</span> PROJECTED</div>
           <div class="matchup-scores" style="margin-top:6px">
-            <span class="proj-score mine" style="font-size:22px" id="ldProjMine">187.8</span>
+            <span class="proj-score mine" id="ldProjMine">187.8</span>
             <span class="matchup-vs">vs</span>
-            <span class="proj-score theirs" style="font-size:22px" id="ldProjTheirs">116.0</span>
-            <span class="ld-opp" id="ldOpp">jtford23</span>
+            <span class="proj-score theirs" id="ldProjTheirs">116.0</span>
           </div>
+          <div class="ld-opp" id="ldOpp" style="margin-left:0">jtford23</div>
+          <div class="favored-tag" id="ldFavoredTag" style="margin-top:6px;display:inline-block">Favored by 71.8</div>
           <div class="matchup-live-score" id="ldLiveScore"></div>
           <div class="ld-orig-score" id="ldOrigScore"></div>
         </div>
@@ -3962,8 +3969,12 @@
           <p>Your starters versus your opponents across all scheduled matchups. Tap a player for the league list.</p>
         </div>
 
-        <div class="rg-leagues-dropdown">
+        <div class="rg-leagues-dropdown" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div class="rg-leagues-toggle" id="rgLeaguesBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="rgLeaguesCount">(18 of 18)</span></div>
+          <div class="rg-sort-toggle" id="rgSortToggle">
+            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="value">$</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-sort="leagues">Leagues</button>
+          </div>
           <div class="rg-leagues-panel" id="rgLeaguesPanel" hidden>
             <p class="rg-leagues-note">Uncheck a league to leave it out of Root For / Root Against for good &mdash; for a team you're tanking or a league you've checked out of. It stays off every week until you check it back on here.</p>
             <div class="rg-league-checklist" id="rgLeaguesChips"></div>
@@ -12410,6 +12421,22 @@
     const evenListEl = document.querySelector('.rg-panel-even .rg-list');
     if (!rgBtn || !rgPanel || !rgChipsEl || !forListEl || !againstListEl || !evenListEl) return;
 
+    // Which stat orders Root For/Root Against: "$" (default) ranks by
+    // rooting impact (how lopsided for-vs-against is), "Leagues" ranks by
+    // how many total leagues a player touches, regardless of side.
+    let rgSortCriterion = 'value';
+    const rgSortToggle = document.getElementById('rgSortToggle');
+    if (rgSortToggle) {
+      rgSortToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          rgSortCriterion = btn.dataset.rgSort;
+          rgSortToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          recomputeRootingGuide();
+        });
+      });
+    }
+
     const RG_BLACKLIST_KEY = 'dynastyToolRootingBlacklist';
     function loadRgBlacklist() {
       try { return new Set(JSON.parse(localStorage.getItem(RG_BLACKLIST_KEY) || '[]')); }
@@ -12508,8 +12535,15 @@
         else if (delta < 0) buckets.against.push(bucket);
         else buckets.even.push(bucket);
       });
-      buckets.for.sort((a, b) => b.delta - a.delta);
-      buckets.against.sort((a, b) => a.delta - b.delta);
+      if (rgSortCriterion === 'leagues') {
+        // Most leagues affected first, regardless of side -- how many
+        // teams a player touches, not how lopsided the impact is.
+        buckets.for.sort((a, b) => b.total - a.total);
+        buckets.against.sort((a, b) => b.total - a.total);
+      } else {
+        buckets.for.sort((a, b) => b.delta - a.delta);
+        buckets.against.sort((a, b) => a.delta - b.delta);
+      }
       buckets.even.sort((a, b) => b.total - a.total);
       forListEl.innerHTML = '';
       againstListEl.innerHTML = '';
@@ -13529,8 +13563,6 @@
       const ldSeedEl = document.getElementById('ldSeed');
       const ldPfRankEl = document.getElementById('ldPfRank');
       const ldVsTopEl = document.getElementById('ldVsTop');
-      const ldTradeBadgeEl = document.getElementById('ldTradeBadge');
-      const ldTradeRankEl = document.getElementById('ldTradeRank');
       const ldFavoredTagEl = document.getElementById('ldFavoredTag');
       const ldProjMineEl = document.getElementById('ldProjMine');
       const ldProjTheirsEl = document.getElementById('ldProjTheirs');
@@ -13559,17 +13591,6 @@
           const topPf = Math.max(...allRosters.map(pfOf));
           const myPf = pfOf(entry.roster);
           ldVsTopEl.textContent = pfRank === 1 ? 'Leader' : `-${(topPf - myPf).toFixed(1)}`;
-        }
-
-        const tradeCounts = allRosters.map(r => ({
-          roster_id: r.roster_id,
-          count: (entry.allTrades || []).filter(t => (t.roster_ids || []).includes(r.roster_id)).length,
-        }));
-        const mine = tradeCounts.find(t => t.roster_id === entry.roster.roster_id);
-        const tradeRank = ldRankOf(tradeCounts, t => t.count, entry.roster.roster_id);
-        if (ldTradeRankEl) ldTradeRankEl.textContent = `${ldOrdinal(tradeRank)} of ${allRosters.length}`;
-        if (ldTradeBadgeEl) {
-          ldTradeBadgeEl.textContent = (!mine || mine.count === 0) ? 'QUIET' : (tradeRank <= Math.ceil(allRosters.length / 2) ? 'ACTIVE' : 'QUIET');
         }
       }
 
