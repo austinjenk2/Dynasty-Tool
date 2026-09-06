@@ -2533,10 +2533,11 @@
     overflow: hidden;
     position: relative;
     display: flex;
-    align-items: flex-end;
-    gap: 5px;
+    flex-direction: column;
+    justify-content: flex-end;
   }
   .dr-pick-avatar {
+    position: absolute; right: 6px; bottom: 6px;
     width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
   }
   .dr-pick-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -2545,20 +2546,17 @@
   .dr-pick.dr-pos-wr { border-color: var(--blue); background: var(--blue); }
   .dr-pick.dr-pos-te { border-color: var(--gold); background: var(--gold); }
   .dr-pick.dr-team-dim { opacity: 0.3; }
-  .dr-pick-num { position: absolute; top: 4px; right: 6px; font-size: 8px; font-weight: 700; color: var(--faint); }
-  .dr-pick-info { flex: 1; min-width: 0; }
+  .dr-pick-num { font-size: 15px; font-weight: 800; color: var(--ink); line-height: 1; }
+  .dr-pick-info { min-width: 0; padding-right: 22px; }
   .dr-pick-name {
     font-size: 9px; font-weight: 800; color: var(--ink); line-height: 1.1;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .dr-pick.dr-pos-qb .dr-pick-num, .dr-pick.dr-pos-rb .dr-pick-num, .dr-pick.dr-pos-wr .dr-pick-num, .dr-pick.dr-pos-te .dr-pick-num { color: #fff; opacity: 0.85; }
+  .dr-pick.dr-pos-qb .dr-pick-num, .dr-pick.dr-pos-rb .dr-pick-num, .dr-pick.dr-pos-wr .dr-pick-num, .dr-pick.dr-pos-te .dr-pick-num { color: #fff; }
   .dr-pick.dr-pos-qb .dr-pick-name, .dr-pick.dr-pos-rb .dr-pick-name, .dr-pick.dr-pos-wr .dr-pick-name, .dr-pick.dr-pos-te .dr-pick-name { color: #fff; }
-  .dr-pick-meta { font-size: 7.5px; color: var(--faint); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 2px; }
-  .dr-pick-meta .dr-pos { font-weight: 800; }
-  .dr-pick-meta.dr-pos-qb .dr-pos, .dr-pick-meta.dr-pos-rb .dr-pos, .dr-pick-meta.dr-pos-wr .dr-pos, .dr-pick-meta.dr-pos-te .dr-pos { color: #fff; }
+  .dr-pick-meta { font-size: 7.5px; color: var(--faint); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dr-pick.dr-pos-qb .dr-pick-meta, .dr-pick.dr-pos-rb .dr-pick-meta, .dr-pick.dr-pos-wr .dr-pick-meta, .dr-pick.dr-pos-te .dr-pick-meta { color: rgba(255,255,255,0.85); }
-  .dr-pick-meta-logo { width: 9px; height: 9px; object-fit: contain; background: #fff; border-radius: 50%; padding: 1px; }
-  .dr-pick-trade { font-size: 7.5px; font-weight: 700; color: var(--ink); font-style: normal; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dr-pick-trade { font-size: 7px; font-weight: 700; color: var(--ink); font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dr-pick.dr-pos-qb .dr-pick-trade, .dr-pick.dr-pos-rb .dr-pick-trade, .dr-pick.dr-pos-wr .dr-pick-trade, .dr-pick.dr-pos-te .dr-pick-trade { color: #fff; }
 
   .dr-board-bottom { display: block; }
@@ -2714,7 +2712,7 @@
   .trade-card-with b { color: var(--ink); }
   .trade-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .trade-side-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 8px; }
-  .trade-side-total { color: var(--navy); font-weight: 700; }
+  .trade-side-total { font-size: 12.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--navy); }
   .trade-col.trade-values-hidden { filter: blur(5px); }
   /* Every asset row -- player, pick, or FAAB -- gets the same bordered
      box, same height, same icon size, so a side with mixed asset types
@@ -3580,7 +3578,7 @@
         <div class="ld-nav-btn"><span class="ld-nav-title">Settings</span><span class="ld-nav-sub">Scoring &middot; Roster &middot; League Rules</span></div>
         <div class="ld-nav-btn"><span class="ld-nav-title">Insights</span><span class="ld-nav-sub">WAR &middot; Value &middot; Trade Activity</span></div>
         <div class="ld-nav-btn"><span class="ld-nav-title">Waivers</span><span class="ld-nav-sub">Browse Free Agents &middot; Trending Adds</span></div>
-        <div class="ld-nav-btn"><span class="ld-nav-title">Notes</span><span class="ld-nav-sub">Your Notes &middot; Roster Type</span></div>
+        <div class="ld-nav-btn" id="ldNavNotes"><span class="ld-nav-title">Notes</span><span class="ld-nav-sub">Your Notes &middot; Roster Type</span></div>
       </div>
 
       <div class="ld-filter-row">
@@ -3601,6 +3599,11 @@
         <div class="ld-stat-cell">
           <div class="ld-stat-label">RECORD</div>
           <div class="ld-stat-value" id="ldRecord">9-5</div>
+        </div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell">
+          <div class="ld-stat-label">VALUE</div>
+          <div class="ld-stat-value" id="ldValue">&mdash;</div>
         </div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell">
@@ -5860,504 +5863,120 @@
               <div class="dr-team-avatar" style="background:#5b6f73">oK</div>
               <div class="dr-team-name">okNikolai</div>
             </div>
-            <div class="dr-pick dr-pos-rb" data-team="okNikolai">
-              <span class="dr-pick-num">1.01</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Jeremiyah Love</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; ARI</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="okNikolai">
-              <span class="dr-pick-num">2.01</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Jonah Coleman</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; DEN</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-te" data-team="okNikolai">
-              <span class="dr-pick-num">3.01</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Cade Stover</div>
-                <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; HOU</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="okNikolai">
-              <span class="dr-pick-num">4.01</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Woody Marks</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; HOU</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-rb" data-team="okNikolai"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; ARI</div><div class="dr-pick-num">1.01</div><div class="dr-pick-info"><div class="dr-pick-name">Jeremiyah Love</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="okNikolai"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; DEN</div><div class="dr-pick-num">2.01</div><div class="dr-pick-info"><div class="dr-pick-name">Jonah Coleman</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-te" data-team="okNikolai"><div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; HOU</div><div class="dr-pick-num">3.01</div><div class="dr-pick-info"><div class="dr-pick-name">Cade Stover</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="okNikolai"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; HOU</div><div class="dr-pick-num">4.01</div><div class="dr-pick-info"><div class="dr-pick-name">Woody Marks</div></div><div class="dr-pick-avatar"></div></div>
           </div>
           <div class="dr-grid-col">
             <div class="dr-grid-team-head" data-team="carsonfrye12">
               <div class="dr-team-avatar" style="background:#8a5a2b">cF</div>
               <div class="dr-team-name">carsonfrye12</div>
             </div>
-            <div class="dr-pick dr-pos-wr" data-team="carsonfrye12">
-              <span class="dr-pick-num">1.02</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Carnell Tate</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; TEN</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-te" data-team="carsonfrye12">
-              <span class="dr-pick-num">2.02</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Eli Stowers</div>
-                <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; PHI</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="carsonfrye12">
-              <span class="dr-pick-num">3.02</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Demond Claiborne</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; NE</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="carsonfrye12">
-              <span class="dr-pick-num">4.02</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Kyle Williams</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NE</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-wr" data-team="carsonfrye12"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; TEN</div><div class="dr-pick-num">1.02</div><div class="dr-pick-info"><div class="dr-pick-name">Carnell Tate</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-te" data-team="carsonfrye12"><div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; PHI</div><div class="dr-pick-num">2.02</div><div class="dr-pick-info"><div class="dr-pick-name">Eli Stowers</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="carsonfrye12"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; NE</div><div class="dr-pick-num">3.02</div><div class="dr-pick-info"><div class="dr-pick-name">Demond Claiborne</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="carsonfrye12"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NE</div><div class="dr-pick-num">4.02</div><div class="dr-pick-info"><div class="dr-pick-name">Kyle Williams</div></div><div class="dr-pick-avatar"></div></div>
           </div>
           <div class="dr-grid-col">
             <div class="dr-grid-team-head" data-team="PaulPatterson">
               <div class="dr-team-avatar" style="background:#2f4f7a">PP</div>
               <div class="dr-team-name">PaulPatterson</div>
             </div>
-            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
-              <span class="dr-pick-num">1.03</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Jordyn Tyson</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NO</div>
-                <div class="dr-pick-trade">&rarr; AusJ2</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="Domo8">
-              <span class="dr-pick-num">2.03</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Emmett Johnson</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; KC</div>
-                <div class="dr-pick-trade">&rarr; Domo8</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson">
-              <span class="dr-pick-num">3.03</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Malachi Fields</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NE</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson">
-              <span class="dr-pick-num">4.03</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Chimere Dike</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; TEN</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NO</div><div class="dr-pick-num">1.03</div><div class="dr-pick-info"><div class="dr-pick-name">Jordyn Tyson</div><div class="dr-pick-trade">&rarr; AusJ2</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="Domo8"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; KC</div><div class="dr-pick-num">2.03</div><div class="dr-pick-info"><div class="dr-pick-name">Emmett Johnson</div><div class="dr-pick-trade">&rarr; Domo8</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NE</div><div class="dr-pick-num">3.03</div><div class="dr-pick-info"><div class="dr-pick-name">Malachi Fields</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; TEN</div><div class="dr-pick-num">4.03</div><div class="dr-pick-info"><div class="dr-pick-name">Chimere Dike</div></div><div class="dr-pick-avatar"></div></div>
           </div>
           <div class="dr-grid-col">
             <div class="dr-grid-team-head" data-team="AusJ2">
               <div class="dr-team-avatar" style="background:#1c7a8c">AJ</div>
               <div class="dr-team-name">AusJ2</div>
             </div>
-            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
-              <span class="dr-pick-num">1.04</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Makai Lemon</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; PHI</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="carsonfrye12">
-              <span class="dr-pick-num">2.04</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Germie Bernard</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; PIT</div>
-                <div class="dr-pick-trade">&rarr; carsonfrye12</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
-              <span class="dr-pick-num">3.04</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Zachariah Branch</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; SEA</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
-              <span class="dr-pick-num">4.04</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Donte Thornton</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; LV</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; PHI</div><div class="dr-pick-num">1.04</div><div class="dr-pick-info"><div class="dr-pick-name">Makai Lemon</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="carsonfrye12"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; PIT</div><div class="dr-pick-num">2.04</div><div class="dr-pick-info"><div class="dr-pick-name">Germie Bernard</div><div class="dr-pick-trade">&rarr; carsonfrye12</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; SEA</div><div class="dr-pick-num">3.04</div><div class="dr-pick-info"><div class="dr-pick-name">Zachariah Branch</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; LV</div><div class="dr-pick-num">4.04</div><div class="dr-pick-info"><div class="dr-pick-name">Donte Thornton</div></div><div class="dr-pick-avatar"></div></div>
           </div>
           <div class="dr-grid-col">
             <div class="dr-grid-team-head" data-team="WesB69">
               <div class="dr-team-avatar" style="background:#a3441f">WB</div>
               <div class="dr-team-name">WesB69</div>
             </div>
-            <div class="dr-pick dr-pos-rb" data-team="PaulPatterson">
-              <span class="dr-pick-num">1.05</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Jadarian Price</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; SEA</div>
-                <div class="dr-pick-trade">&rarr; PaulPatterson</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-te" data-team="carsonfrye12">
-              <span class="dr-pick-num">2.05</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Eli Raridon</div>
-                <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; NE</div>
-                <div class="dr-pick-trade">&rarr; carsonfrye12</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="WesB69">
-              <span class="dr-pick-num">3.05</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Elijah Sarratt</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; MIN</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="WesB69">
-              <span class="dr-pick-num">4.05</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Kalel Mullings</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; TEN</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-rb" data-team="PaulPatterson"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; SEA</div><div class="dr-pick-num">1.05</div><div class="dr-pick-info"><div class="dr-pick-name">Jadarian Price</div><div class="dr-pick-trade">&rarr; PaulPatterson</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-te" data-team="carsonfrye12"><div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; NE</div><div class="dr-pick-num">2.05</div><div class="dr-pick-info"><div class="dr-pick-name">Eli Raridon</div><div class="dr-pick-trade">&rarr; carsonfrye12</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="WesB69"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; MIN</div><div class="dr-pick-num">3.05</div><div class="dr-pick-info"><div class="dr-pick-name">Elijah Sarratt</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="WesB69"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; TEN</div><div class="dr-pick-num">4.05</div><div class="dr-pick-info"><div class="dr-pick-name">Kalel Mullings</div></div><div class="dr-pick-avatar"></div></div>
           </div>
           <div class="dr-grid-col">
             <div class="dr-grid-team-head" data-team="Domo8">
               <div class="dr-team-avatar" style="background:#4a3f36">D8</div>
               <div class="dr-team-name">Domo8</div>
             </div>
-            <div class="dr-pick dr-pos-qb" data-team="AusJ2">
-              <span class="dr-pick-num">1.06</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Fernando Mendoza</div>
-                <div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; LV</div>
-                <div class="dr-pick-trade">&rarr; AusJ2</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="Domo8">
-              <span class="dr-pick-num">2.06</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Cyrus Allen</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; KC</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="Domo8">
-              <span class="dr-pick-num">3.06</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Kaytron Allen</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; PIT</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="Domo8">
-              <span class="dr-pick-num">4.06</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Devin Neal</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; NO</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-qb" data-team="AusJ2"><div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; LV</div><div class="dr-pick-num">1.06</div><div class="dr-pick-info"><div class="dr-pick-name">Fernando Mendoza</div><div class="dr-pick-trade">&rarr; AusJ2</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="Domo8"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; KC</div><div class="dr-pick-num">2.06</div><div class="dr-pick-info"><div class="dr-pick-name">Cyrus Allen</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="Domo8"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; PIT</div><div class="dr-pick-num">3.06</div><div class="dr-pick-info"><div class="dr-pick-name">Kaytron Allen</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="Domo8"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; NO</div><div class="dr-pick-num">4.06</div><div class="dr-pick-info"><div class="dr-pick-name">Devin Neal</div></div><div class="dr-pick-avatar"></div></div>
           </div>
           <div class="dr-grid-col">
             <div class="dr-grid-team-head" data-team="KingProfitVII">
               <div class="dr-team-avatar" style="background:#8a7a2f">KP</div>
               <div class="dr-team-name">KingProfitVII</div>
             </div>
-            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
-              <span class="dr-pick-num">1.07</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">KC Concepcion</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CLE</div>
-                <div class="dr-pick-trade">&rarr; AusJ2</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="AusJ2">
-              <span class="dr-pick-num">2.07</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Nicholas Singleton</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; TEN</div>
-                <div class="dr-pick-trade">&rarr; AusJ2</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-qb" data-team="KingProfitVII">
-              <span class="dr-pick-num">3.07</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Drew Allar</div>
-                <div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; CHI</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="KingProfitVII">
-              <span class="dr-pick-num">4.07</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Jaydon Blue</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; DAL</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CLE</div><div class="dr-pick-num">1.07</div><div class="dr-pick-info"><div class="dr-pick-name">KC Concepcion</div><div class="dr-pick-trade">&rarr; AusJ2</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="AusJ2"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; TEN</div><div class="dr-pick-num">2.07</div><div class="dr-pick-info"><div class="dr-pick-name">Nicholas Singleton</div><div class="dr-pick-trade">&rarr; AusJ2</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-qb" data-team="KingProfitVII"><div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; CHI</div><div class="dr-pick-num">3.07</div><div class="dr-pick-info"><div class="dr-pick-name">Drew Allar</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="KingProfitVII"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; DAL</div><div class="dr-pick-num">4.07</div><div class="dr-pick-info"><div class="dr-pick-name">Jaydon Blue</div></div><div class="dr-pick-avatar"></div></div>
           </div>
           <div class="dr-grid-col">
             <div class="dr-grid-team-head" data-team="dbush24">
               <div class="dr-team-avatar" style="background:#3b4f8a">db</div>
               <div class="dr-team-name">dbush24</div>
             </div>
-            <div class="dr-pick dr-pos-te" data-team="DanyloFilipok">
-              <span class="dr-pick-num">1.08</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Kenyon Sadiq</div>
-                <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; NYJ</div>
-                <div class="dr-pick-trade">&rarr; DanyloFilipok</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="rynchk">
-              <span class="dr-pick-num">2.08</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Ja'Kobi Lane</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; BAL</div>
-                <div class="dr-pick-trade">&rarr; rynchk</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="dbush24">
-              <span class="dr-pick-num">3.08</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Ted Hurst</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CAR</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="dbush24">
-              <span class="dr-pick-num">4.08</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Isaac TeSlaa</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; DET</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-te" data-team="DanyloFilipok"><div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; NYJ</div><div class="dr-pick-num">1.08</div><div class="dr-pick-info"><div class="dr-pick-name">Kenyon Sadiq</div><div class="dr-pick-trade">&rarr; DanyloFilipok</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="rynchk"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; BAL</div><div class="dr-pick-num">2.08</div><div class="dr-pick-info"><div class="dr-pick-name">Ja'Kobi Lane</div><div class="dr-pick-trade">&rarr; rynchk</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="dbush24"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CAR</div><div class="dr-pick-num">3.08</div><div class="dr-pick-info"><div class="dr-pick-name">Ted Hurst</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="dbush24"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; DET</div><div class="dr-pick-num">4.08</div><div class="dr-pick-info"><div class="dr-pick-name">Isaac TeSlaa</div></div><div class="dr-pick-avatar"></div></div>
           </div>
           <div class="dr-grid-col">
             <div class="dr-grid-team-head" data-team="Burtrum">
               <div class="dr-team-avatar" style="background:#6b3fa0">Bu</div>
               <div class="dr-team-name">Burtrum</div>
             </div>
-            <div class="dr-pick dr-pos-qb" data-team="okNikolai">
-              <span class="dr-pick-num">1.09</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Ty Simpson</div>
-                <div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; LAR</div>
-                <div class="dr-pick-trade">&rarr; okNikolai</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="AusJ2">
-              <span class="dr-pick-num">2.09</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Mike Washington</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; LV</div>
-                <div class="dr-pick-trade">&rarr; AusJ2</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="Burtrum">
-              <span class="dr-pick-num">3.09</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Kaelon Black</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; DAL</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="Burtrum">
-              <span class="dr-pick-num">4.09</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Jack Bech</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; LV</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-qb" data-team="okNikolai"><div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; LAR</div><div class="dr-pick-num">1.09</div><div class="dr-pick-info"><div class="dr-pick-name">Ty Simpson</div><div class="dr-pick-trade">&rarr; okNikolai</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="AusJ2"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; LV</div><div class="dr-pick-num">2.09</div><div class="dr-pick-info"><div class="dr-pick-name">Mike Washington</div><div class="dr-pick-trade">&rarr; AusJ2</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="Burtrum"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; DAL</div><div class="dr-pick-num">3.09</div><div class="dr-pick-info"><div class="dr-pick-name">Kaelon Black</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="Burtrum"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; LV</div><div class="dr-pick-num">4.09</div><div class="dr-pick-info"><div class="dr-pick-name">Jack Bech</div></div><div class="dr-pick-avatar"></div></div>
           </div>
           <div class="dr-grid-col">
             <div class="dr-grid-team-head" data-team="zenner">
               <div class="dr-team-avatar" style="background:#3f6b4a">ze</div>
               <div class="dr-team-name">zenner</div>
             </div>
-            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
-              <span class="dr-pick-num">1.10</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Omar Cooper</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NYJ</div>
-                <div class="dr-pick-trade">&rarr; AusJ2</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-qb" data-team="rynchk">
-              <span class="dr-pick-num">2.10</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Carson Beck</div>
-                <div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; ARI</div>
-                <div class="dr-pick-trade">&rarr; rynchk</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="zenner">
-              <span class="dr-pick-num">3.10</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Caleb Douglas</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; DET</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-te" data-team="zenner">
-              <span class="dr-pick-num">4.10</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Jared Wiley</div>
-                <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; KC</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; NYJ</div><div class="dr-pick-num">1.10</div><div class="dr-pick-info"><div class="dr-pick-name">Omar Cooper</div><div class="dr-pick-trade">&rarr; AusJ2</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-qb" data-team="rynchk"><div class="dr-pick-meta dr-pos-qb"><span class="dr-pos">QB</span> &middot; ARI</div><div class="dr-pick-num">2.10</div><div class="dr-pick-info"><div class="dr-pick-name">Carson Beck</div><div class="dr-pick-trade">&rarr; rynchk</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="zenner"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; DET</div><div class="dr-pick-num">3.10</div><div class="dr-pick-info"><div class="dr-pick-name">Caleb Douglas</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-te" data-team="zenner"><div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; KC</div><div class="dr-pick-num">4.10</div><div class="dr-pick-info"><div class="dr-pick-name">Jared Wiley</div></div><div class="dr-pick-avatar"></div></div>
           </div>
           <div class="dr-grid-col">
             <div class="dr-grid-team-head" data-team="DanyloFilipok">
               <div class="dr-team-avatar" style="background:#1d3557">DF</div>
               <div class="dr-team-name">DanyloFilipok</div>
             </div>
-            <div class="dr-pick dr-pos-wr" data-team="rynchk">
-              <span class="dr-pick-num">1.11</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Denzel Boston</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CLE</div>
-                <div class="dr-pick-trade">&rarr; rynchk</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson">
-              <span class="dr-pick-num">2.11</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Chris Bell</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; MIA</div>
-                <div class="dr-pick-trade">&rarr; PaulPatterson</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-te" data-team="DanyloFilipok">
-              <span class="dr-pick-num">3.11</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Max Klare</div>
-                <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; LAC</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-rb" data-team="DanyloFilipok">
-              <span class="dr-pick-num">4.11</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Tahj Brooks</div>
-                <div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; CIN</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-wr" data-team="rynchk"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CLE</div><div class="dr-pick-num">1.11</div><div class="dr-pick-info"><div class="dr-pick-name">Denzel Boston</div><div class="dr-pick-trade">&rarr; rynchk</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; MIA</div><div class="dr-pick-num">2.11</div><div class="dr-pick-info"><div class="dr-pick-name">Chris Bell</div><div class="dr-pick-trade">&rarr; PaulPatterson</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-te" data-team="DanyloFilipok"><div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; LAC</div><div class="dr-pick-num">3.11</div><div class="dr-pick-info"><div class="dr-pick-name">Max Klare</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-rb" data-team="DanyloFilipok"><div class="dr-pick-meta dr-pos-rb"><span class="dr-pos">RB</span> &middot; CIN</div><div class="dr-pick-num">4.11</div><div class="dr-pick-info"><div class="dr-pick-name">Tahj Brooks</div></div><div class="dr-pick-avatar"></div></div>
           </div>
           <div class="dr-grid-col">
             <div class="dr-grid-team-head" data-team="rynchk">
               <div class="dr-team-avatar" style="background:#b23a5a">ry</div>
               <div class="dr-team-name">rynchk</div>
             </div>
-            <div class="dr-pick dr-pos-wr" data-team="AusJ2">
-              <span class="dr-pick-num">1.12</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">De'Zha Stribling</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; SF</div>
-                <div class="dr-pick-trade">&rarr; AusJ2</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson">
-              <span class="dr-pick-num">2.12</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Antonio Williams</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; WAS</div>
-                <div class="dr-pick-trade">&rarr; PaulPatterson</div>
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-te" data-team="rynchk">
-              <span class="dr-pick-num">3.12</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Oscar Delp</div>
-                <div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; ATL</div>
-              
-                          </div>
-</div>
-            <div class="dr-pick dr-pos-wr" data-team="rynchk">
-              <span class="dr-pick-num">4.12</span>
-              <div class="dr-pick-avatar"></div>
-              <div class="dr-pick-info">
-  <div class="dr-pick-name">Jimmy Horn Jr.</div>
-                <div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CAR</div>
-              
-                          </div>
-</div>
+            <div class="dr-pick dr-pos-wr" data-team="AusJ2"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; SF</div><div class="dr-pick-num">1.12</div><div class="dr-pick-info"><div class="dr-pick-name">De'Zha Stribling</div><div class="dr-pick-trade">&rarr; AusJ2</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="PaulPatterson"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; WAS</div><div class="dr-pick-num">2.12</div><div class="dr-pick-info"><div class="dr-pick-name">Antonio Williams</div><div class="dr-pick-trade">&rarr; PaulPatterson</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-te" data-team="rynchk"><div class="dr-pick-meta dr-pos-te"><span class="dr-pos">TE</span> &middot; ATL</div><div class="dr-pick-num">3.12</div><div class="dr-pick-info"><div class="dr-pick-name">Oscar Delp</div></div><div class="dr-pick-avatar"></div></div>
+            <div class="dr-pick dr-pos-wr" data-team="rynchk"><div class="dr-pick-meta dr-pos-wr"><span class="dr-pos">WR</span> &middot; CAR</div><div class="dr-pick-num">4.12</div><div class="dr-pick-info"><div class="dr-pick-name">Jimmy Horn Jr.</div></div><div class="dr-pick-avatar"></div></div>
           </div>
 
             </div>
@@ -11014,11 +10633,125 @@
       if (!deltaEl || !nameEl) return;
       const deltaNum = parseInt(deltaEl.textContent.replace(/−/g, '-'), 10);
       if (!deltaNum) return;
-      matches.push({ name: nameEl.textContent.trim(), delta: deltaNum });
+      matches.push({ id: row.dataset.playerId, name: nameEl.textContent.trim(), delta: deltaNum });
     });
     matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     return matches;
   }
+
+  // "1-on-1 Slates" -- every real game this week grouped into the same
+  // kickoff buckets as the Weekly Schedule, each showing the real players
+  // (from .rg-row, so the same for/against data everywhere else on the
+  // page uses) whose rooting impact falls on that slate. Clicking a chip
+  // opens the same for/against league list as the main rooting-guide rows.
+  function rgSlateLabelFor(g) {
+    const d = g.kickoff || g.date;
+    if (!d) return 'OTHER';
+    const day = d.getDay();
+    const hour = d.getHours();
+    if (day === 4) return 'THURSDAY NIGHT';
+    if (day === 1) return 'MONDAY NIGHT';
+    if (day === 6) return 'SATURDAY';
+    if (day === 0) {
+      if (hour < 13) return 'SUNDAY MORNING';
+      if (hour < 16) return 'SUNDAY &middot; 1:00';
+      if (hour < 19) return 'SUNDAY &middot; 4:00';
+      return 'SUNDAY NIGHT';
+    }
+    return 'OTHER';
+  }
+  const RG_SLATE_ORDER = ['THURSDAY NIGHT', 'SATURDAY', 'SUNDAY MORNING', 'SUNDAY &middot; 1:00', 'SUNDAY &middot; 4:00', 'SUNDAY NIGHT', 'MONDAY NIGHT', 'OTHER'];
+  const RG_SLATE_CHIP_LIMIT = 8;
+
+  async function renderRootingSlates(overrideWeek) {
+    const grid = document.querySelector('.rg-slates-grid');
+    if (!grid) return;
+    const firstEntry = Object.values(window.sleeperLeagueData || {}).find(e => e.roster);
+    if (!firstEntry) return;
+    const currentWeek = firstEntry.week;
+    const week = overrideWeek || currentWeek;
+    const season = firstEntry.league.season;
+    const isCurrentWeek = week === currentWeek;
+    const weekNumEl = document.querySelector('.rg-slates-head .sb-week-num');
+    if (weekNumEl) weekNumEl.textContent = String(week);
+
+    let gameInfo;
+    if (isCurrentWeek) {
+      gameInfo = window.__sleeperGameInfo || {};
+    } else {
+      window.__sleeperScheduleCache = window.__sleeperScheduleCache || {};
+      const cacheKey = `${season}_${week}`;
+      if (!window.__sleeperScheduleCache[cacheKey]) {
+        window.__sleeperScheduleCache[cacheKey] = window.sleeperGetGameInfoForWeek
+          ? await window.sleeperGetGameInfoForWeek(season, week)
+          : {};
+      }
+      gameInfo = window.__sleeperScheduleCache[cacheKey];
+    }
+
+    const teams = Object.keys(gameInfo);
+    if (!teams.length) { grid.innerHTML = ''; return; }
+    const seen = new Set();
+    const games = [];
+    teams.forEach(team => {
+      const info = gameInfo[team];
+      if (!info || !info.opponent) return;
+      const key = [team, info.opponent].sort().join('-');
+      if (seen.has(key)) return;
+      seen.add(key);
+      const away = info.isAway ? team : (gameInfo[info.opponent] && gameInfo[info.opponent].isAway ? info.opponent : team);
+      const home = away === team ? info.opponent : team;
+      games.push({ away, home, date: parseCalendarDate(info.date) });
+    });
+    if (!games.length) { grid.innerHTML = ''; return; }
+
+    if (!window.sleeperGetEspnGameData) { grid.innerHTML = ''; return; }
+    const espnGames = await window.sleeperGetEspnGameData(week, season);
+    games.forEach(g => {
+      const info = espnGames[g.away] || espnGames[g.home];
+      if (info && info.when) {
+        const d = new Date(info.when);
+        if (!isNaN(d.getTime())) g.kickoff = d;
+      }
+    });
+
+    const buckets = {};
+    games.forEach(g => {
+      const label = rgSlateLabelFor(g);
+      (buckets[label] = buckets[label] || []).push(g);
+    });
+
+    const cardsHtml = RG_SLATE_ORDER.filter(label => buckets[label] && buckets[label].length).map(label => {
+      const teamCodes = [];
+      buckets[label].forEach(g => teamCodes.push(g.away, g.home));
+      const matches = getRootingDeltasForTeams(teamCodes);
+      const chipHtml = m => {
+        const cls = m.delta > 0 ? 'rg-chip-pos' : 'rg-chip-neg';
+        const sign = m.delta > 0 ? '+' : '';
+        return `<span class="rg-chip" data-player-id="${m.id}">${sbFieldEsc(m.name)} <span class="${cls}">${sign}${m.delta}</span></span>`;
+      };
+      const shown = matches.slice(0, RG_SLATE_CHIP_LIMIT).map(chipHtml).join('');
+      const extra = matches.slice(RG_SLATE_CHIP_LIMIT);
+      const extraHtml = extra.length
+        ? `<span class="rg-chip rg-chip-more" data-more-label="+${extra.length} more">+${extra.length} more</span>` +
+          `<span class="rg-slate-extra" hidden>${extra.map(chipHtml).join('')}</span>`
+        : '';
+      return `<div class="rg-slate-card"><div class="rg-slate-head"><span class="rg-slate-label">${label}</span><span class="rg-slate-count">${matches.length} sweat${matches.length === 1 ? '' : 's'}</span></div>` +
+        `<div class="rg-slate-chips">${matches.length ? shown + extraHtml : '<span style="color:var(--faint)">No rooting impact this slate.</span>'}</div></div>`;
+    }).join('');
+
+    grid.innerHTML = cardsHtml || '<div class="placeholder"><p>No games scheduled this week.</p></div>';
+    grid.querySelectorAll('.rg-chip-more').forEach(more => {
+      more.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const extraEl = more.nextElementSibling;
+        if (!extraEl || !extraEl.classList.contains('rg-slate-extra')) return;
+        extraEl.hidden = !extraEl.hidden;
+        more.textContent = extraEl.hidden ? more.dataset.moreLabel : 'Show less';
+      });
+    });
+  }
+  window.renderRootingSlates = renderRootingSlates;
 
   const scheduleGroupsEl = document.getElementById('scheduleGroups');
   function openScheduleExpand(chip) {
@@ -11037,7 +10770,7 @@
         const chips = matches.map(m => {
           const cls = m.delta > 0 ? 'schedule-expand-pos' : 'schedule-expand-neg';
           const sign = m.delta > 0 ? '+' : '';
-          return `<span class="schedule-expand-chip">${m.name} <b class="${cls}">${sign}${m.delta}</b></span>`;
+          return `<span class="schedule-expand-chip" data-player-id="${m.id}">${m.name} <b class="${cls}">${sign}${m.delta}</b></span>`;
         }).join('');
         expand.innerHTML =
           `<p class="schedule-expand-count">${matches.length} player${matches.length > 1 ? 's' : ''} affect your exposure in this game</p>` +
@@ -11384,7 +11117,7 @@
           if (!pick) {
             rowsHtml.push(
               '<div class="dr-pick">' +
-                '<span class="dr-pick-num">' + pickNum + '</span>' +
+                '<div class="dr-pick-num">' + pickNum + '</div>' +
                 '<div class="dr-pick-name">&mdash;</div>' +
               '</div>'
             );
@@ -11397,14 +11130,13 @@
           const currentName = traded ? (drRosterOwnerName(entry, currentRosterId) || 'Traded') : headName;
           rowsHtml.push(
             '<div class="dr-pick ' + posClass + '" data-team="' + currentRosterId + '">' +
-              '<span class="dr-pick-num">' + pickNum + '</span>' +
-              '<div class="dr-pick-avatar"><img src="' + sbHeadshotUrl(pick.player_id) + '" alt="" loading="lazy" onerror="this.remove()"></div>' +
+              '<div class="dr-pick-meta ' + posClass + '">' + info.pos + ' &middot; ' + info.team + '</div>' +
+              '<div class="dr-pick-num">' + pickNum + '</div>' +
               '<div class="dr-pick-info">' +
                 '<div class="dr-pick-name">' + info.name + '</div>' +
-                '<div class="dr-pick-meta ' + posClass + '"><span class="dr-pos">' + info.pos + '</span>' +
-                  '<img class="dr-pick-meta-logo" src="' + sbTeamLogoUrl(info.team) + '" alt="' + info.team + '" title="' + info.team + '" loading="lazy" onerror="this.remove()"></div>' +
                 (traded ? '<div class="dr-pick-trade">&rarr; ' + currentName + '</div>' : '') +
               '</div>' +
+              '<div class="dr-pick-avatar"><img src="' + sbHeadshotUrl(pick.player_id) + '" alt="" loading="lazy" onerror="this.remove()"></div>' +
             '</div>'
           );
         }
@@ -13004,6 +12736,33 @@
       return;
     }
     if (e.target.closest('.rg-expand')) return;
+
+    // Weekly Schedule's exposure-preview chips and the Rooting Guide's
+    // 1-on-1 slate chips both name a real player -- clicking either opens
+    // the same "which leagues is this player for/against you in" popup
+    // as the main rooting-guide list, keyed off that player's .rg-row
+    // (the single source of truth for a player's for/against leagues).
+    const scheduleChip = e.target.closest('.schedule-expand-chip[data-player-id]');
+    const slateChip = e.target.closest('.rg-chip[data-player-id]');
+    const playerChip = scheduleChip || slateChip;
+    if (playerChip) {
+      const container = scheduleChip ? scheduleChip.closest('.schedule-expand') : slateChip.closest('.rg-slate-card');
+      const row = container && document.querySelector(`.rg-row[data-player-id="${playerChip.dataset.playerId}"]`);
+      if (!container || !row) return;
+      const playerId = playerChip.dataset.playerId;
+      const existing = container.querySelector('.rg-inline-expand');
+      const wasOpenForThis = existing && existing.dataset.playerId === playerId;
+      if (existing) existing.remove();
+      if (!wasOpenForThis) {
+        const expand = document.createElement('div');
+        expand.className = 'rg-expand rg-inline-expand';
+        expand.dataset.playerId = playerId;
+        expand.innerHTML = rgExpandHtml(row);
+        container.appendChild(expand);
+      }
+      return;
+    }
+
     const row = e.target.closest('.rg-row');
     if (!row) return;
     const existing = row.nextElementSibling;
@@ -13294,6 +13053,7 @@
       // out of sync the way the old mock values did.
       window.__sleeperRootingRows = rowsData;
       if (window.renderWeeklySweats) window.renderWeeklySweats();
+      if (window.renderRootingSlates) window.renderRootingSlates(overrideWeek);
     }
     window.renderRealRootingGuide = renderRealRootingGuide;
   })();
@@ -13568,6 +13328,25 @@
       });
     });
   }
+
+  // League Detail's "Notes" nav button opens this same Notebook, but
+  // scoped to that one league -- filtered down to it via the search box
+  // (reusing its existing filter logic) and pre-expanded so the note is
+  // right there instead of making you find it in the full list.
+  function openNotebookForLeague(leagueId) {
+    const entry = window.sleeperLeagueData && window.sleeperLeagueData[leagueId];
+    if (!entry) return;
+    openNotebook();
+    if (notebookFilterActive && notebookFilterBtn) notebookFilterBtn.click();
+    if (notebookSearchInput) {
+      notebookSearchInput.value = entry.league.name;
+      notebookSearchInput.dispatchEvent(new Event('input'));
+    }
+    document.querySelectorAll('#notebookList .notebook-item').forEach(item => item.classList.remove('expanded'));
+    const item = document.querySelector(`#notebookList .notebook-item[data-league-id="${leagueId}"]`);
+    if (item) { item.classList.add('expanded'); item.scrollIntoView({ block: 'nearest' }); }
+  }
+  window.openNotebookForLeague = openNotebookForLeague;
 
   const sortSelect = document.getElementById('sortSelect');
   const sortMenu = document.getElementById('sortMenu');
@@ -14458,6 +14237,17 @@
         return;
       }
 
+      const ldValueEl = document.getElementById('ldValue');
+      if (ldValueEl) {
+        if (getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league)) {
+          const totalValue = ppRosterValue(activeRoster, dict) +
+            ppPicksOwnedBy(entry, activeRoster.roster_id).reduce((sum, p) => sum + ppPickValue(p.round), 0);
+          ldValueEl.textContent = totalValue.toFixed(2);
+        } else {
+          ldValueEl.textContent = '—';
+        }
+      }
+
       const starters = new Set((activeRoster.starters || []).filter(id => id && id !== '0'));
       const taxiSet = new Set(activeRoster.taxi || []);
       const playerIds = (activeRoster.players || []).filter(id => id && id !== '0');
@@ -14860,6 +14650,15 @@
 
     const ldNavRecordsEl = document.getElementById('ldNavRecords');
     if (ldNavRecordsEl) ldNavRecordsEl.addEventListener('click', ldrecOpen);
+
+    const ldNavNotesEl = document.getElementById('ldNavNotes');
+    if (ldNavNotesEl) {
+      ldNavNotesEl.addEventListener('click', () => {
+        const standingsListEl = document.getElementById('ldStandingsList');
+        const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
+        if (leagueId && window.openNotebookForLeague) window.openNotebookForLeague(leagueId);
+      });
+    }
     const ldrecCloseEl = document.getElementById('ldrecClose');
     if (ldrecCloseEl) ldrecCloseEl.addEventListener('click', ldrecClose);
     const ldrecOverlayEl = document.getElementById('ldrecOverlay');
