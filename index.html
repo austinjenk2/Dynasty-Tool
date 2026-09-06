@@ -2486,6 +2486,23 @@
   }
   .trade-photo-menu-option:hover { background: var(--bg); }
   .trade-photo-menu-icon { font-size: 13px; }
+  .photo-export-toast {
+    position: fixed;
+    left: 50%; bottom: 28px;
+    transform: translate(-50%, 12px);
+    background: var(--ink);
+    color: var(--bg);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+    z-index: 80;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+  .photo-export-toast-show { opacity: 1; transform: translate(-50%, 0); }
   /* Only present in the off-screen clone that gets rasterized for
      Copy Image/Save PNG -- never shown in the live card. */
   .trade-card-watermark {
@@ -11309,11 +11326,37 @@
     anchorEl.appendChild(menu);
   }
 
+  // Both export actions used to give zero feedback -- a copy that
+  // silently failed (or silently succeeded) looked identical to the
+  // user. A brief toast makes the outcome visible either way.
+  function showPhotoExportToast(text) {
+    document.querySelectorAll('.photo-export-toast').forEach(t => t.remove());
+    const toast = document.createElement('div');
+    toast.className = 'photo-export-toast';
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('photo-export-toast-show'));
+    setTimeout(() => toast.remove(), 2200);
+  }
+
+  function downloadBlob(blob, filename) {
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+  }
+
   // Rasterizes `clone` (already built, not yet in the document) and either
   // copies the PNG to the clipboard or downloads it. `referenceEl` supplies
   // the real background color and real width to render at.
   async function rasterizeAndExport(clone, referenceEl, filename, action) {
-    if (typeof html2canvas !== 'function') return;
+    if (typeof html2canvas !== 'function') {
+      // Most likely the html2canvas CDN script (loaded in <head>) didn't
+      // load -- blocked by an ad/script blocker, offline, etc. Without
+      // this the export used to just do nothing with zero feedback.
+      showPhotoExportToast("Couldn't export image -- try reloading the page");
+      return;
+    }
 
     // Sleeper's CDN doesn't send CORS headers, so html2canvas can load
     // these <img>s fine for normal display but can't read their pixels
@@ -11334,39 +11377,49 @@
     clone.style.width = referenceEl.getBoundingClientRect().width + 'px';
     document.body.appendChild(clone);
 
-    await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
-      img.addEventListener('load', resolve, { once: true });
-      img.addEventListener('error', resolve, { once: true });
-    })));
-
-    try {
+    // Everything from here on (waiting on images, rendering with
+    // html2canvas) can take a while -- long enough that by the time a PNG
+    // blob actually exists, the browser may no longer consider this
+    // still tied to the click that started it, and silently refuses a
+    // plain `clipboard.write([new ClipboardItem({..., blob})])`. Chrome
+    // (and now Safari) specifically allow a ClipboardItem to wrap a
+    // still-pending Promise instead of a resolved Blob, so the write
+    // request itself is issued immediately, in the same tick as the
+    // click, while the actual pixels are still being produced.
+    const producePng = (async () => {
+      await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      })));
       const canvas = await html2canvas(clone, {
         backgroundColor: getComputedStyle(referenceEl).backgroundColor || '#ffffff',
         useCORS: true,
         scale: 2,
       });
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        if (action === 'copy') {
-          try {
-            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-          } catch (err) {
-            // Clipboard image writes need a secure context and browser
-            // support -- fall back to a download so the export still
-            // isn't a dead end.
-            const link = document.createElement('a');
-            link.download = filename;
-            link.href = URL.createObjectURL(blob);
-            link.click();
-          }
-        } else {
-          const link = document.createElement('a');
-          link.download = filename;
-          link.href = URL.createObjectURL(blob);
-          link.click();
+      return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    })();
+
+    try {
+      if (action === 'copy' && navigator.clipboard && typeof ClipboardItem === 'function') {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': producePng })]);
+          showPhotoExportToast('Copied image to clipboard');
+          return;
+        } catch (err) {
+          // Fall through to a plain download -- either the browser
+          // doesn't support a pending-Promise ClipboardItem, or image
+          // export/clipboard permission failed outright.
         }
-      }, 'image/png');
+      }
+      const blob = await producePng;
+      if (blob) {
+        downloadBlob(blob, filename);
+        if (action === 'copy') showPhotoExportToast("Couldn't copy -- downloaded the image instead");
+      } else {
+        showPhotoExportToast("Couldn't export image");
+      }
     } catch (err) {
+      showPhotoExportToast("Couldn't export image");
       // Most likely a cross-origin headshot image without CORS headers
       // tainting the canvas -- fail quietly rather than break the page.
     } finally {
