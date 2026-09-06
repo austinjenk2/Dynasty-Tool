@@ -2077,9 +2077,47 @@
   .ld-pnum { font-size: 10.5px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1.2; }
   .ld-pnum i { font-style: normal; font-size: 7.5px; font-weight: 600; color: var(--faint); }
   .ld-loading { grid-column: 1 / -1; text-align: center; color: var(--faint); font-size: 13px; padding: 30px 0; }
-  .ld-pick-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); font-size: 11.5px; }
+  .ld-pick-row { display: flex; align-items: baseline; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); font-size: 11.5px; }
   .ld-pick-row:last-child { border-bottom: none; }
   .ld-pick-when { font-weight: 700; color: var(--ink); }
+
+  /* League Detail -> Records modal */
+  .ldrec-overlay { position: fixed; inset: 0; background: rgba(20,20,26,0.45); z-index: 60; }
+  .ldrec-modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 1100px; max-width: 96vw; max-height: 90vh; overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 61; padding: 22px 24px 26px;
+  }
+  .ldrec-head { display: flex; align-items: center; justify-content: space-between; }
+  .ldrec-title { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 700; color: var(--ink); }
+  .ldrec-title-sub { font-weight: 500; color: var(--faint); font-size: 15px; margin-left: 8px; }
+  .ldrec-close { font-size: 22px; color: var(--faint); cursor: pointer; padding: 4px; line-height: 1; }
+  .ldrec-close:hover { color: var(--ink); }
+  .ldrec-tabs { display: flex; gap: 20px; margin: 16px 0 0; border-bottom: 1px solid var(--border); }
+  .ldrec-tab { padding: 8px 2px 10px; font-size: 13.5px; font-weight: 700; color: var(--faint); border-bottom: 2.5px solid transparent; cursor: pointer; }
+  .ldrec-tab:hover { color: var(--ink); }
+  .ldrec-tab.active { color: var(--ink); border-bottom-color: var(--green); }
+  .ldrec-panel[hidden] { display: none; }
+  .ldrec-season-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 18px 0 16px; }
+  .ldrec-season-league { display: flex; align-items: center; gap: 12px; }
+  .ldrec-season-league-name { font-family: 'Source Serif 4', serif; font-size: 18px; font-weight: 700; color: var(--ink); }
+  .ldrec-season-filters { display: flex; gap: 10px; }
+  .ldrec-table-wrap { margin-bottom: 18px; overflow-x: auto; }
+  .ldrec-table-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 8px; }
+  .ldrec-table { width: 100%; border-collapse: collapse; }
+  .ldrec-table th { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .ldrec-table td { font-size: 12.5px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); color: var(--ink); white-space: nowrap; }
+  .ldrec-table tr:last-child td { border-bottom: none; }
+  .ldrec-wl { font-weight: 800; }
+  .ldrec-table td.ldrec-wl-w { color: #22c55e; }
+  .ldrec-table td.ldrec-wl-l { color: #ef4444; }
+  .ldrec-pos { color: #22c55e; }
+  .ldrec-neg { color: #ef4444; }
+  .ldrec-table td.ldrec-pos { color: #22c55e; }
+  .ldrec-table td.ldrec-neg { color: #ef4444; }
+  .ldrec-empty { text-align: center; color: var(--faint); font-size: 13px; padding: 30px 0; }
+  .ldrec-draft-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 
   /* Notebook panel */
   .notebook-overlay {
@@ -3499,7 +3537,7 @@
       </div>
 
       <div class="ld-nav-row">
-        <div class="ld-nav-btn"><span class="ld-nav-title">Records</span><span class="ld-nav-sub">Transactions &middot; League History</span></div>
+        <div class="ld-nav-btn" id="ldNavRecords"><span class="ld-nav-title">Records</span><span class="ld-nav-sub">Transactions &middot; League History</span></div>
         <div class="ld-nav-btn"><span class="ld-nav-title">Settings</span><span class="ld-nav-sub">Scoring &middot; Roster &middot; League Rules</span></div>
         <div class="ld-nav-btn"><span class="ld-nav-title">Insights</span><span class="ld-nav-sub">WAR &middot; Value &middot; Trade Activity</span></div>
         <div class="ld-nav-btn"><span class="ld-nav-title">Waivers</span><span class="ld-nav-sub">Browse Free Agents &middot; Trending Adds</span></div>
@@ -3613,6 +3651,44 @@
     </div>
 
   </div>
+
+  <div class="ldrec-overlay" id="ldrecOverlay" hidden></div>
+  <div class="ldrec-modal" id="ldrecModal" hidden>
+    <div class="ldrec-head">
+      <div class="ldrec-title">Records <span class="ldrec-title-sub" id="ldrecTitleLeague">League</span></div>
+      <div class="ldrec-close" id="ldrecClose">&#10005;</div>
+    </div>
+    <div class="ldrec-tabs">
+      <span class="ldrec-tab active" data-ldrec-tab="seasons">Seasons</span>
+      <span class="ldrec-tab" data-ldrec-tab="drafts">Drafts</span>
+    </div>
+
+    <div class="ldrec-panel" data-ldrec-panel="seasons">
+      <div class="ldrec-season-head">
+        <div class="ldrec-season-league">
+          <div class="ld-league-logo" id="ldrecLogo" style="background:var(--navy)">L</div>
+          <div class="ldrec-season-league-name" id="ldrecLeagueName">League</div>
+        </div>
+        <div class="ldrec-season-filters">
+          <span class="week-dropdown" id="ldrecTeamDropdown">
+            <span class="week-select" id="ldrecTeamSelect"><span id="ldrecTeamLabel">Team</span> <span>&#9662;</span></span>
+            <span class="week-menu" id="ldrecTeamMenu" hidden></span>
+          </span>
+          <span class="week-dropdown" id="ldrecYearDropdown">
+            <span class="week-select" id="ldrecYearSelect"><span id="ldrecYearLabel">Year</span> <span>&#9662;</span></span>
+            <span class="week-menu" id="ldrecYearMenu" hidden></span>
+          </span>
+        </div>
+      </div>
+
+      <div id="ldrecSeasonBody"><div class="ldrec-empty">Loading...</div></div>
+    </div>
+
+    <div class="ldrec-panel" data-ldrec-panel="drafts" hidden>
+      <div class="ldrec-draft-list" id="ldrecDraftsList"><div class="ldrec-empty">Loading...</div></div>
+    </div>
+  </div>
+
   <div data-view="lineups">
     <div class="sb-page">
       <div class="sb-subtabs" id="sbSubtabs">
@@ -11025,6 +11101,10 @@
       if (drDraftsCountEl) drDraftsCountEl.textContent = String(entries.length);
     }
     window.renderRealDraftRoom = renderRealDraftRoom;
+    // Exposed so the League Detail -> Records -> Drafts tab can jump straight
+    // into this same board for a past season's draft, not just the ones
+    // listed on the main Draft Room page.
+    window.openDraftBoard = openDraftBoard;
 
     // "My ADP" is your own average draft position for a player across your
     // leagues' real drafts -- not compared against a market ADP, since this
@@ -14133,6 +14213,354 @@
       if (picksHtml) ldColumns.insertAdjacentHTML('beforeend', picksHtml);
     }
     window.renderRealLeagueDetail = renderRealLeagueDetail;
+
+    // ---- League Detail -> Records modal (Seasons + Drafts) ----
+    // Both tabs walk the league's real previous_league_id chain (the same
+    // technique Draft Capital/Last Season Placement already use elsewhere)
+    // to reach actual past seasons of this one league -- no synthetic data,
+    // just real historical rosters/matchups/drafts fetched on demand.
+    window.__sleeperSeasonChainCache = window.__sleeperSeasonChainCache || {};
+    async function getLeagueSeasonChain(league) {
+      const rootId = league.league_id;
+      if (window.__sleeperSeasonChainCache[rootId]) return window.__sleeperSeasonChainCache[rootId];
+      const chain = [league];
+      let cur = league;
+      while (cur.previous_league_id) {
+        const prev = await sleeperFetch(`/league/${cur.previous_league_id}`).catch(() => null);
+        if (!prev) break;
+        chain.push(prev);
+        cur = prev;
+      }
+      window.__sleeperSeasonChainCache[rootId] = chain;
+      return chain;
+    }
+
+    window.__sleeperSeasonFullCache = window.__sleeperSeasonFullCache || {};
+    async function loadSeasonRostersUsers(league) {
+      const leagueId = league.league_id;
+      if (window.__sleeperSeasonFullCache[leagueId]) return window.__sleeperSeasonFullCache[leagueId];
+      const [rosters, users] = await Promise.all([
+        sleeperFetch(`/league/${leagueId}/rosters`).catch(() => []),
+        sleeperFetch(`/league/${leagueId}/users`).catch(() => []),
+      ]);
+      const result = { rosters, users };
+      window.__sleeperSeasonFullCache[leagueId] = result;
+      return result;
+    }
+
+    window.__sleeperSeasonMatchupsCache = window.__sleeperSeasonMatchupsCache || {};
+    async function loadSeasonAllWeekMatchups(leagueId) {
+      if (window.__sleeperSeasonMatchupsCache[leagueId]) return window.__sleeperSeasonMatchupsCache[leagueId];
+      const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
+      const byWeek = await Promise.all(weeks.map(w => sleeperFetch(`/league/${leagueId}/matchups/${w}`).catch(() => [])));
+      window.__sleeperSeasonMatchupsCache[leagueId] = byWeek;
+      return byWeek;
+    }
+
+    function ldrecWeekRow(weekMatchups, rosterId) {
+      if (!weekMatchups || !weekMatchups.length) return null;
+      const mine = weekMatchups.find(m => m.roster_id === rosterId);
+      if (!mine) return null;
+      const opp = weekMatchups.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== rosterId);
+      const myScore = mine.points || 0;
+      const oppScore = opp ? (opp.points || 0) : 0;
+      const leagueAvg = weekMatchups.reduce((sum, m) => sum + (m.points || 0), 0) / weekMatchups.length;
+      return {
+        myScore, oppScore, oppRosterId: opp ? opp.roster_id : null,
+        margin: myScore - oppScore,
+        vsAvg: myScore - leagueAvg,
+        win: opp ? myScore > oppScore : null,
+      };
+    }
+
+    function ldrecOwnerName(rosters, users, rosterId) {
+      const r = rosters.find(r => r.roster_id === rosterId);
+      const u = r ? users.find(u => u.user_id === r.owner_id) : null;
+      return u ? (u.display_name || u.username) : 'Unknown';
+    }
+
+    function ldrecSigned(n) {
+      if (n == null || isNaN(n)) return '&mdash;';
+      return (n > 0 ? '+' : '') + n.toFixed(1);
+    }
+    function ldrecSignClass(n) {
+      if (n == null || isNaN(n)) return '';
+      return n > 0 ? 'ldrec-pos' : (n < 0 ? 'ldrec-neg' : '');
+    }
+
+    // FINISH/PF RANK are real (wins+PF and PF-alone rank among that season's
+    // rosters) but, like the Draft Capital section's own "Last Season
+    // Placement" number, don't account for playoff results -- Sleeper has no
+    // simple final-standing field. PICK and NET (money) are left blank on
+    // purpose: this app never shows a fabricated number, and Sleeper has no
+    // real source for either one.
+    async function ldrecComputeSeason(league, rosterId) {
+      const { rosters, users } = await loadSeasonRostersUsers(league);
+      const roster = rosters.find(r => r.roster_id === rosterId);
+      const byWeek = await loadSeasonAllWeekMatchups(league.league_id);
+      const playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
+
+      const regRows = [];
+      const poRows = [];
+      byWeek.forEach((weekMatchups, i) => {
+        const week = i + 1;
+        const row = ldrecWeekRow(weekMatchups, rosterId);
+        if (!row) return;
+        row.week = week;
+        (week < playoffStart ? regRows : poRows).push(row);
+      });
+
+      const pfOf = r => { const s = r.settings || {}; return (s.fpts || 0) + (s.fpts_decimal || 0) / 100; };
+      const winsOf = r => (r.settings && r.settings.wins) || 0;
+      const finishRank = ldRankOf(rosters, r => winsOf(r) * 100000 + pfOf(r), rosterId);
+      const pfRank = ldRankOf(rosters, pfOf, rosterId);
+
+      const s = roster ? (roster.settings || {}) : {};
+      const record = `${s.wins || 0}-${s.losses || 0}${s.ties ? '-' + s.ties : ''}`;
+      const avgMargin = regRows.length ? regRows.reduce((sum, r) => sum + r.margin, 0) / regRows.length : null;
+      const vsAvg = regRows.length ? regRows.reduce((sum, r) => sum + r.vsAvg, 0) / regRows.length : null;
+
+      return { record, finishRank, pfRank, avgMargin, vsAvg, regRows, poRows };
+    }
+
+    function ldrecTableHtml(label, rows, weekLabelFn) {
+      if (!rows.length) return '';
+      const rowsHtml = rows.map(r =>
+        '<tr>' +
+          '<td>' + weekLabelFn(r.week) + '</td>' +
+          '<td>' + r.myScore.toFixed(1) + '</td>' +
+          '<td>' + (r.oppRosterId != null ? r.oppScore.toFixed(1) : '&mdash;') + '</td>' +
+          '<td class="' + ldrecSignClass(r.margin) + '">' + ldrecSigned(r.margin) + '</td>' +
+          '<td class="' + ldrecSignClass(r.vsAvg) + '">' + ldrecSigned(r.vsAvg) + '</td>' +
+          '<td class="ldrec-wl ' + (r.win == null ? '' : (r.win ? 'ldrec-wl-w' : 'ldrec-wl-l')) + '">' + (r.win == null ? '&mdash;' : (r.win ? 'W' : 'L')) + '</td>' +
+        '</tr>'
+      ).join('');
+      return '<div class="ldrec-table-wrap"><div class="ldrec-table-label">' + label + '</div>' +
+        '<table class="ldrec-table"><thead><tr><th>WK</th><th>SCORE</th><th>OPP</th><th>MARGIN</th><th>VS AVG</th><th>W/L</th></tr></thead>' +
+        '<tbody>' + rowsHtml + '</tbody></table></div>';
+    }
+
+    function ldrecRenderStatsAndTables(data) {
+      const statsHtml =
+        '<div class="ld-stats" style="margin-bottom:18px">' +
+          '<div class="ld-stat-cell"><div class="ld-stat-label">RECORD</div><div class="ld-stat-value">' + data.record + '</div></div>' +
+          '<div class="ld-stat-divider"></div>' +
+          '<div class="ld-stat-cell"><div class="ld-stat-label">FINISH</div><div class="ld-stat-value">' + ldOrdinal(data.finishRank) + '</div></div>' +
+          '<div class="ld-stat-divider"></div>' +
+          '<div class="ld-stat-cell"><div class="ld-stat-label">PICK</div><div class="ld-stat-value">&mdash;</div></div>' +
+          '<div class="ld-stat-divider"></div>' +
+          '<div class="ld-stat-cell"><div class="ld-stat-label">PF RANK</div><div class="ld-stat-value">' + ldOrdinal(data.pfRank) + '</div></div>' +
+          '<div class="ld-stat-divider"></div>' +
+          '<div class="ld-stat-cell"><div class="ld-stat-label">NET</div><div class="ld-stat-value">&mdash;</div></div>' +
+          '<div class="ld-stat-divider"></div>' +
+          '<div class="ld-stat-cell"><div class="ld-stat-label">AVG MARGIN</div><div class="ld-stat-value ' + ldrecSignClass(data.avgMargin) + '">' + ldrecSigned(data.avgMargin) + '</div></div>' +
+          '<div class="ld-stat-divider"></div>' +
+          '<div class="ld-stat-cell"><div class="ld-stat-label">VS AVG</div><div class="ld-stat-value ' + ldrecSignClass(data.vsAvg) + '">' + ldrecSigned(data.vsAvg) + '</div></div>' +
+        '</div>';
+      const tablesHtml = ldrecTableHtml('REGULAR SEASON', data.regRows, w => String(w)) + ldrecTableHtml('PLAYOFFS', data.poRows, w => 'P' + w);
+      return statsHtml + (tablesHtml || '<div class="ldrec-empty">No matchup data found for this season.</div>');
+    }
+
+    let ldrecChain = null;
+    let ldrecCurrentOwnerId = null;
+
+    async function ldrecSelectSeason(seasonIndex, preferredOwnerId) {
+      const seasonBody = document.getElementById('ldrecSeasonBody');
+      const league = ldrecChain[seasonIndex];
+      if (seasonBody) seasonBody.innerHTML = '<div class="ldrec-empty">Loading...</div>';
+      const logoEl = document.getElementById('ldrecLogo');
+      const nameEl = document.getElementById('ldrecLeagueName');
+      if (nameEl) nameEl.textContent = league.name;
+      if (logoEl) logoEl.innerHTML = sbLeagueLogoImgHtml(league) || leagueInitials(league.name);
+
+      try {
+        const { rosters, users } = await loadSeasonRostersUsers(league);
+        let targetRoster = preferredOwnerId ? rosters.find(r => r.owner_id === preferredOwnerId) : null;
+        if (!targetRoster) targetRoster = rosters[0] || null;
+        ldrecCurrentOwnerId = targetRoster ? targetRoster.owner_id : null;
+
+        const teamMenu = document.getElementById('ldrecTeamMenu');
+        const teamLabel = document.getElementById('ldrecTeamLabel');
+        if (teamMenu) {
+          teamMenu.innerHTML = rosters.map(r => {
+            const name = ldrecOwnerName(rosters, users, r.roster_id);
+            return `<span class="week-option${targetRoster && r.roster_id === targetRoster.roster_id ? ' active' : ''}" data-owner-id="${sbFieldEsc(r.owner_id)}">${sbFieldEsc(name)}</span>`;
+          }).join('');
+          teamMenu.querySelectorAll('.week-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+              teamMenu.hidden = true;
+              ldrecSelectSeason(seasonIndex, opt.dataset.ownerId);
+            });
+          });
+        }
+        if (teamLabel) teamLabel.textContent = targetRoster ? ldrecOwnerName(rosters, users, targetRoster.roster_id) : 'Team';
+
+        if (!targetRoster) {
+          if (seasonBody) seasonBody.innerHTML = '<div class="ldrec-empty">No teams found for this season.</div>';
+          return;
+        }
+        const data = await ldrecComputeSeason(league, targetRoster.roster_id);
+        if (seasonBody) seasonBody.innerHTML = ldrecRenderStatsAndTables(data);
+      } catch (err) {
+        if (seasonBody) seasonBody.innerHTML = '<div class="ldrec-empty">Could not load this season from Sleeper.</div>';
+      }
+    }
+
+    async function ldrecOpenSeasonsTab(entry, activeRoster) {
+      ldrecChain = await getLeagueSeasonChain(entry.league);
+      const yearMenu = document.getElementById('ldrecYearMenu');
+      const yearLabel = document.getElementById('ldrecYearLabel');
+      if (yearMenu) {
+        yearMenu.innerHTML = ldrecChain.map((lg, i) =>
+          `<span class="week-option${i === 0 ? ' active' : ''}" data-season-index="${i}">${sbFieldEsc(String(lg.season))}</span>`
+        ).join('');
+        if (yearLabel) yearLabel.textContent = String(ldrecChain[0].season);
+        yearMenu.querySelectorAll('.week-option').forEach(opt => {
+          opt.addEventListener('click', () => {
+            yearMenu.querySelectorAll('.week-option').forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            yearMenu.hidden = true;
+            const idx = Number(opt.dataset.seasonIndex);
+            if (yearLabel) yearLabel.textContent = String(ldrecChain[idx].season);
+            ldrecSelectSeason(idx, ldrecCurrentOwnerId);
+          });
+        });
+      }
+      await ldrecSelectSeason(0, activeRoster ? activeRoster.owner_id : null);
+    }
+
+    async function ldrecOpenDraftsTab(entry) {
+      const listEl = document.getElementById('ldrecDraftsList');
+      if (!listEl) return;
+      listEl.innerHTML = '<div class="ldrec-empty">Loading...</div>';
+      try {
+        const chain = ldrecChain || await getLeagueSeasonChain(entry.league);
+        const withDrafts = chain.filter(lg => lg.draft_id);
+        if (!withDrafts.length) {
+          listEl.innerHTML = '<div class="ldrec-empty">No past drafts found for this league.</div>';
+          return;
+        }
+        const rowsHtml = await Promise.all(withDrafts.map(async (lg) => {
+          try {
+            window.__sleeperDraftCache = window.__sleeperDraftCache || {};
+            let cached = window.__sleeperDraftCache[lg.draft_id];
+            if (!cached) {
+              const [draft, picks] = await Promise.all([
+                sleeperFetch(`/draft/${lg.draft_id}`),
+                sleeperFetch(`/draft/${lg.draft_id}/picks`),
+              ]);
+              cached = { draft, picks };
+              window.__sleeperDraftCache[lg.draft_id] = cached;
+            }
+            window.sleeperLeagueData = window.sleeperLeagueData || {};
+            if (!window.sleeperLeagueData[lg.league_id]) {
+              const { rosters, users } = await loadSeasonRostersUsers(lg);
+              const saved = getSavedUser();
+              const myRoster = saved ? (rosters.find(r => r.owner_id === saved.userId) || null) : null;
+              window.sleeperLeagueData[lg.league_id] = { league: lg, allRosters: rosters, users, roster: myRoster, draftId: lg.draft_id };
+            }
+            const { draft } = cached;
+            const status = draft.status === 'complete' ? { cls: 'dr-status-complete', label: 'COMPLETE' }
+              : draft.status === 'drafting' ? { cls: 'dr-status-live', label: 'LIVE' }
+              : { cls: 'dr-status-upcoming', label: 'UPCOMING' };
+            const monthLabel = draft.start_time
+              ? new Date(draft.start_time).toLocaleString('en-US', { month: 'short', year: 'numeric' })
+              : String(lg.season);
+            const teams = (draft.settings && draft.settings.teams) || lg.total_rosters || '?';
+            const rounds = (draft.settings && draft.settings.rounds) || '?';
+            const typeLabel = draft.type ? draft.type[0].toUpperCase() + draft.type.slice(1) : 'Draft';
+            return '<div class="dr-draft-row" data-league="' + sbFieldEsc(lg.name) + '" data-draft-id="' + lg.draft_id + '">' +
+              '<div class="dr-draft-status ' + status.cls + '">' + status.label + '</div>' +
+              '<div class="league-logo" style="background:var(--navy)">' + (sbLeagueLogoImgHtml(lg) || leagueInitials(lg.name)) + '</div>' +
+              '<div class="dr-draft-main">' +
+                '<div class="dr-draft-name">' + sbFieldEsc(lg.name) + '</div>' +
+                '<div class="dr-draft-meta">' + monthLabel + ' &middot; ' + typeLabel + ' Draft &middot; ' + teams + ' teams &middot; ' + rounds + ' rounds</div>' +
+              '</div>' +
+              '<div class="dr-draft-chevron">&rsaquo;</div>' +
+            '</div>';
+          } catch (err) {
+            return '';
+          }
+        }));
+        listEl.innerHTML = rowsHtml.filter(Boolean).join('') || '<div class="ldrec-empty">Could not load past drafts from Sleeper.</div>';
+        listEl.querySelectorAll('.dr-draft-row').forEach(row => {
+          row.addEventListener('click', () => {
+            ldrecClose();
+            goToSection('draft');
+            if (window.openDraftBoard) window.openDraftBoard(row);
+          });
+        });
+      } catch (err) {
+        listEl.innerHTML = '<div class="ldrec-empty">Could not load past drafts from Sleeper.</div>';
+      }
+    }
+
+    function ldrecClose() {
+      const overlay = document.getElementById('ldrecOverlay');
+      const modal = document.getElementById('ldrecModal');
+      if (overlay) overlay.hidden = true;
+      if (modal) modal.hidden = true;
+    }
+
+    async function ldrecOpen() {
+      const standingsListEl = document.getElementById('ldStandingsList');
+      const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
+      const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+      if (!entry) return;
+      const activeRow = document.querySelector('#ldStandingsList .league-standings-row.is-active');
+      const activeRosterId = activeRow ? Number(activeRow.dataset.rosterId) : (entry.roster ? entry.roster.roster_id : null);
+      const activeRoster = (entry.allRosters || []).find(r => r.roster_id === activeRosterId) || entry.roster;
+
+      const overlay = document.getElementById('ldrecOverlay');
+      const modal = document.getElementById('ldrecModal');
+      const titleLeagueEl = document.getElementById('ldrecTitleLeague');
+      if (titleLeagueEl) titleLeagueEl.textContent = entry.league.name;
+      if (overlay) overlay.hidden = false;
+      if (modal) modal.hidden = false;
+
+      document.querySelectorAll('#ldrecModal .ldrec-tab').forEach(t => t.classList.toggle('active', t.dataset.ldrecTab === 'seasons'));
+      document.querySelectorAll('#ldrecModal .ldrec-panel').forEach(p => { p.hidden = p.dataset.ldrecPanel !== 'seasons'; });
+
+      ldrecChain = null;
+      await ldrecOpenSeasonsTab(entry, activeRoster);
+    }
+
+    const ldNavRecordsEl = document.getElementById('ldNavRecords');
+    if (ldNavRecordsEl) ldNavRecordsEl.addEventListener('click', ldrecOpen);
+    const ldrecCloseEl = document.getElementById('ldrecClose');
+    if (ldrecCloseEl) ldrecCloseEl.addEventListener('click', ldrecClose);
+    const ldrecOverlayEl = document.getElementById('ldrecOverlay');
+    if (ldrecOverlayEl) ldrecOverlayEl.addEventListener('click', ldrecClose);
+
+    document.querySelectorAll('#ldrecModal .ldrec-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('#ldrecModal .ldrec-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const target = tab.dataset.ldrecTab;
+        document.querySelectorAll('#ldrecModal .ldrec-panel').forEach(p => { p.hidden = p.dataset.ldrecPanel !== target; });
+        if (target === 'drafts') {
+          const standingsListEl = document.getElementById('ldStandingsList');
+          const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
+          const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+          if (entry) ldrecOpenDraftsTab(entry);
+        }
+      });
+    });
+
+    ['ldrecTeamDropdown', 'ldrecYearDropdown'].forEach(id => {
+      const wrap = document.getElementById(id);
+      const select = wrap ? wrap.querySelector('.week-select') : null;
+      const menu = wrap ? wrap.querySelector('.week-menu') : null;
+      if (!select || !menu) return;
+      select.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('#ldrecModal .week-menu').forEach(m => { if (m !== menu) m.hidden = true; });
+        menu.hidden = !menu.hidden;
+      });
+    });
+    document.addEventListener('click', () => {
+      document.querySelectorAll('#ldrecModal .week-menu').forEach(m => { m.hidden = true; });
+    });
 
     // League Standings popup -- clicking a league used to jump straight to
     // the connected user's own roster with no way to see anyone else's
