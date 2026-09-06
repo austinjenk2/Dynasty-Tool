@@ -2510,9 +2510,18 @@
     border: 2.5px solid var(--border-soft);
     border-radius: 6px;
     padding: 8px;
+    padding-right: 46%;
     height: 82px;
     overflow: hidden;
     position: relative;
+  }
+  .dr-pick-headshot {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 44%;
+    object-fit: cover;
+    object-position: top center;
+    background: rgba(0,0,0,0.08);
   }
   .dr-pick.dr-pos-qb { border-color: var(--red); background: var(--red); }
   .dr-pick.dr-pos-rb { border-color: var(--green); background: var(--green); }
@@ -11172,7 +11181,7 @@
       const typeLabel = draft.type ? draft.type[0].toUpperCase() + draft.type.slice(1) : 'Draft';
 
       drBoardName.textContent = name;
-      drBoardSub.textContent = entry.league.season + ' &middot; ' + typeLabel + ' Draft &middot; ' + teams + ' teams &middot; ' + rounds + ' rounds &middot; ' + status.label;
+      drBoardSub.innerHTML = entry.league.season + ' &middot; ' + typeLabel + ' Draft &middot; ' + teams + ' teams &middot; ' + rounds + ' rounds &middot; ' + status.label;
       if (drBoardLogo) {
         const rowLogo = row ? row.querySelector('.league-logo') : null;
         drBoardLogo.style.background = rowLogo ? rowLogo.style.background : DR_ROSTER_COLORS[0];
@@ -11221,6 +11230,7 @@
           const currentName = traded ? (drRosterOwnerName(entry, currentRosterId) || 'Traded') : headName;
           rowsHtml.push(
             '<div class="dr-pick ' + posClass + '" data-team="' + currentRosterId + '">' +
+              '<img class="dr-pick-headshot" src="' + sbHeadshotUrl(pick.player_id) + '" alt="" loading="lazy" onerror="this.remove()">' +
               '<span class="dr-pick-num">' + pickNum + '</span>' +
               '<div class="dr-pick-name">' + info.name + '</div>' +
               '<div class="dr-pick-meta ' + posClass + '"><span class="dr-pos">' + info.pos + '</span>' +
@@ -14294,6 +14304,32 @@
     // simple final-standing field. PICK and NET (money) are left blank on
     // purpose: this app never shows a fabricated number, and Sleeper has no
     // real source for either one.
+    // Real final standing from Sleeper's own bracket data, not a wins/PF
+    // guess -- winners_bracket (and losers_bracket, for leagues that run a
+    // full consolation ladder) mark the matches that actually decide a
+    // placement with a "p" field: p:1 is the championship (winner=1st,
+    // loser=2nd), p:3 is the 3rd-place game (winner=3rd, loser=4th), and so
+    // on. A roster with no placement match (missed the bracket, or the
+    // league doesn't run one that far down) falls back to a wins+PF rank
+    // among just the other unplaced teams, slotted in after every real
+    // placement.
+    window.__sleeperBracketCache = window.__sleeperBracketCache || {};
+    async function ldrecGetPlacements(leagueId) {
+      if (window.__sleeperBracketCache[leagueId]) return window.__sleeperBracketCache[leagueId];
+      const [winners, losers] = await Promise.all([
+        sleeperFetch(`/league/${leagueId}/winners_bracket`).catch(() => []),
+        sleeperFetch(`/league/${leagueId}/losers_bracket`).catch(() => []),
+      ]);
+      const placements = {};
+      [...(winners || []), ...(losers || [])].forEach(m => {
+        if (!m || m.p == null) return;
+        if (m.w != null) placements[m.w] = m.p;
+        if (m.l != null) placements[m.l] = m.p + 1;
+      });
+      window.__sleeperBracketCache[leagueId] = placements;
+      return placements;
+    }
+
     async function ldrecComputeSeason(league, rosterId) {
       const { rosters, users } = await loadSeasonRostersUsers(league);
       const roster = rosters.find(r => r.roster_id === rosterId);
@@ -14312,8 +14348,15 @@
 
       const pfOf = r => { const s = r.settings || {}; return (s.fpts || 0) + (s.fpts_decimal || 0) / 100; };
       const winsOf = r => (r.settings && r.settings.wins) || 0;
-      const finishRank = ldRankOf(rosters, r => winsOf(r) * 100000 + pfOf(r), rosterId);
       const pfRank = ldRankOf(rosters, pfOf, rosterId);
+
+      const placements = await ldrecGetPlacements(league.league_id);
+      let finishRank = placements[rosterId];
+      if (finishRank == null) {
+        const maxPlacement = Math.max(0, ...Object.values(placements));
+        const unplaced = rosters.filter(r => placements[r.roster_id] == null);
+        finishRank = maxPlacement + ldRankOf(unplaced, r => winsOf(r) * 100000 + pfOf(r), rosterId);
+      }
 
       const s = roster ? (roster.settings || {}) : {};
       const record = `${s.wins || 0}-${s.losses || 0}${s.ties ? '-' + s.ties : ''}`;
