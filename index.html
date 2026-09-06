@@ -551,32 +551,44 @@
   .scatter-tooltip {
     position: absolute;
     z-index: 5;
-    min-width: 150px;
-    background: var(--ink);
-    color: #fff;
-    border-radius: 4px;
-    padding: 8px 10px;
+    min-width: 170px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
     font-size: 11.5px;
     line-height: 1.5;
-    box-shadow: 0 8px 20px -6px rgba(0,0,0,0.35);
+    box-shadow: 0 12px 28px -10px rgba(20,20,26,0.22), 0 2px 8px -2px rgba(20,20,26,0.08);
     pointer-events: none;
     transform: translate(-50%, calc(-100% - 14px));
   }
   .scatter-tooltip .tt-title {
     font-weight: 700;
     font-size: 9.5px;
-    letter-spacing: 0.4px;
-    color: #c9c6ba;
-    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 5px;
   }
-  .scatter-tooltip .tt-league { font-weight: 600; cursor: pointer; pointer-events: auto; padding: 4px 0; }
-  .scatter-tooltip .tt-league:hover .tt-league-name { text-decoration: underline; }
-  .scatter-tooltip .tt-league + .tt-league { margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 6px; }
+  .scatter-tooltip .tt-league { font-weight: 600; cursor: pointer; pointer-events: auto; padding: 5px 6px; border-radius: 6px; margin: 0 -6px; }
+  .scatter-tooltip .tt-league:hover { background: var(--bg); }
+  .scatter-tooltip .tt-league:hover .tt-league-name { color: var(--navy); }
+  .scatter-tooltip .tt-league + .tt-league { margin-top: 2px; border-top: 1px solid var(--border-soft); padding-top: 7px; }
   .scatter-tooltip .tt-league-name { font-weight: 700; }
-  .scatter-tooltip .tt-league-stats { color: #c9c6ba; font-size: 10.5px; margin-top: 1px; }
+  .scatter-tooltip .tt-league-stats { color: var(--muted); font-size: 10.5px; margin-top: 1px; }
   .scatter-tooltip .tt-name { font-weight: 700; font-size: 12.5px; }
-  .scatter-tooltip .tt-stats { color: #c9c6ba; font-size: 11px; margin-top: 2px; }
-  .scatter-tooltip .tt-overlap { color: #6fc3ff; font-weight: 700; font-size: 10px; letter-spacing: 0.2px; margin-top: 6px; }
+  .scatter-tooltip .tt-stats { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .scatter-tooltip .tt-overlap { color: var(--blue); font-weight: 700; font-size: 10px; letter-spacing: 0.2px; margin-top: 6px; }
+  .scatter-tooltip.is-chooser {
+    pointer-events: auto;
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+  .scatter-tooltip.is-chooser::-webkit-scrollbar { width: 6px; }
+  .scatter-tooltip.is-chooser::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .scatter-tooltip.is-chooser::-webkit-scrollbar-track { background: transparent; }
   [hidden] { display: none !important; }
 
   /* Scoreboard (lineups) page */
@@ -13313,6 +13325,7 @@
     if (leagues.length > 1) {
       html += `<div class="tt-overlap">+${leagues.length - 1} OVERLAPPING &middot; CLICK TO CHOOSE &rarr;</div>`;
     }
+    scatterTooltip.classList.remove('is-chooser');
     scatterTooltip.innerHTML = html;
     scatterTooltip.style.left = dot.style.left;
     scatterTooltip.style.top = dot.style.top;
@@ -13320,6 +13333,7 @@
   }
   function scatterShowChooser(dot) {
     const leagues = dot.dataset.leagues.split(',').map(s => s.trim());
+    scatterTooltip.classList.add('is-chooser');
     scatterTooltip.innerHTML = `<div class="tt-title">${leagues.length} LEAGUES HERE</div>` +
       leagues.map(name =>
         `<div class="tt-league" data-league-name="${name}">` +
@@ -13409,6 +13423,7 @@
     const primary = leagues[0];
     let html = `<div class="tt-name">${sbFieldEsc(primary.name)}</div><div class="tt-stats">${trackStatsLine(primary, statLabel)}</div>`;
     if (leagues.length > 1) html += `<div class="tt-overlap">+${leagues.length - 1} OVERLAPPING &middot; CLICK TO CHOOSE &rarr;</div>`;
+    trackTooltip.classList.remove('is-chooser');
     trackTooltip.innerHTML = html;
     trackPositionTooltip(dot);
     trackTooltip.hidden = false;
@@ -13416,6 +13431,7 @@
   function trackShowChooser(dot) {
     const leagues = trackParseLeagues(dot);
     const statLabel = dot.dataset.statLabel;
+    trackTooltip.classList.add('is-chooser');
     trackTooltip.innerHTML = `<div class="tt-title">${leagues.length} LEAGUES HERE</div>` +
       leagues.map(l =>
         `<div class="tt-league" data-league-name="${sbFieldEsc(l.name)}">` +
@@ -14884,13 +14900,24 @@
       const conResult = sbLeagueContendingRanks(entry);
       const half = Math.ceil(allRosters.length / 2);
 
+      // VAL is real dynasty asset value (Pure Potential player values + the
+      // placeholder pick values) when it's actually available -- dynasty
+      // mode, a real dynasty league, and the player dict loaded. Otherwise
+      // this falls back to the old points-for proxy rather than showing
+      // nothing (redraft has no dynasty asset value to rank by anyway).
+      const dict = window.__sleeperPlayerDict;
+      const useRealValue = getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league) && dict;
+      const realValueOf = r => ppRosterValue(r, dict) +
+        ppPicksOwnedBy(entry, r.roster_id).reduce((sum, p) => sum + ppPickValue(p.round), 0);
+      const valueOf = useRealValue ? realValueOf : pfOf;
+
       const rows = allRosters.map(r => {
         const user = (entry.users || []).find(u => u.user_id === r.owner_id);
         const name = user ? (user.display_name || user.username || 'Unknown') : 'Unknown';
         const wins = (r.settings && r.settings.wins) || 0;
         const losses = (r.settings && r.settings.losses) || 0;
         const conRank = conResult ? conResult.ranks[r.roster_id] : null;
-        const valRank = ldRankOf(allRosters, pfOf, r.roster_id);
+        const valRank = ldRankOf(allRosters, valueOf, r.roster_id);
         const type = sbStandingsRosterType(conRank, valRank, half);
         return { rosterId: r.roster_id, ownerId: r.owner_id, avatar: user ? user.avatar : null, name, wins, losses, conRank, valRank, type };
       });
