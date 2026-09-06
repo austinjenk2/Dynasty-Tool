@@ -4009,8 +4009,8 @@
         <div class="rg-leagues-dropdown" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div class="rg-leagues-toggle" id="rgLeaguesBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="rgLeaguesCount">(18 of 18)</span></div>
           <div class="rg-sort-toggle" id="rgSortToggle">
-            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="leagues">Leagues</button>
-            <button type="button" class="rg-sort-toggle-btn" data-rg-sort="value">$</button>
+            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="value">Leagues</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-sort="leagues">$</button>
           </div>
           <div class="rg-leagues-panel" id="rgLeaguesPanel" hidden>
             <p class="rg-leagues-note">Uncheck a league to leave it out of Root For / Root Against for good &mdash; for a team you're tanking or a league you've checked out of. It stays off every week until you check it back on here.</p>
@@ -11392,11 +11392,22 @@
     // still-pending Promise instead of a resolved Blob, so the write
     // request itself is issued immediately, in the same tick as the
     // click, while the actual pixels are still being produced.
+    // A single stalled image request (proxied through api/avatar.js, one
+    // request per headshot -- a full roster page can have 20-30+ of them,
+    // versus a trade card's handful) used to block this forever with zero
+    // feedback: Promise.all never resolves if even one image never fires
+    // load or error. Capping each wait means one bad request degrades to
+    // a blank headshot in the export instead of hanging the whole thing.
+    const IMAGE_LOAD_TIMEOUT_MS = 6000;
+    const waitForImage = (img) => img.complete ? Promise.resolve() : new Promise(resolve => {
+      const done = () => { clearTimeout(timer); resolve(); };
+      img.addEventListener('load', done, { once: true });
+      img.addEventListener('error', done, { once: true });
+      const timer = setTimeout(done, IMAGE_LOAD_TIMEOUT_MS);
+    });
+
     const producePng = (async () => {
-      await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
-        img.addEventListener('load', resolve, { once: true });
-        img.addEventListener('error', resolve, { once: true });
-      })));
+      await Promise.all(images.map(waitForImage));
       const canvas = await html2canvas(clone, {
         backgroundColor: getComputedStyle(referenceEl).backgroundColor || '#ffffff',
         useCORS: true,
@@ -11405,10 +11416,23 @@
       return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     })();
 
+    // Belt-and-suspenders: even with the per-image cap above, html2canvas
+    // itself or the clipboard call could still stall. Never leave the
+    // user with a silent, permanently-stuck button.
+    const OVERALL_TIMEOUT_MS = 20000;
+    const timedOut = Symbol('timeout');
+    const withOverallTimeout = (promise) => Promise.race([
+      promise,
+      new Promise(resolve => setTimeout(() => resolve(timedOut), OVERALL_TIMEOUT_MS)),
+    ]);
+
     try {
       if (action === 'copy' && navigator.clipboard && typeof ClipboardItem === 'function') {
         try {
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': producePng })]);
+          const result = await withOverallTimeout(
+            navigator.clipboard.write([new ClipboardItem({ 'image/png': producePng })])
+          );
+          if (result === timedOut) throw new Error('timed out');
           showPhotoExportToast('Copied image to clipboard');
           return;
         } catch (err) {
@@ -11417,7 +11441,8 @@
           // export/clipboard permission failed outright.
         }
       }
-      const blob = await producePng;
+      const blob = await withOverallTimeout(producePng);
+      if (blob === timedOut) { showPhotoExportToast("Couldn't export image -- try again"); return; }
       if (blob) {
         downloadBlob(blob, filename);
         if (action === 'copy') showPhotoExportToast("Couldn't copy -- downloaded the image instead");
@@ -12554,10 +12579,12 @@
     const evenListEl = document.querySelector('.rg-panel-even .rg-list');
     if (!rgBtn || !rgPanel || !rgChipsEl || !forListEl || !againstListEl || !evenListEl) return;
 
-    // Which stat orders Root For/Root Against: "$" (default) ranks by
-    // rooting impact (how lopsided for-vs-against is), "Leagues" ranks by
-    // how many total leagues a player touches, regardless of side.
-    let rgSortCriterion = 'leagues';
+    // Which stat orders Root For/Root Against. Internal values keep their
+    // original meaning ('value' = rooting impact/delta, 'leagues' = total
+    // league count) -- only the button labels were swapped, so "Leagues"
+    // (default) now triggers the 'value'-based ranking and "$" triggers
+    // the 'leagues'-based one.
+    let rgSortCriterion = 'value';
     const rgSortToggle = document.getElementById('rgSortToggle');
     if (rgSortToggle) {
       rgSortToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(btn => {
