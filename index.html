@@ -607,11 +607,12 @@
   }
   @media (max-width: 900px) { .sb-field-page-grid { grid-template-columns: 1fr; } }
   .sb-field-page-card {
-    /* Deliberately not var(--surface) (pure white, used by every other
-       card in the app) -- a cool slate tint gives Field View its own
-       identity and enough contrast to actually stand out on the page. */
-    background: #eef1f6;
-    border: 1px solid #d7dce6;
+    /* Tracks the theme's own surface/border tokens (was a hardcoded cool
+       slate tint that stood out fine against the old cream theme but
+       clashed against any other palette -- e.g. sat blue against Vintage
+       Program's parchment instead of matching the field panel below it). */
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 14px;
   }
