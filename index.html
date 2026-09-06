@@ -397,7 +397,13 @@
     border-radius: 3px;
     transform: translateX(-50%);
     box-shadow: 0 0 0 2px var(--surface);
+    cursor: pointer;
+    transition: transform 0.12s ease;
   }
+  .track-dot:hover, .track-dot.is-active { transform: translateX(-50%) scaleX(1.6); }
+  .track-dot.track-dot-multi { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+  .track-dot.track-dot-multi.is-active { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink), 0 0 0 7px rgba(200,16,46,0.25); }
+  .track-tooltip { z-index: 6; }
   .track-avg-marker {
     position: absolute;
     top: -7px;
@@ -2074,12 +2080,13 @@
   .ld-pick-owner { font-weight: 700; color: var(--muted); font-size: 13px; }
   .ld-pteam { font-size: 9.5px; color: var(--faint); font-weight: 600; display: inline-flex; align-items: center; }
   .ld-team-logo { width: 22px; height: 22px; object-fit: contain; }
-  .ld-pnum { font-size: 10.5px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1.2; }
-  .ld-pnum i { font-style: normal; font-size: 7.5px; font-weight: 600; color: var(--faint); }
+  .ld-pnum, .ld-pick-val { font-size: 10.5px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1.2; }
+  .ld-pnum i, .ld-pick-val i { font-style: normal; font-size: 7.5px; font-weight: 600; color: var(--faint); }
   .ld-loading { grid-column: 1 / -1; text-align: center; color: var(--faint); font-size: 13px; padding: 30px 0; }
   .ld-pick-row { display: flex; align-items: baseline; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); font-size: 11.5px; }
   .ld-pick-row:last-child { border-bottom: none; }
   .ld-pick-when { font-weight: 700; color: var(--ink); }
+  .ld-pick-row .ld-pick-val { margin-left: auto; }
 
   /* League Detail -> Records modal */
   .ldrec-overlay { position: fixed; inset: 0; background: rgba(20,20,26,0.45); z-index: 60; }
@@ -2821,6 +2828,7 @@
         <div class="panel">
           <h2>Portfolio Health</h2>
           <p class="ph-sub">Each bar is a percentile: where you'd rank against the other teams in your leagues this week if every league had the same number of teams (0 = last place, 100 = first place), averaged across all your connected leagues.</p>
+          <div class="scatter-tooltip track-tooltip" id="trackTooltip" hidden></div>
 
           <div class="track" id="phRosterValueTrack">
             <div class="track-label" id="phRosterValueLabel">ROSTER VALUE</div>
@@ -13375,6 +13383,100 @@
     goToLeagueDetail(leagueEl.dataset.leagueName);
   });
 
+  // Portfolio Health track dots -- same hover-preview / click-to-choose /
+  // jump-to-league pattern as Team Strength above, just delegated on
+  // document since dots live in whichever of the 4 track rows is visible
+  // and get rebuilt on every render (renderDotTrack), so per-dot listeners
+  // would just be thrown away each time.
+  const trackTooltip = document.getElementById('trackTooltip');
+  let trackPinned = false;
+  function trackParseLeagues(dot) {
+    try { return JSON.parse(dot.dataset.leagues || '[]'); } catch (e) { return []; }
+  }
+  function trackStatsLine(item, statLabel) {
+    return `${scatterOrdinal(item.rank)} of ${item.of} ${statLabel}`;
+  }
+  function trackPositionTooltip(dot) {
+    const row = dot.parentElement;
+    if (row && trackTooltip.parentElement !== row) row.appendChild(trackTooltip);
+    trackTooltip.style.left = dot.style.left;
+    trackTooltip.style.top = '0';
+  }
+  function trackShowPreview(dot) {
+    const leagues = trackParseLeagues(dot);
+    if (!leagues.length) return;
+    const statLabel = dot.dataset.statLabel;
+    const primary = leagues[0];
+    let html = `<div class="tt-name">${sbFieldEsc(primary.name)}</div><div class="tt-stats">${trackStatsLine(primary, statLabel)}</div>`;
+    if (leagues.length > 1) html += `<div class="tt-overlap">+${leagues.length - 1} OVERLAPPING &middot; CLICK TO CHOOSE &rarr;</div>`;
+    trackTooltip.innerHTML = html;
+    trackPositionTooltip(dot);
+    trackTooltip.hidden = false;
+  }
+  function trackShowChooser(dot) {
+    const leagues = trackParseLeagues(dot);
+    const statLabel = dot.dataset.statLabel;
+    trackTooltip.innerHTML = `<div class="tt-title">${leagues.length} LEAGUES HERE</div>` +
+      leagues.map(l =>
+        `<div class="tt-league" data-league-name="${sbFieldEsc(l.name)}">` +
+        `<div class="tt-league-name">${sbFieldEsc(l.name)}</div>` +
+        `<div class="tt-league-stats">${trackStatsLine(l, statLabel)}</div>` +
+        `</div>`
+      ).join('');
+    trackPositionTooltip(dot);
+    trackTooltip.hidden = false;
+  }
+  document.addEventListener('mouseover', (e) => {
+    const dot = e.target.closest('.track-dot');
+    if (!dot || trackPinned) return;
+    trackShowPreview(dot);
+  });
+  document.addEventListener('mouseout', (e) => {
+    const dot = e.target.closest('.track-dot');
+    if (!dot || trackPinned) return;
+    trackTooltip.hidden = true;
+  });
+  // One handler, not three -- all three cases (dot click, chooser-row
+  // click, click elsewhere) are on the same element (document), so
+  // e.stopPropagation() can't stop a later sibling listener on that same
+  // element from also firing; only combining them into one handler with
+  // early returns does.
+  document.addEventListener('click', (e) => {
+    const dot = e.target.closest('.track-dot');
+    if (dot) {
+      const leagues = trackParseLeagues(dot);
+      if (!leagues.length) return;
+      if (leagues.length === 1) {
+        trackPinned = false;
+        trackTooltip.hidden = true;
+        goToLeagueDetail(leagues[0].name);
+        return;
+      }
+      const already = trackPinned && dot.classList.contains('is-active');
+      document.querySelectorAll('.track-dot').forEach(d => d.classList.remove('is-active'));
+      if (already) {
+        trackPinned = false;
+        trackTooltip.hidden = true;
+        return;
+      }
+      dot.classList.add('is-active');
+      trackPinned = true;
+      trackShowChooser(dot);
+      return;
+    }
+    const leagueEl = e.target.closest('#trackTooltip .tt-league');
+    if (leagueEl) {
+      trackPinned = false;
+      document.querySelectorAll('.track-dot').forEach(d => d.classList.remove('is-active'));
+      trackTooltip.hidden = true;
+      goToLeagueDetail(leagueEl.dataset.leagueName);
+      return;
+    }
+    trackPinned = false;
+    document.querySelectorAll('.track-dot').forEach(d => d.classList.remove('is-active'));
+    trackTooltip.hidden = true;
+  });
+
   const notebookBtn = document.getElementById('notebookBtn');
   const notebookOverlay = document.getElementById('notebookOverlay');
   const notebookPanel = document.getElementById('notebookPanel');
@@ -14120,38 +14222,16 @@
       if (getSiteMode() !== 'dynasty' || !sbLeagueIsDynasty(entry.league)) return '';
       const allRosters = entry.allRosters || [];
       if (!allRosters.length) return '';
-      const tradedPicks = entry.tradedPicks || [];
       const users = entry.users || [];
-      const currentSeason = Number(entry.league.season) || new Date().getFullYear();
-      const seasons = [currentSeason + 1, currentSeason + 2];
-      const rounds = [1, 2, 3, 4];
       const roundLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
-
-      const ownerOfSlot = (originalRosterId, season, round) => {
-        const tp = tradedPicks.find(p => Number(p.season) === season && p.round === round && p.roster_id === originalRosterId);
-        return tp ? tp.owner_id : originalRosterId;
-      };
-      const picksOwnedBy = (rosterId) => {
-        const owned = [];
-        seasons.forEach(season => {
-          rounds.forEach(round => {
-            allRosters.forEach(r => {
-              if (ownerOfSlot(r.roster_id, season, round) === rosterId) {
-                owned.push({ season, round, fromRosterId: r.roster_id });
-              }
-            });
-          });
-        });
-        return owned;
-      };
       const nameForRoster = (rosterId) => {
         const r = allRosters.find(r => r.roster_id === rosterId);
         const u = r ? users.find(u => u.user_id === r.owner_id) : null;
         return u ? (u.display_name || u.username) : null;
       };
 
-      const myPicks = picksOwnedBy(activeRoster.roster_id);
-      const rank = ldRankOf(allRosters, r => picksOwnedBy(r.roster_id).length, activeRoster.roster_id);
+      const myPicks = ppPicksOwnedBy(entry, activeRoster.roster_id);
+      const rank = ldRankOf(allRosters, r => ppPicksOwnedBy(entry, r.roster_id).length, activeRoster.roster_id);
       const rowsHtml = myPicks.map(p => {
         // p.fromRosterId is the pick's original slot (whoever's roster it
         // would have been without a trade) -- Sleeper's traded_picks record
@@ -14163,6 +14243,7 @@
         return '<div class="ld-pick-row">' +
           `<span class="ld-pick-when">${p.season} &middot; ${roundLabels[p.round]}</span>` +
           (originalOwnerName ? `<span class="ld-pick-owner">(${sbFieldEsc(originalOwnerName)})</span>` : '') +
+          `<span class="ld-pick-val">${ppPickValue(p.round).toFixed(2)}<br><i>VAL</i></span>` +
         '</div>';
       }).join('') || '<div class="ld-pick-row"><span class="ld-pick-when" style="color:var(--faint)">No picks owned</span></div>';
 
@@ -15651,6 +15732,43 @@
     return playerIds.reduce((sum, id) => sum + (ppValueForPlayerId(id, dict) || 0), 0);
   }
 
+  // Placeholder draft-pick values until a real pick-value source exists --
+  // rough "how much is a future rookie pick worth" shape (1sts worth a lot
+  // more than 2nds, tailing off fast), not tied to any real market data.
+  // Anything beyond round 4 (or a round Sleeper doesn't report) is 0.
+  const PICK_ROUND_VALUES = { 1: 1.0, 2: 0.3, 3: 0.1, 4: 0.05 };
+  function ppPickValue(round) {
+    return PICK_ROUND_VALUES[round] || 0;
+  }
+
+  // Every future pick (next 2 draft classes, rounds 1-4) a roster actually
+  // owns right now, resolved through the league's real traded_picks records
+  // -- same walk as League Detail's PICKS column, shared here so both that
+  // column and the roster-value math below stay in lockstep.
+  function ppPicksOwnedBy(entry, rosterId) {
+    const allRosters = entry.allRosters || [];
+    if (!allRosters.length) return [];
+    const tradedPicks = entry.tradedPicks || [];
+    const currentSeason = Number(entry.league.season) || new Date().getFullYear();
+    const seasons = [currentSeason + 1, currentSeason + 2];
+    const rounds = [1, 2, 3, 4];
+    const ownerOfSlot = (originalRosterId, season, round) => {
+      const tp = tradedPicks.find(p => Number(p.season) === season && p.round === round && p.roster_id === originalRosterId);
+      return tp ? tp.owner_id : originalRosterId;
+    };
+    const owned = [];
+    seasons.forEach(season => {
+      rounds.forEach(round => {
+        allRosters.forEach(r => {
+          if (ownerOfSlot(r.roster_id, season, round) === rosterId) {
+            owned.push({ season, round, fromRosterId: r.roster_id });
+          }
+        });
+      });
+    });
+    return owned;
+  }
+
   // Portfolio Health and Team Strength: Roster Value now comes from the
   // real Pure Potential value list above (dynasty mode only, per the
   // no-fabricated-numbers rule -- redraft has no dynasty asset value to
@@ -15700,7 +15818,11 @@
       entries.forEach(e => {
         const allRosters = e.allRosters || [];
         if (allRosters.length < 2) return;
-        const values = allRosters.map(r => ({ rosterId: r.roster_id, value: ppRosterValue(r, dict) }));
+        const isDynastyLeague = sbLeagueIsDynasty(e.league);
+        const values = allRosters.map(r => ({
+          rosterId: r.roster_id,
+          value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(e, r.roster_id).reduce((s, p) => s + ppPickValue(p.round), 0) : 0),
+        }));
         const myValue = values.find(v => v.rosterId === e.roster.roster_id);
         if (!myValue) return;
         const sortedDesc = [...values].sort((a, b) => b.value - a.value);
@@ -15714,9 +15836,9 @@
     if (phRosterValueTrack) phRosterValueTrack.hidden = getSiteMode() !== 'dynasty';
     const phRosterValueLabel = document.getElementById('phRosterValueLabel');
     if (phRosterValueLabel) phRosterValueLabel.textContent = 'ROSTER VALUE';
-    renderDotTrack('phRosterValueRow', valuePcts);
+    renderDotTrack('phRosterValueRow', valueByLeague, 'value');
 
-    const pointProjPcts = [];
+    const pointProjByLeague = [];
     entries.forEach(e => {
       if (!e.allMatchups || !e.allMatchups.length) return;
       const totals = e.allMatchups
@@ -15727,30 +15849,29 @@
       if (!myTotal) return;
       const sortedDesc = [...totals].sort((a, b) => b.total - a.total);
       const rank = sortedDesc.findIndex(t => t.rosterId === e.roster.roster_id) + 1;
-      pointProjPcts.push(((totals.length - rank) / (totals.length - 1)) * 100);
+      const pct = ((totals.length - rank) / (totals.length - 1)) * 100;
+      pointProjByLeague.push({ league: e.league.name, pct, rank, of: totals.length });
     });
     const phPointProjTrack = document.getElementById('phPointProjTrack');
     if (phPointProjTrack) phPointProjTrack.hidden = getSiteMode() === 'dynasty';
-    renderDotTrack('phPointProjRow', pointProjPcts);
+    renderDotTrack('phPointProjRow', pointProjByLeague, 'point projection');
 
     // Contending Rank: same optimal-lineup rank shown on the Leagues page,
     // as a percentile per league.
-    const contendingPcts = [];
     const contendingByLeague = [];
     entries.forEach(e => {
       const result = sbContendingRank(e);
       if (!result || result.of < 2) return;
       const pct = ((result.of - result.rank) / (result.of - 1)) * 100;
       contendingByLeague.push({ league: e.league.name, pct, rank: result.rank, of: result.of });
-      contendingPcts.push(pct);
     });
     const phContendingTrack = document.getElementById('phContendingTrack');
-    if (phContendingTrack) phContendingTrack.hidden = contendingPcts.length === 0;
-    renderDotTrack('phContendingRow', contendingPcts);
+    if (phContendingTrack) phContendingTrack.hidden = contendingByLeague.length === 0;
+    renderDotTrack('phContendingRow', contendingByLeague, 'contending');
 
     // Last Season Placement: real regular-season standings (wins, then
     // points-for as tiebreak) from each league's previous_league_id.
-    const lastSeasonPcts = [];
+    const lastSeasonByLeague = [];
     entries.forEach(e => {
       const prevRosters = e.prevSeasonRosters;
       if (!prevRosters || prevRosters.length < 2) return;
@@ -15764,11 +15885,12 @@
       const sorted = [...prevRosters].sort((a, b) =>
         (b.settings.wins || 0) - (a.settings.wins || 0) || pfOf(b) - pfOf(a));
       const rank = sorted.findIndex(r => r.roster_id === myPrevRoster.roster_id) + 1;
-      lastSeasonPcts.push(((prevRosters.length - rank) / (prevRosters.length - 1)) * 100);
+      const pct = ((prevRosters.length - rank) / (prevRosters.length - 1)) * 100;
+      lastSeasonByLeague.push({ league: e.league.name, pct, rank, of: prevRosters.length });
     });
     const phLastSeasonTrack = document.getElementById('phLastSeasonTrack');
-    if (phLastSeasonTrack) phLastSeasonTrack.hidden = lastSeasonPcts.length === 0;
-    renderDotTrack('phLastSeasonRow', lastSeasonPcts);
+    if (phLastSeasonTrack) phLastSeasonTrack.hidden = lastSeasonByLeague.length === 0;
+    renderDotTrack('phLastSeasonRow', lastSeasonByLeague, 'last season');
 
     renderDraftCapital(entries);
     renderTeamStrength(contendingByLeague, valueByLeague);
@@ -15784,16 +15906,29 @@
     const hue = Math.max(0, Math.min(120, pct * 1.2));
     return `hsl(${hue}, 68%, 48%)`;
   }
-  function renderDotTrack(rowId, pcts) {
+  // items: [{league, pct, rank, of}]. statLabel names what "rank" means in
+  // the popup ("value", "contending", etc). Leagues landing on (about) the
+  // same spot share one dot -- clicking it lists every league there with a
+  // jump straight into that league's page, same pattern as Team Strength.
+  function renderDotTrack(rowId, items, statLabel) {
     const row = document.getElementById(rowId);
     if (!row) return;
     row.querySelectorAll('.track-dot, .track-avg-marker, .track-avg-label').forEach(el => el.remove());
-    if (!pcts.length) return;
-    pcts.forEach(pct => {
+    if (!items.length) return;
+    const pcts = items.map(i => i.pct);
+    const groups = {};
+    items.forEach(item => {
+      const key = Math.round(Math.max(1, Math.min(99, item.pct)));
+      if (!groups[key]) groups[key] = { pct: item.pct, leagues: [] };
+      groups[key].leagues.push(item);
+    });
+    Object.values(groups).forEach(g => {
       const dot = document.createElement('div');
-      dot.className = 'track-dot';
-      dot.style.left = Math.max(1, Math.min(99, pct)) + '%';
-      dot.style.background = pctToColor(pct);
+      dot.className = 'track-dot' + (g.leagues.length > 1 ? ' track-dot-multi' : '');
+      dot.style.left = Math.max(1, Math.min(99, g.pct)) + '%';
+      dot.style.background = pctToColor(g.pct);
+      dot.dataset.statLabel = statLabel;
+      dot.dataset.leagues = JSON.stringify(g.leagues.map(l => ({ name: l.league, rank: l.rank, of: l.of })));
       row.appendChild(dot);
     });
     const avg = pcts.reduce((s, p) => s + p, 0) / pcts.length;
