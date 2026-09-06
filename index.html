@@ -11276,11 +11276,29 @@
     watermark.textContent = 'Fantasy Tool';
     clone.appendChild(watermark);
 
+    // Sleeper's CDN doesn't send CORS headers, so html2canvas can load
+    // these <img>s fine for normal display but can't read their pixels
+    // onto a canvas -- they came out blank in the exported image. Routing
+    // just this clone's headshots/logos through our own same-origin proxy
+    // (api/avatar.js) sidesteps that entirely; the live card keeps hitting
+    // Sleeper's CDN directly.
+    const images = Array.from(clone.querySelectorAll('img'));
+    images.forEach(img => {
+      if (img.src.includes('sleepercdn.com')) {
+        img.src = '/api/avatar?url=' + encodeURIComponent(img.src);
+      }
+    });
+
     clone.style.position = 'fixed';
     clone.style.top = '0';
     clone.style.left = '-10000px';
     clone.style.width = cardEl.getBoundingClientRect().width + 'px';
     document.body.appendChild(clone);
+
+    await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+      img.addEventListener('load', resolve, { once: true });
+      img.addEventListener('error', resolve, { once: true });
+    })));
 
     try {
       const canvas = await html2canvas(clone, {
