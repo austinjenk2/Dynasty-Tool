@@ -2983,16 +2983,15 @@
   <div class="section-tabs" id="sectionNav">
     <a class="section-tab active" data-section="dashboard">Dashboard</a>
     <a class="section-tab" data-section="leagues">Leagues</a>
-    <a class="section-tab" data-section="lineups">Live</a>
+    <a class="section-tab" data-section="lineups">Matchup Hub</a>
     <a class="section-tab" data-section="gamecast">GameCast</a>
     <a class="section-tab" data-section="rooting">Rooting Guide</a>
     <a class="section-tab" data-section="waiver">Waiver Wire</a>
     <a class="section-tab" data-section="draft">Draft Room</a>
     <a class="section-tab" data-section="exposures">Exposures</a>
     <a class="section-tab" data-section="trades">Trade History</a>
-    <a class="section-tab" data-section="records">Record Book</a>
-    <a class="section-tab" data-section="calculator">Trade Calculator</a>
-    <a class="section-tab" data-section="database">Trade Database</a>
+    <a class="section-tab" data-section="records">Results</a>
+    <a class="section-tab" data-section="calculator">Trade Calc</a>
     <a class="section-tab" data-section="settings">Settings</a>
   </div>
 </nav>
@@ -4041,7 +4040,7 @@
     <div class="sb-page">
       <div class="sb-subtabs" id="sbSubtabs">
         <div class="sb-subtabs-left">
-          <h1 style="margin:0">Live</h1>
+          <h1 style="margin:0">Matchup Hub</h1>
           <div class="sb-view-toggle" id="sbViewToggle">
             <button type="button" class="sb-view-toggle-btn is-active" data-sbv="scoreboard">Standard View</button>
             <button type="button" class="sb-view-toggle-btn" data-sbv="field">Field View</button>
@@ -10446,14 +10445,14 @@
   </div>
   <div data-view="records">
     <div class="page-title">
-      <h1>Record Book</h1>
+      <h1>Results</h1>
       <p>Every league's season in one grid &mdash; finish, PF rank, playoffs, weekly results, and bracket rounds. Net is entered in Settings.</p>
     </div>
-    <div id="rbBody"><div class="rb-empty">Connect your Sleeper account to see your Record Book.</div></div>
+    <div id="rbBody"><div class="rb-empty">Connect your Sleeper account to see your results.</div></div>
   </div>
   <div data-view="calculator">
     <div class="page-title">
-      <h1>Trade Calculator</h1>
+      <h1>Trade Calc</h1>
       <p>Build a trade and see who wins it, using real dynasty player values.</p>
     </div>
 
@@ -10534,7 +10533,6 @@
       </div>
     </div>
   </div>
-  <div data-view="database"><div class="placeholder"><h3>Trade Database</h3><p>This section is being built.</p></div></div>
   <div data-view="settings">
     <div class="page-title">
       <h1>Settings</h1>
@@ -10577,7 +10575,7 @@
 
     <div class="settings-panel">
       <div class="settings-label">League Money (this season)</div>
-      <div class="settings-sub">No Sleeper league tracks real side-pot money, so this is the one manually-entered number in the app -- your net for each league this season, shown on the Record Book's Net column. Leave a league blank to show a dash there instead of $0.</div>
+      <div class="settings-sub">No Sleeper league tracks real side-pot money, so this is the one manually-entered number in the app -- your net for each league this season, shown on the Results page's Net column. Leave a league blank to show a dash there instead of $0.</div>
       <div id="rbMoneyList" style="margin-top:12px"></div>
     </div>
   </div>
@@ -14162,6 +14160,10 @@
       }
       return cachedNflState;
     }
+    // Exposed globally: GameCast lives in a separate top-level scope from
+    // this Sleeper-integration IIFE and needs the real current week/season
+    // too.
+    window.getNflState = getNflState;
 
     function extractGameInfo(list) {
       const games = {};
@@ -15279,7 +15281,7 @@
       if (!body) return;
       const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
       if (!entries.length) {
-        body.innerHTML = '<div class="rb-empty">Connect your Sleeper account to see your Record Book.</div>';
+        body.innerHTML = '<div class="rb-empty">Connect your Sleeper account to see your results.</div>';
         return;
       }
       const sorted = [...entries].sort((a, b) => a.league.name.localeCompare(b.league.name));
@@ -17776,7 +17778,8 @@
   async function renderRealGameCast() {
     const strip = document.getElementById('gcStrip');
     if (!strip) return;
-    const { week, season } = await getNflState();
+    if (!window.getNflState) return;
+    const { week, season } = await window.getNflState();
     const games = await gcGetGamesList(season, week);
     if (!window.__gcSelectedEventId || !games.some(g => g.eventId === window.__gcSelectedEventId)) {
       const live = games.find(g => g.state === 'in');
