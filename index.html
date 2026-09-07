@@ -617,27 +617,53 @@
   .sb-view-toggle-btn:last-child { border-right: none; }
   .sb-view-toggle-btn.is-active { background: var(--ink); color: var(--bg); }
 
-  /* GameCast -- full live play-by-play feed for one matchup at a time */
-  .gc-page { background: var(--bg); margin-top: 8px; color: var(--ink); }
-  .gc-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 18px; padding-bottom: 14px; }
-  #gcMatchupPickerWrap { margin-bottom: 18px; }
+  /* GameCast -- every real NFL game this week; pick one to see a full
+     fantasy box score (live/proj/exposure/portfolio) for both teams plus
+     the live play-by-play. */
+  .gc-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; margin: 4px 0 18px; }
+  .gc-game-card {
+    flex: 0 0 auto; min-width: 168px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .gc-game-card.active { border-color: var(--navy); box-shadow: 0 0 0 1px var(--navy) inset; }
+  .gc-game-card-status { font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; color: var(--faint); margin-bottom: 6px; }
+  .gc-game-card-status.gc-live { color: var(--red); }
+  .gc-game-card-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; }
+  .gc-game-card-team { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .gc-game-card-team img { width: 18px; height: 18px; object-fit: contain; }
+  .gc-game-card-score { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; color: var(--ink); }
+
   .gc-score-header {
     display: flex; align-items: center; justify-content: space-between;
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
     padding: 18px 22px; margin-bottom: 20px;
   }
-  .gc-score-side { flex: 1; }
-  .gc-score-side-right { text-align: right; }
+  .gc-score-side { flex: 1; display: flex; align-items: center; gap: 10px; }
+  .gc-score-side-right { flex-direction: row-reverse; text-align: right; }
+  .gc-score-side img { width: 32px; height: 32px; object-fit: contain; }
   .gc-score-name { font-size: 12.5px; font-weight: 700; color: var(--muted); }
   .gc-score-value { font-family: 'Source Serif 4', serif; font-size: 30px; font-weight: 700; color: var(--navy); margin-top: 2px; }
   .gc-score-side-right .gc-score-value { color: var(--ink); }
-  .gc-score-mid { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: var(--red); flex-shrink: 0; padding: 0 18px; }
-  .gc-feed-head { font-size: 12.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 0 0 8px; }
+  .gc-score-mid { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: var(--red); flex-shrink: 0; padding: 0 18px; text-align: center; }
+
+  .gc-boxscore-team-label { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--ink); margin: 22px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .gc-boxscore-team-label img { width: 22px; height: 22px; object-fit: contain; }
+  .gc-table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+  .gc-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .gc-table th, .gc-table td { padding: 8px 10px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--border-soft); }
+  .gc-table th { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); border-bottom: 1px solid var(--border); }
+  .gc-table th.gc-th-player, .gc-table td.gc-player-cell { text-align: left; }
+  .gc-player-cell { display: flex; align-items: center; gap: 6px; }
+  .gc-player-name { font-weight: 700; color: var(--ink); }
+  .gc-player-pos { font-size: 9.5px; font-weight: 800; color: var(--faint); }
+  .gc-stat-line { color: var(--muted); font-size: 11.5px; }
+  .gc-exposure-frac { font-weight: 700; color: var(--ink); }
+
+  .gc-feed-head { font-size: 12.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 22px 0 8px; }
   .gc-feed { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 4px 14px; }
   .gc-play { gap: 10px; }
-  .gc-side-tag { flex-shrink: 0; font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; padding: 3px 6px; border-radius: 4px; }
-  .gc-side-tag.gc-side-mine { color: var(--navy); background: #e6edf7; }
-  .gc-side-tag.gc-side-opp { color: var(--muted); background: var(--bg); }
+  .gc-side-tag { flex-shrink: 0; font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; padding: 3px 6px; border-radius: 4px; color: var(--navy); background: #e6edf7; }
 
   /* Field View -- a grid of every league's live win-probability field at
      once, reusing the same .field-panel markup/animation as the
@@ -4529,18 +4555,12 @@
   </div>
 
   <div data-view="gamecast">
-    <div class="gc-page">
-      <div class="gc-header">
-        <h1 style="margin:0">GameCast</h1>
-      </div>
-      <div class="sort-dropdown" id="gcMatchupPickerWrap">
-        <div class="sort-select" id="gcMatchupSelect"><span id="gcMatchupSelectLabel">Select a matchup&hellip;</span> <span>&#9662;</span></div>
-        <div class="sort-menu" id="gcMatchupMenu" hidden></div>
-      </div>
-      <div id="gcContent">
-        <div class="ld-loading">Pick a matchup to load its live GameCast feed.</div>
-      </div>
+    <div class="page-title">
+      <h1>GameCast</h1>
+      <p>Every real NFL game this week &mdash; pick one for a full fantasy box score: live vs. projected points, real stats, your exposure, and how each player is swinging your portfolio.</p>
     </div>
+    <div class="gc-strip" id="gcStrip"><div class="ld-loading">Loading today's games&hellip;</div></div>
+    <div id="gcGameBody"><div class="ld-loading">Pick a game above to see its fantasy box score.</div></div>
   </div>
 
       <div data-view="rooting">
@@ -17669,99 +17689,229 @@
     }
   }
 
-  // ---- GameCast -- the full live play-by-play feed for one matchup at a
-  // time, same fantasy-scoring engine as the Live tab's "Last 5 Plays"
-  // teaser but unbounded and merged across both sides of the matchup. ----
+  // ---- GameCast -- every real NFL game this week (ESPN scoreboard), pick
+  // one to see a full fantasy box score for both teams: real stats, live
+  // points, live projections, your exposure to each player this week, and
+  // how many of your leagues that player is currently winning/losing you --
+  // plus the game's live play-by-play, fantasy-scored. ----
 
-  window.__gcSelectedLeagueId = window.__gcSelectedLeagueId || null;
+  // League-agnostic games have no scoring_settings to score against, so
+  // this view uses a standard full-PPR line -- same fallback convention
+  // sbProjectionFor already uses when no league context is available.
+  const GC_DEFAULT_SCORING = {
+    pass_yd: 0.04, pass_td: 4, pass_int: -2, pass_2pt: 2,
+    rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
+    rec: 1, rec_yd: 0.1, rec_td: 6, rec_2pt: 2,
+    fum_lost: -2,
+  };
+  const GC_FANTASY_POS = ['QB', 'RB', 'WR', 'TE'];
+
+  window.__gcSelectedEventId = window.__gcSelectedEventId || null;
   let gcRefreshTimer = null;
 
-  function gcMatchupLabel(entry) {
-    const oppName = entry.oppUser
-      ? (entry.oppUser.display_name || entry.oppUser.username || 'Opponent')
-      : (entry.myMatchup ? 'TBD' : 'No matchup yet');
-    return `${entry.league.name} vs ${oppName}`;
+  window.__gcGamesCache = window.__gcGamesCache || {};
+  const GC_GAMES_TTL = 15 * 1000;
+  async function gcGetGamesList(season, week) {
+    const key = `${season}_${week}`;
+    const cached = window.__gcGamesCache[key];
+    if (cached && (Date.now() - cached.at < GC_GAMES_TTL)) return cached.games;
+    let games = [];
+    try {
+      const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}&year=${season}&seasontype=2`);
+      if (res.ok) {
+        const data = await res.json();
+        games = (data.events || []).map(ev => {
+          const comp = ev.competitions && ev.competitions[0];
+          if (!comp) return null;
+          const statusType = comp.status && comp.status.type;
+          const teamOf = (side) => {
+            const c = (comp.competitors || []).find(x => x.homeAway === side);
+            if (!c || !c.team) return null;
+            const abbr = ESPN_TEAM_ABBR_FIX[c.team.abbreviation] || c.team.abbreviation;
+            return { abbr, score: c.score != null ? Number(c.score) : null };
+          };
+          return {
+            eventId: ev.id,
+            when: comp.date || ev.date,
+            state: statusType ? statusType.state : null,
+            detail: statusType ? statusType.shortDetail : null,
+            away: teamOf('away'),
+            home: teamOf('home'),
+          };
+        }).filter(g => g && g.away && g.home);
+      }
+    } catch (e) { /* fall through to empty/cached list below */ }
+    if (!games.length && cached) games = cached.games;
+    window.__gcGamesCache[key] = { games, at: Date.now() };
+    return games;
   }
 
-  function renderRealGameCast() {
-    const menu = document.getElementById('gcMatchupMenu');
-    const label = document.getElementById('gcMatchupSelectLabel');
-    if (!menu) return;
-    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.myMatchup);
-    const content = document.getElementById('gcContent');
-    if (!entries.length) {
-      menu.innerHTML = '';
-      if (label) label.textContent = 'No live matchups';
-      if (content) content.innerHTML = '<div class="ld-loading">No live matchups this week.</div>';
-      return;
+  function gcGameStatusHtml(g) {
+    if (g.state === 'in') return `<div class="gc-game-card-status gc-live">${sbFieldEsc(g.detail || 'LIVE')}</div>`;
+    if (g.state === 'post') return `<div class="gc-game-card-status">FINAL</div>`;
+    const when = g.when ? new Date(g.when) : null;
+    const label = when ? when.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : 'Scheduled';
+    return `<div class="gc-game-card-status">${sbFieldEsc(label)}</div>`;
+  }
+
+  function gcRenderStrip(games) {
+    const strip = document.getElementById('gcStrip');
+    if (!strip) return;
+    if (!games.length) { strip.innerHTML = '<div class="ld-loading">No NFL games found for this week.</div>'; return; }
+    strip.innerHTML = games.map(g => `
+      <div class="gc-game-card${g.eventId === window.__gcSelectedEventId ? ' active' : ''}" data-gc-event="${sbFieldEsc(g.eventId)}">
+        ${gcGameStatusHtml(g)}
+        <div class="gc-game-card-row">
+          <span class="gc-game-card-team"><img src="${sbTeamLogoUrl(g.away.abbr)}" alt="" onerror="this.remove()">${g.away.abbr}</span>
+          <span class="gc-game-card-score">${g.away.score != null ? g.away.score : ''}</span>
+        </div>
+        <div class="gc-game-card-row">
+          <span class="gc-game-card-team"><img src="${sbTeamLogoUrl(g.home.abbr)}" alt="" onerror="this.remove()">${g.home.abbr}</span>
+          <span class="gc-game-card-score">${g.home.score != null ? g.home.score : ''}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function renderRealGameCast() {
+    const strip = document.getElementById('gcStrip');
+    if (!strip) return;
+    const { week, season } = await getNflState();
+    const games = await gcGetGamesList(season, week);
+    if (!window.__gcSelectedEventId || !games.some(g => g.eventId === window.__gcSelectedEventId)) {
+      const live = games.find(g => g.state === 'in');
+      window.__gcSelectedEventId = (live || games[0] || {}).eventId || null;
     }
-    if (!window.__gcSelectedLeagueId || !entries.some(e => e.league.league_id === window.__gcSelectedLeagueId)) {
-      window.__gcSelectedLeagueId = entries[0].league.league_id;
-    }
-    menu.innerHTML = entries.map(e =>
-      `<div class="sort-option${e.league.league_id === window.__gcSelectedLeagueId ? ' active' : ''}" data-gc-league="${e.league.league_id}">${sbFieldEsc(gcMatchupLabel(e))}</div>`
-    ).join('');
-    const activeEntry = entries.find(e => e.league.league_id === window.__gcSelectedLeagueId);
-    if (label && activeEntry) label.textContent = gcMatchupLabel(activeEntry);
+    gcRenderStrip(games);
     const gamecastView = document.querySelector('[data-view="gamecast"]');
     if (gamecastView && gamecastView.classList.contains('is-active')) {
-      loadGcFeed(activeEntry);
+      const selected = games.find(g => g.eventId === window.__gcSelectedEventId);
+      if (selected) loadGcGameBody(selected, week, season);
     }
   }
   window.renderRealGameCast = renderRealGameCast;
 
-  async function loadGcFeed(entry) {
-    const content = document.getElementById('gcContent');
-    if (!content || !entry) return;
-    const dict = window.__sleeperPlayerDict;
-    if (!dict) { content.innerHTML = '<div class="ld-loading">Loading players&hellip;</div>'; return; }
+  // How much of your portfolio is riding on one player this week: the real
+  // % of your connected leagues starting him right now, and -- among just
+  // those leagues -- how many live matchups he's currently on the winning
+  // vs. losing side of. Not a marginal what-if (benching him and re-scoring
+  // isn't something this app fabricates); just the honest state of the
+  // matchups he's actually in.
+  function gcPortfolioForPlayer(playerId) {
+    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.myMatchup);
+    let startedIn = 0, wins = 0, losses = 0, ties = 0;
+    entries.forEach(e => {
+      const starters = (e.myMatchup.starters || []).filter(Boolean);
+      if (!starters.includes(playerId)) return;
+      startedIn++;
+      const myPts = e.myMatchup.points || 0;
+      const oppPts = e.oppMatchup ? (e.oppMatchup.points || 0) : 0;
+      if (myPts > oppPts) wins++; else if (myPts < oppPts) losses++; else ties++;
+    });
+    return { startedIn, total: entries.length, wins, losses, ties };
+  }
 
-    const myMatchup = entry.myMatchup, oppMatchup = entry.oppMatchup;
-    const myPts = myMatchup ? (myMatchup.points || 0) : 0;
-    const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
-    const oppName = entry.oppUser ? (entry.oppUser.display_name || entry.oppUser.username || 'Opponent') : 'Opponent';
+  function gcStatLine(pos, s) {
+    s = s || {};
+    const parts = [];
+    if (pos === 'QB') {
+      if (s.pass_att) parts.push(`${s.pass_cmp || 0}/${s.pass_att} ${Math.round(s.pass_yd || 0)} yd`);
+      if (s.pass_td) parts.push(`${s.pass_td} TD`);
+      if (s.pass_int) parts.push(`${s.pass_int} INT`);
+      if (s.rush_att) parts.push(`${s.rush_att} car, ${Math.round(s.rush_yd || 0)} yd`);
+    } else {
+      if (s.rush_att) parts.push(`${s.rush_att} car, ${Math.round(s.rush_yd || 0)} yd${s.rush_td ? ', ' + s.rush_td + ' TD' : ''}`);
+      if (s.rec != null) parts.push(`${s.rec}/${s.rec_tgt || s.rec} rec, ${Math.round(s.rec_yd || 0)} yd${s.rec_td ? ', ' + s.rec_td + ' TD' : ''}`);
+    }
+    return parts.length ? parts.join(' &middot; ') : '&mdash;';
+  }
 
-    const myStarters = ((myMatchup && myMatchup.starters) || []).filter(id => id && id !== '0');
-    const oppStarters = ((oppMatchup && oppMatchup.starters) || []).filter(id => id && id !== '0');
+  function gcPlayerRowHtml(id, p, statsMap, projMap) {
+    const stats = statsMap[id];
+    const livePts = stats ? (stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std) : null;
+    const projPts = projMap[id];
+    const expDiff = (livePts != null && projPts != null) ? livePts - projPts : null;
+    const expCls = expDiff == null ? '' : (expDiff > 0 ? 'ldrec-pos' : (expDiff < 0 ? 'ldrec-neg' : ''));
+    const port = gcPortfolioForPlayer(id);
+    const portCls = port.startedIn === 0 ? '' : (port.wins > port.losses ? 'ldrec-pos' : (port.losses > port.wins ? 'ldrec-neg' : ''));
+    const portText = port.startedIn === 0 ? '&mdash;' : `${port.wins}-${port.losses}${port.ties ? '-' + port.ties : ''}`;
+    const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+    return `<tr data-player-id="${sbFieldEsc(id)}">
+      <td class="gc-player-cell">
+        <img class="exp-list-avatar" src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()" style="width:26px;height:26px;border-radius:50%;object-fit:cover">
+        <span><span class="gc-player-name">${sbFieldEsc(name)}</span> <span class="gc-player-pos">${p.position}</span></span>
+      </td>
+      <td>${livePts != null ? livePts.toFixed(1) : '&mdash;'}</td>
+      <td>${projPts != null ? projPts.toFixed(1) : '&mdash;'}</td>
+      <td class="${expCls}">${expDiff != null ? (expDiff > 0 ? '+' : '') + expDiff.toFixed(1) : '&mdash;'}</td>
+      <td class="gc-stat-line">${gcStatLine(p.position, stats)}</td>
+      <td>${port.total ? `<span class="gc-exposure-frac">${port.startedIn}/${port.total}</span> <span class="exp-frac">(${Math.round((port.startedIn / port.total) * 100)}%)</span>` : '&mdash;'}</td>
+      <td class="${portCls}">${portText}</td>
+    </tr>`;
+  }
 
-    content.innerHTML = `
+  function gcTeamTableHtml(abbr, dict, statsMap, projMap) {
+    const players = Object.keys(dict)
+      .filter(id => dict[id] && dict[id].team === abbr && GC_FANTASY_POS.includes(dict[id].position))
+      .map(id => ({ id, p: dict[id], livePts: statsMap[id] ? (statsMap[id].pts_ppr ?? statsMap[id].pts_half_ppr ?? statsMap[id].pts_std ?? -1) : -1 }))
+      .sort((a, b) => b.livePts - a.livePts);
+    if (!players.length) return '<div class="ld-loading">No fantasy-relevant players found for this team.</div>';
+    return `<div class="gc-table-wrap"><table class="gc-table">
+      <thead><tr>
+        <th class="gc-th-player">Player</th><th>Live</th><th>Proj</th><th>+/- Exp</th><th>Stats</th><th>Your Exposure</th><th>Portfolio W-L</th>
+      </tr></thead>
+      <tbody>${players.map(r => gcPlayerRowHtml(r.id, r.p, statsMap, projMap)).join('')}</tbody>
+    </table></div>`;
+  }
+
+  async function loadGcGameBody(game, week, season) {
+    const body = document.getElementById('gcGameBody');
+    if (!body || !game) return;
+    body.innerHTML = '<div class="ld-loading">Loading box score&hellip;</div>';
+
+    const [dict, statsMap, projMap] = await Promise.all([
+      window.sleeperGetPlayerDict ? window.sleeperGetPlayerDict() : {},
+      window.sleeperGetWeekStats ? window.sleeperGetWeekStats(season, week) : {},
+      window.sleeperGetWeekProjections ? window.sleeperGetWeekProjections(season, week) : {},
+    ]);
+
+    body.innerHTML = `
       <div class="gc-score-header">
         <div class="gc-score-side">
-          <div class="gc-score-name">You</div>
-          <div class="gc-score-value">${myPts.toFixed(1)}</div>
+          <img src="${sbTeamLogoUrl(game.away.abbr)}" alt="" onerror="this.remove()">
+          <div><div class="gc-score-name">${game.away.abbr}</div><div class="gc-score-value">${game.away.score != null ? game.away.score : '&mdash;'}</div></div>
         </div>
-        <div class="gc-score-mid">LIVE</div>
+        <div class="gc-score-mid">${game.state === 'in' ? sbFieldEsc(game.detail || 'LIVE') : (game.state === 'post' ? 'FINAL' : 'UPCOMING')}</div>
         <div class="gc-score-side gc-score-side-right">
-          <div class="gc-score-name">${sbFieldEsc(oppName)}</div>
-          <div class="gc-score-value">${oppPts.toFixed(1)}</div>
+          <img src="${sbTeamLogoUrl(game.home.abbr)}" alt="" onerror="this.remove()">
+          <div><div class="gc-score-name">${game.home.abbr}</div><div class="gc-score-value">${game.home.score != null ? game.home.score : '&mdash;'}</div></div>
         </div>
       </div>
+      <div class="gc-boxscore-team-label"><img src="${sbTeamLogoUrl(game.away.abbr)}" alt="" onerror="this.remove()">${game.away.abbr}</div>
+      ${gcTeamTableHtml(game.away.abbr, dict, statsMap, projMap)}
+      <div class="gc-boxscore-team-label"><img src="${sbTeamLogoUrl(game.home.abbr)}" alt="" onerror="this.remove()">${game.home.abbr}</div>
+      ${gcTeamTableHtml(game.home.abbr, dict, statsMap, projMap)}
       <div class="gc-feed-head">Live Play-by-Play</div>
       <div class="gc-feed" id="gcFeedList"><div class="ld-loading">Loading live plays&hellip;</div></div>
     `;
 
     try {
-      const espnGames = await getEspnGameDataCached(entry.week, entry.league.season);
-      const [minePlays, oppPlays] = await Promise.all([
-        gcGetAllPlays(myStarters, dict, entry.league, espnGames, 'mine'),
-        gcGetAllPlays(oppStarters, dict, entry.league, espnGames, 'opp'),
-      ]);
-      const merged = minePlays.concat(oppPlays).sort((a, b) => b.order - a.order);
+      const plays = await gcGetGamePlays(game, dict);
       const feedList = document.getElementById('gcFeedList');
-      if (feedList) feedList.innerHTML = gcFeedHtml(merged);
+      if (feedList) feedList.innerHTML = gcFeedHtml(plays);
     } catch (err) {
       const feedList = document.getElementById('gcFeedList');
       if (feedList) feedList.innerHTML = '<div class="sb-last-plays-empty">Could not load live plays</div>';
     }
   }
 
-  // Same fantasy-relevant play matching as sbGetLast5Plays, but returns
-  // every matched play instead of the 5 most recent -- GameCast is the full
-  // feed, the Live tab's "Last 5 Plays" is just the teaser.
-  async function gcGetAllPlays(starterIds, dict, league, espnGames, side) {
-    const relevant = (starterIds || []).filter(id => {
+  // Full play-by-play for one real NFL game, fantasy-scored with the
+  // standard full-PPR line (see GC_DEFAULT_SCORING) since a real game has
+  // no single league's scoring settings to use.
+  async function gcGetGamePlays(game, dict) {
+    const relevant = Object.keys(dict).filter(id => {
       const p = dict[id];
-      return p && ['QB', 'RB', 'WR', 'TE'].includes(p.position);
+      return p && (p.team === game.away.abbr || p.team === game.home.abbr) && GC_FANTASY_POS.includes(p.position);
     });
     if (!relevant.length) return [];
 
@@ -17772,33 +17922,23 @@
       shortNameMap[sbEspnShortName(full)] = id;
     });
 
-    const eventIds = new Set();
-    relevant.forEach(id => {
-      const info = espnGames[dict[id].team];
-      if (info && info.eventId) eventIds.add(info.eventId);
-    });
-    if (!eventIds.size) return [];
-
-    const gamesPlays = await Promise.all(Array.from(eventIds).map(getEspnPlayByPlay));
-
+    const plays = await getEspnPlayByPlay(game.eventId);
     const found = [];
-    gamesPlays.forEach(plays => {
-      plays.forEach((play, idx) => {
-        sbParsePlayEvents(play.text).forEach(ev => {
-          const playerId = shortNameMap[ev.name];
-          if (!playerId) return;
-          const points = sbCustomScoreFor(ev.stats, league.scoring_settings);
-          if (points == null) return;
-          const p = dict[playerId];
-          const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : ev.name;
-          found.push({
-            name, desc: ev.desc, points, side,
-            order: play.wallclock ? new Date(play.wallclock).getTime() : idx,
-          });
+    plays.forEach((play, idx) => {
+      sbParsePlayEvents(play.text).forEach(ev => {
+        const playerId = shortNameMap[ev.name];
+        if (!playerId) return;
+        const points = sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING);
+        if (points == null) return;
+        const p = dict[playerId];
+        const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : ev.name;
+        found.push({
+          name, desc: ev.desc, points, team: p ? p.team : null,
+          order: play.wallclock ? new Date(play.wallclock).getTime() : idx,
         });
       });
     });
-    return found;
+    return found.sort((a, b) => b.order - a.order);
   }
 
   function gcFeedHtml(plays) {
@@ -17806,10 +17946,8 @@
     return plays.map(p => {
       const cls = p.points > 0 ? 'sb-last-play-pos' : (p.points < 0 ? 'sb-last-play-neg' : '');
       const sign = p.points > 0 ? '+' : '';
-      const sideCls = p.side === 'mine' ? 'gc-side-mine' : 'gc-side-opp';
-      const sideLabel = p.side === 'mine' ? 'YOU' : 'OPP';
       return '<div class="sb-last-play gc-play">' +
-        `<span class="gc-side-tag ${sideCls}">${sideLabel}</span>` +
+        `<span class="gc-side-tag">${sbFieldEsc(p.team || '')}</span>` +
         `<span class="sb-last-play-name">${sbFieldEsc(p.name)}</span>` +
         `<span class="sb-last-play-desc">${sbFieldEsc(p.desc)}</span>` +
         `<span class="sb-last-play-pts ${cls}">${sign}${p.points.toFixed(1)}</span>` +
@@ -17817,22 +17955,15 @@
     }).join('');
   }
 
-  (function initGcMatchupPicker() {
-    const selectEl = document.getElementById('gcMatchupSelect');
-    const menuEl = document.getElementById('gcMatchupMenu');
-    if (!selectEl || !menuEl) return;
-    selectEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-      menuEl.hidden = !menuEl.hidden;
-    });
-    menuEl.addEventListener('click', (e) => {
-      const option = e.target.closest('.sort-option');
-      if (!option || !option.dataset.gcLeague) return;
-      window.__gcSelectedLeagueId = option.dataset.gcLeague;
-      menuEl.hidden = true;
+  (function initGcStripClick() {
+    const strip = document.getElementById('gcStrip');
+    if (!strip) return;
+    strip.addEventListener('click', (e) => {
+      const card = e.target.closest('.gc-game-card');
+      if (!card || !card.dataset.gcEvent) return;
+      window.__gcSelectedEventId = card.dataset.gcEvent;
       renderRealGameCast();
     });
-    document.addEventListener('click', () => { menuEl.hidden = true; });
   })();
 
   document.querySelectorAll('.section-tab').forEach(tab => {
