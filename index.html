@@ -2440,6 +2440,20 @@
     padding: 4px 10px; border-radius: 5px; background: var(--surface);
     border: 1px solid var(--border); color: var(--ink); margin-bottom: 14px;
   }
+  .pm-gl-scroll { overflow-x: auto; margin: 0 -24px 18px; padding: 0 24px 2px; }
+  .pm-gl-scroll:last-child { margin-bottom: 0; }
+  .pm-gl-table { border-collapse: collapse; width: 100%; min-width: 600px; font-size: 12.5px; }
+  .pm-gl-table th, .pm-gl-table td { padding: 7px 9px; text-align: center; white-space: nowrap; }
+  .pm-gl-table th { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); border-bottom: 1px solid var(--border); }
+  .pm-gl-table td:first-child, .pm-gl-table th:first-child { text-align: left; }
+  .pm-gl-group-th { border-bottom: 1px solid var(--border); }
+  .pm-gl-season-row { cursor: pointer; border-bottom: 1px solid var(--border); }
+  .pm-gl-season-row:hover { background: var(--surface); }
+  .pm-gl-fpts { font-weight: 800; color: var(--ink); }
+  .pm-gl-chevron { display: inline-block; margin-right: 4px; color: var(--faint); transition: transform 0.15s; }
+  .pm-gl-chevron.is-open { transform: rotate(90deg); }
+  .pm-gl-weeks tbody tr { border-bottom: 1px solid var(--border-soft); }
+  .pm-gl-weeks td:first-child { color: var(--faint); }
 
   /* Record row */
   .record-row {
@@ -13856,6 +13870,34 @@
       }
     }
 
+    // Full-season projection totals (same undocumented CDN as the per-week
+    // endpoint above, just without a /week segment) -- used by the player
+    // modal's Overview tab for "Sleeper Proj (season)" / "Proj PPG". Cached
+    // per season since it's a full-league payload reused across every
+    // player looked up in a session.
+    window.__sleeperSeasonProjCache = window.__sleeperSeasonProjCache || {};
+    async function getSeasonProjections(season) {
+      if (window.__sleeperSeasonProjCache[season]) return window.__sleeperSeasonProjCache[season];
+      const promise = (async () => {
+        try {
+          const list = await sleeperFetchRoot(
+            `/projections/nfl/${season}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
+          );
+          const map = {};
+          (list || []).forEach(p => {
+            if (!p || !p.player_id || !p.stats) return;
+            const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std;
+            if (pts != null) map[p.player_id] = { pts: Number(pts), gp: p.stats.gp || null };
+          });
+          return map;
+        } catch (e) {
+          return {};
+        }
+      })();
+      window.__sleeperSeasonProjCache[season] = promise;
+      return promise;
+    }
+
     // Real recorded per-player stat lines for a week (same undocumented
     // Sleeper CDN shape as /projections, just the "stats" resource instead
     // of "projections") -- live-updating during games, final once they end.
@@ -15175,6 +15217,7 @@
     window.sleeperFetch = sleeperFetch;
     window.sleeperReloadData = loadSleeperData;
     window.sleeperGetWeekProjections = getWeekProjections;
+    window.sleeperGetSeasonProjections = getSeasonProjections;
     window.sleeperScoringLabel = scoringLabel;
     window.sleeperGetGameInfoForWeek = getGameInfoForWeek;
 
@@ -17394,34 +17437,223 @@
     return { entry, rows };
   }
 
+  // Real box-score game log (any player, not just ones on your rosters) --
+  // built from Sleeper's actual weekly stat lines rather than fantasy
+  // points alone. Deliberately not tied to any one league's roster, unlike
+  // pmFetchGameLogRows above (kept for Overview's league-scored totals).
+  function pmPts(stats) {
+    if (!stats) return null;
+    const pts = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
+    return pts != null ? Number(pts) : null;
+  }
+  function pmPlayerPosition(dict, playerId) {
+    const p = dict && dict[playerId];
+    if (!p) return null;
+    return p.position || (p.fantasy_positions || [])[0] || null;
+  }
+  function pmGlColumnGroups(pos) {
+    if (pos === 'QB') return [
+      { label: 'PASSING', cols: [['pass_cmp', 'Cmp'], ['pass_att', 'Att'], ['pass_yd', 'Yds'], ['pass_td', 'TD'], ['pass_int', 'INT']] },
+      { label: 'RUSHING', cols: [['rush_att', 'Att'], ['rush_yd', 'Yds'], ['rush_td', 'TD']] },
+    ];
+    if (pos === 'RB') return [
+      { label: 'RUSHING', cols: [['rush_att', 'Att'], ['rush_yd', 'Yds'], ['rush_td', 'TD']] },
+      { label: 'RECEIVING', cols: [['rec_tgt', 'Tgt'], ['rec', 'Rec'], ['rec_yd', 'Yds'], ['rec_td', 'TD']] },
+    ];
+    // WR/TE and anything else default to this shape.
+    return [
+      { label: 'RECEIVING', cols: [['rec_tgt', 'Tgt'], ['rec', 'Rec'], ['rec_yd', 'Yds'], ['rec_td', 'TD']] },
+      { label: 'RUSHING', cols: [['rush_att', 'Att'], ['rush_yd', 'Yds'], ['rush_td', 'TD']] },
+    ];
+  }
+  function pmGlCell(stats, key) {
+    const v = stats ? stats[key] : null;
+    return v != null ? v : 0;
+  }
+
+  function pmCurrentSeasonWeek() {
+    const anyEntry = Object.values(window.sleeperLeagueData || {})[0];
+    if (anyEntry && anyEntry.league && anyEntry.week) {
+      return { season: Number(anyEntry.league.season), week: anyEntry.week };
+    }
+    return { season: new Date().getFullYear(), week: 18 };
+  }
+
+  // Sleeper's real full-season projection for this player, plus where that
+  // projection ranks among every player Sleeper projects at the same
+  // position -- used by Overview's PROJ POINTS / PROJ PPG stats.
+  async function pmSeasonProjWithRank(playerId, dict, season) {
+    if (!window.sleeperGetSeasonProjections) return null;
+    let projMap;
+    try { projMap = await window.sleeperGetSeasonProjections(season); } catch (e) { return null; }
+    const mine = projMap[playerId];
+    if (!mine) return null;
+    const pos = pmPlayerPosition(dict, playerId);
+    let rank = null;
+    if (pos) {
+      const posEntries = Object.entries(projMap)
+        .filter(([pid]) => pmPlayerPosition(dict, pid) === pos)
+        .sort((a, b) => b[1].pts - a[1].pts);
+      const idx = posEntries.findIndex(([pid]) => pid === playerId);
+      rank = idx >= 0 ? idx + 1 : null;
+    }
+    const gp = mine.gp || 17;
+    return { pts: mine.pts, ppg: mine.pts / gp, rank, pos };
+  }
+
+  // Walks every week of a season fetching the *whole league's* real stat
+  // line (window.sleeperGetWeekStats, already cached per season/week) so
+  // this player's own weekly rows and a real position-rank (weekly and
+  // season-long) can both be pulled from the same fetch instead of a
+  // second network round trip.
+  async function pmFetchSeasonGameLog(playerId, dict, season, throughWeek) {
+    const targetPos = pmPlayerPosition(dict, playerId);
+    const weekRows = [];
+    const posTotals = {};
+    for (let w = 1; w <= throughWeek; w++) {
+      let statsMap = {};
+      if (window.sleeperGetWeekStats) {
+        try { statsMap = (await window.sleeperGetWeekStats(season, w)) || {}; } catch (e) {}
+      }
+      const myStats = statsMap[playerId];
+      let posRank = null;
+      if (targetPos) {
+        const posEntries = [];
+        Object.keys(statsMap).forEach(pid => {
+          if (pmPlayerPosition(dict, pid) !== targetPos) return;
+          const pts = pmPts(statsMap[pid]);
+          if (pts == null) return;
+          posEntries.push([pid, pts]);
+          posTotals[pid] = (posTotals[pid] || 0) + pts;
+        });
+        if (myStats) {
+          posEntries.sort((a, b) => b[1] - a[1]);
+          const idx = posEntries.findIndex(([pid]) => pid === playerId);
+          posRank = idx >= 0 ? idx + 1 : null;
+        }
+      }
+      if (myStats) weekRows.push({ week: w, stats: myStats, posRank });
+    }
+    let seasonRank = null;
+    if (targetPos && posTotals[playerId] != null) {
+      const sorted = Object.entries(posTotals).sort((a, b) => b[1] - a[1]);
+      seasonRank = sorted.findIndex(([pid]) => pid === playerId) + 1;
+    }
+    return { season, weekRows, seasonRank, pos: targetPos };
+  }
+
+  function pmGlSeasonTable(gl, idx) {
+    const groups = pmGlColumnGroups(gl.pos);
+    const g = gl.weekRows.length;
+    const totalPts = gl.weekRows.reduce((s, r) => s + (pmPts(r.stats) || 0), 0);
+    const ppg = g ? totalPts / g : 0;
+    const rankText = gl.seasonRank ? `${gl.pos}${gl.seasonRank}` : '&mdash;';
+
+    const groupHeadHtml = groups.map(gr => `<th colspan="${gr.cols.length}" class="pm-gl-group-th">${gr.label}</th>`).join('');
+    const subHeadHtml = groups.map(gr => gr.cols.map(([, label]) => `<th>${label}</th>`).join('')).join('');
+    const seasonStatCellsHtml = groups.map(gr => gr.cols.map(([key]) =>
+      `<td>${gl.weekRows.reduce((s, r) => s + (Number(pmGlCell(r.stats, key)) || 0), 0)}</td>`
+    ).join('')).join('');
+
+    const weekRowsHtml = gl.weekRows.slice().reverse().map(r => {
+      const pts = pmPts(r.stats);
+      const rk = r.posRank ? `${gl.pos}${r.posRank}` : '&mdash;';
+      const statCellsHtml = groups.map(gr => gr.cols.map(([key]) => `<td>${pmGlCell(r.stats, key)}</td>`).join('')).join('');
+      return `<tr>
+        <td>Wk ${r.week}</td>
+        <td class="pm-gl-fpts">${pts != null ? pts.toFixed(1) : '&mdash;'}</td>
+        <td>${rk}</td>
+        ${statCellsHtml}
+      </tr>`;
+    }).join('');
+
+    return `
+      <div class="pm-gl-scroll">
+        <table class="pm-gl-table">
+          <thead>
+            <tr>
+              <th rowspan="2">Season</th>
+              <th rowspan="2">G</th>
+              <th rowspan="2">FPts</th>
+              <th rowspan="2">FPts/G</th>
+              <th rowspan="2">Rk</th>
+              ${groupHeadHtml}
+            </tr>
+            <tr>${subHeadHtml}</tr>
+          </thead>
+          <tbody>
+            <tr class="pm-gl-season-row" data-gl-toggle="${idx}">
+              <td><span class="pm-gl-chevron" data-gl-chevron="${idx}">&rsaquo;</span>${gl.season}</td>
+              <td>${g}</td>
+              <td class="pm-gl-fpts">${totalPts.toFixed(1)}</td>
+              <td>${ppg.toFixed(1)}</td>
+              <td>${rankText}</td>
+              ${seasonStatCellsHtml}
+            </tr>
+          </tbody>
+        </table>
+        <table class="pm-gl-table pm-gl-weeks" id="pmGlWeeks${idx}" hidden>
+          <thead><tr><th>Wk</th><th>FPts</th><th>Rk</th>${subHeadHtml}</tr></thead>
+          <tbody>${weekRowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
   let pmGameLogToken = 0;
   async function renderPmGameLog(playerId) {
     const pmGameLogList = document.getElementById('pmGameLogList');
     if (!pmGameLogList) return;
-    if (!playerId || !window.sleeperFetch) {
-      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>Connect a Sleeper account to see weekly scoring.</p></div>';
+    if (!playerId) {
+      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No player selected.</p></div>';
       return;
     }
     const myToken = ++pmGameLogToken;
     pmGameLogList.innerHTML = '<div class="ld-loading">Loading game log…</div>';
 
-    const gl = await pmFetchGameLogRows(playerId);
-    if (myToken !== pmGameLogToken) return; // a newer player was opened meanwhile
-    if (!gl) {
-      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No roster data for this player.</p></div>';
+    const dict = await pmGetPlayerDict();
+    if (myToken !== pmGameLogToken) return;
+    if (!dict || !dict[playerId] || !window.sleeperGetWeekStats) {
+      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No game log data available for this player.</p></div>';
       return;
     }
-    pmGameLogList.innerHTML = '<div class="pm-league-list">' + gl.rows.map(r =>
-      `<div class="pm-league-row"><span>Week ${r.week}</span><span>${r.pts != null ? r.pts.toFixed(1) + ' pts' : '&mdash;'}</span></div>`
-    ).join('') + '</div>';
+
+    const { season: curSeason, week: curWeek } = pmCurrentSeasonWeek();
+    const seasonSpecs = [
+      { season: curSeason, through: Math.max(curWeek, 1) },
+      { season: curSeason - 1, through: 18 },
+    ];
+
+    const results = [];
+    for (const spec of seasonSpecs) {
+      const gl = await pmFetchSeasonGameLog(playerId, dict, spec.season, spec.through);
+      if (myToken !== pmGameLogToken) return;
+      if (gl.weekRows.length) results.push(gl);
+    }
+
+    if (!results.length) {
+      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No recorded games found for this player.</p></div>';
+      return;
+    }
+
+    pmGameLogList.innerHTML = results.map((gl, i) => pmGlSeasonTable(gl, i)).join('');
+    pmGameLogList.querySelectorAll('[data-gl-toggle]').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = el.dataset.glToggle;
+        const weeksEl = document.getElementById('pmGlWeeks' + idx);
+        if (!weeksEl) return;
+        weeksEl.hidden = !weeksEl.hidden;
+        pmGameLogList.querySelectorAll(`[data-gl-chevron="${idx}"]`).forEach(c => c.classList.toggle('is-open', !weeksEl.hidden));
+      });
+    });
   }
 
   // getPlayerDict() itself lives inside loadSleeperData()'s closure and
-  // isn't reachable from here -- but by the time a player modal can even
-  // be opened, the user's Sleeper data (and this cache) has already loaded
-  // via that same path, so read the cache it left on window directly. The
-  // fetch fallback only matters if that ever isn't true yet.
+  // isn't reachable from here, but it's exposed on window for exactly this
+  // kind of caller. Fall back to the cache it leaves on window (or a bare
+  // fetch) only for the unlikely case that exposure isn't there yet.
   async function pmGetPlayerDict() {
+    if (window.sleeperGetPlayerDict) return window.sleeperGetPlayerDict();
     if (window.__sleeperPlayerDict) return window.__sleeperPlayerDict;
     if (!window.sleeperFetch) return null;
     try {
@@ -17476,6 +17708,24 @@
         <div class="ld-stat-cell"><div class="ld-stat-label">STATUS</div><div class="ld-stat-value">${statusStr}</div></div>
       </div>
       <div class="pm-note">${[p.college, p.number != null ? '#' + p.number : null].filter(Boolean).join(' &middot; ')}</div>
+    `;
+
+    const { season: projSeason } = pmCurrentSeasonWeek();
+    const proj = await pmSeasonProjWithRank(playerId, dict, projSeason);
+    if (myToken !== pmOverviewToken) return;
+    const projPtsText = proj ? proj.pts.toFixed(1) : '&mdash;';
+    const projPpgText = proj ? proj.ppg.toFixed(1) : '&mdash;';
+    const projRankText = proj && proj.rank ? `${proj.pos}${proj.rank}` : '';
+    html += `
+      <div class="pm-section-label">${projSeason} PROJECTION</div>
+      <div class="ld-stats">
+        <div class="ld-stat-cell"><div class="ld-stat-label">PROJ POINTS</div><div class="ld-stat-value">${projPtsText}${projRankText ? ` <span class="pm-note" style="display:inline">(${projRankText})</span>` : ''}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">PROJ PPG</div><div class="ld-stat-value">${projPpgText}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">STARTUP ADP</div><div class="ld-stat-value">&mdash;</div></div>
+      </div>
+      ${proj ? '' : '<div class="pm-note">Sleeper hasn\'t published a projection for this player yet.</div>'}
     `;
 
     const gl = await pmFetchGameLogRows(playerId);
