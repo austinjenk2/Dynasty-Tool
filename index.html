@@ -2177,6 +2177,12 @@
   .rb-po-col { border-left: 2px solid var(--border); }
   .rb-total-row td { font-weight: 800; border-top: 2px solid var(--border); border-bottom: none; color: var(--ink); }
   .rb-total-row .rb-league-name { color: var(--ink); }
+  .rb-table th.rb-sort-th { cursor: pointer; user-select: none; }
+  .rb-table th.rb-sort-th:hover { color: var(--ink); }
+  .rb-table th.rb-sort-th.active { color: var(--ink); }
+  .rb-table tbody tr[data-league-name] { cursor: pointer; }
+  .rb-table tbody tr[data-league-name]:hover td { background: var(--border-soft); }
+  .rb-table tbody tr[data-league-name]:hover td.rb-league-cell { background: var(--border-soft); }
   .rb-wl-w { background: rgba(34,197,94,0.16); color: #16a34a; }
   .rb-wl-l { background: rgba(239,68,68,0.16); color: #dc2626; }
   .rb-empty { text-align: center; color: var(--faint); font-size: 13px; padding: 40px 0; }
@@ -14930,16 +14936,6 @@
       return net == null ? '&mdash;' : (net > 0 ? '+$' + net : (net < 0 ? '-$' + Math.abs(net) : '$0'));
     }
 
-    function rbPickHtml(entry, myRosterId) {
-      if (getSiteMode() !== 'dynasty' || !sbLeagueIsDynasty(entry.league)) return '&mdash;';
-      const roundLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
-      const picks = ppPicksOwnedBy(entry, myRosterId);
-      const nextSeason = Number(entry.league.season || 0) + 1;
-      const nextPicks = picks.filter(p => p.season === nextSeason).sort((a, b) => a.round - b.round);
-      if (!nextPicks.length) return `<span style="color:var(--faint)">None</span>`;
-      return nextPicks.map(p => roundLabels[p.round] || (p.round + 'th')).join(', ');
-    }
-
     // Real playoff-round results (Wild Card / Semifinal / Championship) off
     // Sleeper's own winners_bracket -- round numbers count down from the
     // final (whatever round has the highest r is the championship), so a
@@ -14991,6 +14987,14 @@
       const pfOf = r => { const rs = r.settings || {}; return (rs.fpts || 0) + (rs.fpts_decimal || 0) / 100; };
       const pfRank = ldRankOf(allRosters, pfOf, myRoster.roster_id);
 
+      // "Pts From 1.01": real Sleeper potential points (ppts -- your best
+      // possible lineup score, sometimes called "max points for"), shown as
+      // the gap above whoever in the league has the LOWEST potential points
+      // -- so the league's least-optimized manager always reads as +0.
+      const potentialPtsOf = r => { const rs = r.settings || {}; return (rs.ppts || 0) + (rs.ppts_decimal || 0) / 100; };
+      const minPotentialPts = Math.min(...allRosters.map(potentialPtsOf));
+      const ptsFromMin = potentialPtsOf(myRoster) - minPotentialPts;
+
       const placements = await ldrecGetPlacements(league.league_id);
       const seasonDecided = Object.keys(placements).length > 0;
       let finishRank = placements[myRoster.roster_id];
@@ -15016,11 +15020,10 @@
       return {
         league, entry,
         wins, losses, ties, record,
-        pfRank, finishRank, seasonDecided, madePlayoffs,
+        pfRank, finishRank, seasonDecided, madePlayoffs, ptsFromMin,
         regularWeeks, weekResults,
         wc: bracketResults.WC || null, sf: bracketResults.SF || null, chip: bracketResults.CHIP || null,
         net: rbGetNet(league.league_id, league.season),
-        pickHtml: rbPickHtml(entry, myRoster.roster_id),
       };
     }
 
@@ -15038,12 +15041,12 @@
         weekCellsHtml += `<td>${res == null ? '&mdash;' : rbWlChipHtml(res)}</td>`;
       }
 
-      return `<tr data-league-id="${sbFieldEsc(row.league.league_id)}">
+      return `<tr data-league-id="${sbFieldEsc(row.league.league_id)}" data-league-name="${sbFieldEsc(row.league.name)}">
         <td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(row.league.name)}</span>${coBadge}</td>
         <td>${row.record}</td>
         <td>${finishHtml}</td>
-        <td>${row.pickHtml}</td>
         <td>${ldOrdinal(row.pfRank)}</td>
+        <td>${row.ptsFromMin > 0 ? '+' + Math.round(row.ptsFromMin) : '+0'}</td>
         <td>${playoffHtml}</td>
         <td class="${netCls}">${rbNetDisplay(row.net)}</td>
         ${weekCellsHtml}
@@ -15066,6 +15069,9 @@
       const avgPfRank = rows.length
         ? (rows.reduce((s, r) => s + r.pfRank, 0) / rows.length).toFixed(1)
         : '&mdash;';
+      const avgPtsFromMin = rows.length
+        ? Math.round(rows.reduce((s, r) => s + r.ptsFromMin, 0) / rows.length)
+        : 0;
 
       const netRows = rows.filter(r => r.net != null);
       const totalNet = netRows.length ? netRows.reduce((s, r) => s + r.net, 0) : null;
@@ -15087,8 +15093,8 @@
         <td class="rb-league-cell"><span class="rb-league-name">Overall Record</span></td>
         <td>${totalRecord}</td>
         <td>${avgFinish}</td>
-        <td>&mdash;</td>
         <td>${avgPfRank}</td>
+        <td>${avgPtsFromMin > 0 ? '+' + avgPtsFromMin : '+0'}</td>
         <td>&mdash;</td>
         <td class="${netCls}">${rbNetDisplay(totalNet)}</td>
         ${weekCellsHtml}
@@ -15096,6 +15102,70 @@
         <td>${roundRecordOf('sf')}</td>
         <td>${roundRecordOf('chip')}</td>
       </tr>`;
+    }
+
+    // Column headers are sortable: first click on a column sorts by its
+    // real value, highest/most first; a second click on the same column
+    // flips to lowest/least first. Rows are already fully computed by the
+    // time this runs, so re-sorting is a plain in-memory sort + re-render,
+    // no re-fetching.
+    const RB_SORT_KEYS = {
+      league: r => r.league.name.toLowerCase(),
+      rec: r => (r.wins + r.losses + r.ties) ? r.wins / (r.wins + r.losses + r.ties) : 0,
+      finish: r => r.finishRank == null ? Infinity : r.finishRank,
+      pf: r => r.pfRank,
+      pts: r => r.ptsFromMin,
+      po: r => r.madePlayoffs ? 2 : (r.seasonDecided ? 1 : 0),
+      net: r => r.net == null ? -Infinity : r.net,
+    };
+    let rbRows = [];
+    let rbMaxRegWeeks = 0;
+    let rbSortKey = null;
+    let rbSortDir = 'desc';
+
+    function rbRenderTable() {
+      const body = document.getElementById('rbBody');
+      if (!body) return;
+      const rows = [...rbRows];
+      if (rbSortKey) {
+        const valueOf = RB_SORT_KEYS[rbSortKey];
+        rows.sort((a, b) => {
+          const va = valueOf(a), vb = valueOf(b);
+          if (typeof va === 'string') {
+            const diff = va.localeCompare(vb);
+            return rbSortDir === 'desc' ? -diff : diff;
+          }
+          const diff = vb - va;
+          return rbSortDir === 'desc' ? diff : -diff;
+        });
+      }
+      let weekHeadHtml = '';
+      for (let i = 1; i <= rbMaxRegWeeks; i++) weekHeadHtml += `<th>W${i}</th>`;
+      const sortArrow = (key) => key === rbSortKey ? (rbSortDir === 'desc' ? ' &#9660;' : ' &#9650;') : '';
+      const th = (key, label) => `<th class="rb-sort-th${key === rbSortKey ? ' active' : ''}${key === 'league' ? ' rb-th-league' : ''}" data-rb-sort="${key}">${label}${sortArrow(key)}</th>`;
+
+      body.innerHTML = `<div class="rb-table-wrap"><table class="rb-table">
+        <thead><tr>
+          ${th('league', 'League')}
+          ${th('rec', 'Rec')}${th('finish', 'Finish')}${th('pf', 'PF Rank')}${th('pts', 'Pts From 1.01')}${th('po', 'PO')}${th('net', 'Net')}
+          ${weekHeadHtml}
+          <th class="rb-po-col">WC</th><th>SF</th><th>Chip</th>
+        </tr></thead>
+        <tbody>${rows.map(r => rbRowHtml(r, rbMaxRegWeeks)).join('')}</tbody>
+        <tfoot>${rbTotalRowHtml(rows, rbMaxRegWeeks)}</tfoot>
+      </table></div>`;
+
+      body.querySelectorAll('.rb-sort-th').forEach(el => {
+        el.addEventListener('click', () => {
+          const key = el.dataset.rbSort;
+          rbSortDir = (rbSortKey === key && rbSortDir === 'desc') ? 'asc' : 'desc';
+          rbSortKey = key;
+          rbRenderTable();
+        });
+      });
+      body.querySelectorAll('tbody tr[data-league-name]').forEach(tr => {
+        tr.addEventListener('click', () => goToLeagueDetail(tr.dataset.leagueName));
+      });
     }
 
     async function renderRealRecordBook() {
@@ -15112,20 +15182,9 @@
         body.innerHTML = '<div class="rb-empty">No league data available yet.</div>';
         return;
       }
-      const maxRegWeeks = Math.max(0, ...rows.map(r => r.regularWeeks));
-      let weekHeadHtml = '';
-      for (let i = 1; i <= maxRegWeeks; i++) weekHeadHtml += `<th>W${i}</th>`;
-
-      body.innerHTML = `<div class="rb-table-wrap"><table class="rb-table">
-        <thead><tr>
-          <th class="rb-th-league">League</th>
-          <th>Rec</th><th>Finish</th><th>Rookie Pick</th><th>PF Rank</th><th>PO</th><th>Net</th>
-          ${weekHeadHtml}
-          <th class="rb-po-col">WC</th><th>SF</th><th>Chip</th>
-        </tr></thead>
-        <tbody>${rows.map(r => rbRowHtml(r, maxRegWeeks)).join('')}</tbody>
-        <tfoot>${rbTotalRowHtml(rows, maxRegWeeks)}</tfoot>
-      </table></div>`;
+      rbRows = rows;
+      rbMaxRegWeeks = Math.max(0, ...rows.map(r => r.regularWeeks));
+      rbRenderTable();
     }
     window.renderRealRecordBook = renderRealRecordBook;
 
