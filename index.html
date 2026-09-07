@@ -1607,7 +1607,12 @@
   .exp-dollar.exp-rb { color: var(--green); }
   .exp-dollar.exp-wr { color: var(--blue); }
   .exp-dollar.exp-te { color: var(--gold); }
-  .exp-pct.exp-pct-secondary { font-size: 12px; font-weight: 600; color: var(--faint); }
+  /* Board cards show one primary stat at a time -- % for ADP/EXP%, $ for
+     the $ chip -- never both, so the number never runs into the position
+     badge above it. */
+  #exposuresView .exp-card .exp-dollar { display: none; }
+  #exposuresView.exp-mode-dollar .exp-card .exp-dollar { display: inline; }
+  #exposuresView.exp-mode-dollar .exp-card .exp-pct { display: none; }
   .exp-frac { font-size: 11px; color: var(--faint); font-weight: 600; }
   .exp-dash { font-size: 15px; font-weight: 800; color: var(--border); }
   .exp-bar { height: 4px; border-radius: 2px; margin-top: 8px; }
@@ -7396,7 +7401,7 @@
     </div>
 
   </div>
-  <div data-view="exposures">
+  <div data-view="exposures" id="exposuresView">
     <div class="page-title">
       <h1>Exposures</h1>
       <p>How concentrated you are on every ranked player, across all 18 leagues — including ones you don't roster.</p>
@@ -16452,6 +16457,8 @@
     sortExpItems(expGrid);
     sortExpItems(expListBody);
     applyExpFilter();
+    const exposuresViewEl = document.getElementById('exposuresView');
+    if (exposuresViewEl) exposuresViewEl.classList.toggle('exp-mode-dollar', expState.sortMode === 'dollar');
   }
 
   function isCoManagedIncluded() {
@@ -16683,7 +16690,7 @@
             <span class="exp-pos-badge exp-${posClass}">${r.pos}</span>
           </div>
           <div class="exp-name">${r.name}</div>
-          <div class="exp-pct-row">${dollarHtml}<span class="exp-pct${dollarHtml ? ' exp-pct-secondary' : ' exp-' + posClass}">${r.pct}%</span><span class="exp-frac">${r.count}/${totalLeagues}</span></div>
+          <div class="exp-pct-row">${dollarHtml}<span class="exp-pct exp-${posClass}">${r.pct}%</span><span class="exp-frac">${r.count}/${totalLeagues}</span></div>
           <div class="exp-bar exp-${posClass}" style="width:${r.pct}%"></div>
         </div>`;
     }).join('');
