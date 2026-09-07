@@ -1602,6 +1602,17 @@
   .exp-pct.exp-rb { color: var(--green); }
   .exp-pct.exp-wr { color: var(--blue); }
   .exp-pct.exp-te { color: var(--gold); }
+  .exp-dollar { font-size: 22px; font-weight: 800; }
+  .exp-dollar.exp-qb { color: var(--red); }
+  .exp-dollar.exp-rb { color: var(--green); }
+  .exp-dollar.exp-wr { color: var(--blue); }
+  .exp-dollar.exp-te { color: var(--gold); }
+  /* Board cards show one primary stat at a time -- % for ADP/EXP%, $ for
+     the $ chip -- never both, so the number never runs into the position
+     badge above it. */
+  #exposuresView .exp-card .exp-dollar { display: none; }
+  #exposuresView.exp-mode-dollar .exp-card .exp-dollar { display: inline; }
+  #exposuresView.exp-mode-dollar .exp-card .exp-pct { display: none; }
   .exp-frac { font-size: 11px; color: var(--faint); font-weight: 600; }
   .exp-dash { font-size: 15px; font-weight: 800; color: var(--border); }
   .exp-bar { height: 4px; border-radius: 2px; margin-top: 8px; }
@@ -1691,6 +1702,10 @@
   .settings-panel + .settings-panel { margin-top: 16px; }
   .settings-panel > .settings-label { padding-top: 18px; }
   .settings-panel > .rg-leagues-chips { padding-bottom: 18px; }
+  #rbMoneyList { padding-bottom: 18px; }
+  .rb-money-row { padding: 10px 0; }
+  .rb-money-input-wrap { display: flex; align-items: center; gap: 4px; color: var(--faint); font-weight: 700; }
+  .rb-money-input { width: 90px; font-size: 14px; font-weight: 700; color: var(--ink); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; background: var(--bg); }
   .toggle-switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
   .toggle-switch input { opacity: 0; width: 0; height: 0; }
   .toggle-slider {
@@ -2152,6 +2167,36 @@
   .ldrec-table td.ldrec-pos { color: #22c55e; }
   .ldrec-table td.ldrec-neg { color: #ef4444; }
   .ldrec-empty { text-align: center; color: var(--faint); font-size: 13px; padding: 30px 0; }
+
+  /* Record Book: one row per league in a single grid, not a stack of
+     per-league cards -- easier to scan across leagues than one at a time. */
+  .rb-table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+  .rb-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .rb-table th, .rb-table td { padding: 8px 10px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--border-soft); }
+  .rb-table th { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); }
+  .rb-table th.rb-th-league, .rb-table td.rb-league-cell { text-align: left; }
+  .rb-table td.rb-league-cell { position: sticky; left: 0; background: var(--surface); }
+  .rb-league-name { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 13px; color: var(--ink); }
+  .rb-co-badge { display: inline-block; margin-left: 5px; font-size: 8.5px; font-weight: 800; color: var(--faint); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; vertical-align: 1px; }
+  .rb-playoff-yes { color: #22c55e; font-weight: 800; }
+  .rb-playoff-no { color: #ef4444; font-weight: 800; }
+  .rb-playoff-tbd { color: var(--faint); }
+  .rb-wl-chip { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 20px; border-radius: 4px; font-size: 10.5px; font-weight: 800; color: #fff; }
+  .rb-wl-chip.rb-wl-w { background: #22c55e; }
+  .rb-wl-chip.rb-wl-l { background: #ef4444; }
+  .rb-wl-chip.rb-wl-none { background: var(--border-soft); }
+  .rb-po-col { border-left: 2px solid var(--border); }
+  .rb-total-row td { font-weight: 800; border-top: 2px solid var(--border); border-bottom: none; color: var(--ink); }
+  .rb-total-row .rb-league-name { color: var(--ink); }
+  .rb-table th.rb-sort-th { cursor: pointer; user-select: none; }
+  .rb-table th.rb-sort-th:hover { color: var(--ink); }
+  .rb-table th.rb-sort-th.active { color: var(--ink); }
+  .rb-table tbody tr[data-league-name] { cursor: pointer; }
+  .rb-table tbody tr[data-league-name]:hover td { background: var(--border-soft); }
+  .rb-table tbody tr[data-league-name]:hover td.rb-league-cell { background: var(--border-soft); }
+  .rb-wl-w { background: rgba(34,197,94,0.16); color: #16a34a; }
+  .rb-wl-l { background: rgba(239,68,68,0.16); color: #dc2626; }
+  .rb-empty { text-align: center; color: var(--faint); font-size: 13px; padding: 40px 0; }
   .ldrec-draft-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 
   /* League Detail -> Waivers modal */
@@ -7356,7 +7401,7 @@
     </div>
 
   </div>
-  <div data-view="exposures">
+  <div data-view="exposures" id="exposuresView">
     <div class="page-title">
       <h1>Exposures</h1>
       <p>How concentrated you are on every ranked player, across all 18 leagues — including ones you don't roster.</p>
@@ -10340,7 +10385,13 @@
         </div>
     </div>
   </div>
-  <div data-view="records"><div class="placeholder"><h3>Record Book</h3><p>This section is being built.</p></div></div>
+  <div data-view="records">
+    <div class="page-title">
+      <h1>Record Book</h1>
+      <p>Every league's season in one grid &mdash; finish, PF rank, playoffs, weekly results, and bracket rounds. Net is entered in Settings.</p>
+    </div>
+    <div id="rbBody"><div class="rb-empty">Connect your Sleeper account to see your Record Book.</div></div>
+  </div>
   <div data-view="calculator">
     <div class="page-title">
       <h1>Trade Calculator</h1>
@@ -10463,6 +10514,12 @@
       <div class="settings-label">Blacklisted Leagues</div>
       <div class="settings-sub">Turn a league off entirely and it disappears everywhere in the app -- Leagues, Exposures, Scoreboard, Trades, Waiver Wire, Rooting Guide, Draft Room, Dashboard, the league count up top, all of it -- as if it were never connected. Turn it back on here to bring it back.</div>
       <div class="rg-leagues-chips" id="blacklistChips" style="margin-top:12px"></div>
+    </div>
+
+    <div class="settings-panel">
+      <div class="settings-label">League Money (this season)</div>
+      <div class="settings-sub">No Sleeper league tracks real side-pot money, so this is the one manually-entered number in the app -- your net for each league this season, shown on the Record Book's Net column. Leave a league blank to show a dash there instead of $0.</div>
+      <div id="rbMoneyList" style="margin-top:12px"></div>
     </div>
   </div>
 
@@ -13079,10 +13136,10 @@
     if (!rgBtn || !rgPanel || !rgChipsEl || !forListEl || !againstListEl || !evenListEl) return;
 
     // Which stat orders Root For/Root Against. Internal values keep their
-    // original meaning ('value' = rooting impact/delta, 'leagues' = total
-    // league count) -- only the button labels were swapped, so "Leagues"
-    // (default) now triggers the 'value'-based ranking and "$" triggers
-    // the 'leagues'-based one.
+    // original meaning ('value' = rooting impact/delta, 'leagues' = real
+    // dollars at stake, from the Net entered in Settings) -- only the
+    // button labels were swapped, so "Leagues" (default) triggers the
+    // 'value'-based ranking and "$" triggers the money-based one.
     let rgSortCriterion = 'value';
     const rgSortToggle = document.getElementById('rgSortToggle');
     if (rgSortToggle) {
@@ -13167,7 +13224,19 @@
       rgCountEl.textContent = `(${included} of ${rgLeagueNames.length})`;
     }
 
+    // Real money at stake per league, from the Net you entered in Settings
+    // (same store the Record Book reads from) -- keyed by league name since
+    // that's all the rooting-guide rows carry per player.
+    function rgLeagueDollarMap() {
+      const map = {};
+      Object.values(window.sleeperLeagueData || {}).forEach(e => {
+        if (e && e.league) map[e.league.name] = (window.rbGetNet ? window.rbGetNet(e.league.league_id, e.league.season) : null) || 0;
+      });
+      return map;
+    }
+
     function recomputeRootingGuide() {
+      const dollarMap = rgLeagueDollarMap();
       const buckets = { for: [], against: [], even: [] };
       rgRows.forEach(r => {
         const f = r.forAll.filter(l => !rgBlacklist.has(l));
@@ -13179,26 +13248,39 @@
         r.el.dataset.for = f.join(' &middot; ');
         r.el.dataset.against = a.join(' &middot; ');
         const delta = f.length - a.length;
+        // Your buy-in in every league this player helps you in, minus your
+        // buy-in in every league he hurts you in -- same for/against split
+        // the win-count delta above uses, just weighted by real dollars
+        // instead of by 1 per league.
+        const dollarNet = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
         const deltaEl = r.el.querySelector('.rg-delta');
         const noteEl = r.el.querySelector('.rg-note');
         deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
-        if (delta > 0) { deltaEl.textContent = '+' + delta; deltaEl.classList.add('rg-delta-pos'); }
-        else if (delta < 0) { deltaEl.textContent = String(delta); deltaEl.classList.add('rg-delta-neg'); }
-        else { deltaEl.textContent = '0'; deltaEl.classList.add('rg-delta-even'); }
+        // In $ mode the badge shows real dollars at stake instead of a
+        // league count, so it reads "+$325" rather than "+3".
+        if (rgSortCriterion === 'leagues') {
+          if (dollarNet > 0) { deltaEl.textContent = '+$' + dollarNet; deltaEl.classList.add('rg-delta-pos'); }
+          else if (dollarNet < 0) { deltaEl.textContent = '-$' + Math.abs(dollarNet); deltaEl.classList.add('rg-delta-neg'); }
+          else { deltaEl.textContent = '$0'; deltaEl.classList.add('rg-delta-even'); }
+        } else {
+          if (delta > 0) { deltaEl.textContent = '+' + delta; deltaEl.classList.add('rg-delta-pos'); }
+          else if (delta < 0) { deltaEl.textContent = String(delta); deltaEl.classList.add('rg-delta-neg'); }
+          else { deltaEl.textContent = '0'; deltaEl.classList.add('rg-delta-even'); }
+        }
         const noteParts = [];
         if (f.length) noteParts.push(f.length + ' <span class="rg-note-for">for</span>');
         if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
         noteEl.innerHTML = noteParts.join(' &middot; ');
-        const bucket = { el: r.el, delta, total: f.length + a.length };
+        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet };
         if (delta > 0) buckets.for.push(bucket);
         else if (delta < 0) buckets.against.push(bucket);
         else buckets.even.push(bucket);
       });
       if (rgSortCriterion === 'leagues') {
-        // Most leagues affected first, regardless of side -- how many
-        // teams a player touches, not how lopsided the impact is.
-        buckets.for.sort((a, b) => b.total - a.total);
-        buckets.against.sort((a, b) => b.total - a.total);
+        // Most real dollars in your favor first for Root For, most real
+        // dollars against you first for Root Against.
+        buckets.for.sort((a, b) => b.dollarNet - a.dollarNet);
+        buckets.against.sort((a, b) => a.dollarNet - b.dollarNet);
       } else {
         buckets.for.sort((a, b) => b.delta - a.delta);
         buckets.against.sort((a, b) => a.delta - b.delta);
@@ -13211,6 +13293,9 @@
       buckets.against.forEach(b => againstListEl.appendChild(b.el));
       buckets.even.forEach(b => evenListEl.appendChild(b.el));
     }
+    // Exposed so Settings' League Money panel can refresh this page's $
+    // sort immediately after an edit, instead of waiting on the next sync.
+    window.recomputeRootingGuide = recomputeRootingGuide;
 
     rgBtn.addEventListener('click', (e) => { e.stopPropagation(); rgPanel.hidden = !rgPanel.hidden; });
 
@@ -14317,6 +14402,8 @@
         if (window.renderRealDashboard) window.renderRealDashboard();
         if (window.renderRealNotebook) window.renderRealNotebook();
         if (window.renderRealSchedule) window.renderRealSchedule();
+        if (window.renderRealRecordBook) window.renderRealRecordBook();
+        if (window.renderRecordBookMoneySettings) window.renderRecordBookMoneySettings();
         renderLeagueBlacklistSettings();
         if (window.renderContendingRanks) window.renderContendingRanks();
         if (window.updateModeToggleBtn) window.updateModeToggleBtn();
@@ -14754,6 +14841,7 @@
       if (n == null || isNaN(n)) return '';
       return n > 0 ? 'ldrec-pos' : (n < 0 ? 'ldrec-neg' : '');
     }
+    window.ldrecSignClass = ldrecSignClass;
 
     // FINISH/PF RANK are real (wins+PF and PF-alone rank among that season's
     // rosters) but, like the Draft Capital section's own "Last Season
@@ -14860,6 +14948,331 @@
       const tablesHtml = ldrecTableHtml('REGULAR SEASON', data.regRows, w => String(w)) + ldrecTableHtml('PLAYOFFS', data.poRows, w => 'P' + w);
       return statsHtml + (tablesHtml || '<div class="ldrec-empty">No matchup data found for this season.</div>');
     }
+
+    // ---- Record Book (all leagues in one grid) ----
+    // NET is the one manually-entered field on this page (no Sleeper
+    // endpoint has ever tracked league side-pot money), stored per league
+    // per season so it doesn't collide across years, and edited from the
+    // Settings page rather than inline here. Everything else -- finish, PF
+    // rank, playoff status, rookie picks owned, weekly W/L, and real
+    // wild-card/semifinal/championship bracket results -- reuses the same
+    // real Sleeper data the League Detail Records tab and Draft Capital
+    // already compute.
+    const RB_NET_KEY = 'dynastyToolRecordBookNet';
+    function rbGetNetStore() {
+      try { return JSON.parse(localStorage.getItem(RB_NET_KEY) || '{}'); } catch (e) { return {}; }
+    }
+    function rbSetNet(leagueId, season, value) {
+      const store = rbGetNetStore();
+      store[`${leagueId}_${season}`] = value;
+      try { localStorage.setItem(RB_NET_KEY, JSON.stringify(store)); } catch (e) {}
+    }
+    function rbGetNet(leagueId, season) {
+      const store = rbGetNetStore();
+      const v = store[`${leagueId}_${season}`];
+      return v == null || v === '' ? null : Number(v);
+    }
+    // Exposed globally: Exposures and the Rooting Guide live in separate
+    // top-level IIFEs from Record Book/Settings, but both need to read the
+    // same entered-money store.
+    window.rbGetNet = rbGetNet;
+    function rbNetDisplay(net) {
+      return net == null ? '&mdash;' : (net > 0 ? '+$' + net : (net < 0 ? '-$' + Math.abs(net) : '$0'));
+    }
+    window.rbNetDisplay = rbNetDisplay;
+
+    // Real playoff-round results (Wild Card / Semifinal / Championship) off
+    // Sleeper's own winners_bracket -- round numbers count down from the
+    // final (whatever round has the highest r is the championship), so a
+    // league with byes for top seeds still labels correctly instead of
+    // assuming round 1 is always the wild card.
+    window.__sleeperWinnersBracketCache = window.__sleeperWinnersBracketCache || {};
+    async function rbGetWinnersBracket(leagueId) {
+      if (window.__sleeperWinnersBracketCache[leagueId]) return window.__sleeperWinnersBracketCache[leagueId];
+      const bracket = await sleeperFetch(`/league/${leagueId}/winners_bracket`).catch(() => []);
+      window.__sleeperWinnersBracketCache[leagueId] = bracket || [];
+      return window.__sleeperWinnersBracketCache[leagueId];
+    }
+    async function rbBracketRoundResults(leagueId, rosterId) {
+      const bracket = await rbGetWinnersBracket(leagueId);
+      if (!bracket.length) return {};
+      const maxRound = Math.max(...bracket.map(m => m.r || 1));
+      const roundLabel = (r) => {
+        const fromEnd = maxRound - r;
+        if (fromEnd === 0) return 'CHIP';
+        if (fromEnd === 1) return 'SF';
+        if (fromEnd === 2) return 'WC';
+        return null;
+      };
+      const results = {};
+      bracket.forEach(m => {
+        const label = roundLabel(m.r || 1);
+        if (!label) return;
+        if (m.w === rosterId) results[label] = 'W';
+        else if (m.l === rosterId) results[label] = 'L';
+      });
+      return results;
+    }
+    function rbWlChipHtml(res) {
+      if (res === 'W') return '<span class="rb-wl-chip rb-wl-w">W</span>';
+      if (res === 'L') return '<span class="rb-wl-chip rb-wl-l">L</span>';
+      return '<span class="rb-wl-chip rb-wl-none">&mdash;</span>';
+    }
+
+    async function rbComputeLeagueRow(entry) {
+      const league = entry.league;
+      const myRoster = entry.roster;
+      const allRosters = entry.allRosters || [];
+      if (!myRoster || !allRosters.length) return null;
+
+      const s = myRoster.settings || {};
+      const wins = s.wins || 0, losses = s.losses || 0, ties = s.ties || 0;
+      const record = `${wins}-${losses}${ties ? '-' + ties : ''}`;
+
+      const pfOf = r => { const rs = r.settings || {}; return (rs.fpts || 0) + (rs.fpts_decimal || 0) / 100; };
+      const pfRank = ldRankOf(allRosters, pfOf, myRoster.roster_id);
+
+      // "Pts From 1.01": real Sleeper potential points (ppts -- your best
+      // possible lineup score, sometimes called "max points for"), shown as
+      // the gap above whoever in the league has the LOWEST potential points
+      // -- so the league's least-optimized manager always reads as +0.
+      const potentialPtsOf = r => { const rs = r.settings || {}; return (rs.ppts || 0) + (rs.ppts_decimal || 0) / 100; };
+      const minPotentialPts = Math.min(...allRosters.map(potentialPtsOf));
+      const ptsFromMin = potentialPtsOf(myRoster) - minPotentialPts;
+
+      const placements = await ldrecGetPlacements(league.league_id);
+      const seasonDecided = Object.keys(placements).length > 0;
+      let finishRank = placements[myRoster.roster_id];
+      if (finishRank == null && seasonDecided) {
+        const maxPlacement = Math.max(0, ...Object.values(placements));
+        const unplaced = allRosters.filter(r => placements[r.roster_id] == null);
+        finishRank = maxPlacement + ldRankOf(unplaced, r => ((r.settings && r.settings.wins) || 0) * 100000 + pfOf(r), myRoster.roster_id);
+      }
+      const madePlayoffs = placements[myRoster.roster_id] != null;
+
+      const playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
+      const regularWeeks = Math.max(0, playoffStart - 1);
+      const byWeek = await loadSeasonAllWeekMatchups(league.league_id);
+      const weekResults = [];
+      for (let week = 1; week <= regularWeeks; week++) {
+        const row = ldrecWeekRow(byWeek[week - 1], myRoster.roster_id);
+        const notPlayed = !row || (row.myScore === 0 && row.oppScore === 0);
+        weekResults.push(notPlayed ? null : (row.win ? 'W' : 'L'));
+      }
+
+      const bracketResults = await rbBracketRoundResults(league.league_id, myRoster.roster_id);
+
+      return {
+        league, entry,
+        wins, losses, ties, record,
+        pfRank, finishRank, seasonDecided, madePlayoffs, ptsFromMin,
+        regularWeeks, weekResults,
+        wc: bracketResults.WC || null, sf: bracketResults.SF || null, chip: bracketResults.CHIP || null,
+        net: rbGetNet(league.league_id, league.season),
+      };
+    }
+
+    function rbRowHtml(row, maxRegWeeks) {
+      const finishHtml = row.finishRank != null ? ldOrdinal(row.finishRank) : '&mdash;';
+      const playoffHtml = !row.seasonDecided
+        ? '<span class="rb-playoff-tbd">TBD</span>'
+        : (row.madePlayoffs ? '<span class="rb-playoff-yes">&#10003;</span>' : '<span class="rb-playoff-no">&#10007;</span>');
+      const netCls = row.net == null ? '' : ldrecSignClass(row.net);
+      const coBadge = row.entry.isCoOwned ? '<span class="rb-co-badge" title="Co-managed">M</span>' : '';
+
+      let weekCellsHtml = '';
+      for (let i = 0; i < maxRegWeeks; i++) {
+        const res = i < row.weekResults.length ? row.weekResults[i] : undefined;
+        weekCellsHtml += `<td>${res == null ? '&mdash;' : rbWlChipHtml(res)}</td>`;
+      }
+
+      return `<tr data-league-id="${sbFieldEsc(row.league.league_id)}" data-league-name="${sbFieldEsc(row.league.name)}">
+        <td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(row.league.name)}</span>${coBadge}</td>
+        <td>${row.record}</td>
+        <td>${finishHtml}</td>
+        <td>${ldOrdinal(row.pfRank)}</td>
+        <td>${row.ptsFromMin > 0 ? '+' + Math.round(row.ptsFromMin) : '+0'}</td>
+        <td>${playoffHtml}</td>
+        <td class="${netCls}">${rbNetDisplay(row.net)}</td>
+        ${weekCellsHtml}
+        <td class="rb-po-col">${rbWlChipHtml(row.wc)}</td>
+        <td>${rbWlChipHtml(row.sf)}</td>
+        <td>${rbWlChipHtml(row.chip)}</td>
+      </tr>`;
+    }
+
+    function rbTotalRowHtml(rows, maxRegWeeks) {
+      const totalWins = rows.reduce((s, r) => s + r.wins, 0);
+      const totalLosses = rows.reduce((s, r) => s + r.losses, 0);
+      const totalTies = rows.reduce((s, r) => s + r.ties, 0);
+      const totalRecord = `${totalWins}-${totalLosses}${totalTies ? '-' + totalTies : ''}`;
+
+      const finishRanked = rows.filter(r => r.finishRank != null);
+      const avgFinish = finishRanked.length
+        ? (finishRanked.reduce((s, r) => s + r.finishRank, 0) / finishRanked.length).toFixed(1)
+        : '&mdash;';
+      const avgPfRank = rows.length
+        ? (rows.reduce((s, r) => s + r.pfRank, 0) / rows.length).toFixed(1)
+        : '&mdash;';
+      const avgPtsFromMin = rows.length
+        ? Math.round(rows.reduce((s, r) => s + r.ptsFromMin, 0) / rows.length)
+        : 0;
+
+      const netRows = rows.filter(r => r.net != null);
+      const totalNet = netRows.length ? netRows.reduce((s, r) => s + r.net, 0) : null;
+      const netCls = totalNet == null ? '' : ldrecSignClass(totalNet);
+
+      const weeklyRecordOf = (res) => {
+        let w = 0, l = 0;
+        res.forEach(r => { if (r === 'W') w++; else if (r === 'L') l++; });
+        return `${w}-${l}`;
+      };
+      let weekCellsHtml = '';
+      for (let i = 0; i < maxRegWeeks; i++) {
+        const results = rows.map(r => (i < r.weekResults.length ? r.weekResults[i] : null)).filter(Boolean);
+        weekCellsHtml += `<td>${results.length ? weeklyRecordOf(results) : '&mdash;'}</td>`;
+      }
+      const roundRecordOf = (key) => weeklyRecordOf(rows.map(r => r[key]).filter(Boolean));
+
+      return `<tr class="rb-total-row">
+        <td class="rb-league-cell"><span class="rb-league-name">Overall Record</span></td>
+        <td>${totalRecord}</td>
+        <td>${avgFinish}</td>
+        <td>${avgPfRank}</td>
+        <td>${avgPtsFromMin > 0 ? '+' + avgPtsFromMin : '+0'}</td>
+        <td>&mdash;</td>
+        <td class="${netCls}">${rbNetDisplay(totalNet)}</td>
+        ${weekCellsHtml}
+        <td class="rb-po-col">${roundRecordOf('wc')}</td>
+        <td>${roundRecordOf('sf')}</td>
+        <td>${roundRecordOf('chip')}</td>
+      </tr>`;
+    }
+
+    // Column headers are sortable: first click on a column sorts by its
+    // real value, highest/most first; a second click on the same column
+    // flips to lowest/least first. Rows are already fully computed by the
+    // time this runs, so re-sorting is a plain in-memory sort + re-render,
+    // no re-fetching.
+    const RB_SORT_KEYS = {
+      league: r => r.league.name.toLowerCase(),
+      rec: r => (r.wins + r.losses + r.ties) ? r.wins / (r.wins + r.losses + r.ties) : 0,
+      finish: r => r.finishRank == null ? Infinity : r.finishRank,
+      pf: r => r.pfRank,
+      pts: r => r.ptsFromMin,
+      po: r => r.madePlayoffs ? 2 : (r.seasonDecided ? 1 : 0),
+      net: r => r.net == null ? -Infinity : r.net,
+    };
+    let rbRows = [];
+    let rbMaxRegWeeks = 0;
+    let rbSortKey = null;
+    let rbSortDir = 'desc';
+
+    function rbRenderTable() {
+      const body = document.getElementById('rbBody');
+      if (!body) return;
+      const rows = [...rbRows];
+      if (rbSortKey) {
+        const valueOf = RB_SORT_KEYS[rbSortKey];
+        rows.sort((a, b) => {
+          const va = valueOf(a), vb = valueOf(b);
+          if (typeof va === 'string') {
+            const diff = va.localeCompare(vb);
+            return rbSortDir === 'desc' ? -diff : diff;
+          }
+          const diff = vb - va;
+          return rbSortDir === 'desc' ? diff : -diff;
+        });
+      }
+      let weekHeadHtml = '';
+      for (let i = 1; i <= rbMaxRegWeeks; i++) weekHeadHtml += `<th>W${i}</th>`;
+      const sortArrow = (key) => key === rbSortKey ? (rbSortDir === 'desc' ? ' &#9660;' : ' &#9650;') : '';
+      const th = (key, label) => `<th class="rb-sort-th${key === rbSortKey ? ' active' : ''}${key === 'league' ? ' rb-th-league' : ''}" data-rb-sort="${key}">${label}${sortArrow(key)}</th>`;
+
+      body.innerHTML = `<div class="rb-table-wrap"><table class="rb-table">
+        <thead><tr>
+          ${th('league', 'League')}
+          ${th('rec', 'Rec')}${th('finish', 'Finish')}${th('pf', 'PF Rank')}${th('pts', 'Pts From 1.01')}${th('po', 'PO')}${th('net', 'Net')}
+          ${weekHeadHtml}
+          <th class="rb-po-col">WC</th><th>SF</th><th>Chip</th>
+        </tr></thead>
+        <tbody>${rows.map(r => rbRowHtml(r, rbMaxRegWeeks)).join('')}</tbody>
+        <tfoot>${rbTotalRowHtml(rows, rbMaxRegWeeks)}</tfoot>
+      </table></div>`;
+
+      body.querySelectorAll('.rb-sort-th').forEach(el => {
+        el.addEventListener('click', () => {
+          const key = el.dataset.rbSort;
+          rbSortDir = (rbSortKey === key && rbSortDir === 'desc') ? 'asc' : 'desc';
+          rbSortKey = key;
+          rbRenderTable();
+        });
+      });
+      body.querySelectorAll('tbody tr[data-league-name]').forEach(tr => {
+        tr.addEventListener('click', () => goToLeagueDetail(tr.dataset.leagueName));
+      });
+    }
+
+    async function renderRealRecordBook() {
+      const body = document.getElementById('rbBody');
+      if (!body) return;
+      const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+      if (!entries.length) {
+        body.innerHTML = '<div class="rb-empty">Connect your Sleeper account to see your Record Book.</div>';
+        return;
+      }
+      const sorted = [...entries].sort((a, b) => a.league.name.localeCompare(b.league.name));
+      const rows = (await Promise.all(sorted.map(e => rbComputeLeagueRow(e).catch(() => null)))).filter(Boolean);
+      if (!rows.length) {
+        body.innerHTML = '<div class="rb-empty">No league data available yet.</div>';
+        return;
+      }
+      rbRows = rows;
+      rbMaxRegWeeks = Math.max(0, ...rows.map(r => r.regularWeeks));
+      rbRenderTable();
+    }
+    window.renderRealRecordBook = renderRealRecordBook;
+
+    // Settings -> League Money: the one place NET (side-pot dues/winnings)
+    // gets entered, keyed per league per current season (same store the
+    // Record Book grid reads from). No Sleeper endpoint tracks real money,
+    // so this stays a manual field rather than a guessed number.
+    async function renderRecordBookMoneySettings() {
+      const listEl = document.getElementById('rbMoneyList');
+      if (!listEl) return;
+      const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+      if (!entries.length) {
+        listEl.innerHTML = '<div class="rb-empty">Connect your Sleeper account to enter league money.</div>';
+        return;
+      }
+      const sorted = [...entries].sort((a, b) => a.league.name.localeCompare(b.league.name));
+      listEl.innerHTML = sorted.map(e => {
+        const season = e.league.season;
+        const net = rbGetNet(e.league.league_id, season);
+        return `<div class="settings-row rb-money-row">
+          <div class="settings-label" style="font-weight:600">${sbFieldEsc(e.league.name)}</div>
+          <div class="rb-money-input-wrap">
+            <span>$</span>
+            <input type="number" step="1" class="rb-money-input" placeholder="0"
+              value="${net == null ? '' : net}"
+              data-league-id="${sbFieldEsc(e.league.league_id)}" data-season="${sbFieldEsc(String(season))}">
+          </div>
+        </div>`;
+      }).join('');
+      listEl.querySelectorAll('.rb-money-input').forEach(input => {
+        input.addEventListener('change', () => {
+          rbSetNet(input.dataset.leagueId, input.dataset.season, input.value.trim());
+          // Every other page reading this money (Record Book, Exposures,
+          // Rooting Guide) only re-renders on the next 60s sync otherwise --
+          // refresh them immediately so a just-entered number shows up
+          // without waiting.
+          if (window.renderRealRecordBook) window.renderRealRecordBook();
+          if (window.renderRealExposures) window.renderRealExposures();
+          if (window.recomputeRootingGuide) window.recomputeRootingGuide();
+        });
+      });
+    }
+    window.renderRecordBookMoneySettings = renderRecordBookMoneySettings;
 
     let ldrecChain = null;
     let ldrecCurrentOwnerId = null;
@@ -16004,6 +16417,7 @@
 
   function expCompare(mode, a, b) {
     if (mode === 'adp') return Number(a.dataset.adp) - Number(b.dataset.adp);
+    if (mode === 'dollar') return Number(b.dataset.dollar) - Number(a.dataset.dollar);
     const diff = Number(b.dataset.pct) - Number(a.dataset.pct);
     return diff !== 0 ? diff : Number(a.dataset.adp) - Number(b.dataset.adp);
   }
@@ -16043,6 +16457,8 @@
     sortExpItems(expGrid);
     sortExpItems(expListBody);
     applyExpFilter();
+    const exposuresViewEl = document.getElementById('exposuresView');
+    if (exposuresViewEl) exposuresViewEl.classList.toggle('exp-mode-dollar', expState.sortMode === 'dollar');
   }
 
   function isCoManagedIncluded() {
@@ -16186,11 +16602,23 @@
     leagueEntries.forEach(entry => {
       const players = (entry.roster.players || []).filter(id => id && id !== '0');
       players.forEach(id => {
-        if (!exposureMap[id]) exposureMap[id] = { count: 0, leagues: [] };
+        if (!exposureMap[id]) exposureMap[id] = { count: 0, leagues: [], leagueIds: [] };
         exposureMap[id].count++;
         exposureMap[id].leagues.push(entry.league.name);
+        exposureMap[id].leagueIds.push(entry.league.league_id);
       });
     });
+    // Real money exposure: the Net you entered in Settings for each league
+    // you're in, summed across every league where you actually roster this
+    // player -- how much of your entered money is riding on him.
+    const leagueIdToSeason = {};
+    leagueEntries.forEach(e => { leagueIdToSeason[e.league.league_id] = e.league.season; });
+    function dollarExposureFor(leagueIds) {
+      return (leagueIds || []).reduce((sum, lid) => {
+        const net = window.rbGetNet(lid, leagueIdToSeason[lid]);
+        return sum + (net || 0);
+      }, 0);
+    }
 
     const EXP_POS_COLOR = { QB: 'var(--red)', RB: 'var(--green)', WR: 'var(--blue)', TE: 'var(--gold)' };
     // The Rookie/2nd Year filter chips match against a draft-class year, but
@@ -16213,6 +16641,7 @@
         // dynasty value rank (PP_PLAYER_VALUES, via ppRankForPlayerId) so
         // the ADP column and sort aren't just permanently blank.
         adp: ppRankForPlayerId(id, dict),
+        dollars: dollarExposureFor(info.leagueIds),
       };
     };
 
@@ -16238,7 +16667,7 @@
       if (!id || rosteredIds.has(id)) return;
       const p = dict[id];
       if (!p) return;
-      rows.push(rowForPlayer(id, p, { count: 0, leagues: [] }));
+      rows.push(rowForPlayer(id, p, { count: 0, leagues: [], leagueIds: [] }));
     });
 
     // Keep the list in rank order by default (unranked players -- no
@@ -16247,10 +16676,13 @@
 
     const adpSortVal = (r) => r.adp != null ? r.adp : 99999;
 
+    const dollarText = (d) => d < 0 ? '-$' + Math.abs(d) : '$' + d;
+
     const posRankCounter = {};
     expGrid.innerHTML = rows.map((r, i) => {
       const posClass = r.pos.toLowerCase();
-      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}" data-team="${r.team}">
+      const dollarHtml = r.count ? `<span class="exp-dollar exp-${posClass}">${dollarText(r.dollars)}</span>` : '';
+      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-dollar="${r.dollars}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}" data-team="${r.team}">
           <div class="exp-rank">${i + 1}</div>
           <div class="exp-team-icon"><img src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" title="${r.team}" loading="lazy" onerror="this.remove()"></div>
           <div class="exp-avatar-wrap">
@@ -16258,7 +16690,7 @@
             <span class="exp-pos-badge exp-${posClass}">${r.pos}</span>
           </div>
           <div class="exp-name">${r.name}</div>
-          <div class="exp-pct-row"><span class="exp-pct exp-${posClass}">${r.pct}%</span><span class="exp-frac">${r.count}/${totalLeagues}</span></div>
+          <div class="exp-pct-row">${dollarHtml}<span class="exp-pct exp-${posClass}">${r.pct}%</span><span class="exp-frac">${r.count}/${totalLeagues}</span></div>
           <div class="exp-bar exp-${posClass}" style="width:${r.pct}%"></div>
         </div>`;
     }).join('');
@@ -16266,7 +16698,7 @@
     expListBody.innerHTML = rows.map((r) => {
       const posClass = r.pos.toLowerCase();
       posRankCounter[r.pos] = (posRankCounter[r.pos] || 0) + 1;
-      return `<div class="exp-list-row" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}">
+      return `<div class="exp-list-row" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-dollar="${r.dollars}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}">
           <div class="exp-list-player">
             <div class="exp-list-avatar"><img src="${sbHeadshotUrl(r.id)}" alt="" loading="lazy" onerror="this.remove()"></div>
             <span class="exp-list-name">${r.name}</span>
@@ -16274,7 +16706,7 @@
           </div>
           <div class="exp-list-team">${r.team}</div>
           <div class="exp-list-adp">${r.adp != null ? r.adp : '&mdash;'}</div>
-          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-dollar${r.count ? ' ' + window.ldrecSignClass(r.dollars) : ''}">${r.count ? dollarText(r.dollars) : '&mdash;'}</div>
           <div class="exp-list-leagues">${r.count}/${totalLeagues}</div>
           <div class="exp-list-exposure">
             <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-${posClass}" style="width:${r.pct}%"></div></div>
@@ -17786,7 +18218,7 @@
           if (expGrid) expGrid.hidden = showList;
           if (expList) expList.hidden = !showList;
         } else if (isSort) {
-          const mode = label === 'ADP' ? 'adp' : (label === 'EXP%' ? 'exp' : null);
+          const mode = label === 'ADP' ? 'adp' : (label === 'EXP%' ? 'exp' : (label === '$' ? 'dollar' : null));
           if (mode) {
             expState.sortDir = (wasActive && expState.sortMode === mode) ? expState.sortDir * -1 : 1;
             expState.sortMode = mode;
