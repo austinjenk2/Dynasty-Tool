@@ -13219,7 +13219,7 @@
     function rgLeagueDollarMap() {
       const map = {};
       Object.values(window.sleeperLeagueData || {}).forEach(e => {
-        if (e && e.league) map[e.league.name] = rbGetNet(e.league.league_id, e.league.season) || 0;
+        if (e && e.league) map[e.league.name] = (window.rbGetNet ? window.rbGetNet(e.league.league_id, e.league.season) : null) || 0;
       });
       return map;
     }
@@ -14815,6 +14815,7 @@
       if (n == null || isNaN(n)) return '';
       return n > 0 ? 'ldrec-pos' : (n < 0 ? 'ldrec-neg' : '');
     }
+    window.ldrecSignClass = ldrecSignClass;
 
     // FINISH/PF RANK are real (wins+PF and PF-alone rank among that season's
     // rosters) but, like the Draft Capital section's own "Last Season
@@ -14945,9 +14946,14 @@
       const v = store[`${leagueId}_${season}`];
       return v == null || v === '' ? null : Number(v);
     }
+    // Exposed globally: Exposures and the Rooting Guide live in separate
+    // top-level IIFEs from Record Book/Settings, but both need to read the
+    // same entered-money store.
+    window.rbGetNet = rbGetNet;
     function rbNetDisplay(net) {
       return net == null ? '&mdash;' : (net > 0 ? '+$' + net : (net < 0 ? '-$' + Math.abs(net) : '$0'));
     }
+    window.rbNetDisplay = rbNetDisplay;
 
     // Real playoff-round results (Wild Card / Semifinal / Championship) off
     // Sleeper's own winners_bracket -- round numbers count down from the
@@ -16574,7 +16580,7 @@
     leagueEntries.forEach(e => { leagueIdToSeason[e.league.league_id] = e.league.season; });
     function dollarExposureFor(leagueIds) {
       return (leagueIds || []).reduce((sum, lid) => {
-        const net = rbGetNet(lid, leagueIdToSeason[lid]);
+        const net = window.rbGetNet(lid, leagueIdToSeason[lid]);
         return sum + (net || 0);
       }, 0);
     }
@@ -16662,7 +16668,7 @@
           </div>
           <div class="exp-list-team">${r.team}</div>
           <div class="exp-list-adp">${r.adp != null ? r.adp : '&mdash;'}</div>
-          <div class="exp-list-dollar${r.count ? ' ' + ldrecSignClass(r.dollars) : ''}">${r.count ? rbNetDisplay(r.dollars) : '&mdash;'}</div>
+          <div class="exp-list-dollar${r.count ? ' ' + window.ldrecSignClass(r.dollars) : ''}">${r.count ? window.rbNetDisplay(r.dollars) : '&mdash;'}</div>
           <div class="exp-list-leagues">${r.count}/${totalLeagues}</div>
           <div class="exp-list-exposure">
             <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-${posClass}" style="width:${r.pct}%"></div></div>
