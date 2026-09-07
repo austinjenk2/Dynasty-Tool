@@ -2545,8 +2545,8 @@
     background: var(--surface);
     border: 2px solid var(--border-soft);
     border-radius: 5px;
-    padding: 6px;
-    height: 70px;
+    padding: 8px 6px 6px;
+    height: 78px;
     overflow: hidden;
     position: relative;
     display: flex;
@@ -2563,15 +2563,15 @@
   .dr-pick.dr-pos-wr { border-color: var(--blue); background: var(--blue); }
   .dr-pick.dr-pos-te { border-color: var(--gold); background: var(--gold); }
   .dr-pick.dr-team-dim { opacity: 0.3; }
-  .dr-pick-num { font-size: 10px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-top: 1px; }
-  .dr-pick-info { min-width: 0; padding-right: 36px; margin-top: 2px; }
+  .dr-pick-num { font-size: 10px; font-weight: 800; color: var(--ink); line-height: 1.3; margin-top: 3px; }
+  .dr-pick-info { min-width: 0; padding-right: 36px; margin-top: 3px; }
   .dr-pick-name {
-    font-size: 11px; font-weight: 800; color: var(--ink); line-height: 1.15;
+    font-size: 11px; font-weight: 800; color: var(--ink); line-height: 1.2;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
   .dr-pick.dr-pos-qb .dr-pick-num, .dr-pick.dr-pos-rb .dr-pick-num, .dr-pick.dr-pos-wr .dr-pick-num, .dr-pick.dr-pos-te .dr-pick-num { color: #fff; }
   .dr-pick.dr-pos-qb .dr-pick-name, .dr-pick.dr-pos-rb .dr-pick-name, .dr-pick.dr-pos-wr .dr-pick-name, .dr-pick.dr-pos-te .dr-pick-name { color: #fff; }
-  .dr-pick-meta { font-size: 7.5px; color: var(--faint); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dr-pick-meta { font-size: 8px; line-height: 1.4; color: var(--faint); font-weight: 700; white-space: nowrap; overflow: visible; text-overflow: clip; }
   .dr-pick.dr-pos-qb .dr-pick-meta, .dr-pick.dr-pos-rb .dr-pick-meta, .dr-pick.dr-pos-wr .dr-pick-meta, .dr-pick.dr-pos-te .dr-pick-meta { color: rgba(255,255,255,0.85); }
   .dr-pick-trade { font-size: 7px; font-weight: 700; color: var(--ink); font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dr-pick.dr-pos-qb .dr-pick-trade, .dr-pick.dr-pos-rb .dr-pick-trade, .dr-pick.dr-pos-wr .dr-pick-trade, .dr-pick.dr-pos-te .dr-pick-trade { color: #fff; }
@@ -2844,7 +2844,7 @@
       <div class="record-card">
         <div>
           <div class="record-label">PROJECTED WEEKLY RECORD</div>
-          <div class="record-sub">This week's projected wins/losses, all leagues</div>
+          <div class="record-sub">This week's projected wins/losses, all leagues (excluding teams marked as tanking)</div>
         </div>
         <div class="record-value"><span class="win">9</span><span class="sep">-</span><span class="loss">3</span></div>
       </div>
@@ -3602,8 +3602,8 @@
         <div class="ld-rankby-wrap">
           <label for="ldStandingsRankBy">Rank By</label>
           <select id="ldStandingsRankBy">
+            <option value="val" selected>Roster Value</option>
             <option value="con">Contending</option>
-            <option value="val">Roster Value</option>
             <option value="qb">QB Value</option>
             <option value="rb">RB Value</option>
             <option value="wr">WR Value</option>
@@ -13922,7 +13922,13 @@
         // league_id -- only fetched once per league ever, not every poll.
         window.__sleeperPrevSeasonCache = window.__sleeperPrevSeasonCache || {};
         const [rosters, allMatchups, allUsers, projections, allTransactions, trendingAdds, allTradedPicks, allPrevRosters] = await Promise.all([
-          Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => []))),
+          // null (not []) on failure -- a transient fetch error here used to
+          // silently collapse a league's whole roster list to empty, which
+          // made every one of that league's real players look like a free
+          // agent everywhere allRosters is used (Waivers, standings, dynasty
+          // value). null lets the assembly below fall back to the last
+          // known-good rosters for that league instead of wiping them out.
+          Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => null))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/matchups/${week}`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
           getWeekProjections(season, week),
@@ -13961,9 +13967,15 @@
         window.__sleeperProjections = projections;
         window.__sleeperTrendingAdds = trendingAdds;
 
+        const prevLeagueData = window.sleeperLeagueData || {};
         window.sleeperLeagueData = {};
         const rows = leagues.map((lg, i) => {
-          const leagueRosters = rosters[i] || [];
+          // rosters[i] is null only when this sync's fetch for this specific
+          // league failed -- reuse whatever rosters that league had last
+          // sync rather than treating the whole league as empty (which would
+          // make every real rostered player look like a free agent).
+          const prevEntry = prevLeagueData[lg.league_id];
+          const leagueRosters = rosters[i] || (prevEntry && prevEntry.allRosters) || [];
           const ownedRoster = leagueRosters.find(r => r.owner_id === saved.userId);
           const coOwnedRoster = !ownedRoster
             ? leagueRosters.find(r => (r.co_owners || []).includes(saved.userId))
@@ -14202,7 +14214,7 @@
         if (activeRoster && allRosters.length > 1) {
           ldStandingsList.dataset.leagueId = leagueId;
           const rankBySel = document.getElementById('ldStandingsRankBy');
-          const rankBy = rankBySel ? rankBySel.value : 'con';
+          const rankBy = rankBySel ? rankBySel.value : 'val';
           ldStandingsList.innerHTML = sbBuildLeagueStandingsHtml(entry, activeRoster.roster_id, rankBy);
           sbLoadStandingsLeagueCounts(ldStandingsList, entry.league.season);
           const activeRow = ldRosterExpandEl && ldStandingsList.querySelector(`.league-standings-row[data-roster-id="${activeRoster.roster_id}"]`);
@@ -15003,6 +15015,16 @@
         return out;
       };
 
+      // Tiebreaker for the Roster Value sort: this week's projected points
+      // for that roster's own matchup (same number the Scoreboard shows),
+      // not the whole-league contending rank -- ties in real dynasty value
+      // are rare but not impossible, and "who's projected to score more
+      // this week" is a more direct tiebreak than a different stat.
+      const weeklyPtsByRoster = {};
+      (entry.allMatchups || []).forEach(m => {
+        if (m && m.roster_id != null) weeklyPtsByRoster[m.roster_id] = sbMatchupProjectedTotal(m, null, entry.league);
+      });
+
       const rows = allRosters.map(r => {
         const user = (entry.users || []).find(u => u.user_id === r.owner_id);
         const name = user ? (user.display_name || user.username || 'Unknown') : 'Unknown';
@@ -15011,11 +15033,12 @@
         const conRank = conResult ? conResult.ranks[r.roster_id] : null;
         const valRank = ldRankOf(allRosters, valueOf, r.roster_id);
         const posRanks = posRanksOf(r);
+        const weeklyPts = weeklyPtsByRoster[r.roster_id] != null ? weeklyPtsByRoster[r.roster_id] : -Infinity;
         const type = sbStandingsRosterType(conRank, valRank, half);
-        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar: user ? user.avatar : null, name, wins, losses, conRank, valRank, posRanks, type };
+        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar: user ? user.avatar : null, name, wins, losses, conRank, valRank, posRanks, weeklyPts, type };
       });
       if (sortBy === 'val') {
-        rows.sort((a, b) => (a.valRank || 999) - (b.valRank || 999));
+        rows.sort((a, b) => (a.valRank || 999) - (b.valRank || 999) || (b.weeklyPts - a.weeklyPts));
       } else if (['qb', 'rb', 'wr', 'te'].includes(sortBy)) {
         const pos = sortBy.toUpperCase();
         rows.sort((a, b) => (a.posRanks[pos] || 999) - (b.posRanks[pos] || 999));
@@ -15085,10 +15108,16 @@
     const ldStandingsListEl = document.getElementById('ldStandingsList');
     if (ldStandingsListEl) {
       ldStandingsListEl.addEventListener('click', (e) => {
-        // The export/copy-image icon lives inside the active row now --
-        // let its own document-level handler deal with the click instead
-        // of also treating it as a row toggle.
-        if (e.target.closest('.ld-icon-photo')) return;
+        // The export/copy-image icon (and the Copy Image/Save PNG menu it
+        // opens, appended as a child of this same row) both live inside the
+        // active row -- let the document-level photo-export handler deal
+        // with those clicks instead of also treating them as a row toggle.
+        // Missing the menu case here used to strip the row's is-active
+        // class (closing the roster panel) the instant "Copy Image" was
+        // clicked, which is why exportLeagueDetailImage's own
+        // .league-standings-row.is-active lookup came up empty and the
+        // export silently did nothing.
+        if (e.target.closest('.ld-icon-photo') || e.target.closest('.trade-photo-menu')) return;
         const stRow = e.target.closest('.league-standings-row');
         if (!stRow) return;
         const leagueId = ldStandingsListEl.dataset.leagueId;
