@@ -13247,17 +13247,21 @@
         if (f.length) noteParts.push(f.length + ' <span class="rg-note-for">for</span>');
         if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
         noteEl.innerHTML = noteParts.join(' &middot; ');
-        const dollarTotal = Array.from(new Set([...f, ...a])).reduce((s, name) => s + Math.abs(dollarMap[name] || 0), 0);
-        const bucket = { el: r.el, delta, total: f.length + a.length, dollarTotal };
+        // Your buy-in in every league this player helps you in, minus your
+        // buy-in in every league he hurts you in -- same for/against split
+        // the win-count delta above uses, just weighted by real dollars
+        // instead of by 1 per league.
+        const dollarNet = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
+        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet };
         if (delta > 0) buckets.for.push(bucket);
         else if (delta < 0) buckets.against.push(bucket);
         else buckets.even.push(bucket);
       });
       if (rgSortCriterion === 'leagues') {
-        // Most real dollars at stake first, regardless of side -- how much
-        // entered league money a player touches, not how lopsided it is.
-        buckets.for.sort((a, b) => b.dollarTotal - a.dollarTotal);
-        buckets.against.sort((a, b) => b.dollarTotal - a.dollarTotal);
+        // Most real dollars in your favor first for Root For, most real
+        // dollars against you first for Root Against.
+        buckets.for.sort((a, b) => b.dollarNet - a.dollarNet);
+        buckets.against.sort((a, b) => a.dollarNet - b.dollarNet);
       } else {
         buckets.for.sort((a, b) => b.delta - a.delta);
         buckets.against.sort((a, b) => a.delta - b.delta);
@@ -13270,6 +13274,9 @@
       buckets.against.forEach(b => againstListEl.appendChild(b.el));
       buckets.even.forEach(b => evenListEl.appendChild(b.el));
     }
+    // Exposed so Settings' League Money panel can refresh this page's $
+    // sort immediately after an edit, instead of waiting on the next sync.
+    window.recomputeRootingGuide = recomputeRootingGuide;
 
     rgBtn.addEventListener('click', (e) => { e.stopPropagation(); rgPanel.hidden = !rgPanel.hidden; });
 
@@ -15236,6 +15243,13 @@
       listEl.querySelectorAll('.rb-money-input').forEach(input => {
         input.addEventListener('change', () => {
           rbSetNet(input.dataset.leagueId, input.dataset.season, input.value.trim());
+          // Every other page reading this money (Record Book, Exposures,
+          // Rooting Guide) only re-renders on the next 60s sync otherwise --
+          // refresh them immediately so a just-entered number shows up
+          // without waiting.
+          if (window.renderRealRecordBook) window.renderRealRecordBook();
+          if (window.renderRealExposures) window.renderRealExposures();
+          if (window.recomputeRootingGuide) window.recomputeRootingGuide();
         });
       });
     }
