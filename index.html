@@ -2132,6 +2132,10 @@
   .ldrec-table-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 8px; }
   .ldrec-table { width: 100%; border-collapse: collapse; }
   .ldrec-table th { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .ldrec-table th.dc-sort-th { cursor: pointer; user-select: none; }
+  .ldrec-table th.dc-sort-th:hover { color: var(--ink); }
+  .ldrec-table th.dc-sort-th.active { color: var(--ink); }
+  .ldrec-table th.dc-sort-th .dc-sort-arrow { font-size: 8.5px; }
   .ldrec-table td { font-size: 12.5px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); color: var(--ink); white-space: nowrap; }
   .ldrec-table tr:last-child td { border-bottom: none; }
   .ldrec-wl { font-weight: 800; }
@@ -3897,7 +3901,14 @@
     <div class="ldrec-table-wrap" style="margin-top:16px">
       <table class="ldrec-table">
         <thead>
-          <tr><th>League</th><th>1st</th><th>2nd</th><th>3rd</th><th>4th</th><th>Total</th></tr>
+          <tr id="dcModalHead">
+            <th>League</th>
+            <th class="dc-sort-th" data-dc-sort="0">1st <span class="dc-sort-arrow"></span></th>
+            <th class="dc-sort-th" data-dc-sort="1">2nd <span class="dc-sort-arrow"></span></th>
+            <th class="dc-sort-th" data-dc-sort="2">3rd <span class="dc-sort-arrow"></span></th>
+            <th class="dc-sort-th" data-dc-sort="3">4th <span class="dc-sort-arrow"></span></th>
+            <th class="dc-sort-th" data-dc-sort="total">Total <span class="dc-sort-arrow"></span></th>
+          </tr>
         </thead>
         <tbody id="dcModalBody"><tr><td colspan="6" class="ldrec-empty">Loading...</td></tr></tbody>
       </table>
@@ -16674,24 +16685,53 @@
 
   // Draft Capital drill-down: clicking a season header in the averaged
   // view above opens the real per-league pick counts it was averaged from.
+  // The table's rows can then be sorted by any round's count or the total,
+  // toggling most-first/least-first on repeated clicks of the same column.
+  let dcModalRows = [];
+  let dcSortKey = 'total';
+  let dcSortDir = 'desc';
+
+  function dcRowSortValue(row, key) {
+    return key === 'total' ? row.total : row.counts[key];
+  }
+
+  function renderDcModalBody() {
+    const body = document.getElementById('dcModalBody');
+    if (!body) return;
+    const sorted = [...dcModalRows].sort((a, b) => {
+      const va = dcRowSortValue(a, dcSortKey);
+      const vb = dcRowSortValue(b, dcSortKey);
+      const diff = dcSortDir === 'desc' ? vb - va : va - vb;
+      return diff !== 0 ? diff : a.league.localeCompare(b.league);
+    });
+    body.innerHTML = sorted.length
+      ? sorted.map(r => `<tr><td>${r.league}</td>${r.counts.map(c => `<td>${c}</td>`).join('')}<td class="ldrec-wl">${r.total}</td></tr>`).join('')
+      : '<tr><td colspan="6" class="ldrec-empty">No dynasty leagues.</td></tr>';
+
+    document.querySelectorAll('#dcModalHead .dc-sort-th').forEach(th => {
+      const isActive = th.dataset.dcSort === String(dcSortKey);
+      th.classList.toggle('active', isActive);
+      const arrow = th.querySelector('.dc-sort-arrow');
+      if (arrow) arrow.textContent = isActive ? (dcSortDir === 'desc' ? '▼' : '▲') : '';
+    });
+  }
+
   function openDraftCapitalModal(season) {
     const overlay = document.getElementById('dcOverlay');
     const modal = document.getElementById('dcModal');
-    const body = document.getElementById('dcModalBody');
     const titleEl = document.getElementById('dcTitleSeason');
-    if (!overlay || !modal || !body) return;
+    if (!overlay || !modal) return;
     if (titleEl) titleEl.textContent = season;
 
     const dynastyEntries = dcCurrentDynastyEntries();
-    const rows = dynastyEntries.map(e => {
+    dcModalRows = dynastyEntries.map(e => {
       const counts = [1, 2, 3, 4].map(round => dcPickCountForLeague(e, season, round));
       const total = counts.reduce((s, c) => s + c, 0);
       return { league: e.league.name, counts, total };
-    }).sort((a, b) => b.total - a.total || a.league.localeCompare(b.league));
-
-    body.innerHTML = rows.length
-      ? rows.map(r => `<tr><td>${r.league}</td>${r.counts.map(c => `<td>${c}</td>`).join('')}<td class="ldrec-wl">${r.total}</td></tr>`).join('')
-      : '<tr><td colspan="6" class="ldrec-empty">No dynasty leagues.</td></tr>';
+    });
+    dcSortKey = 'total';
+    dcSortDir = 'desc';
+    renderDcModalBody();
 
     overlay.hidden = false;
     modal.hidden = false;
@@ -16711,6 +16751,17 @@
       if (!seasonEl) return;
       const season = Number(seasonEl.dataset.dcSeason);
       if (season) openDraftCapitalModal(season);
+    });
+  }
+  const dcModalHeadEl = document.getElementById('dcModalHead');
+  if (dcModalHeadEl) {
+    dcModalHeadEl.addEventListener('click', (e) => {
+      const th = e.target.closest('.dc-sort-th');
+      if (!th) return;
+      const key = th.dataset.dcSort === 'total' ? 'total' : Number(th.dataset.dcSort);
+      dcSortDir = (dcSortKey === key && dcSortDir === 'desc') ? 'asc' : 'desc';
+      dcSortKey = key;
+      renderDcModalBody();
     });
   }
   const dcCloseEl = document.getElementById('dcClose');
