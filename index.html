@@ -7302,7 +7302,7 @@
   <div data-view="exposures">
     <div class="page-title">
       <h1>Exposures</h1>
-      <p>How concentrated you are on every rostered player, across all 18 leagues.</p>
+      <p>How concentrated you are on every ranked player, across all 18 leagues — including ones you don't roster.</p>
     </div>
 
     <div class="exp-toolbar">
@@ -15991,10 +15991,7 @@
     // 1 = second year) does, so derive the same year label from that
     // instead of leaving it blank forever.
     const currentSeason = Number((leagueEntries[0] && leagueEntries[0].league.season) || new Date().getFullYear());
-    const rows = Object.keys(exposureMap).map(id => {
-      const p = dict[id];
-      if (!p || !EXP_POS_COLOR[p.position]) return null;
-      const info = exposureMap[id];
+    const rowForPlayer = (id, p, info) => {
       const yearTag = p.years_exp === 0 ? String(currentSeason) : (p.years_exp === 1 ? String(currentSeason - 1) : '');
       return {
         id,
@@ -16002,7 +15999,7 @@
         team: p.team || 'FA',
         pos: p.position,
         count: info.count,
-        pct: Math.round((info.count / totalLeagues) * 100),
+        pct: totalLeagues ? Math.round((info.count / totalLeagues) * 100) : 0,
         leagues: info.leagues,
         yearTag,
         // No real ADP feed exists yet -- stand in with this app's own
@@ -16010,16 +16007,38 @@
         // the ADP column and sort aren't just permanently blank.
         adp: ppRankForPlayerId(id, dict),
       };
+    };
+
+    const rows = Object.keys(exposureMap).map(id => {
+      const p = dict[id];
+      if (!p || !EXP_POS_COLOR[p.position]) return null;
+      return rowForPlayer(id, p, exposureMap[id]);
     }).filter(Boolean);
 
-    rows.sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name));
+    // Every ranked player belongs in the list, not just the ones currently
+    // rostered somewhere -- add the rest at 0% exposure so the list (in
+    // rank order) matches the full rankings, not just your roster spots.
+    const rosteredIds = new Set(Object.keys(exposureMap));
+    const nameToId = {};
+    Object.keys(dict).forEach(id => {
+      const pl = dict[id];
+      if (!pl || !EXP_POS_COLOR[pl.position]) return;
+      const norm = ppNormalizeName(pl.full_name || [pl.first_name, pl.last_name].filter(Boolean).join(' '));
+      if (norm && !nameToId[norm]) nameToId[norm] = id;
+    });
+    Object.keys(PP_PLAYER_VALUES).forEach(normName => {
+      const id = nameToId[normName];
+      if (!id || rosteredIds.has(id)) return;
+      const p = dict[id];
+      if (!p) return;
+      rows.push(rowForPlayer(id, p, { count: 0, leagues: [] }));
+    });
 
-    // Players with no PP_PLAYER_VALUES entry have no rank to show -- sort
-    // them after every ranked player instead of to the front (Number(null)
-    // would otherwise read as 0 and win every ascending ADP sort).
-    const unrankedBase = Object.keys(PP_PLAYER_VALUES).length;
-    let unrankedSeen = 0;
-    const adpSortVal = (r) => r.adp != null ? r.adp : (unrankedBase + (++unrankedSeen));
+    // Keep the list in rank order by default (unranked players -- no
+    // PP_PLAYER_VALUES entry -- fall to the end, sorted by name).
+    rows.sort((a, b) => (a.adp ?? Infinity) - (b.adp ?? Infinity) || a.name.localeCompare(b.name));
+
+    const adpSortVal = (r) => r.adp != null ? r.adp : 99999;
 
     const posRankCounter = {};
     expGrid.innerHTML = rows.map((r, i) => {
@@ -16037,7 +16056,6 @@
         </div>`;
     }).join('');
 
-    unrankedSeen = 0;
     expListBody.innerHTML = rows.map((r) => {
       const posClass = r.pos.toLowerCase();
       posRankCounter[r.pos] = (posRankCounter[r.pos] || 0) + 1;
