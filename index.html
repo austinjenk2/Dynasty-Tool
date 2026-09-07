@@ -2161,6 +2161,19 @@
   .ldwv-banner-meta { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
   .ldwv-modal .ww-list { max-height: 420px; overflow-y: auto; }
 
+  /* League Detail -> Settings modal */
+  .lds-modal { width: 640px; }
+  .lds-section { margin-top: 20px; }
+  .lds-section:first-of-type { margin-top: 18px; }
+  .lds-section-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); text-transform: uppercase; margin-bottom: 8px; }
+  .lds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1px; background: var(--border-soft); border: 1px solid var(--border-soft); border-radius: 8px; overflow: hidden; }
+  .lds-cell { background: var(--surface); padding: 10px 12px; }
+  .lds-cell-label { font-size: 11px; color: var(--faint); margin-bottom: 3px; }
+  .lds-cell-value { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .lds-lineup { display: flex; flex-wrap: wrap; gap: 6px; }
+  .lds-slot { font-size: 12px; font-weight: 700; color: var(--ink); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; }
+  .lds-slot-count { color: var(--faint); font-weight: 600; margin-right: 2px; }
+
   /* Notebook panel */
   .notebook-overlay {
     position: fixed;
@@ -3690,7 +3703,7 @@
 
       <div class="ld-nav-row">
         <div class="ld-nav-btn" id="ldNavRecords"><span class="ld-nav-title">Records</span><span class="ld-nav-sub">Transactions &middot; League History</span></div>
-        <div class="ld-nav-btn"><span class="ld-nav-title">Settings</span><span class="ld-nav-sub">Scoring &middot; Roster &middot; League Rules</span></div>
+        <div class="ld-nav-btn" id="ldNavSettings"><span class="ld-nav-title">Settings</span><span class="ld-nav-sub">Scoring &middot; Roster &middot; League Rules</span></div>
         <div class="ld-nav-btn"><span class="ld-nav-title">Insights</span><span class="ld-nav-sub">WAR &middot; Value &middot; Trade Activity</span></div>
         <div class="ld-nav-btn" id="ldNavWaivers"><span class="ld-nav-title">Waivers</span><span class="ld-nav-sub">Browse Free Agents &middot; Trending Adds</span></div>
         <div class="ld-nav-btn" id="ldNavNotes"><span class="ld-nav-title">Notes</span><span class="ld-nav-sub">Your Notes &middot; Roster Type</span></div>
@@ -3890,6 +3903,15 @@
     </div>
 
     <div class="ww-list" id="ldwvList"><div class="exp-loading">Loading...</div></div>
+  </div>
+
+  <div class="ldrec-overlay" id="ldsOverlay" hidden></div>
+  <div class="ldrec-modal lds-modal" id="ldsModal" hidden>
+    <div class="ldrec-head">
+      <div class="ldrec-title">Settings <span class="ldrec-title-sub" id="ldsTitleLeague">League</span></div>
+      <div class="ldrec-close" id="ldsClose">&#10005;</div>
+    </div>
+    <div id="ldsBody"><div class="ldrec-empty">Loading...</div></div>
   </div>
 
   <div class="ldrec-overlay" id="dcOverlay" hidden></div>
@@ -15173,6 +15195,107 @@
         });
       });
     }
+
+    // League Detail -> Settings modal: a read-only summary of the league's
+    // real Sleeper settings (scoring_settings, roster_positions, and the
+    // settings object) -- nothing here is editable, since all of it lives
+    // in Sleeper and is only ever changed there.
+    const LDS_SLOT_LABEL = { FLEX: 'FLEX', SUPER_FLEX: 'SFLEX', WRRB_FLEX: 'FLEX', REC_FLEX: 'FLEX', BN: 'BN', IR: 'IR', TAXI: 'TAXI' };
+    const LDS_TYPE_LABEL = { 0: 'Redraft', 1: 'Keeper', 2: 'Dynasty' };
+    const LDS_WAIVER_LABEL = { 0: 'Rolling Waivers', 1: 'Reverse Standings', 2: 'FAAB' };
+
+    function ldsScoringSummary(league) {
+      const s = league.scoring_settings || {};
+      const rec = s.rec ? (s.rec === 1 ? 'PPR' : s.rec === 0.5 ? 'Half PPR' : `${s.rec} PPR`) : 'Standard';
+      const bonusTe = s.bonus_rec_te ? `+${s.bonus_rec_te} TE Premium` : null;
+      return [rec, bonusTe].filter(Boolean).join(', ');
+    }
+
+    function ldsRenderLineup(rosterPositions) {
+      const counts = {};
+      const order = [];
+      rosterPositions.forEach(slot => {
+        const label = LDS_SLOT_LABEL[slot] || slot;
+        if (!counts[label]) { counts[label] = 0; order.push(label); }
+        counts[label] += 1;
+      });
+      return order.map(label =>
+        `<span class="lds-slot"><span class="lds-slot-count">${counts[label]}</span>${label}</span>`
+      ).join('');
+    }
+
+    function ldsRenderBody(league) {
+      const s = league.settings || {};
+      const rosterPositions = league.roster_positions || [];
+      const startSlots = rosterPositions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+      const benchSlots = rosterPositions.filter(p => p === 'BN');
+      const isSF = rosterPositions.includes('SUPER_FLEX') || rosterPositions.filter(p => p === 'QB').length > 1;
+      const typeLabel = LDS_TYPE_LABEL[s.type] || 'Redraft';
+      const waiverLabel = LDS_WAIVER_LABEL[s.waiver_type] != null ? LDS_WAIVER_LABEL[s.waiver_type] : 'Waivers';
+      const tradeDeadline = s.trade_deadline ? `Week ${s.trade_deadline}` : 'None';
+
+      return `
+        <div class="lds-section">
+          <div class="lds-section-label">Format</div>
+          <div class="lds-grid">
+            <div class="lds-cell"><div class="lds-cell-label">Teams</div><div class="lds-cell-value">${league.total_rosters || '&mdash;'}</div></div>
+            <div class="lds-cell"><div class="lds-cell-label">Type</div><div class="lds-cell-value">${typeLabel}</div></div>
+            <div class="lds-cell"><div class="lds-cell-label">QB Format</div><div class="lds-cell-value">${isSF ? 'Superflex' : '1QB'}</div></div>
+            <div class="lds-cell"><div class="lds-cell-label">Scoring</div><div class="lds-cell-value">${ldsScoringSummary(league)}</div></div>
+          </div>
+        </div>
+
+        <div class="lds-section">
+          <div class="lds-section-label">Roster</div>
+          <div class="lds-lineup">${ldsRenderLineup(startSlots)}</div>
+          <div class="lds-grid" style="margin-top:10px">
+            <div class="lds-cell"><div class="lds-cell-label">Bench Spots</div><div class="lds-cell-value">${benchSlots.length}</div></div>
+            <div class="lds-cell"><div class="lds-cell-label">IR Spots</div><div class="lds-cell-value">${s.reserve_slots != null ? s.reserve_slots : '&mdash;'}</div></div>
+            ${s.taxi_slots ? `<div class="lds-cell"><div class="lds-cell-label">Taxi Spots</div><div class="lds-cell-value">${s.taxi_slots}</div></div>` : ''}
+          </div>
+        </div>
+
+        <div class="lds-section">
+          <div class="lds-section-label">League Rules</div>
+          <div class="lds-grid">
+            <div class="lds-cell"><div class="lds-cell-label">Waivers</div><div class="lds-cell-value">${waiverLabel}${s.waiver_type === 2 && s.waiver_budget ? ` ($${s.waiver_budget})` : ''}</div></div>
+            <div class="lds-cell"><div class="lds-cell-label">Trade Deadline</div><div class="lds-cell-value">${tradeDeadline}</div></div>
+            <div class="lds-cell"><div class="lds-cell-label">Playoff Teams</div><div class="lds-cell-value">${s.playoff_teams || '&mdash;'}</div></div>
+            <div class="lds-cell"><div class="lds-cell-label">Playoffs Start</div><div class="lds-cell-value">${s.playoff_week_start ? `Week ${s.playoff_week_start}` : '&mdash;'}</div></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function ldsOpen() {
+      const standingsListEl = document.getElementById('ldStandingsList');
+      const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
+      const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+      if (!entry) return;
+
+      const overlay = document.getElementById('ldsOverlay');
+      const modal = document.getElementById('ldsModal');
+      const titleLeagueEl = document.getElementById('ldsTitleLeague');
+      const bodyEl = document.getElementById('ldsBody');
+      if (titleLeagueEl) titleLeagueEl.textContent = entry.league.name;
+      if (bodyEl) bodyEl.innerHTML = ldsRenderBody(entry.league);
+      if (overlay) overlay.hidden = false;
+      if (modal) modal.hidden = false;
+    }
+
+    function ldsClose() {
+      const overlay = document.getElementById('ldsOverlay');
+      const modal = document.getElementById('ldsModal');
+      if (overlay) overlay.hidden = true;
+      if (modal) modal.hidden = true;
+    }
+
+    const ldNavSettingsEl = document.getElementById('ldNavSettings');
+    if (ldNavSettingsEl) ldNavSettingsEl.addEventListener('click', ldsOpen);
+    const ldsCloseEl = document.getElementById('ldsClose');
+    if (ldsCloseEl) ldsCloseEl.addEventListener('click', ldsClose);
+    const ldsOverlayEl = document.getElementById('ldsOverlay');
+    if (ldsOverlayEl) ldsOverlayEl.addEventListener('click', ldsClose);
 
     document.querySelectorAll('#ldrecModal .ldrec-tab').forEach(tab => {
       tab.addEventListener('click', () => {
