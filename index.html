@@ -617,27 +617,33 @@
   .sb-view-toggle-btn:last-child { border-right: none; }
   .sb-view-toggle-btn.is-active { background: var(--ink); color: var(--bg); }
 
-  /* GameCast -- every real NFL game this week; pick one to see a full
-     fantasy box score (live/proj/exposure/portfolio) for both teams plus
-     the live play-by-play. */
-  .gc-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; margin: 4px 0 18px; }
-  .gc-game-card {
-    flex: 0 0 auto; min-width: 168px; cursor: pointer;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 14px;
+  /* GameCast -- day tabs + a grid of every real NFL game on the selected
+     day (ESPN-style); pick one to see its live play-by-play feed (default)
+     or either team's offense box score (live/proj/rooting exposure/
+     matchup impact). */
+  .gc-day-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 4px 0 14px; }
+  .gc-day-tab { flex: 0 0 auto; cursor: pointer; padding: 6px 14px; border-radius: 20px; font-size: 12.5px; font-weight: 700; color: var(--muted); background: var(--surface); border: 1px solid var(--border); }
+  .gc-day-tab.active { color: #fff; background: var(--navy); border-color: var(--navy); }
+
+  .gc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .gc-box {
+    cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px;
   }
-  .gc-game-card.active { border-color: var(--navy); box-shadow: 0 0 0 1px var(--navy) inset; }
-  .gc-game-card-status { font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; color: var(--faint); margin-bottom: 6px; }
-  .gc-game-card-status.gc-live { color: var(--red); }
-  .gc-game-card-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; }
-  .gc-game-card-team { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--ink); }
-  .gc-game-card-team img { width: 18px; height: 18px; object-fit: contain; }
-  .gc-game-card-score { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; color: var(--ink); }
+  .gc-box.active { border-color: var(--navy); box-shadow: 0 0 0 1px var(--navy) inset; }
+  .gc-box-status { font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; color: var(--faint); margin-bottom: 8px; text-align: center; }
+  .gc-box-status.gc-live { color: var(--red); }
+  .gc-box-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; }
+  .gc-box-team { display: flex; align-items: center; gap: 8px; }
+  .gc-box-team img { width: 22px; height: 22px; object-fit: contain; }
+  .gc-box-team-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .gc-box-team-rec { font-size: 10.5px; color: var(--faint); }
+  .gc-box-score { font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 700; color: var(--ink); }
 
   .gc-score-header {
     display: flex; align-items: center; justify-content: space-between;
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 18px 22px; margin-bottom: 20px;
+    padding: 18px 22px; margin-bottom: 14px;
   }
   .gc-score-side { flex: 1; display: flex; align-items: center; gap: 10px; }
   .gc-score-side-right { flex-direction: row-reverse; text-align: right; }
@@ -647,9 +653,13 @@
   .gc-score-side-right .gc-score-value { color: var(--ink); }
   .gc-score-mid { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: var(--red); flex-shrink: 0; padding: 0 18px; text-align: center; }
 
-  .gc-boxscore-team-label { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--ink); margin: 22px 0 8px; display: flex; align-items: center; gap: 8px; }
-  .gc-boxscore-team-label img { width: 22px; height: 22px; object-fit: contain; }
-  .gc-table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+  .gc-detail-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .gc-detail-tab { padding: 8px 2px 10px; font-size: 13px; font-weight: 700; color: var(--faint); border-bottom: 2.5px solid transparent; cursor: pointer; }
+  .gc-detail-tab:hover { color: var(--ink); }
+  .gc-detail-tab.active { color: var(--ink); border-bottom-color: var(--navy); }
+
+  .gc-table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; }
+  .gc-table-label { font-size: 12.5px; font-weight: 800; color: var(--faint); padding: 10px 10px 0; }
   .gc-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   .gc-table th, .gc-table td { padding: 8px 10px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--border-soft); }
   .gc-table th { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); border-bottom: 1px solid var(--border); }
@@ -657,13 +667,21 @@
   .gc-player-cell { display: flex; align-items: center; gap: 6px; }
   .gc-player-name { font-weight: 700; color: var(--ink); }
   .gc-player-pos { font-size: 9.5px; font-weight: 800; color: var(--faint); }
-  .gc-stat-line { color: var(--muted); font-size: 11.5px; }
-  .gc-exposure-frac { font-weight: 700; color: var(--ink); }
+  .gc-root-badge { font-size: 10.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: var(--border-soft); }
+  .gc-impact-btn { font-size: 10.5px; font-weight: 700; color: var(--navy); background: none; border: 1px solid var(--border); border-radius: 5px; padding: 3px 8px; cursor: pointer; }
+  .gc-impact-btn:hover { background: var(--border-soft); }
+  .gc-impact-row td { background: var(--bg); text-align: left; }
+  .gc-impact-list { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; padding: 4px 0; }
+  .gc-impact-list span.ldrec-pos, .gc-impact-list span.ldrec-neg { font-weight: 800; }
 
-  .gc-feed-head { font-size: 12.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 22px 0 8px; }
-  .gc-feed { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 4px 14px; }
-  .gc-play { gap: 10px; }
-  .gc-side-tag { flex-shrink: 0; font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; padding: 3px 6px; border-radius: 4px; color: var(--navy); background: #e6edf7; }
+  .gc-feed-head { font-size: 12.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 0 0 8px; }
+  .gc-feed { display: flex; flex-direction: column; gap: 10px; }
+  .gc-feed-play { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+  .gc-play-meta { font-size: 10.5px; font-weight: 700; color: var(--faint); margin-bottom: 4px; }
+  .gc-play-headline { font-family: 'Source Serif 4', serif; font-size: 14.5px; font-weight: 700; color: var(--ink); }
+  .gc-play-player { font-size: 12.5px; font-weight: 700; color: var(--navy); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+  .gc-play-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .gc-play-pts { float: right; font-weight: 800; }
 
   /* Field View -- a grid of every league's live win-probability field at
      once, reusing the same .field-panel markup/animation as the
@@ -4558,7 +4576,8 @@
       <h1>GameCast</h1>
       <p>Every real NFL game this week &mdash; pick one for a full fantasy box score: live vs. projected points, real stats, your exposure, and how each player is swinging your portfolio.</p>
     </div>
-    <div class="gc-strip" id="gcStrip"><div class="ld-loading">Loading today's games&hellip;</div></div>
+    <div class="gc-day-tabs" id="gcDayTabs"></div>
+    <div class="gc-grid" id="gcGrid"><div class="ld-loading">Loading today's games&hellip;</div></div>
     <div id="gcGameBody"><div class="ld-loading">Pick a game above to see its fantasy box score.</div></div>
   </div>
 
@@ -17548,6 +17567,14 @@
             text: play.text,
             wallclock: play.wallclock || null,
             seq: Number(play.sequenceNumber || play.id || 0),
+            // Real per-play game state (score/quarter/clock/down), when ESPN
+            // includes it -- GameCast's play-by-play meta line uses this;
+            // sbGetLast5Plays/gcGetAllPlays ignore it, purely additive.
+            period: play.period ? play.period.number : null,
+            clock: play.clock ? play.clock.displayValue : null,
+            downDistance: play.start ? play.start.downDistanceText : null,
+            awayScore: play.awayScore != null ? play.awayScore : null,
+            homeScore: play.homeScore != null ? play.homeScore : null,
           });
         });
       });
@@ -17691,11 +17718,13 @@
     }
   }
 
-  // ---- GameCast -- every real NFL game this week (ESPN scoreboard), pick
-  // one to see a full fantasy box score for both teams: real stats, live
-  // points, live projections, your exposure to each player this week, and
-  // how many of your leagues that player is currently winning/losing you --
-  // plus the game's live play-by-play, fantasy-scored. ----
+  // ---- GameCast -- every real NFL game this week (ESPN scoreboard),
+  // grouped into day tabs like ESPN's own scoreboard. Pick a game to see
+  // its live play-by-play feed (cumulative stats + fantasy points per
+  // play) or either team's offense-only box score: live points, live
+  // projection, points-over-expectation, your weekly rooting-guide
+  // exposure to that player, and how his current performance is swinging
+  // each of your fantasy matchups he's rostered/started in this week. ----
 
   // League-agnostic games have no scoring_settings to score against, so
   // this view uses a standard full-PPR line -- same fallback convention
@@ -17709,6 +17738,10 @@
   const GC_FANTASY_POS = ['QB', 'RB', 'WR', 'TE'];
 
   window.__gcSelectedEventId = window.__gcSelectedEventId || null;
+  window.__gcSelectedDay = window.__gcSelectedDay || null;
+  window.__gcDetailTab = window.__gcDetailTab || 'feed';
+  window.__gcLoadedEventId = window.__gcLoadedEventId || null;
+  window.__gcCurrentGame = window.__gcCurrentGame || null;
   let gcRefreshTimer = null;
 
   window.__gcGamesCache = window.__gcGamesCache || {};
@@ -17730,7 +17763,8 @@
             const c = (comp.competitors || []).find(x => x.homeAway === side);
             if (!c || !c.team) return null;
             const abbr = ESPN_TEAM_ABBR_FIX[c.team.abbreviation] || c.team.abbreviation;
-            return { abbr, score: c.score != null ? Number(c.score) : null };
+            const totalRec = (c.records || []).find(r => r.type === 'total');
+            return { abbr, score: c.score != null ? Number(c.score) : null, record: totalRec ? totalRec.summary : null };
           };
           return {
             eventId: ev.id,
@@ -17749,134 +17783,244 @@
   }
 
   function gcGameStatusHtml(g) {
-    if (g.state === 'in') return `<div class="gc-game-card-status gc-live">${sbFieldEsc(g.detail || 'LIVE')}</div>`;
-    if (g.state === 'post') return `<div class="gc-game-card-status">FINAL</div>`;
+    if (g.state === 'in') return `<div class="gc-box-status gc-live">${sbFieldEsc(g.detail || 'LIVE')}</div>`;
+    if (g.state === 'post') return `<div class="gc-box-status">FINAL</div>`;
     const when = g.when ? new Date(g.when) : null;
-    const label = when ? when.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : 'Scheduled';
-    return `<div class="gc-game-card-status">${sbFieldEsc(label)}</div>`;
+    const label = when ? when.toLocaleString(undefined, { hour: 'numeric', minute: '2-digit' }) : 'Scheduled';
+    return `<div class="gc-box-status">${sbFieldEsc(label)}</div>`;
   }
 
-  function gcRenderStrip(games) {
-    const strip = document.getElementById('gcStrip');
-    if (!strip) return;
-    if (!games.length) { strip.innerHTML = '<div class="ld-loading">No NFL games found for this week.</div>'; return; }
-    strip.innerHTML = games.map(g => `
-      <div class="gc-game-card${g.eventId === window.__gcSelectedEventId ? ' active' : ''}" data-gc-event="${sbFieldEsc(g.eventId)}">
+  // Local calendar day (not raw UTC date) so a Monday-night kickoff at
+  // 8pm ET still groups under "Mon" instead of spilling into "Tue".
+  function gcDayKey(whenStr) {
+    const d = whenStr ? new Date(whenStr) : null;
+    if (!d || isNaN(d.getTime())) return 'unknown';
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  }
+  function gcDayLabel(whenStr) {
+    const d = new Date(whenStr);
+    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function gcGroupGamesByDay(games) {
+    const map = {};
+    games.forEach(g => { (map[gcDayKey(g.when)] = map[gcDayKey(g.when)] || []).push(g); });
+    return map;
+  }
+
+  function gcRenderDayTabs(dayKeys, gamesByDay) {
+    const el = document.getElementById('gcDayTabs');
+    if (!el) return;
+    el.innerHTML = dayKeys.map(key => {
+      const sample = gamesByDay[key][0];
+      return `<div class="gc-day-tab${key === window.__gcSelectedDay ? ' active' : ''}" data-gc-day="${sbFieldEsc(key)}">${sbFieldEsc(gcDayLabel(sample.when))}</div>`;
+    }).join('');
+  }
+
+  function gcRenderGrid(games) {
+    const el = document.getElementById('gcGrid');
+    if (!el) return;
+    if (!games.length) { el.innerHTML = '<div class="ld-loading">No NFL games this day.</div>'; return; }
+    el.innerHTML = games.map(g => `
+      <div class="gc-box${g.eventId === window.__gcSelectedEventId ? ' active' : ''}" data-gc-event="${sbFieldEsc(g.eventId)}">
         ${gcGameStatusHtml(g)}
-        <div class="gc-game-card-row">
-          <span class="gc-game-card-team"><img src="${sbTeamLogoUrl(g.away.abbr)}" alt="" onerror="this.remove()">${g.away.abbr}</span>
-          <span class="gc-game-card-score">${g.away.score != null ? g.away.score : ''}</span>
+        <div class="gc-box-row">
+          <div class="gc-box-team"><img src="${sbTeamLogoUrl(g.away.abbr)}" alt="" onerror="this.remove()"><div><div class="gc-box-team-name">${g.away.abbr}</div><div class="gc-box-team-rec">${sbFieldEsc(g.away.record || '')}</div></div></div>
+          <div class="gc-box-score">${g.away.score != null ? g.away.score : ''}</div>
         </div>
-        <div class="gc-game-card-row">
-          <span class="gc-game-card-team"><img src="${sbTeamLogoUrl(g.home.abbr)}" alt="" onerror="this.remove()">${g.home.abbr}</span>
-          <span class="gc-game-card-score">${g.home.score != null ? g.home.score : ''}</span>
+        <div class="gc-box-row">
+          <div class="gc-box-team"><img src="${sbTeamLogoUrl(g.home.abbr)}" alt="" onerror="this.remove()"><div><div class="gc-box-team-name">${g.home.abbr}</div><div class="gc-box-team-rec">${sbFieldEsc(g.home.record || '')}</div></div></div>
+          <div class="gc-box-score">${g.home.score != null ? g.home.score : ''}</div>
         </div>
       </div>
     `).join('');
   }
 
   async function renderRealGameCast() {
-    const strip = document.getElementById('gcStrip');
-    if (!strip) return;
+    const grid = document.getElementById('gcGrid');
+    if (!grid) return;
     if (!window.getNflState) return;
     const { week, season } = await window.getNflState();
     const games = await gcGetGamesList(season, week);
-    if (!window.__gcSelectedEventId || !games.some(g => g.eventId === window.__gcSelectedEventId)) {
-      const live = games.find(g => g.state === 'in');
-      window.__gcSelectedEventId = (live || games[0] || {}).eventId || null;
+    const gamesByDay = gcGroupGamesByDay(games);
+    const dayKeys = Object.keys(gamesByDay).sort((a, b) => new Date(gamesByDay[a][0].when) - new Date(gamesByDay[b][0].when));
+    if (!window.__gcSelectedDay || !dayKeys.includes(window.__gcSelectedDay)) {
+      const liveDay = dayKeys.find(k => gamesByDay[k].some(g => g.state === 'in'));
+      const todayKey = gcDayKey(new Date().toISOString());
+      window.__gcSelectedDay = liveDay || (dayKeys.includes(todayKey) ? todayKey : dayKeys[0]) || null;
     }
-    gcRenderStrip(games);
+    gcRenderDayTabs(dayKeys, gamesByDay);
+    const dayGames = window.__gcSelectedDay ? (gamesByDay[window.__gcSelectedDay] || []) : [];
+    if (!window.__gcSelectedEventId || !dayGames.some(g => g.eventId === window.__gcSelectedEventId)) {
+      const live = dayGames.find(g => g.state === 'in');
+      window.__gcSelectedEventId = (live || dayGames[0] || {}).eventId || null;
+    }
+    gcRenderGrid(dayGames);
     const gamecastView = document.querySelector('[data-view="gamecast"]');
+    const body = document.getElementById('gcGameBody');
     if (gamecastView && gamecastView.classList.contains('is-active')) {
-      const selected = games.find(g => g.eventId === window.__gcSelectedEventId);
+      const selected = dayGames.find(g => g.eventId === window.__gcSelectedEventId);
       if (selected) loadGcGameBody(selected, week, season);
+      else if (body) body.innerHTML = '<div class="ld-loading">Pick a game above to see its fantasy box score.</div>';
     }
   }
   window.renderRealGameCast = renderRealGameCast;
 
-  // How much of your portfolio is riding on one player this week: the real
-  // % of your connected leagues starting him right now, and -- among just
-  // those leagues -- how many live matchups he's currently on the winning
-  // vs. losing side of. Not a marginal what-if (benching him and re-scoring
-  // isn't something this app fabricates); just the honest state of the
-  // matchups he's actually in.
-  function gcPortfolioForPlayer(playerId) {
-    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.myMatchup);
-    let startedIn = 0, wins = 0, losses = 0, ties = 0;
-    entries.forEach(e => {
-      const starters = (e.myMatchup.starters || []).filter(Boolean);
-      if (!starters.includes(playerId)) return;
-      startedIn++;
-      const myPts = e.myMatchup.points || 0;
-      const oppPts = e.oppMatchup ? (e.oppMatchup.points || 0) : 0;
-      if (myPts > oppPts) wins++; else if (myPts < oppPts) losses++; else ties++;
+  // Your real weekly rooting-guide exposure to one player: the net count
+  // of your connected leagues where he's started on your side (helps you)
+  // minus leagues where he's started against you (hurts you) -- the same
+  // for/against split the Rooting Guide page itself computes.
+  function gcRootingDelta(playerId) {
+    const forLeagues = [], againstLeagues = [];
+    Object.values(window.sleeperLeagueData || {}).forEach(e => {
+      if (!e || !e.myMatchup || !e.oppMatchup || !e.league) return;
+      const mine = (e.myMatchup.starters || []).filter(Boolean);
+      const opp = (e.oppMatchup.starters || []).filter(Boolean);
+      if (mine.includes(playerId)) forLeagues.push(e.league.name);
+      else if (opp.includes(playerId)) againstLeagues.push(e.league.name);
     });
-    return { startedIn, total: entries.length, wins, losses, ties };
+    return { delta: forLeagues.length - againstLeagues.length, forLeagues, againstLeagues };
   }
 
-  function gcStatLine(pos, s) {
-    s = s || {};
-    const parts = [];
-    if (pos === 'QB') {
-      if (s.pass_att) parts.push(`${s.pass_cmp || 0}/${s.pass_att} ${Math.round(s.pass_yd || 0)} yd`);
-      if (s.pass_td) parts.push(`${s.pass_td} TD`);
-      if (s.pass_int) parts.push(`${s.pass_int} INT`);
-      if (s.rush_att) parts.push(`${s.rush_att} car, ${Math.round(s.rush_yd || 0)} yd`);
-    } else {
-      if (s.rush_att) parts.push(`${s.rush_att} car, ${Math.round(s.rush_yd || 0)} yd${s.rush_td ? ', ' + s.rush_td + ' TD' : ''}`);
-      if (s.rec != null) parts.push(`${s.rec}/${s.rec_tgt || s.rec} rec, ${Math.round(s.rec_yd || 0)} yd${s.rec_td ? ', ' + s.rec_td + ' TD' : ''}`);
-    }
-    return parts.length ? parts.join(' &middot; ') : '&mdash;';
+  function gcRootBadgeHtml(playerId) {
+    const { delta, forLeagues, againstLeagues } = gcRootingDelta(playerId);
+    if (!forLeagues.length && !againstLeagues.length) return '';
+    const cls = delta > 0 ? 'ldrec-pos' : (delta < 0 ? 'ldrec-neg' : '');
+    const text = delta > 0 ? '+' + delta : String(delta);
+    const title = [...forLeagues.map(l => '+ ' + l), ...againstLeagues.map(l => '- ' + l)].join('\n');
+    return `<span class="gc-root-badge ${cls}" title="${sbFieldEsc(title)}">${text}</span>`;
   }
 
-  function gcPlayerRowHtml(id, p, statsMap, projMap) {
+  // How much this player's real performance so far is swinging each of
+  // your live fantasy matchups he's started in -- his own league (rather
+  // than the league-agnostic full-PPR line) actually scores him, using
+  // Sleeper's real players_points for that matchup, then the app's own
+  // trusted win-probability model (sbWinProbability) compares "matchup as
+  // it stands" against "matchup with his points zeroed out."
+  function gcMatchupImpact(playerId) {
+    const out = [];
+    Object.values(window.sleeperLeagueData || {}).forEach(e => {
+      if (!e || !e.myMatchup || !e.oppMatchup || !e.league) return;
+      const mine = (e.myMatchup.starters || []).filter(Boolean);
+      const opp = (e.oppMatchup.starters || []).filter(Boolean);
+      const onMySide = mine.includes(playerId);
+      const onOppSide = !onMySide && opp.includes(playerId);
+      if (!onMySide && !onOppSide) return;
+      const myPts = e.myMatchup.points || 0;
+      const oppPts = e.oppMatchup.points || 0;
+      const playerPts = ((onMySide ? e.myMatchup.players_points : e.oppMatchup.players_points) || {})[playerId] || 0;
+      const nowProb = sbWinProbability(myPts, oppPts);
+      const withoutProb = onMySide
+        ? sbWinProbability(myPts - playerPts, oppPts)
+        : sbWinProbability(myPts, oppPts - playerPts);
+      out.push({ league: e.league.name, impact: nowProb - withoutProb, playerPts, onMySide });
+    });
+    return out;
+  }
+
+  function gcImpactBtnHtml(playerId) {
+    const impacts = gcMatchupImpact(playerId);
+    if (!impacts.length) return '&mdash;';
+    return `<button type="button" class="gc-impact-btn" data-gc-impact="${sbFieldEsc(playerId)}">Impact (${impacts.length})</button>`;
+  }
+
+  function gcImpactRowHtml(playerId) {
+    const impacts = gcMatchupImpact(playerId);
+    if (!impacts.length) return 'Not started in any of your leagues this week.';
+    return `<div class="gc-impact-list">${impacts.map(i => {
+      const cls = i.impact > 0 ? 'ldrec-pos' : (i.impact < 0 ? 'ldrec-neg' : '');
+      const sign = i.impact > 0 ? '+' : '';
+      return `<span class="${cls}">${sbFieldEsc(i.league)}: ${sign}${i.impact}%</span>`;
+    }).join('')}</div>`;
+  }
+
+  function gcPlayerMetaHtml(id, p) {
+    const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+    return `<td class="gc-player-cell">
+      <img class="exp-list-avatar" src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()" style="width:26px;height:26px;border-radius:50%;object-fit:cover">
+      <span><span class="gc-player-name">${sbFieldEsc(name)}</span> <span class="gc-player-pos">${p.position}</span> ${gcRootBadgeHtml(id)}</span>
+    </td>`;
+  }
+
+  function gcTailCellsHtml(id, statsMap, projMap) {
     const stats = statsMap[id];
     const livePts = stats ? (stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std) : null;
     const projPts = projMap[id];
     const expDiff = (livePts != null && projPts != null) ? livePts - projPts : null;
     const expCls = expDiff == null ? '' : (expDiff > 0 ? 'ldrec-pos' : (expDiff < 0 ? 'ldrec-neg' : ''));
-    const port = gcPortfolioForPlayer(id);
-    const portCls = port.startedIn === 0 ? '' : (port.wins > port.losses ? 'ldrec-pos' : (port.losses > port.wins ? 'ldrec-neg' : ''));
-    const portText = port.startedIn === 0 ? '&mdash;' : `${port.wins}-${port.losses}${port.ties ? '-' + port.ties : ''}`;
-    const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-    return `<tr data-player-id="${sbFieldEsc(id)}">
-      <td class="gc-player-cell">
-        <img class="exp-list-avatar" src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()" style="width:26px;height:26px;border-radius:50%;object-fit:cover">
-        <span><span class="gc-player-name">${sbFieldEsc(name)}</span> <span class="gc-player-pos">${p.position}</span></span>
-      </td>
+    return `
       <td>${livePts != null ? livePts.toFixed(1) : '&mdash;'}</td>
       <td>${projPts != null ? projPts.toFixed(1) : '&mdash;'}</td>
       <td class="${expCls}">${expDiff != null ? (expDiff > 0 ? '+' : '') + expDiff.toFixed(1) : '&mdash;'}</td>
-      <td class="gc-stat-line">${gcStatLine(p.position, stats)}</td>
-      <td>${port.total ? `<span class="gc-exposure-frac">${port.startedIn}/${port.total}</span> <span class="exp-frac">(${Math.round((port.startedIn / port.total) * 100)}%)</span>` : '&mdash;'}</td>
-      <td class="${portCls}">${portText}</td>
-    </tr>`;
+      <td>${gcImpactBtnHtml(id)}</td>
+    `;
   }
 
-  function gcTeamTableHtml(abbr, dict, statsMap, projMap) {
-    const players = Object.keys(dict)
-      .filter(id => dict[id] && dict[id].team === abbr && GC_FANTASY_POS.includes(dict[id].position))
-      .map(id => ({ id, p: dict[id], livePts: statsMap[id] ? (statsMap[id].pts_ppr ?? statsMap[id].pts_half_ppr ?? statsMap[id].pts_std ?? -1) : -1 }))
-      .sort((a, b) => b.livePts - a.livePts);
-    if (!players.length) return '<div class="ld-loading">No fantasy-relevant players found for this team.</div>';
-    return `<div class="gc-table-wrap"><table class="gc-table">
-      <thead><tr>
-        <th class="gc-th-player">Player</th><th>Live</th><th>Proj</th><th>+/- Exp</th><th>Stats</th><th>Your Exposure</th><th>Portfolio W-L</th>
-      </tr></thead>
-      <tbody>${players.map(r => gcPlayerRowHtml(r.id, r.p, statsMap, projMap)).join('')}</tbody>
-    </table></div>`;
+  function gcStatGroupTableHtml(title, columns, rows) {
+    if (!rows.length) return '';
+    return `<div class="gc-table-wrap">
+      <div class="gc-table-label">${title}</div>
+      <table class="gc-table">
+        <thead><tr><th class="gc-th-player">Player</th>${columns.map(c => `<th>${c}</th>`).join('')}<th>Live</th><th>Proj</th><th>+/- Exp</th><th>Impact</th></tr></thead>
+        <tbody>${rows.join('')}</tbody>
+      </table>
+    </div>`;
+  }
+
+  // Offense-only box score, split into real stat-line categories (a dual
+  // threat QB/RB can show up in more than one) -- no team-totals header,
+  // no defense, and no QB rating: just completions/attempts/yards/TDs,
+  // carries/yards/TDs, catches/yards/TDs, the way ESPN's own box score
+  // groups them.
+  function gcTeamTablesHtml(abbr, dict, statsMap, projMap) {
+    const ids = Object.keys(dict).filter(id => dict[id] && dict[id].team === abbr && GC_FANTASY_POS.includes(dict[id].position));
+    const passing = [], rushing = [], receiving = [];
+    ids.forEach(id => {
+      const p = dict[id];
+      const s = statsMap[id] || {};
+      if (s.pass_att) passing.push({ id, p, sort: s.pass_yd || 0 });
+      if (s.rush_att) rushing.push({ id, p, sort: s.rush_yd || 0 });
+      if (s.rec) receiving.push({ id, p, sort: s.rec_yd || 0 });
+    });
+    const byBest = (a, b) => b.sort - a.sort;
+    passing.sort(byBest); rushing.sort(byBest); receiving.sort(byBest);
+
+    const row = (id, p, cells) => `<tr data-player-id="${sbFieldEsc(id)}">${gcPlayerMetaHtml(id, p)}${cells}${gcTailCellsHtml(id, statsMap, projMap)}</tr>`;
+    const passRows = passing.map(({ id, p }) => {
+      const s = statsMap[id] || {};
+      return row(id, p, `<td>${s.pass_cmp || 0}/${s.pass_att || 0}</td><td>${Math.round(s.pass_yd || 0)}</td><td>${s.pass_td || 0}</td>`);
+    });
+    const rushRows = rushing.map(({ id, p }) => {
+      const s = statsMap[id] || {};
+      return row(id, p, `<td>${s.rush_att || 0}</td><td>${Math.round(s.rush_yd || 0)}</td><td>${s.rush_td || 0}</td>`);
+    });
+    const recRows = receiving.map(({ id, p }) => {
+      const s = statsMap[id] || {};
+      return row(id, p, `<td>${s.rec || 0}</td><td>${Math.round(s.rec_yd || 0)}</td><td>${s.rec_td || 0}</td>`);
+    });
+
+    const tables = [
+      gcStatGroupTableHtml('Passing', ['CMP/ATT', 'YDS', 'TD'], passRows),
+      gcStatGroupTableHtml('Rushing', ['ATT', 'YDS', 'TD'], rushRows),
+      gcStatGroupTableHtml('Receiving', ['REC', 'YDS', 'TD'], recRows),
+    ].filter(Boolean).join('');
+    return tables || '<div class="ld-loading">No offensive stats yet for this team.</div>';
   }
 
   async function loadGcGameBody(game, week, season) {
     const body = document.getElementById('gcGameBody');
     if (!body || !game) return;
-    body.innerHTML = '<div class="ld-loading">Loading box score&hellip;</div>';
+    if (window.__gcLoadedEventId !== game.eventId) {
+      window.__gcDetailTab = 'feed';
+      window.__gcLoadedEventId = game.eventId;
+    }
+    body.innerHTML = '<div class="ld-loading">Loading&hellip;</div>';
 
     const [dict, statsMap, projMap] = await Promise.all([
       window.sleeperGetPlayerDict ? window.sleeperGetPlayerDict() : {},
       window.sleeperGetWeekStats ? window.sleeperGetWeekStats(season, week) : {},
       window.sleeperGetWeekProjections ? window.sleeperGetWeekProjections(season, week) : {},
     ]);
+    window.__gcCurrentGame = { game, dict, statsMap, projMap };
 
     body.innerHTML = `
       <div class="gc-score-header">
@@ -17890,28 +18034,45 @@
           <div><div class="gc-score-name">${game.home.abbr}</div><div class="gc-score-value">${game.home.score != null ? game.home.score : '&mdash;'}</div></div>
         </div>
       </div>
-      <div class="gc-boxscore-team-label"><img src="${sbTeamLogoUrl(game.away.abbr)}" alt="" onerror="this.remove()">${game.away.abbr}</div>
-      ${gcTeamTableHtml(game.away.abbr, dict, statsMap, projMap)}
-      <div class="gc-boxscore-team-label"><img src="${sbTeamLogoUrl(game.home.abbr)}" alt="" onerror="this.remove()">${game.home.abbr}</div>
-      ${gcTeamTableHtml(game.home.abbr, dict, statsMap, projMap)}
-      <div class="gc-feed-head">Live Play-by-Play</div>
-      <div class="gc-feed" id="gcFeedList"><div class="ld-loading">Loading live plays&hellip;</div></div>
+      <div class="gc-detail-tabs">
+        <div class="gc-detail-tab${window.__gcDetailTab === 'feed' ? ' active' : ''}" data-gc-tab="feed">Feed</div>
+        <div class="gc-detail-tab${window.__gcDetailTab === 'away' ? ' active' : ''}" data-gc-tab="away">${sbFieldEsc(game.away.abbr)}</div>
+        <div class="gc-detail-tab${window.__gcDetailTab === 'home' ? ' active' : ''}" data-gc-tab="home">${sbFieldEsc(game.home.abbr)}</div>
+      </div>
+      <div id="gcDetailBody"></div>
     `;
+    await gcRenderDetailTab();
+  }
 
-    try {
-      const plays = await gcGetGamePlays(game, dict);
-      const feedList = document.getElementById('gcFeedList');
-      if (feedList) feedList.innerHTML = gcFeedHtml(plays);
-    } catch (err) {
-      const feedList = document.getElementById('gcFeedList');
-      if (feedList) feedList.innerHTML = '<div class="sb-last-plays-empty">Could not load live plays</div>';
+  async function gcRenderDetailTab() {
+    const el = document.getElementById('gcDetailBody');
+    const cur = window.__gcCurrentGame;
+    if (!el || !cur) return;
+    const { game, dict, statsMap, projMap } = cur;
+    if (window.__gcDetailTab === 'away') {
+      el.innerHTML = gcTeamTablesHtml(game.away.abbr, dict, statsMap, projMap);
+    } else if (window.__gcDetailTab === 'home') {
+      el.innerHTML = gcTeamTablesHtml(game.home.abbr, dict, statsMap, projMap);
+    } else {
+      el.innerHTML = '<div class="gc-feed" id="gcFeedList"><div class="ld-loading">Loading play-by-play&hellip;</div></div>';
+      try {
+        const feed = await gcBuildFeed(game, dict);
+        const feedList = document.getElementById('gcFeedList');
+        if (feedList) feedList.innerHTML = gcFeedHtml(feed);
+      } catch (err) {
+        const feedList = document.getElementById('gcFeedList');
+        if (feedList) feedList.innerHTML = '<div class="sb-last-plays-empty">Could not load live plays</div>';
+      }
     }
   }
 
-  // Full play-by-play for one real NFL game, fantasy-scored with the
-  // standard full-PPR line (see GC_DEFAULT_SCORING) since a real game has
-  // no single league's scoring settings to use.
-  async function gcGetGamePlays(game, dict) {
+  // Real ESPN play-by-play (chronological), fantasy-scored with the
+  // standard full-PPR line since a real game has no single league's
+  // scoring settings to use, tracking each fantasy-relevant player's
+  // cumulative stat line and points as the game progresses -- ESPN's
+  // "Feed" tab shows the same thing: a headline for the play itself, then
+  // the player's updated total for the game so far.
+  async function gcBuildFeed(game, dict) {
     const relevant = Object.keys(dict).filter(id => {
       const p = dict[id];
       return p && (p.team === game.away.abbr || p.team === game.home.abbr) && GC_FANTASY_POS.includes(p.position);
@@ -17926,46 +18087,96 @@
     });
 
     const plays = await getEspnPlayByPlay(game.eventId);
-    const found = [];
+    const cum = {};
+    const feed = [];
     plays.forEach((play, idx) => {
       sbParsePlayEvents(play.text).forEach(ev => {
         const playerId = shortNameMap[ev.name];
         if (!playerId) return;
-        const points = sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING);
-        if (points == null) return;
         const p = dict[playerId];
+        const acc = cum[playerId] = cum[playerId] || {};
+        Object.keys(ev.stats).forEach(k => { acc[k] = (acc[k] || 0) + ev.stats[k]; });
+        const cumPoints = sbCustomScoreFor(acc, GC_DEFAULT_SCORING) || 0;
+        const playPoints = sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING) || 0;
         const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : ev.name;
-        found.push({
-          name, desc: ev.desc, points, team: p ? p.team : null,
-          order: play.wallclock ? new Date(play.wallclock).getTime() : idx,
+        feed.push({
+          playerId, name, team: p ? p.team : null,
+          headline: `${name} ${ev.desc}`, playPoints,
+          summary: gcCumSummary(acc, cumPoints),
+          period: play.period, clock: play.clock, downDistance: play.downDistance,
+          awayScore: play.awayScore, homeScore: play.homeScore,
+          order: play.wallclock ? new Date(play.wallclock).getTime() : (play.seq || idx),
         });
       });
     });
-    return found.sort((a, b) => b.order - a.order);
+    return feed.sort((a, b) => b.order - a.order);
+  }
+
+  // "5 catches for 87 yards and 13.7 PPR points" -- a player's real
+  // cumulative game-so-far stat line plus fantasy points, phrased like
+  // ESPN's own Feed tab.
+  function gcCumSummary(s, points) {
+    s = s || {};
+    const parts = [];
+    if (s.pass_att) parts.push(`${s.pass_cmp || 0}-${s.pass_att} passing for ${Math.round(s.pass_yd || 0)} yards${s.pass_td ? ' and ' + s.pass_td + ' TD' + (s.pass_td > 1 ? 's' : '') : ''}`);
+    if (s.rush_att) parts.push(`${s.rush_att} carries for ${Math.round(s.rush_yd || 0)} yards${s.rush_td ? ' and ' + s.rush_td + ' TD' + (s.rush_td > 1 ? 's' : '') : ''}`);
+    if (s.rec) parts.push(`${s.rec} catches for ${Math.round(s.rec_yd || 0)} yards${s.rec_td ? ' and ' + s.rec_td + ' TD' + (s.rec_td > 1 ? 's' : '') : ''}`);
+    const pointsText = `${points.toFixed(1)} PPR points`;
+    return parts.length ? `${parts.join(', ')} and ${pointsText}` : pointsText;
   }
 
   function gcFeedHtml(plays) {
-    if (!plays.length) return '<div class="sb-last-plays-empty">No scoring plays yet</div>';
+    if (!plays.length) return '<div class="sb-last-plays-empty">No fantasy-relevant plays yet</div>';
     return plays.map(p => {
-      const cls = p.points > 0 ? 'sb-last-play-pos' : (p.points < 0 ? 'sb-last-play-neg' : '');
-      const sign = p.points > 0 ? '+' : '';
-      return '<div class="sb-last-play gc-play">' +
-        `<span class="gc-side-tag">${sbFieldEsc(p.team || '')}</span>` +
-        `<span class="sb-last-play-name">${sbFieldEsc(p.name)}</span>` +
-        `<span class="sb-last-play-desc">${sbFieldEsc(p.desc)}</span>` +
-        `<span class="sb-last-play-pts ${cls}">${sign}${p.points.toFixed(1)}</span>` +
-      '</div>';
+      const scoreText = (p.awayScore != null && p.homeScore != null) ? `${p.awayScore}-${p.homeScore}` : '';
+      const metaParts = [p.period ? `Q${p.period}` : '', p.clock, p.downDistance, scoreText].filter(Boolean);
+      const ptsCls = p.playPoints > 0 ? 'ldrec-pos' : '';
+      return `<div class="gc-feed-play">
+        <div class="gc-play-meta">${sbFieldEsc(metaParts.join(' &middot; '))}</div>
+        <div class="gc-play-headline">${sbFieldEsc(p.headline)} <span class="gc-play-pts ${ptsCls}">${p.playPoints > 0 ? '+' : ''}${p.playPoints.toFixed(1)}</span></div>
+        <div class="gc-play-player">${sbFieldEsc(p.team || '')} ${gcRootBadgeHtml(p.playerId)}</div>
+        <div class="gc-play-sub">${sbFieldEsc(p.summary)}</div>
+      </div>`;
     }).join('');
   }
 
-  (function initGcStripClick() {
-    const strip = document.getElementById('gcStrip');
-    if (!strip) return;
-    strip.addEventListener('click', (e) => {
-      const card = e.target.closest('.gc-game-card');
-      if (!card || !card.dataset.gcEvent) return;
-      window.__gcSelectedEventId = card.dataset.gcEvent;
+  (function initGcClicks() {
+    const dayTabs = document.getElementById('gcDayTabs');
+    const grid = document.getElementById('gcGrid');
+    const body = document.getElementById('gcGameBody');
+    if (dayTabs) dayTabs.addEventListener('click', (e) => {
+      const tab = e.target.closest('.gc-day-tab');
+      if (!tab || !tab.dataset.gcDay) return;
+      window.__gcSelectedDay = tab.dataset.gcDay;
+      window.__gcSelectedEventId = null;
       renderRealGameCast();
+    });
+    if (grid) grid.addEventListener('click', (e) => {
+      const box = e.target.closest('.gc-box');
+      if (!box || !box.dataset.gcEvent) return;
+      window.__gcSelectedEventId = box.dataset.gcEvent;
+      renderRealGameCast();
+    });
+    if (body) body.addEventListener('click', (e) => {
+      const tab = e.target.closest('.gc-detail-tab');
+      if (tab && tab.dataset.gcTab) {
+        window.__gcDetailTab = tab.dataset.gcTab;
+        document.querySelectorAll('.gc-detail-tab').forEach(t => t.classList.toggle('active', t === tab));
+        gcRenderDetailTab();
+        return;
+      }
+      const impactBtn = e.target.closest('.gc-impact-btn');
+      if (impactBtn && impactBtn.dataset.gcImpact) {
+        const tr = impactBtn.closest('tr');
+        if (!tr) return;
+        const nextRow = tr.nextElementSibling;
+        if (nextRow && nextRow.classList.contains('gc-impact-row')) { nextRow.remove(); return; }
+        document.querySelectorAll('.gc-impact-row').forEach(r => r.remove());
+        const newRow = document.createElement('tr');
+        newRow.className = 'gc-impact-row';
+        newRow.innerHTML = `<td colspan="${tr.children.length}">${gcImpactRowHtml(impactBtn.dataset.gcImpact)}</td>`;
+        tr.after(newRow);
+      }
     });
   })();
 
