@@ -16005,15 +16005,26 @@
         pct: Math.round((info.count / totalLeagues) * 100),
         leagues: info.leagues,
         yearTag,
+        // No real ADP feed exists yet -- stand in with this app's own
+        // dynasty value rank (PP_PLAYER_VALUES, via ppRankForPlayerId) so
+        // the ADP column and sort aren't just permanently blank.
+        adp: ppRankForPlayerId(id, dict),
       };
     }).filter(Boolean);
 
     rows.sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name));
 
+    // Players with no PP_PLAYER_VALUES entry have no rank to show -- sort
+    // them after every ranked player instead of to the front (Number(null)
+    // would otherwise read as 0 and win every ascending ADP sort).
+    const unrankedBase = Object.keys(PP_PLAYER_VALUES).length;
+    let unrankedSeen = 0;
+    const adpSortVal = (r) => r.adp != null ? r.adp : (unrankedBase + (++unrankedSeen));
+
     const posRankCounter = {};
     expGrid.innerHTML = rows.map((r, i) => {
       const posClass = r.pos.toLowerCase();
-      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}" data-team="${r.team}">
+      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}" data-team="${r.team}">
           <div class="exp-rank">${i + 1}</div>
           <div class="exp-team-icon"><img src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" title="${r.team}" loading="lazy" onerror="this.remove()"></div>
           <div class="exp-avatar-wrap">
@@ -16026,17 +16037,18 @@
         </div>`;
     }).join('');
 
-    expListBody.innerHTML = rows.map((r, i) => {
+    unrankedSeen = 0;
+    expListBody.innerHTML = rows.map((r) => {
       const posClass = r.pos.toLowerCase();
       posRankCounter[r.pos] = (posRankCounter[r.pos] || 0) + 1;
-      return `<div class="exp-list-row" data-pct="${r.pct}" data-adp="${i + 1}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}">
+      return `<div class="exp-list-row" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}">
           <div class="exp-list-player">
             <div class="exp-list-avatar"><img src="${sbHeadshotUrl(r.id)}" alt="" loading="lazy" onerror="this.remove()"></div>
             <span class="exp-list-name">${r.name}</span>
             <span class="exp-list-posrank exp-${posClass}">${r.pos}${posRankCounter[r.pos]}</span>
           </div>
           <div class="exp-list-team">${r.team}</div>
-          <div class="exp-list-adp">&mdash;</div>
+          <div class="exp-list-adp">${r.adp != null ? r.adp : '&mdash;'}</div>
           <div class="exp-list-dollar">&mdash;</div>
           <div class="exp-list-leagues">${r.count}/${totalLeagues}</div>
           <div class="exp-list-exposure">
@@ -16050,13 +16062,6 @@
       item.addEventListener('click', () => openPlayerModal(item));
     });
 
-    expState.sortMode = 'exp';
-    document.querySelectorAll('.exp-group').forEach(group => {
-      const chips = Array.from(group.querySelectorAll('.exp-chip'));
-      if (chips.some(c => c.textContent.trim() === 'ADP')) {
-        chips.forEach(c => c.classList.toggle('active', c.textContent.trim() === 'EXP%'));
-      }
-    });
     refreshExpBoard();
   }
   window.renderRealExposures = renderRealExposures;
@@ -17965,6 +17970,11 @@
     const projPtsText = proj ? proj.pts.toFixed(1) : '&mdash;';
     const projPpgText = proj ? proj.ppg.toFixed(1) : '&mdash;';
     const projRankText = proj && proj.rank ? `${proj.pos}${proj.rank}` : '';
+    // No real ADP feed exists yet -- stand in with this app's own dynasty
+    // value rank (PP_PLAYER_VALUES, via ppRankForPlayerId), same source the
+    // DYNASTY VALUE section below uses for RANK.
+    const startupAdpRank = ppRankForPlayerId(playerId, dict);
+    const startupAdpText = startupAdpRank ? `#${startupAdpRank}` : '&mdash;';
     html += `
       <div class="pm-section-label">${projSeason} PROJECTION</div>
       <div class="ld-stats">
@@ -17972,7 +17982,7 @@
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell"><div class="ld-stat-label">PROJ PPG</div><div class="ld-stat-value">${projPpgText}</div></div>
         <div class="ld-stat-divider"></div>
-        <div class="ld-stat-cell"><div class="ld-stat-label">STARTUP ADP</div><div class="ld-stat-value">&mdash;</div></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">STARTUP ADP</div><div class="ld-stat-value">${startupAdpText}</div></div>
       </div>
       ${proj ? '' : '<div class="pm-note">Sleeper hasn\'t published a projection for this player yet.</div>'}
     `;
