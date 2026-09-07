@@ -12077,7 +12077,7 @@
     const store = origProjStore();
     const wk = `${season}_${week}`;
     store[wk] = store[wk] || { players: {}, teams: {} };
-    const bucket = store[wk][kind];
+    const bucket = store[wk][kind] || (store[wk][kind] = {});
     if (bucket[key] == null) {
       bucket[key] = liveValue;
       saveOrigProjStore(store);
