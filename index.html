@@ -2415,6 +2415,14 @@
     color: var(--green); font-weight: 700; font-size: 13px; cursor: pointer;
   }
   .pm-league-row.pm-league-hidden { display: none; }
+  .pm-section-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; color: var(--faint); margin: 20px 0 10px; }
+  .pm-section-label:first-child { margin-top: 0; }
+  .pm-note { font-size: 11.5px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
+  .pm-contract-type {
+    display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 0.4px;
+    padding: 4px 10px; border-radius: 5px; background: var(--surface);
+    border: 1px solid var(--border); color: var(--ink); margin-bottom: 14px;
+  }
 
   /* Record row */
   .record-row {
@@ -10205,10 +10213,10 @@
   </div>
 
   <div class="pm-body">
-    <div class="pm-panel" data-pm-panel="overview" hidden><div class="placeholder"><h3>Overview</h3><p>This section is being built.</p></div></div>
+    <div class="pm-panel" data-pm-panel="overview" hidden><div id="pmOverviewList"></div></div>
     <div class="pm-panel" data-pm-panel="ranks" hidden><div class="placeholder"><h3>Paul's Ranks</h3><p>This section is being built.</p></div></div>
     <div class="pm-panel" data-pm-panel="gamelog" hidden><div id="pmGameLogList"></div></div>
-    <div class="pm-panel" data-pm-panel="contract" hidden><div class="placeholder"><h3>Contract</h3><p>This section is being built.</p></div></div>
+    <div class="pm-panel" data-pm-panel="contract" hidden><div id="pmContractList"></div></div>
     <div class="pm-panel" data-pm-panel="exposure">
       <div class="pm-exp-head">EXPOSURE &middot; <b id="pmExpFrac"></b> Leagues &middot; <b id="pmExpPct"></b></div>
       <div class="pm-league-list" id="pmLeagueList"></div>
@@ -15570,6 +15578,70 @@
     const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
     return ppValueForName(name);
   }
+  // Where a player's value ranks among every name Pure Potential covers --
+  // used by the player modal's Overview tab. Ties are fine to break by
+  // insertion order here since values are precise decimals.
+  function ppRankForPlayerId(playerId, dict) {
+    const p = dict && dict[playerId];
+    if (!p) return null;
+    const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+    const norm = ppNormalizeName(name);
+    const stripped = norm.replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
+    const key = PP_PLAYER_VALUES[norm] != null ? norm : (PP_PLAYER_VALUES[stripped] != null ? stripped : null);
+    if (!key) return null;
+    const sortedKeys = Object.keys(PP_PLAYER_VALUES).sort((a, b) => PP_PLAYER_VALUES[b] - PP_PLAYER_VALUES[a]);
+    return sortedKeys.indexOf(key) + 1;
+  }
+
+  // Real-world NFL contract terms for well-known players -- hand-curated
+  // (like PP_PLAYER_VALUES above, this app's other non-Sleeper data source)
+  // and not live-updated, so treat the dollar figures as a rough guide, not
+  // gospel -- a restructure or new extension can go stale here. Everyone
+  // not in this list falls back to a real, Sleeper-sourced rookie/veteran
+  // contract clock derived from years_exp instead (see renderPmContract).
+  const PLAYER_CONTRACTS = {
+    "josh allen": { type: "Veteran Extension", through: 2028, apy: 43.0, total: 258, guaranteed: 150 },
+    "jalen hurts": { type: "Veteran Extension", through: 2028, apy: 51.0, total: 255, guaranteed: 179.3 },
+    "joe burrow": { type: "Veteran Extension", through: 2029, apy: 55.0, total: 275, guaranteed: 219 },
+    "justin herbert": { type: "Veteran Extension", through: 2029, apy: 52.5, total: 262.5, guaranteed: 218.7 },
+    "lamar jackson": { type: "Veteran Extension", through: 2027, apy: 52.0, total: 260, guaranteed: 185 },
+    "patrick mahomes": { type: "Veteran Extension", through: 2031, apy: 45.0, total: 450, guaranteed: 141.5 },
+    "jordan love": { type: "Veteran Extension", through: 2027, apy: 55.0, total: 220, guaranteed: 155 },
+    "dak prescott": { type: "Veteran Extension", through: 2027, apy: 60.0, total: 240, guaranteed: 231 },
+    "trevor lawrence": { type: "Veteran Extension", through: 2029, apy: 55.0, total: 275, guaranteed: 200 },
+    "kyler murray": { type: "Veteran Extension", through: 2028, apy: 46.1, total: 230.5, guaranteed: 103.3 },
+    "tua tagovailoa": { type: "Veteran Extension", through: 2028, apy: 53.1, total: 212.4, guaranteed: 167.1 },
+    "jared goff": { type: "Veteran Extension", through: 2028, apy: 53.0, total: 212, guaranteed: 170 },
+    "baker mayfield": { type: "Veteran Deal", through: 2026, apy: 33.3, total: 100, guaranteed: 66.6 },
+    "sam darnold": { type: "Veteran Deal", through: 2027, apy: 33.5, total: 100.5, guaranteed: 55 },
+    "geno smith": { type: "Veteran Deal", through: 2026, apy: 25.0, total: 50, guaranteed: 30 },
+    "brock purdy": { type: "Veteran Extension", through: 2029, apy: 53.0, total: 265, guaranteed: 100 },
+    "christian mccaffrey": { type: "Veteran Extension", through: 2026, apy: 19.0, total: 38, guaranteed: 24 },
+    "saquon barkley": { type: "Veteran Deal", through: 2026, apy: 12.6, total: 37.75, guaranteed: 26 },
+    "derrick henry": { type: "Veteran Deal", through: 2026, apy: 8.0, total: 16, guaranteed: 9 },
+    "josh jacobs": { type: "Veteran Deal", through: 2027, apy: 12.0, total: 48, guaranteed: 29.5 },
+    "jonathan taylor": { type: "Veteran Extension", through: 2026, apy: 20.7, total: 41.75, guaranteed: 26 },
+    "travis etienne": { type: "Veteran Extension", through: 2026, apy: 13.3, total: 40, guaranteed: 20 },
+    "alvin kamara": { type: "Veteran Extension", through: 2026, apy: 13.5, total: 27, guaranteed: 15 },
+    "kyren williams": { type: "Veteran Extension", through: 2027, apy: 10.5, total: 33, guaranteed: 20 },
+    "james cook": { type: "Veteran Extension", through: 2028, apy: 12.5, total: 50, guaranteed: 30 },
+    "jamarr chase": { type: "Veteran Extension", through: 2029, apy: 40.25, total: 161, guaranteed: 100 },
+    "justin jefferson": { type: "Veteran Extension", through: 2028, apy: 35.0, total: 140, guaranteed: 110 },
+    "ceedee lamb": { type: "Veteran Extension", through: 2028, apy: 34.0, total: 136, guaranteed: 100 },
+    "amonra st brown": { type: "Veteran Extension", through: 2028, apy: 30.0, total: 120, guaranteed: 77 },
+    "nico collins": { type: "Veteran Extension", through: 2027, apy: 24.0, total: 72.75, guaranteed: 39 },
+    "aj brown": { type: "Veteran Extension", through: 2026, apy: 25.0, total: 100, guaranteed: 57 },
+    "tyreek hill": { type: "Veteran Extension", through: 2026, apy: 30.0, total: 120, guaranteed: 72.2 },
+    "davante adams": { type: "Veteran Deal", through: 2026, apy: 22.0, total: 44, guaranteed: 22 },
+    "mike evans": { type: "Veteran Extension", through: 2026, apy: 26.0, total: 52, guaranteed: 33 },
+    "stefon diggs": { type: "Veteran Deal", through: 2027, apy: 22.0, total: 69.5, guaranteed: 27.5 },
+    "terry mclaurin": { type: "Veteran Extension", through: 2028, apy: 30.0, total: 96, guaranteed: 65 },
+    "dk metcalf": { type: "Veteran Extension", through: 2029, apy: 33.0, total: 132, guaranteed: 65 },
+    "george kittle": { type: "Veteran Extension", through: 2028, apy: 19.0, total: 76.4, guaranteed: 40.6 },
+    "travis kelce": { type: "Veteran Deal", through: 2026, apy: 17.0, total: 34, guaranteed: 17 },
+    "mark andrews": { type: "Veteran Deal", through: 2026, apy: 14.0, total: 56, guaranteed: 37 },
+    "trey mcbride": { type: "Veteran Extension", through: 2029, apy: 19.0, total: 76, guaranteed: 45 },
+  };
   // Total real dynasty value of every rostered player (bench included --
   // dynasty value is about assets on hand, not just this week's lineup).
   // Players Pure Potential doesn't rank (deep bench/practice-squad names)
@@ -16959,23 +17031,17 @@
     return (matchups || []).find(m => m.roster_id === rosterId) || null;
   }
 
-  let pmGameLogToken = 0;
-  async function renderPmGameLog(playerId) {
-    const pmGameLogList = document.getElementById('pmGameLogList');
-    if (!pmGameLogList) return;
-    if (!playerId || !window.sleeperFetch) {
-      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>Connect a Sleeper account to see weekly scoring.</p></div>';
-      return;
-    }
+  // Shared by the Game Log and Overview tabs -- both want the same
+  // week-by-week scoring for whichever of the user's rosters carries this
+  // player. Recomputed fresh on every call (not memoized) since the live
+  // week's matchup can update between polls; the underlying per-week
+  // matchup fetch (pmFetchWeekMatchup) is already cached, so re-running
+  // this is cheap.
+  async function pmFetchGameLogRows(playerId) {
+    if (!playerId || !window.sleeperFetch) return null;
     const entry = Object.values(window.sleeperLeagueData || {})
       .find(e => e.roster && (e.roster.players || []).includes(playerId));
-    if (!entry) {
-      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No roster data for this player.</p></div>';
-      return;
-    }
-
-    const myToken = ++pmGameLogToken;
-    pmGameLogList.innerHTML = '<div class="ld-loading">Loading game log…</div>';
+    if (!entry) return null;
 
     const currentWeek = entry.week || 1;
     const weeks = [];
@@ -16991,10 +17057,194 @@
       return { week: w, pts: pts != null ? Number(pts) : null };
     }));
 
+    return { entry, rows };
+  }
+
+  let pmGameLogToken = 0;
+  async function renderPmGameLog(playerId) {
+    const pmGameLogList = document.getElementById('pmGameLogList');
+    if (!pmGameLogList) return;
+    if (!playerId || !window.sleeperFetch) {
+      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>Connect a Sleeper account to see weekly scoring.</p></div>';
+      return;
+    }
+    const myToken = ++pmGameLogToken;
+    pmGameLogList.innerHTML = '<div class="ld-loading">Loading game log…</div>';
+
+    const gl = await pmFetchGameLogRows(playerId);
     if (myToken !== pmGameLogToken) return; // a newer player was opened meanwhile
-    pmGameLogList.innerHTML = '<div class="pm-league-list">' + rows.map(r =>
+    if (!gl) {
+      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No roster data for this player.</p></div>';
+      return;
+    }
+    pmGameLogList.innerHTML = '<div class="pm-league-list">' + gl.rows.map(r =>
       `<div class="pm-league-row"><span>Week ${r.week}</span><span>${r.pts != null ? r.pts.toFixed(1) + ' pts' : '&mdash;'}</span></div>`
     ).join('') + '</div>';
+  }
+
+  // getPlayerDict() itself lives inside loadSleeperData()'s closure and
+  // isn't reachable from here -- but by the time a player modal can even
+  // be opened, the user's Sleeper data (and this cache) has already loaded
+  // via that same path, so read the cache it left on window directly. The
+  // fetch fallback only matters if that ever isn't true yet.
+  async function pmGetPlayerDict() {
+    if (window.__sleeperPlayerDict) return window.__sleeperPlayerDict;
+    if (!window.sleeperFetch) return null;
+    try {
+      const dict = await window.sleeperFetch('/players/nfl');
+      window.__sleeperPlayerDict = dict;
+      return dict;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  const PM_ORDINAL_SUFFIX = { 1: 'st', 2: 'nd', 3: 'rd' };
+  function pmOrdinal(n) {
+    const rem100 = n % 100;
+    return n + ((rem100 >= 11 && rem100 <= 13) ? 'th' : (PM_ORDINAL_SUFFIX[n % 10] || 'th'));
+  }
+
+  let pmOverviewToken = 0;
+  async function renderPmOverview(playerId) {
+    const pmOverviewList = document.getElementById('pmOverviewList');
+    if (!pmOverviewList) return;
+    if (!playerId) {
+      pmOverviewList.innerHTML = '<div class="placeholder"><h3>Overview</h3><p>No player selected.</p></div>';
+      return;
+    }
+    const myToken = ++pmOverviewToken;
+    pmOverviewList.innerHTML = '<div class="ld-loading">Loading overview…</div>';
+
+    const dict = await pmGetPlayerDict();
+    if (myToken !== pmOverviewToken) return;
+    const p = dict ? dict[playerId] : null;
+    if (!p) {
+      pmOverviewList.innerHTML = '<div class="placeholder"><h3>Overview</h3><p>No bio data available for this player.</p></div>';
+      return;
+    }
+
+    const heightIn = Number(p.height);
+    const heightStr = heightIn ? `${Math.floor(heightIn / 12)}'${heightIn % 12}"` : '&mdash;';
+    const weightStr = p.weight ? `${p.weight} lbs` : '&mdash;';
+    const expStr = p.years_exp === 0 ? 'Rookie' : (p.years_exp != null ? `${pmOrdinal(p.years_exp)} year` : '&mdash;');
+    const statusStr = p.injury_status || p.status || '&mdash;';
+
+    let html = `
+      <div class="pm-section-label">BIO</div>
+      <div class="ld-stats">
+        <div class="ld-stat-cell"><div class="ld-stat-label">AGE</div><div class="ld-stat-value">${p.age || '&mdash;'}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">HT / WT</div><div class="ld-stat-value">${heightStr} / ${weightStr}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">EXPERIENCE</div><div class="ld-stat-value">${expStr}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">STATUS</div><div class="ld-stat-value">${statusStr}</div></div>
+      </div>
+      <div class="pm-note">${[p.college, p.number != null ? '#' + p.number : null].filter(Boolean).join(' &middot; ')}</div>
+    `;
+
+    const gl = await pmFetchGameLogRows(playerId);
+    if (myToken !== pmOverviewToken) return;
+    if (gl) {
+      const played = gl.rows.filter(r => r.pts != null);
+      if (played.length) {
+        const total = played.reduce((s, r) => s + r.pts, 0);
+        const avg = total / played.length;
+        const best = played.reduce((b, r) => (r.pts > b.pts ? r : b), played[0]);
+        html += `
+          <div class="pm-section-label">${gl.entry.league.season} SEASON</div>
+          <div class="ld-stats">
+            <div class="ld-stat-cell"><div class="ld-stat-label">TOTAL PTS</div><div class="ld-stat-value">${total.toFixed(1)}</div></div>
+            <div class="ld-stat-divider"></div>
+            <div class="ld-stat-cell"><div class="ld-stat-label">AVG / GM</div><div class="ld-stat-value">${avg.toFixed(1)}</div></div>
+            <div class="ld-stat-divider"></div>
+            <div class="ld-stat-cell"><div class="ld-stat-label">BEST WEEK</div><div class="ld-stat-value">${best.pts.toFixed(1)} (Wk ${best.week})</div></div>
+          </div>
+        `;
+      }
+    }
+
+    if (getSiteMode() === 'dynasty') {
+      const val = ppValueForPlayerId(playerId, dict);
+      if (val != null) {
+        const rank = ppRankForPlayerId(playerId, dict);
+        const total = Object.keys(PP_PLAYER_VALUES).length;
+        html += `
+          <div class="pm-section-label">DYNASTY VALUE</div>
+          <div class="ld-stats">
+            <div class="ld-stat-cell"><div class="ld-stat-label">VALUE</div><div class="ld-stat-value">${val.toFixed(2)}</div></div>
+            <div class="ld-stat-divider"></div>
+            <div class="ld-stat-cell"><div class="ld-stat-label">RANK</div><div class="ld-stat-value">${rank ? '#' + rank + ' of ' + total : '&mdash;'}</div></div>
+          </div>
+        `;
+      }
+    }
+
+    if (myToken !== pmOverviewToken) return;
+    pmOverviewList.innerHTML = html;
+  }
+
+  async function renderPmContract(playerId) {
+    const pmContractList = document.getElementById('pmContractList');
+    if (!pmContractList) return;
+    if (!playerId) {
+      pmContractList.innerHTML = '<div class="placeholder"><h3>Contract</h3><p>No player selected.</p></div>';
+      return;
+    }
+    pmContractList.innerHTML = '<div class="ld-loading">Loading contract…</div>';
+
+    const dict = await pmGetPlayerDict();
+    const p = dict ? dict[playerId] : null;
+    const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : pmName.textContent;
+    const norm = ppNormalizeName(name);
+    const stripped = norm.replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
+    const c = PLAYER_CONTRACTS[norm] || PLAYER_CONTRACTS[stripped];
+
+    const anyEntry = Object.values(window.sleeperLeagueData || {})[0];
+    const currentSeason = Number(anyEntry && anyEntry.league && anyEntry.league.season) || new Date().getFullYear();
+
+    if (c) {
+      const yearsLeft = Math.max(0, c.through - currentSeason);
+      pmContractList.innerHTML = `
+        <div class="pm-contract-type">${c.type.toUpperCase()}</div>
+        <div class="ld-stats">
+          <div class="ld-stat-cell"><div class="ld-stat-label">YEARS LEFT</div><div class="ld-stat-value">${yearsLeft} (thru '${String(c.through).slice(2)})</div></div>
+          <div class="ld-stat-divider"></div>
+          <div class="ld-stat-cell"><div class="ld-stat-label">APY</div><div class="ld-stat-value">$${c.apy.toFixed(1)}M</div></div>
+          <div class="ld-stat-divider"></div>
+          <div class="ld-stat-cell"><div class="ld-stat-label">TOTAL VALUE</div><div class="ld-stat-value">$${c.total.toFixed(1)}M</div></div>
+          <div class="ld-stat-divider"></div>
+          <div class="ld-stat-cell"><div class="ld-stat-label">GUARANTEED</div><div class="ld-stat-value">$${c.guaranteed.toFixed(1)}M</div></div>
+        </div>
+        <div class="pm-note">Approximate, hand-curated terms &mdash; may not reflect the most recent restructure or extension. Verify exact figures with a source like Spotrac or Over The Cap.</div>
+      `;
+      return;
+    }
+
+    if (p && p.years_exp != null && p.years_exp <= 3) {
+      const yearOf = p.years_exp + 1;
+      pmContractList.innerHTML = `
+        <div class="pm-contract-type">ROOKIE CONTRACT</div>
+        <div class="ld-stats">
+          <div class="ld-stat-cell"><div class="ld-stat-label">CONTRACT YEAR</div><div class="ld-stat-value">${yearOf} of 4</div></div>
+          <div class="ld-stat-divider"></div>
+          <div class="ld-stat-cell"><div class="ld-stat-label">YEARS LEFT</div><div class="ld-stat-value">${4 - yearOf}</div></div>
+        </div>
+        <div class="pm-note">Standard 4-year rookie contract under the current CBA (a 5th-year option may apply for 1st-round picks). Exact dollar terms aren't available for this player yet.</div>
+      `;
+      return;
+    }
+
+    if (p && p.years_exp != null) {
+      pmContractList.innerHTML = `
+        <div class="pm-contract-type">VETERAN</div>
+        <div class="placeholder"><h3>Contract</h3><p>Exact contract terms aren't available for this player yet.</p></div>
+      `;
+      return;
+    }
+
+    pmContractList.innerHTML = '<div class="placeholder"><h3>Contract</h3><p>No contract data available for this player.</p></div>';
   }
 
   function openPlayerModal(item) {
@@ -17011,6 +17261,10 @@
     if (pmTradesList) pmTradesList.innerHTML = pmBuildTradesHtml(playerId);
     const pmGameLogList = document.getElementById('pmGameLogList');
     if (pmGameLogList) pmGameLogList.innerHTML = '';
+    const pmOverviewList = document.getElementById('pmOverviewList');
+    if (pmOverviewList) pmOverviewList.innerHTML = '';
+    const pmContractList = document.getElementById('pmContractList');
+    if (pmContractList) pmContractList.innerHTML = '';
 
     pmAvatar.innerHTML = `<img src="${sbHeadshotUrl(playerId)}" alt="" onerror="this.remove()">`;
     pmName.textContent = name;
@@ -17060,6 +17314,14 @@
       if (target === 'gamelog') {
         const pmGameLogList = document.getElementById('pmGameLogList');
         if (pmGameLogList && !pmGameLogList.innerHTML) renderPmGameLog(playerModal.dataset.playerId);
+      }
+      if (target === 'overview') {
+        const pmOverviewList = document.getElementById('pmOverviewList');
+        if (pmOverviewList && !pmOverviewList.innerHTML) renderPmOverview(playerModal.dataset.playerId);
+      }
+      if (target === 'contract') {
+        const pmContractList = document.getElementById('pmContractList');
+        if (pmContractList && !pmContractList.innerHTML) renderPmContract(playerModal.dataset.playerId);
       }
     });
   });
