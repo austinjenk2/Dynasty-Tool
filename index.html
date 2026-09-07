@@ -428,7 +428,9 @@
   .ph-draft-capital-head span { font-weight: 500; text-transform: none; letter-spacing: 0; margin-left: 4px; }
   .ph-draft-capital-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
   @media (max-width: 560px) { .ph-draft-capital-cols { grid-template-columns: 1fr; } }
-  .ph-dc-season { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 15px; color: var(--ink); margin-bottom: 10px; }
+  .ph-dc-season { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 15px; color: var(--ink); margin-bottom: 10px; cursor: pointer; }
+  .ph-dc-season:hover { color: var(--green); text-decoration: underline; }
+  .ph-dc-season::after { content: ' \203A'; font-weight: 500; color: var(--faint); }
   .ph-dc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .ph-dc-round { width: 26px; flex-shrink: 0; font-size: 12px; font-weight: 800; }
   .ph-dc-round.ph-dc-round-1 { color: var(--blue); }
@@ -3884,6 +3886,22 @@
     </div>
 
     <div class="ww-list" id="ldwvList"><div class="exp-loading">Loading...</div></div>
+  </div>
+
+  <div class="ldrec-overlay" id="dcOverlay" hidden></div>
+  <div class="ldrec-modal" id="dcModal" hidden>
+    <div class="ldrec-head">
+      <div class="ldrec-title">Draft Capital <span class="ldrec-title-sub" id="dcTitleSeason">Season</span></div>
+      <div class="ldrec-close" id="dcClose">&#10005;</div>
+    </div>
+    <div class="ldrec-table-wrap" style="margin-top:16px">
+      <table class="ldrec-table">
+        <thead>
+          <tr><th>League</th><th>1st</th><th>2nd</th><th>3rd</th><th>4th</th><th>Total</th></tr>
+        </thead>
+        <tbody id="dcModalBody"><tr><td colspan="6" class="ldrec-empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
   </div>
 
   <div data-view="lineups">
@@ -16589,13 +16607,36 @@
     }).join('');
   }
 
+  // How many picks of one round/season a single league entry's manager
+  // actually owns right now, worked out from Sleeper's real traded_picks
+  // records (a pick with no trade record is still owned by whoever
+  // originally had it). Shared by the averaged Draft Capital cols below
+  // and the per-league drill-down modal a season header opens.
+  function dcPickCountForLeague(entry, season, round) {
+    const myRosterId = entry.roster.roster_id;
+    const tradedPicks = entry.tradedPicks || [];
+    let count = 0;
+    (entry.allRosters || []).forEach(r => {
+      const tp = tradedPicks.find(p =>
+        Number(p.season) === season && p.round === round && p.roster_id === r.roster_id);
+      const ownerRosterId = tp ? tp.owner_id : r.roster_id;
+      if (ownerRosterId === myRosterId) count++;
+    });
+    return count;
+  }
+
+  function dcCurrentDynastyEntries() {
+    const entries = Object.values(window.sleeperLeagueData || {})
+      .filter(e => e.roster && (isCoManagedIncluded() || !e.isCoOwned));
+    return entries.filter(e => sbLeagueIsDynasty(e.league));
+  }
+
   // Real future draft-pick ownership, dynasty mode only -- for each of the
-  // next two draft classes, how many picks (per round) you actually own
-  // right now across your dynasty/keeper leagues, worked out from Sleeper's
-  // real traded_picks records (a pick with no trade record is still owned
-  // by whoever originally had it). Averaged per league since some leagues
-  // run more/fewer rounds or you've traded for extra picks in some but not
-  // others.
+  // next three draft classes, how many picks (per round) you actually own
+  // right now across your dynasty/keeper leagues. Averaged per league since
+  // some leagues run more/fewer rounds or you've traded for extra picks in
+  // some but not others; clicking a season drills into the real per-league
+  // breakdown behind that average.
   function renderDraftCapital(allEntries) {
     const section = document.getElementById('phDraftCapital');
     const colsEl = document.getElementById('phDraftCapitalCols');
@@ -16615,16 +16656,7 @@
       const rows = [];
       for (let round = 1; round <= maxRounds; round++) {
         let total = 0;
-        dynastyEntries.forEach(e => {
-          const myRosterId = e.roster.roster_id;
-          const tradedPicks = e.tradedPicks || [];
-          (e.allRosters || []).forEach(r => {
-            const tp = tradedPicks.find(p =>
-              Number(p.season) === season && p.round === round && p.roster_id === r.roster_id);
-            const ownerRosterId = tp ? tp.owner_id : r.roster_id;
-            if (ownerRosterId === myRosterId) total++;
-          });
-        });
+        dynastyEntries.forEach(e => { total += dcPickCountForLeague(e, season, round); });
         const avg = total / dynastyEntries.length;
         rows.push({ round, avg });
       }
@@ -16636,9 +16668,55 @@
           `<span class="ph-dc-value">${r.avg.toFixed(2)}</span>` +
         `</div>`
       ).join('');
-      return `<div><div class="ph-dc-season">${season}</div>${rowsHtml}</div>`;
+      return `<div><div class="ph-dc-season" data-dc-season="${season}">${season}</div>${rowsHtml}</div>`;
     }).join('');
   }
+
+  // Draft Capital drill-down: clicking a season header in the averaged
+  // view above opens the real per-league pick counts it was averaged from.
+  function openDraftCapitalModal(season) {
+    const overlay = document.getElementById('dcOverlay');
+    const modal = document.getElementById('dcModal');
+    const body = document.getElementById('dcModalBody');
+    const titleEl = document.getElementById('dcTitleSeason');
+    if (!overlay || !modal || !body) return;
+    if (titleEl) titleEl.textContent = season;
+
+    const dynastyEntries = dcCurrentDynastyEntries();
+    const rows = dynastyEntries.map(e => {
+      const counts = [1, 2, 3, 4].map(round => dcPickCountForLeague(e, season, round));
+      const total = counts.reduce((s, c) => s + c, 0);
+      return { league: e.league.name, counts, total };
+    }).sort((a, b) => b.total - a.total || a.league.localeCompare(b.league));
+
+    body.innerHTML = rows.length
+      ? rows.map(r => `<tr><td>${r.league}</td>${r.counts.map(c => `<td>${c}</td>`).join('')}<td class="ldrec-wl">${r.total}</td></tr>`).join('')
+      : '<tr><td colspan="6" class="ldrec-empty">No dynasty leagues.</td></tr>';
+
+    overlay.hidden = false;
+    modal.hidden = false;
+  }
+
+  function closeDraftCapitalModal() {
+    const overlay = document.getElementById('dcOverlay');
+    const modal = document.getElementById('dcModal');
+    if (overlay) overlay.hidden = true;
+    if (modal) modal.hidden = true;
+  }
+
+  const dcCols = document.getElementById('phDraftCapitalCols');
+  if (dcCols) {
+    dcCols.addEventListener('click', (e) => {
+      const seasonEl = e.target.closest('.ph-dc-season');
+      if (!seasonEl) return;
+      const season = Number(seasonEl.dataset.dcSeason);
+      if (season) openDraftCapitalModal(season);
+    });
+  }
+  const dcCloseEl = document.getElementById('dcClose');
+  if (dcCloseEl) dcCloseEl.addEventListener('click', closeDraftCapitalModal);
+  const dcOverlayEl = document.getElementById('dcOverlay');
+  if (dcOverlayEl) dcOverlayEl.addEventListener('click', closeDraftCapitalModal);
 
   // Best-effort real schedule, built from the opponent/date fields the
   // projections payload sometimes carries per player (see getWeekProjections).
