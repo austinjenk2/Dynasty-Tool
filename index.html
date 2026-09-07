@@ -1251,6 +1251,10 @@
   .rg-note { margin-left: auto; flex-shrink: 0; font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
   .rg-note-for { color: var(--green); }
   .rg-note-vs { color: var(--red); }
+  .rg-stat { flex-shrink: 0; font-size: 11.5px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .rg-stat b { font-weight: 800; color: var(--text); }
+  .rg-poe.rg-poe-pos b { color: var(--green); }
+  .rg-poe.rg-poe-neg b { color: var(--red); }
 
 
   .rg-slates-head { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: var(--muted); text-transform: uppercase; margin: 20px 0 10px; }
@@ -2137,6 +2141,19 @@
   .ldrec-table td.ldrec-neg { color: #ef4444; }
   .ldrec-empty { text-align: center; color: var(--faint); font-size: 13px; padding: 30px 0; }
   .ldrec-draft-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+
+  /* League Detail -> Waivers modal */
+  .ldwv-modal { width: 720px; }
+  .ldwv-banner {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    margin: 16px 0; padding: 12px 16px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .ldwv-banner-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ldwv-banner-label { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink); }
+  .ldwv-banner-note { font-size: 12px; color: var(--muted); }
+  .ldwv-banner-meta { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+  .ldwv-modal .ww-list { max-height: 420px; overflow-y: auto; }
 
   /* Notebook panel */
   .notebook-overlay {
@@ -3577,7 +3594,7 @@
         <div class="ld-nav-btn" id="ldNavRecords"><span class="ld-nav-title">Records</span><span class="ld-nav-sub">Transactions &middot; League History</span></div>
         <div class="ld-nav-btn"><span class="ld-nav-title">Settings</span><span class="ld-nav-sub">Scoring &middot; Roster &middot; League Rules</span></div>
         <div class="ld-nav-btn"><span class="ld-nav-title">Insights</span><span class="ld-nav-sub">WAR &middot; Value &middot; Trade Activity</span></div>
-        <div class="ld-nav-btn"><span class="ld-nav-title">Waivers</span><span class="ld-nav-sub">Browse Free Agents &middot; Trending Adds</span></div>
+        <div class="ld-nav-btn" id="ldNavWaivers"><span class="ld-nav-title">Waivers</span><span class="ld-nav-sub">Browse Free Agents &middot; Trending Adds</span></div>
         <div class="ld-nav-btn" id="ldNavNotes"><span class="ld-nav-title">Notes</span><span class="ld-nav-sub">Your Notes &middot; Roster Type</span></div>
       </div>
 
@@ -3587,6 +3604,10 @@
           <select id="ldStandingsRankBy">
             <option value="con">Contending</option>
             <option value="val">Roster Value</option>
+            <option value="qb">QB Value</option>
+            <option value="rb">RB Value</option>
+            <option value="wr">WR Value</option>
+            <option value="te">TE Value</option>
           </select>
         </div>
         <input class="ld-player-search" type="text" placeholder="Search any player..." disabled title="Coming soon">
@@ -3729,6 +3750,48 @@
     <div class="ldrec-panel" data-ldrec-panel="drafts" hidden>
       <div class="ldrec-draft-list" id="ldrecDraftsList"><div class="ldrec-empty">Loading...</div></div>
     </div>
+  </div>
+
+  <div class="ldrec-overlay" id="ldwvOverlay" hidden></div>
+  <div class="ldrec-modal ldwv-modal" id="ldwvModal" hidden>
+    <div class="ldrec-head">
+      <div class="ldrec-title">Waivers <span class="ldrec-title-sub" id="ldwvTitleLeague">League</span></div>
+      <div class="ldrec-close" id="ldwvClose">&#10005;</div>
+    </div>
+
+    <div class="ldwv-banner">
+      <div class="ldwv-banner-left">
+        <span class="ldwv-banner-label">FREE AGENTS</span>
+        <span class="ldwv-banner-note">Viewing only &mdash; claims are made in the Sleeper app.</span>
+      </div>
+      <div class="ldwv-banner-meta" id="ldwvMeta">&nbsp;</div>
+    </div>
+
+    <div class="ww-toolbar">
+      <div class="ww-search"><span>&#128269;</span><input type="text" id="ldwvSearch" placeholder="Search any free agent..."></div>
+      <div class="ww-toggle-group" id="ldwvModeToggle">
+        <span class="ww-toggle active" data-ldwv-mode="value">Value</span>
+        <span class="ww-toggle" data-ldwv-mode="trending">Trending</span>
+      </div>
+      <div class="ww-pos-filter" id="ldwvPosFilter">
+        <span class="ww-pos-chip active" data-ldwv-pos="ALL">All</span>
+        <span class="ww-pos-chip" data-ldwv-pos="QB">QB</span>
+        <span class="ww-pos-chip" data-ldwv-pos="RB">RB</span>
+        <span class="ww-pos-chip" data-ldwv-pos="WR">WR</span>
+        <span class="ww-pos-chip" data-ldwv-pos="TE">TE</span>
+      </div>
+    </div>
+
+    <p class="ww-sub" id="ldwvSub">Best available &middot; sorted by player value</p>
+
+    <div class="ww-table-head">
+      <span>PLAYER</span>
+      <span>VALUE</span>
+      <span>PROJ PPG</span>
+      <span>ROSTER %</span>
+    </div>
+
+    <div class="ww-list" id="ldwvList"><div class="exp-loading">Loading...</div></div>
   </div>
 
   <div data-view="lineups">
@@ -12014,7 +12077,7 @@
     const store = origProjStore();
     const wk = `${season}_${week}`;
     store[wk] = store[wk] || { players: {}, teams: {} };
-    const bucket = store[wk][kind];
+    const bucket = store[wk][kind] || (store[wk][kind] = {});
     if (bucket[key] == null) {
       bucket[key] = liveValue;
       saveOrigProjStore(store);
@@ -12961,6 +13024,33 @@
       }));
       if (!entries.length) return;
 
+      // PPR Points / Projection Over Expected use one fixed scoring basis
+      // (full PPR, 0.5 TE premium) instead of each league's own real
+      // scoring settings -- a player shows up "for" or "against" leagues
+      // that don't all score the same way, so there's no single real
+      // per-league number that would make sense here. Sleeper's own
+      // pts_ppr stat already bakes in the reception itself; only the extra
+      // 0.5-per-catch TE premium has to be added on top by hand.
+      const rgSeason = entries[0].league.season;
+      let rgProjStatsMap = window.__sleeperProjectionStats || {};
+      if (!isCurrentWeek && window.sleeperGetWeekProjections) {
+        try {
+          const pm = await window.sleeperGetWeekProjections(rgSeason, week);
+          rgProjStatsMap = (pm && pm.__statsMap) || {};
+        } catch (err) {}
+      }
+      let rgActualStatsMap = {};
+      if (window.sleeperGetWeekStats) {
+        try { rgActualStatsMap = await window.sleeperGetWeekStats(rgSeason, week) || {}; } catch (err) {}
+      }
+      function rgBasePprPoints(stats, pos) {
+        if (!stats) return null;
+        const base = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
+        if (base == null) return null;
+        const bonus = pos === 'TE' ? 0.5 * Number(stats.rec || 0) : 0;
+        return Number(base) + bonus;
+      }
+
       const byPlayer = {};
       entries.forEach(entry => {
         const myStarters = (entry.myMatchup.starters || []).filter(id => id && id !== '0');
@@ -12979,6 +13069,10 @@
         const p = dict[id];
         const pos = p ? p.position : null;
         if (!p || !['QB', 'RB', 'WR', 'TE'].includes(pos)) return null;
+        const pprPoints = rgBasePprPoints(rgActualStatsMap[id], pos);
+        const liveProj = rgBasePprPoints(rgProjStatsMap[id], pos);
+        const origProj = liveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, liveProj) : null;
+        const poe = (liveProj != null && origProj != null) ? (liveProj - origProj) : null;
         return {
           id,
           name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
@@ -12986,6 +13080,8 @@
           pos,
           for: byPlayer[id].for,
           against: byPlayer[id].against,
+          pprPoints: pprPoints != null ? pprPoints : 0,
+          poe,
         };
       }).filter(Boolean);
 
@@ -13008,6 +13104,9 @@
         const noteParts = [];
         if (r.for.length) noteParts.push(`${r.for.length} <span class="rg-note-for">for</span>`);
         if (r.against.length) noteParts.push(`${r.against.length} <span class="rg-note-vs">vs</span>`);
+        const pprText = Number(r.pprPoints || 0).toFixed(1);
+        const poeClass = r.poe == null ? '' : (r.poe >= 0 ? 'rg-poe-pos' : 'rg-poe-neg');
+        const poeText = r.poe == null ? '&mdash;' : (r.poe >= 0 ? '+' : '') + r.poe.toFixed(1);
         const el = document.createElement('div');
         el.className = 'rg-row';
         el.dataset.for = r.for.join(' &middot; ');
@@ -13022,6 +13121,8 @@
             `<span class="rg-pos sb-pos-${posClass}">${r.pos}</span>` +
             `<span class="rg-name">${r.name}</span>` +
             `<span class="rg-team"><img class="rg-team-logo" src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" title="${r.team}" loading="lazy" onerror="var p=this.parentNode;this.remove();p.textContent='${r.team}'"></span>` +
+            `<span class="rg-stat">PPR Points: <b>${pprText}</b></span>` +
+            `<span class="rg-stat rg-poe ${poeClass}">Projection Over Expected: <b>${poeText}</b></span>` +
             `<span class="rg-note">${noteParts.join(' &middot; ')}</span>` +
           '</div>';
         return { el, forAll: r.for.slice(), againstAll: r.against.slice() };
@@ -14664,6 +14765,167 @@
     const ldrecOverlayEl = document.getElementById('ldrecOverlay');
     if (ldrecOverlayEl) ldrecOverlayEl.addEventListener('click', ldrecClose);
 
+    // League Detail -> Waivers modal: the same "Best Available" free-agent
+    // list as the standalone Waiver Manager page, scoped to just the one
+    // league clicked into instead of every connected league. Real dynasty
+    // value (Pure Potential list) for VALUE, the live per-player projection
+    // for PROJ PPG, and -- same heuristic the Waiver Manager page already
+    // uses since there's no real ownership-% endpoint available -- ROSTER %
+    // is how many of the user's own connected leagues roster this player.
+    const ldwvState = { mode: 'value', pos: 'ALL', search: '' };
+    let ldwvRows = [];
+
+    function ldwvRenderList() {
+      const listEl = document.getElementById('ldwvList');
+      if (!listEl) return;
+      const term = ldwvState.search.trim().toLowerCase();
+      let rows = ldwvRows.filter(r => ldwvState.pos === 'ALL' || r.pos === ldwvState.pos);
+      if (term) rows = rows.filter(r => r.name.toLowerCase().includes(term));
+      if (ldwvState.mode === 'trending') {
+        rows = rows.filter(r => r.trend > 0).sort((a, b) => b.trend - a.trend);
+      } else {
+        rows = rows.slice().sort((a, b) => b.value - a.value);
+      }
+      rows = rows.slice(0, 150);
+      const subEl = document.getElementById('ldwvSub');
+      if (subEl) {
+        subEl.textContent = ldwvState.mode === 'trending'
+          ? 'Best available · sorted by trending adds'
+          : 'Best available · sorted by player value';
+      }
+      listEl.innerHTML = rows.length ? rows.map(r => {
+        const posClass = r.pos.toLowerCase();
+        return `<div class="ww-row" data-pos="${r.pos}">
+            <div class="ww-player">
+              <div class="ww-avatar"><img src="${sbHeadshotUrl(r.id)}" alt="" loading="lazy" onerror="this.remove()"></div>
+              <div>
+                <div class="ww-pname">${r.name}</div>
+                <div class="ww-pmeta"><span class="ww-pos-${posClass}">${r.pos}</span>${r.team ? ' &middot; ' + r.team : ''}</div>
+              </div>
+            </div>
+            <div class="ww-value">${r.value.toFixed(2)}</div>
+            <div class="ww-proj">${r.proj != null ? r.proj.toFixed(1) : '&mdash;'}</div>
+            <div class="ww-roster">${r.rosterPct}%</div>
+          </div>`;
+      }).join('') : '<div class="exp-loading">No free agents match.</div>';
+    }
+
+    async function ldwvOpen() {
+      const standingsListEl = document.getElementById('ldStandingsList');
+      const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
+      const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+      if (!entry) return;
+
+      const overlay = document.getElementById('ldwvOverlay');
+      const modal = document.getElementById('ldwvModal');
+      const titleLeagueEl = document.getElementById('ldwvTitleLeague');
+      if (titleLeagueEl) titleLeagueEl.textContent = entry.league.name;
+      if (overlay) overlay.hidden = false;
+      if (modal) modal.hidden = false;
+
+      const listEl = document.getElementById('ldwvList');
+      if (listEl) listEl.innerHTML = '<div class="exp-loading">Loading...</div>';
+
+      const metaEl = document.getElementById('ldwvMeta');
+      const settings = entry.league.settings || {};
+      const typeLabel = WW_WAIVER_TYPE_LABEL[settings.waiver_type] || 'Waivers';
+      if (metaEl) metaEl.textContent = `${typeLabel} · Today`;
+
+      if (!window.sleeperGetPlayerDict) return;
+      let dict;
+      try { dict = await window.sleeperGetPlayerDict(); } catch (err) { return; }
+
+      const rosteredHere = new Set();
+      (entry.allRosters || []).forEach(r => (r.players || []).forEach(id => rosteredHere.add(id)));
+
+      const allEntries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+      const entryRosterSets = allEntries.map(e => {
+        const set = new Set();
+        (e.allRosters || []).forEach(r => (r.players || []).forEach(id => set.add(id)));
+        return set;
+      });
+
+      const trendCounts = {};
+      (window.__sleeperTrendingAdds || []).forEach(t => { trendCounts[t.player_id] = t.count; });
+      const projections = window.__sleeperProjections || {};
+      const projStats = window.__sleeperProjectionStats || {};
+      const FA_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE']);
+      // Same fixed base as the Rooting Guide's PPR Points/Projection Over
+      // Expected: full PPR plus a 0.5-per-catch TE premium, since a
+      // free-agent list has no single real league's scoring to key off of.
+      function ldwvBaseProj(id, pos) {
+        const stats = projStats[id];
+        if (stats) {
+          const base = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
+          if (base != null) return Number(base) + (pos === 'TE' ? 0.5 * Number(stats.rec || 0) : 0);
+        }
+        return projections[id] != null ? Number(projections[id]) : null;
+      }
+
+      ldwvRows = Object.keys(dict).filter(id => {
+        const p = dict[id];
+        return p && FA_POSITIONS.has(p.position) && !rosteredHere.has(id);
+      }).map(id => {
+        const p = dict[id];
+        const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id;
+        const rosteredInCount = entryRosterSets.filter(set => set.has(id)).length;
+        const rosterPct = allEntries.length ? Math.round((rosteredInCount / allEntries.length) * 100) : 0;
+        return {
+          id,
+          name,
+          pos: p.position,
+          team: p.team || '',
+          value: ppValueForPlayerId(id, dict) || 0,
+          proj: ldwvBaseProj(id, p.position),
+          trend: trendCounts[id] || 0,
+          rosterPct,
+        };
+      });
+
+      ldwvRenderList();
+    }
+
+    function ldwvClose() {
+      const overlay = document.getElementById('ldwvOverlay');
+      const modal = document.getElementById('ldwvModal');
+      if (overlay) overlay.hidden = true;
+      if (modal) modal.hidden = true;
+    }
+
+    const ldNavWaiversEl = document.getElementById('ldNavWaivers');
+    if (ldNavWaiversEl) ldNavWaiversEl.addEventListener('click', ldwvOpen);
+    const ldwvCloseEl = document.getElementById('ldwvClose');
+    if (ldwvCloseEl) ldwvCloseEl.addEventListener('click', ldwvClose);
+    const ldwvOverlayEl = document.getElementById('ldwvOverlay');
+    if (ldwvOverlayEl) ldwvOverlayEl.addEventListener('click', ldwvClose);
+    const ldwvSearchEl = document.getElementById('ldwvSearch');
+    if (ldwvSearchEl) ldwvSearchEl.addEventListener('input', () => {
+      ldwvState.search = ldwvSearchEl.value;
+      ldwvRenderList();
+    });
+    const ldwvModeToggleEl = document.getElementById('ldwvModeToggle');
+    if (ldwvModeToggleEl) {
+      ldwvModeToggleEl.querySelectorAll('.ww-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          ldwvModeToggleEl.querySelectorAll('.ww-toggle').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          ldwvState.mode = btn.dataset.ldwvMode;
+          ldwvRenderList();
+        });
+      });
+    }
+    const ldwvPosFilterEl = document.getElementById('ldwvPosFilter');
+    if (ldwvPosFilterEl) {
+      ldwvPosFilterEl.querySelectorAll('.ww-pos-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          ldwvPosFilterEl.querySelectorAll('.ww-pos-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          ldwvState.pos = chip.dataset.ldwvPos;
+          ldwvRenderList();
+        });
+      });
+    }
+
     document.querySelectorAll('#ldrecModal .ldrec-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('#ldrecModal .ldrec-tab').forEach(t => t.classList.remove('active'));
@@ -14731,6 +14993,21 @@
         ppPicksOwnedBy(entry, r.roster_id).reduce((sum, p) => sum + ppPickValue(p.round), 0);
       const valueOf = useRealValue ? realValueOf : pfOf;
 
+      // Positional Value Rank: each roster's total real dynasty value at one
+      // position (QB/RB/WR/TE), ranked against the rest of the league --
+      // same "add up the values, then rank the league" the VAL column
+      // already does for the whole roster. Dynasty-value-gated the same way
+      // VAL is, since redraft/non-dynasty leagues have no real asset value
+      // to sum.
+      const posRanksOf = r => {
+        if (!useRealValue) return { QB: null, RB: null, WR: null, TE: null };
+        const out = {};
+        ['QB', 'RB', 'WR', 'TE'].forEach(pos => {
+          out[pos] = ldRankOf(allRosters, ros => ppPositionValue(ros, dict, pos), r.roster_id);
+        });
+        return out;
+      };
+
       const rows = allRosters.map(r => {
         const user = (entry.users || []).find(u => u.user_id === r.owner_id);
         const name = user ? (user.display_name || user.username || 'Unknown') : 'Unknown';
@@ -14738,11 +15015,15 @@
         const losses = (r.settings && r.settings.losses) || 0;
         const conRank = conResult ? conResult.ranks[r.roster_id] : null;
         const valRank = ldRankOf(allRosters, valueOf, r.roster_id);
+        const posRanks = posRanksOf(r);
         const type = sbStandingsRosterType(conRank, valRank, half);
-        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar: user ? user.avatar : null, name, wins, losses, conRank, valRank, type };
+        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar: user ? user.avatar : null, name, wins, losses, conRank, valRank, posRanks, type };
       });
       if (sortBy === 'val') {
         rows.sort((a, b) => (a.valRank || 999) - (b.valRank || 999));
+      } else if (['qb', 'rb', 'wr', 'te'].includes(sortBy)) {
+        const pos = sortBy.toUpperCase();
+        rows.sort((a, b) => (a.posRanks[pos] || 999) - (b.posRanks[pos] || 999));
       } else {
         rows.sort((a, b) => (a.conRank || 999) - (b.conRank || 999));
       }
@@ -14767,10 +15048,10 @@
           '<div class="ld-tags">' +
             `<span class="ld-tag">CON <b>${row.conRank != null ? ldOrdinal(row.conRank) : '—'}</b></span>` +
             `<span class="ld-tag">VAL <b>${row.valRank != null ? ldOrdinal(row.valRank) : '—'}</b></span>` +
-            '<span class="ld-tag">QB <b>—</b></span>' +
-            '<span class="ld-tag">RB <b>—</b></span>' +
-            '<span class="ld-tag">WR <b>—</b></span>' +
-            '<span class="ld-tag">TE <b>—</b></span>' +
+            `<span class="ld-tag">QB <b>${row.posRanks.QB != null ? ldOrdinal(row.posRanks.QB) : '—'}</b></span>` +
+            `<span class="ld-tag">RB <b>${row.posRanks.RB != null ? ldOrdinal(row.posRanks.RB) : '—'}</b></span>` +
+            `<span class="ld-tag">WR <b>${row.posRanks.WR != null ? ldOrdinal(row.posRanks.WR) : '—'}</b></span>` +
+            `<span class="ld-tag">TE <b>${row.posRanks.TE != null ? ldOrdinal(row.posRanks.TE) : '—'}</b></span>` +
             '<span class="ld-tag">PICKS <b>—</b></span>' +
             '<span class="ld-tag">PLAYOFF <b>—</b></span>' +
           '</div>' +
@@ -15577,6 +15858,19 @@
   function ppRosterValue(roster, dict) {
     const playerIds = (roster.players || []).filter(id => id && id !== '0');
     return playerIds.reduce((sum, id) => sum + (ppValueForPlayerId(id, dict) || 0), 0);
+  }
+
+  // Same real dynasty value as ppRosterValue, narrowed to one position --
+  // the League Detail standings QB/RB/WR/TE tags and the standings page's
+  // positional Rank By options both sum this per roster then rank teams
+  // against each other, same shape as the overall VAL rank.
+  function ppPositionValue(roster, dict, pos) {
+    const playerIds = (roster.players || []).filter(id => id && id !== '0');
+    return playerIds.reduce((sum, id) => {
+      const p = dict && dict[id];
+      if (!p || p.position !== pos) return sum;
+      return sum + (ppValueForPlayerId(id, dict) || 0);
+    }, 0);
   }
 
   // Placeholder draft-pick values until a real pick-value source exists --
