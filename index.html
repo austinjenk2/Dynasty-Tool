@@ -1961,6 +1961,12 @@
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
     padding: 10px 14px; display: flex; flex-direction: column; gap: 3px;
   }
+  /* Only the wired-up nav buttons carry an id (Insights is still a
+     placeholder) -- give just those the clickable affordance so they read
+     differently from the ones that don't do anything yet. */
+  .ld-nav-btn[id] { cursor: pointer; transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s; }
+  .ld-nav-btn[id]:hover { border-color: var(--green); box-shadow: 0 2px 8px rgba(0,0,0,0.08); transform: translateY(-1px); }
+  .ld-nav-btn[id]:active { transform: translateY(0); }
   .ld-nav-title { font-size: 13px; font-weight: 700; color: var(--ink); }
   .ld-nav-sub { font-size: 10.5px; color: var(--faint); }
   .ld-filter-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -15207,8 +15213,44 @@
     function ldsScoringSummary(league) {
       const s = league.scoring_settings || {};
       const rec = s.rec ? (s.rec === 1 ? 'PPR' : s.rec === 0.5 ? 'Half PPR' : `${s.rec} PPR`) : 'Standard';
-      const bonusTe = s.bonus_rec_te ? `+${s.bonus_rec_te} TE Premium` : null;
-      return [rec, bonusTe].filter(Boolean).join(', ');
+      return rec;
+    }
+
+    // Every extra per-position/per-stat scoring rule Sleeper supports, on
+    // top of the base PPR rate above -- position-tiered reception bonuses
+    // (a league can score WR/RB/TE receptions differently, not just TE, so
+    // this can't be a single "TE Premium" line), yardage-milestone bonuses,
+    // and first-down/completion scoring. Anything present and non-zero in
+    // the league's real scoring_settings shows up here; a handful of common
+    // keys get a readable label, and anything else Sleeper adds later still
+    // shows (title-cased from its raw key) instead of silently vanishing.
+    const LDS_BONUS_LABELS = {
+      bonus_rec_wr: 'Reception Bonus (WR)',
+      bonus_rec_rb: 'Reception Bonus (RB)',
+      bonus_rec_te: 'Reception Bonus (TE)',
+      bonus_pass_yd_300: '300+ Pass Yd Bonus',
+      bonus_pass_yd_400: '400+ Pass Yd Bonus',
+      bonus_rush_yd_100: '100+ Rush Yd Bonus',
+      bonus_rush_yd_200: '200+ Rush Yd Bonus',
+      bonus_rec_yd_100: '100+ Rec Yd Bonus',
+      bonus_rec_yd_200: '200+ Rec Yd Bonus',
+      bonus_rush_rec_yd_100: '100+ Rush+Rec Yd Bonus',
+      bonus_rush_rec_yd_200: '200+ Rush+Rec Yd Bonus',
+      rush_fd: 'Rushing 1st Down',
+      rec_fd: 'Receiving 1st Down',
+      pass_fd: 'Passing 1st Down',
+      pass_cmp: 'Pass Completion',
+      pass_inc: 'Pass Incompletion',
+    };
+    function ldsBonusLabel(key) {
+      return LDS_BONUS_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+    function ldsBonusList(league) {
+      const s = league.scoring_settings || {};
+      return Object.keys(s)
+        .filter(key => s[key] && (key.startsWith('bonus_') || key.endsWith('_fd') || key === 'pass_cmp' || key === 'pass_inc'))
+        .map(key => ({ key, label: ldsBonusLabel(key), value: s[key] }))
+        .sort((a, b) => a.label.localeCompare(b.label));
     }
 
     function ldsRenderLineup(rosterPositions) {
@@ -15232,7 +15274,11 @@
       const isSF = rosterPositions.includes('SUPER_FLEX') || rosterPositions.filter(p => p === 'QB').length > 1;
       const typeLabel = LDS_TYPE_LABEL[s.type] || 'Redraft';
       const waiverLabel = LDS_WAIVER_LABEL[s.waiver_type] != null ? LDS_WAIVER_LABEL[s.waiver_type] : 'Waivers';
-      const tradeDeadline = s.trade_deadline ? `Week ${s.trade_deadline}` : 'None';
+      // Sleeper's real sentinel for "no trade deadline" is week 99 (not 0
+      // or a missing field), so a plain truthy check showed "Week 99" for
+      // leagues that actually have no deadline at all.
+      const tradeDeadline = (s.trade_deadline && s.trade_deadline < 90) ? `Week ${s.trade_deadline}` : 'None';
+      const bonuses = ldsBonusList(league);
 
       return `
         <div class="lds-section">
@@ -15242,8 +15288,17 @@
             <div class="lds-cell"><div class="lds-cell-label">Type</div><div class="lds-cell-value">${typeLabel}</div></div>
             <div class="lds-cell"><div class="lds-cell-label">QB Format</div><div class="lds-cell-value">${isSF ? 'Superflex' : '1QB'}</div></div>
             <div class="lds-cell"><div class="lds-cell-label">Scoring</div><div class="lds-cell-value">${ldsScoringSummary(league)}</div></div>
+            ${s.best_ball ? '<div class="lds-cell"><div class="lds-cell-label">Best Ball</div><div class="lds-cell-value">Yes</div></div>' : ''}
           </div>
         </div>
+
+        ${bonuses.length ? `
+        <div class="lds-section">
+          <div class="lds-section-label">Scoring Bonuses</div>
+          <div class="lds-grid">
+            ${bonuses.map(b => `<div class="lds-cell"><div class="lds-cell-label">${b.label}</div><div class="lds-cell-value">+${b.value}</div></div>`).join('')}
+          </div>
+        </div>` : ''}
 
         <div class="lds-section">
           <div class="lds-section-label">Roster</div>
