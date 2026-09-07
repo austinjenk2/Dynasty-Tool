@@ -13125,10 +13125,10 @@
     if (!rgBtn || !rgPanel || !rgChipsEl || !forListEl || !againstListEl || !evenListEl) return;
 
     // Which stat orders Root For/Root Against. Internal values keep their
-    // original meaning ('value' = rooting impact/delta, 'leagues' = total
-    // league count) -- only the button labels were swapped, so "Leagues"
-    // (default) now triggers the 'value'-based ranking and "$" triggers
-    // the 'leagues'-based one.
+    // original meaning ('value' = rooting impact/delta, 'leagues' = real
+    // dollars at stake, from the Net entered in Settings) -- only the
+    // button labels were swapped, so "Leagues" (default) triggers the
+    // 'value'-based ranking and "$" triggers the money-based one.
     let rgSortCriterion = 'value';
     const rgSortToggle = document.getElementById('rgSortToggle');
     if (rgSortToggle) {
@@ -13213,7 +13213,19 @@
       rgCountEl.textContent = `(${included} of ${rgLeagueNames.length})`;
     }
 
+    // Real money at stake per league, from the Net you entered in Settings
+    // (same store the Record Book reads from) -- keyed by league name since
+    // that's all the rooting-guide rows carry per player.
+    function rgLeagueDollarMap() {
+      const map = {};
+      Object.values(window.sleeperLeagueData || {}).forEach(e => {
+        if (e && e.league) map[e.league.name] = rbGetNet(e.league.league_id, e.league.season) || 0;
+      });
+      return map;
+    }
+
     function recomputeRootingGuide() {
+      const dollarMap = rgLeagueDollarMap();
       const buckets = { for: [], against: [], even: [] };
       rgRows.forEach(r => {
         const f = r.forAll.filter(l => !rgBlacklist.has(l));
@@ -13235,16 +13247,17 @@
         if (f.length) noteParts.push(f.length + ' <span class="rg-note-for">for</span>');
         if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
         noteEl.innerHTML = noteParts.join(' &middot; ');
-        const bucket = { el: r.el, delta, total: f.length + a.length };
+        const dollarTotal = Array.from(new Set([...f, ...a])).reduce((s, name) => s + Math.abs(dollarMap[name] || 0), 0);
+        const bucket = { el: r.el, delta, total: f.length + a.length, dollarTotal };
         if (delta > 0) buckets.for.push(bucket);
         else if (delta < 0) buckets.against.push(bucket);
         else buckets.even.push(bucket);
       });
       if (rgSortCriterion === 'leagues') {
-        // Most leagues affected first, regardless of side -- how many
-        // teams a player touches, not how lopsided the impact is.
-        buckets.for.sort((a, b) => b.total - a.total);
-        buckets.against.sort((a, b) => b.total - a.total);
+        // Most real dollars at stake first, regardless of side -- how much
+        // entered league money a player touches, not how lopsided it is.
+        buckets.for.sort((a, b) => b.dollarTotal - a.dollarTotal);
+        buckets.against.sort((a, b) => b.dollarTotal - a.dollarTotal);
       } else {
         buckets.for.sort((a, b) => b.delta - a.delta);
         buckets.against.sort((a, b) => a.delta - b.delta);
@@ -16365,6 +16378,7 @@
 
   function expCompare(mode, a, b) {
     if (mode === 'adp') return Number(a.dataset.adp) - Number(b.dataset.adp);
+    if (mode === 'dollar') return Number(b.dataset.dollar) - Number(a.dataset.dollar);
     const diff = Number(b.dataset.pct) - Number(a.dataset.pct);
     return diff !== 0 ? diff : Number(a.dataset.adp) - Number(b.dataset.adp);
   }
@@ -16547,11 +16561,23 @@
     leagueEntries.forEach(entry => {
       const players = (entry.roster.players || []).filter(id => id && id !== '0');
       players.forEach(id => {
-        if (!exposureMap[id]) exposureMap[id] = { count: 0, leagues: [] };
+        if (!exposureMap[id]) exposureMap[id] = { count: 0, leagues: [], leagueIds: [] };
         exposureMap[id].count++;
         exposureMap[id].leagues.push(entry.league.name);
+        exposureMap[id].leagueIds.push(entry.league.league_id);
       });
     });
+    // Real money exposure: the Net you entered in Settings for each league
+    // you're in, summed across every league where you actually roster this
+    // player -- how much of your entered money is riding on him.
+    const leagueIdToSeason = {};
+    leagueEntries.forEach(e => { leagueIdToSeason[e.league.league_id] = e.league.season; });
+    function dollarExposureFor(leagueIds) {
+      return (leagueIds || []).reduce((sum, lid) => {
+        const net = rbGetNet(lid, leagueIdToSeason[lid]);
+        return sum + (net || 0);
+      }, 0);
+    }
 
     const EXP_POS_COLOR = { QB: 'var(--red)', RB: 'var(--green)', WR: 'var(--blue)', TE: 'var(--gold)' };
     // The Rookie/2nd Year filter chips match against a draft-class year, but
@@ -16574,6 +16600,7 @@
         // dynasty value rank (PP_PLAYER_VALUES, via ppRankForPlayerId) so
         // the ADP column and sort aren't just permanently blank.
         adp: ppRankForPlayerId(id, dict),
+        dollars: dollarExposureFor(info.leagueIds),
       };
     };
 
@@ -16599,7 +16626,7 @@
       if (!id || rosteredIds.has(id)) return;
       const p = dict[id];
       if (!p) return;
-      rows.push(rowForPlayer(id, p, { count: 0, leagues: [] }));
+      rows.push(rowForPlayer(id, p, { count: 0, leagues: [], leagueIds: [] }));
     });
 
     // Keep the list in rank order by default (unranked players -- no
@@ -16611,7 +16638,7 @@
     const posRankCounter = {};
     expGrid.innerHTML = rows.map((r, i) => {
       const posClass = r.pos.toLowerCase();
-      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}" data-team="${r.team}">
+      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-dollar="${r.dollars}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}" data-team="${r.team}">
           <div class="exp-rank">${i + 1}</div>
           <div class="exp-team-icon"><img src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" title="${r.team}" loading="lazy" onerror="this.remove()"></div>
           <div class="exp-avatar-wrap">
@@ -16627,7 +16654,7 @@
     expListBody.innerHTML = rows.map((r) => {
       const posClass = r.pos.toLowerCase();
       posRankCounter[r.pos] = (posRankCounter[r.pos] || 0) + 1;
-      return `<div class="exp-list-row" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}">
+      return `<div class="exp-list-row" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-dollar="${r.dollars}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}">
           <div class="exp-list-player">
             <div class="exp-list-avatar"><img src="${sbHeadshotUrl(r.id)}" alt="" loading="lazy" onerror="this.remove()"></div>
             <span class="exp-list-name">${r.name}</span>
@@ -16635,7 +16662,7 @@
           </div>
           <div class="exp-list-team">${r.team}</div>
           <div class="exp-list-adp">${r.adp != null ? r.adp : '&mdash;'}</div>
-          <div class="exp-list-dollar">&mdash;</div>
+          <div class="exp-list-dollar${r.count ? ' ' + ldrecSignClass(r.dollars) : ''}">${r.count ? rbNetDisplay(r.dollars) : '&mdash;'}</div>
           <div class="exp-list-leagues">${r.count}/${totalLeagues}</div>
           <div class="exp-list-exposure">
             <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-${posClass}" style="width:${r.pct}%"></div></div>
@@ -18147,7 +18174,7 @@
           if (expGrid) expGrid.hidden = showList;
           if (expList) expList.hidden = !showList;
         } else if (isSort) {
-          const mode = label === 'ADP' ? 'adp' : (label === 'EXP%' ? 'exp' : null);
+          const mode = label === 'ADP' ? 'adp' : (label === 'EXP%' ? 'exp' : (label === '$' ? 'dollar' : null));
           if (mode) {
             expState.sortDir = (wasActive && expState.sortMode === mode) ? expState.sortDir * -1 : 1;
             expState.sortMode = mode;
