@@ -617,6 +617,28 @@
   .sb-view-toggle-btn:last-child { border-right: none; }
   .sb-view-toggle-btn.is-active { background: var(--ink); color: var(--bg); }
 
+  /* GameCast -- full live play-by-play feed for one matchup at a time */
+  .gc-page { background: var(--bg); margin-top: 8px; color: var(--ink); }
+  .gc-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 18px; padding-bottom: 14px; }
+  #gcMatchupPickerWrap { margin-bottom: 18px; }
+  .gc-score-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 18px 22px; margin-bottom: 20px;
+  }
+  .gc-score-side { flex: 1; }
+  .gc-score-side-right { text-align: right; }
+  .gc-score-name { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+  .gc-score-value { font-family: 'Source Serif 4', serif; font-size: 30px; font-weight: 700; color: var(--navy); margin-top: 2px; }
+  .gc-score-side-right .gc-score-value { color: var(--ink); }
+  .gc-score-mid { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: var(--red); flex-shrink: 0; padding: 0 18px; }
+  .gc-feed-head { font-size: 12.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 0 0 8px; }
+  .gc-feed { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 4px 14px; }
+  .gc-play { gap: 10px; }
+  .gc-side-tag { flex-shrink: 0; font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; padding: 3px 6px; border-radius: 4px; }
+  .gc-side-tag.gc-side-mine { color: var(--navy); background: #e6edf7; }
+  .gc-side-tag.gc-side-opp { color: var(--muted); background: var(--bg); }
+
   /* Field View -- a grid of every league's live win-probability field at
      once, reusing the same .field-panel markup/animation as the
      Scoreboard's matchup expand so both views always agree. */
@@ -2935,7 +2957,8 @@
   <div class="section-tabs" id="sectionNav">
     <a class="section-tab active" data-section="dashboard">Dashboard</a>
     <a class="section-tab" data-section="leagues">Leagues</a>
-    <a class="section-tab" data-section="lineups">Scoreboard</a>
+    <a class="section-tab" data-section="lineups">Live</a>
+    <a class="section-tab" data-section="gamecast">GameCast</a>
     <a class="section-tab" data-section="rooting">Rooting Guide</a>
     <a class="section-tab" data-section="waiver">Waiver Wire</a>
     <a class="section-tab" data-section="draft">Draft Room</a>
@@ -3992,7 +4015,7 @@
     <div class="sb-page">
       <div class="sb-subtabs" id="sbSubtabs">
         <div class="sb-subtabs-left">
-          <h1 style="margin:0">Scoreboard</h1>
+          <h1 style="margin:0">Live</h1>
           <div class="sb-view-toggle" id="sbViewToggle">
             <button type="button" class="sb-view-toggle-btn is-active" data-sbv="scoreboard">Standard View</button>
             <button type="button" class="sb-view-toggle-btn" data-sbv="field">Field View</button>
@@ -4504,6 +4527,22 @@
 
     </div>
   </div>
+
+  <div data-view="gamecast">
+    <div class="gc-page">
+      <div class="gc-header">
+        <h1 style="margin:0">GameCast</h1>
+      </div>
+      <div class="sort-dropdown" id="gcMatchupPickerWrap">
+        <div class="sort-select" id="gcMatchupSelect"><span id="gcMatchupSelectLabel">Select a matchup&hellip;</span> <span>&#9662;</span></div>
+        <div class="sort-menu" id="gcMatchupMenu" hidden></div>
+      </div>
+      <div id="gcContent">
+        <div class="ld-loading">Pick a matchup to load its live GameCast feed.</div>
+      </div>
+    </div>
+  </div>
+
       <div data-view="rooting">
         <div class="rg-header">
           <div class="rg-header-top">
@@ -14394,6 +14433,7 @@
         setSyncState('ok', 'Synced just now');
         if (window.renderRealExposures) window.renderRealExposures();
         if (window.renderRealScoreboard) window.renderRealScoreboard();
+        if (window.renderRealGameCast) window.renderRealGameCast();
         if (window.renderRealTrades) window.renderRealTrades();
         if (window.renderRealWaiverWire) window.renderRealWaiverWire();
         if (window.renderRealRootingGuide) window.renderRealRootingGuide();
@@ -14421,6 +14461,7 @@
         if (window.sleeperGetPlayerDict && !window.__sleeperPlayerDict) {
           window.sleeperGetPlayerDict().then(() => {
             if (window.renderRealScoreboard) window.renderRealScoreboard();
+            if (window.renderRealGameCast) window.renderRealGameCast();
             if (window.renderRealDashboard) window.renderRealDashboard();
             if (window.renderContendingRanks) window.renderContendingRanks();
           }).catch(() => {});
@@ -17627,6 +17668,189 @@
       if (oppEl) oppEl.innerHTML = '<div class="sb-last-plays-empty">Could not load recent plays</div>';
     }
   }
+
+  // ---- GameCast -- the full live play-by-play feed for one matchup at a
+  // time, same fantasy-scoring engine as the Live tab's "Last 5 Plays"
+  // teaser but unbounded and merged across both sides of the matchup. ----
+
+  window.__gcSelectedLeagueId = window.__gcSelectedLeagueId || null;
+  let gcRefreshTimer = null;
+
+  function gcMatchupLabel(entry) {
+    const oppName = entry.oppUser
+      ? (entry.oppUser.display_name || entry.oppUser.username || 'Opponent')
+      : (entry.myMatchup ? 'TBD' : 'No matchup yet');
+    return `${entry.league.name} vs ${oppName}`;
+  }
+
+  function renderRealGameCast() {
+    const menu = document.getElementById('gcMatchupMenu');
+    const label = document.getElementById('gcMatchupSelectLabel');
+    if (!menu) return;
+    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.myMatchup);
+    const content = document.getElementById('gcContent');
+    if (!entries.length) {
+      menu.innerHTML = '';
+      if (label) label.textContent = 'No live matchups';
+      if (content) content.innerHTML = '<div class="ld-loading">No live matchups this week.</div>';
+      return;
+    }
+    if (!window.__gcSelectedLeagueId || !entries.some(e => e.league.league_id === window.__gcSelectedLeagueId)) {
+      window.__gcSelectedLeagueId = entries[0].league.league_id;
+    }
+    menu.innerHTML = entries.map(e =>
+      `<div class="sort-option${e.league.league_id === window.__gcSelectedLeagueId ? ' active' : ''}" data-gc-league="${e.league.league_id}">${sbFieldEsc(gcMatchupLabel(e))}</div>`
+    ).join('');
+    const activeEntry = entries.find(e => e.league.league_id === window.__gcSelectedLeagueId);
+    if (label && activeEntry) label.textContent = gcMatchupLabel(activeEntry);
+    const gamecastView = document.querySelector('[data-view="gamecast"]');
+    if (gamecastView && gamecastView.classList.contains('is-active')) {
+      loadGcFeed(activeEntry);
+    }
+  }
+  window.renderRealGameCast = renderRealGameCast;
+
+  async function loadGcFeed(entry) {
+    const content = document.getElementById('gcContent');
+    if (!content || !entry) return;
+    const dict = window.__sleeperPlayerDict;
+    if (!dict) { content.innerHTML = '<div class="ld-loading">Loading players&hellip;</div>'; return; }
+
+    const myMatchup = entry.myMatchup, oppMatchup = entry.oppMatchup;
+    const myPts = myMatchup ? (myMatchup.points || 0) : 0;
+    const oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
+    const oppName = entry.oppUser ? (entry.oppUser.display_name || entry.oppUser.username || 'Opponent') : 'Opponent';
+
+    const myStarters = ((myMatchup && myMatchup.starters) || []).filter(id => id && id !== '0');
+    const oppStarters = ((oppMatchup && oppMatchup.starters) || []).filter(id => id && id !== '0');
+
+    content.innerHTML = `
+      <div class="gc-score-header">
+        <div class="gc-score-side">
+          <div class="gc-score-name">You</div>
+          <div class="gc-score-value">${myPts.toFixed(1)}</div>
+        </div>
+        <div class="gc-score-mid">LIVE</div>
+        <div class="gc-score-side gc-score-side-right">
+          <div class="gc-score-name">${sbFieldEsc(oppName)}</div>
+          <div class="gc-score-value">${oppPts.toFixed(1)}</div>
+        </div>
+      </div>
+      <div class="gc-feed-head">Live Play-by-Play</div>
+      <div class="gc-feed" id="gcFeedList"><div class="ld-loading">Loading live plays&hellip;</div></div>
+    `;
+
+    try {
+      const espnGames = await getEspnGameDataCached(entry.week, entry.league.season);
+      const [minePlays, oppPlays] = await Promise.all([
+        gcGetAllPlays(myStarters, dict, entry.league, espnGames, 'mine'),
+        gcGetAllPlays(oppStarters, dict, entry.league, espnGames, 'opp'),
+      ]);
+      const merged = minePlays.concat(oppPlays).sort((a, b) => b.order - a.order);
+      const feedList = document.getElementById('gcFeedList');
+      if (feedList) feedList.innerHTML = gcFeedHtml(merged);
+    } catch (err) {
+      const feedList = document.getElementById('gcFeedList');
+      if (feedList) feedList.innerHTML = '<div class="sb-last-plays-empty">Could not load live plays</div>';
+    }
+  }
+
+  // Same fantasy-relevant play matching as sbGetLast5Plays, but returns
+  // every matched play instead of the 5 most recent -- GameCast is the full
+  // feed, the Live tab's "Last 5 Plays" is just the teaser.
+  async function gcGetAllPlays(starterIds, dict, league, espnGames, side) {
+    const relevant = (starterIds || []).filter(id => {
+      const p = dict[id];
+      return p && ['QB', 'RB', 'WR', 'TE'].includes(p.position);
+    });
+    if (!relevant.length) return [];
+
+    const shortNameMap = {};
+    relevant.forEach(id => {
+      const p = dict[id];
+      const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+      shortNameMap[sbEspnShortName(full)] = id;
+    });
+
+    const eventIds = new Set();
+    relevant.forEach(id => {
+      const info = espnGames[dict[id].team];
+      if (info && info.eventId) eventIds.add(info.eventId);
+    });
+    if (!eventIds.size) return [];
+
+    const gamesPlays = await Promise.all(Array.from(eventIds).map(getEspnPlayByPlay));
+
+    const found = [];
+    gamesPlays.forEach(plays => {
+      plays.forEach((play, idx) => {
+        sbParsePlayEvents(play.text).forEach(ev => {
+          const playerId = shortNameMap[ev.name];
+          if (!playerId) return;
+          const points = sbCustomScoreFor(ev.stats, league.scoring_settings);
+          if (points == null) return;
+          const p = dict[playerId];
+          const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : ev.name;
+          found.push({
+            name, desc: ev.desc, points, side,
+            order: play.wallclock ? new Date(play.wallclock).getTime() : idx,
+          });
+        });
+      });
+    });
+    return found;
+  }
+
+  function gcFeedHtml(plays) {
+    if (!plays.length) return '<div class="sb-last-plays-empty">No scoring plays yet</div>';
+    return plays.map(p => {
+      const cls = p.points > 0 ? 'sb-last-play-pos' : (p.points < 0 ? 'sb-last-play-neg' : '');
+      const sign = p.points > 0 ? '+' : '';
+      const sideCls = p.side === 'mine' ? 'gc-side-mine' : 'gc-side-opp';
+      const sideLabel = p.side === 'mine' ? 'YOU' : 'OPP';
+      return '<div class="sb-last-play gc-play">' +
+        `<span class="gc-side-tag ${sideCls}">${sideLabel}</span>` +
+        `<span class="sb-last-play-name">${sbFieldEsc(p.name)}</span>` +
+        `<span class="sb-last-play-desc">${sbFieldEsc(p.desc)}</span>` +
+        `<span class="sb-last-play-pts ${cls}">${sign}${p.points.toFixed(1)}</span>` +
+      '</div>';
+    }).join('');
+  }
+
+  (function initGcMatchupPicker() {
+    const selectEl = document.getElementById('gcMatchupSelect');
+    const menuEl = document.getElementById('gcMatchupMenu');
+    if (!selectEl || !menuEl) return;
+    selectEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menuEl.hidden = !menuEl.hidden;
+    });
+    menuEl.addEventListener('click', (e) => {
+      const option = e.target.closest('.sort-option');
+      if (!option || !option.dataset.gcLeague) return;
+      window.__gcSelectedLeagueId = option.dataset.gcLeague;
+      menuEl.hidden = true;
+      renderRealGameCast();
+    });
+    document.addEventListener('click', () => { menuEl.hidden = true; });
+  })();
+
+  document.querySelectorAll('.section-tab').forEach(tab => {
+    if (tab.dataset.section !== 'gamecast') return;
+    tab.addEventListener('click', () => {
+      renderRealGameCast();
+      if (gcRefreshTimer) clearInterval(gcRefreshTimer);
+      gcRefreshTimer = setInterval(() => {
+        const view = document.querySelector('[data-view="gamecast"]');
+        if (view && view.classList.contains('is-active')) {
+          renderRealGameCast();
+        } else {
+          clearInterval(gcRefreshTimer);
+          gcRefreshTimer = null;
+        }
+      }, 20000);
+    });
+  });
 
   window.__sleeperScheduleCache = window.__sleeperScheduleCache || {};
 
