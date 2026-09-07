@@ -1602,6 +1602,12 @@
   .exp-pct.exp-rb { color: var(--green); }
   .exp-pct.exp-wr { color: var(--blue); }
   .exp-pct.exp-te { color: var(--gold); }
+  .exp-dollar { font-size: 22px; font-weight: 800; }
+  .exp-dollar.exp-qb { color: var(--red); }
+  .exp-dollar.exp-rb { color: var(--green); }
+  .exp-dollar.exp-wr { color: var(--blue); }
+  .exp-dollar.exp-te { color: var(--gold); }
+  .exp-pct.exp-pct-secondary { font-size: 12px; font-weight: 600; color: var(--faint); }
   .exp-frac { font-size: 11px; color: var(--faint); font-weight: 600; }
   .exp-dash { font-size: 15px; font-weight: 800; color: var(--border); }
   .exp-bar { height: 4px; border-radius: 2px; margin-top: 8px; }
@@ -13237,21 +13243,29 @@
         r.el.dataset.for = f.join(' &middot; ');
         r.el.dataset.against = a.join(' &middot; ');
         const delta = f.length - a.length;
-        const deltaEl = r.el.querySelector('.rg-delta');
-        const noteEl = r.el.querySelector('.rg-note');
-        deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
-        if (delta > 0) { deltaEl.textContent = '+' + delta; deltaEl.classList.add('rg-delta-pos'); }
-        else if (delta < 0) { deltaEl.textContent = String(delta); deltaEl.classList.add('rg-delta-neg'); }
-        else { deltaEl.textContent = '0'; deltaEl.classList.add('rg-delta-even'); }
-        const noteParts = [];
-        if (f.length) noteParts.push(f.length + ' <span class="rg-note-for">for</span>');
-        if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
-        noteEl.innerHTML = noteParts.join(' &middot; ');
         // Your buy-in in every league this player helps you in, minus your
         // buy-in in every league he hurts you in -- same for/against split
         // the win-count delta above uses, just weighted by real dollars
         // instead of by 1 per league.
         const dollarNet = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
+        const deltaEl = r.el.querySelector('.rg-delta');
+        const noteEl = r.el.querySelector('.rg-note');
+        deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
+        // In $ mode the badge shows real dollars at stake instead of a
+        // league count, so it reads "+$325" rather than "+3".
+        if (rgSortCriterion === 'leagues') {
+          if (dollarNet > 0) { deltaEl.textContent = '+$' + dollarNet; deltaEl.classList.add('rg-delta-pos'); }
+          else if (dollarNet < 0) { deltaEl.textContent = '-$' + Math.abs(dollarNet); deltaEl.classList.add('rg-delta-neg'); }
+          else { deltaEl.textContent = '$0'; deltaEl.classList.add('rg-delta-even'); }
+        } else {
+          if (delta > 0) { deltaEl.textContent = '+' + delta; deltaEl.classList.add('rg-delta-pos'); }
+          else if (delta < 0) { deltaEl.textContent = String(delta); deltaEl.classList.add('rg-delta-neg'); }
+          else { deltaEl.textContent = '0'; deltaEl.classList.add('rg-delta-even'); }
+        }
+        const noteParts = [];
+        if (f.length) noteParts.push(f.length + ' <span class="rg-note-for">for</span>');
+        if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
+        noteEl.innerHTML = noteParts.join(' &middot; ');
         const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet };
         if (delta > 0) buckets.for.push(bucket);
         else if (delta < 0) buckets.against.push(bucket);
@@ -16655,9 +16669,12 @@
 
     const adpSortVal = (r) => r.adp != null ? r.adp : 99999;
 
+    const dollarText = (d) => d < 0 ? '-$' + Math.abs(d) : '$' + d;
+
     const posRankCounter = {};
     expGrid.innerHTML = rows.map((r, i) => {
       const posClass = r.pos.toLowerCase();
+      const dollarHtml = r.count ? `<span class="exp-dollar exp-${posClass}">${dollarText(r.dollars)}</span>` : '';
       return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-dollar="${r.dollars}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}" data-team="${r.team}">
           <div class="exp-rank">${i + 1}</div>
           <div class="exp-team-icon"><img src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" title="${r.team}" loading="lazy" onerror="this.remove()"></div>
@@ -16666,7 +16683,7 @@
             <span class="exp-pos-badge exp-${posClass}">${r.pos}</span>
           </div>
           <div class="exp-name">${r.name}</div>
-          <div class="exp-pct-row"><span class="exp-pct exp-${posClass}">${r.pct}%</span><span class="exp-frac">${r.count}/${totalLeagues}</span></div>
+          <div class="exp-pct-row">${dollarHtml}<span class="exp-pct${dollarHtml ? ' exp-pct-secondary' : ' exp-' + posClass}">${r.pct}%</span><span class="exp-frac">${r.count}/${totalLeagues}</span></div>
           <div class="exp-bar exp-${posClass}" style="width:${r.pct}%"></div>
         </div>`;
     }).join('');
@@ -16682,7 +16699,7 @@
           </div>
           <div class="exp-list-team">${r.team}</div>
           <div class="exp-list-adp">${r.adp != null ? r.adp : '&mdash;'}</div>
-          <div class="exp-list-dollar${r.count ? ' ' + window.ldrecSignClass(r.dollars) : ''}">${r.count ? window.rbNetDisplay(r.dollars) : '&mdash;'}</div>
+          <div class="exp-list-dollar${r.count ? ' ' + window.ldrecSignClass(r.dollars) : ''}">${r.count ? dollarText(r.dollars) : '&mdash;'}</div>
           <div class="exp-list-leagues">${r.count}/${totalLeagues}</div>
           <div class="exp-list-exposure">
             <div class="exp-list-bar-mini"><div class="exp-list-bar-fill exp-${posClass}" style="width:${r.pct}%"></div></div>
