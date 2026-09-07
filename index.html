@@ -13906,6 +13906,12 @@
     // which the popup treats as an honest "no stats recorded yet" rather
     // than showing zeroes.
     window.__sleeperStatsCache = window.__sleeperStatsCache || {};
+    // Same payload also carries each entry's real team/opponent for that
+    // week -- captured alongside the stats (not part of getWeekStats's own
+    // return value, so this is purely additive) for the player modal's
+    // Game Log tab, which wants a real "Opp" column and a real team per
+    // team-to-compute-snap-% grouping.
+    window.__sleeperStatsMetaCache = window.__sleeperStatsMetaCache || {};
     async function getWeekStats(season, week) {
       const cacheKey = `${season}_${week}`;
       try {
@@ -13913,17 +13919,21 @@
           `/stats/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
         );
         const statsMap = {};
+        const metaMap = {};
         (list || []).forEach(p => {
           if (!p || !p.player_id || !p.stats) return;
           statsMap[p.player_id] = p.stats;
+          if (p.team) metaMap[p.player_id] = { team: p.team, opponent: p.opponent || null };
         });
         window.__sleeperStatsCache[cacheKey] = statsMap;
+        window.__sleeperStatsMetaCache[cacheKey] = metaMap;
         return statsMap;
       } catch (e) {
         return window.__sleeperStatsCache[cacheKey] || {};
       }
     }
     window.sleeperGetWeekStats = getWeekStats;
+    window.sleeperGetWeekStatsMeta = (season, week) => window.__sleeperStatsMetaCache[`${season}_${week}`] || {};
 
     // Used to look up a different week's schedule (team/opponent pairings
     // only, not points) without touching the current week's cached
@@ -17466,24 +17476,77 @@
     if (!p) return null;
     return p.position || (p.fantasy_positions || [])[0] || null;
   }
+  // Column defs work off a "stats-like" object -- either one week's raw
+  // stats, or a season's worth of them summed together (pmGlSumStats) --
+  // so the exact same renderer draws both the season row and each week
+  // row. `calc` columns (YPT/YPC/rush YPC) are real per-target/per-catch/
+  // per-carry averages computed from the raw counts, not separate fields.
   function pmGlColumnGroups(pos) {
-    if (pos === 'QB') return [
-      { label: 'PASSING', cols: [['pass_cmp', 'Cmp'], ['pass_att', 'Att'], ['pass_yd', 'Yds'], ['pass_td', 'TD'], ['pass_int', 'INT']] },
-      { label: 'RUSHING', cols: [['rush_att', 'Att'], ['rush_yd', 'Yds'], ['rush_td', 'TD']] },
-    ];
-    if (pos === 'RB') return [
-      { label: 'RUSHING', cols: [['rush_att', 'Att'], ['rush_yd', 'Yds'], ['rush_td', 'TD']] },
-      { label: 'RECEIVING', cols: [['rec_tgt', 'Tgt'], ['rec', 'Rec'], ['rec_yd', 'Yds'], ['rec_td', 'TD']] },
-    ];
+    const RECEIVING = { label: 'RECEIVING', cols: [
+      { key: 'rec_tgt', label: 'Tgt' },
+      { key: 'rec', label: 'Rec' },
+      { key: 'rec_yd', label: 'Yds' },
+      { label: 'YPT', calc: s => (s.rec_tgt ? (s.rec_yd || 0) / s.rec_tgt : null) },
+      { label: 'YPC', calc: s => (s.rec ? (s.rec_yd || 0) / s.rec : null) },
+      { key: 'rec_td', label: 'TD' },
+    ] };
+    const RUSHING = { label: 'RUSHING', cols: [
+      { key: 'rush_att', label: 'Att' },
+      { key: 'rush_yd', label: 'Yds' },
+      { label: 'YPC', calc: s => (s.rush_att ? (s.rush_yd || 0) / s.rush_att : null) },
+      { key: 'rush_td', label: 'TD' },
+    ] };
+    const PASSING = { label: 'PASSING', cols: [
+      { key: 'pass_cmp', label: 'Cmp' },
+      { key: 'pass_att', label: 'Att' },
+      { key: 'pass_yd', label: 'Yds' },
+      { key: 'pass_td', label: 'TD' },
+      { key: 'pass_int', label: 'INT' },
+    ] };
+    if (pos === 'QB') return [PASSING, RUSHING];
+    if (pos === 'RB') return [RUSHING, RECEIVING];
     // WR/TE and anything else default to this shape.
-    return [
-      { label: 'RECEIVING', cols: [['rec_tgt', 'Tgt'], ['rec', 'Rec'], ['rec_yd', 'Yds'], ['rec_td', 'TD']] },
-      { label: 'RUSHING', cols: [['rush_att', 'Att'], ['rush_yd', 'Yds'], ['rush_td', 'TD']] },
-    ];
+    return [RECEIVING, RUSHING];
   }
-  function pmGlCell(stats, key) {
-    const v = stats ? stats[key] : null;
+  function pmGlColCell(col, statsLike) {
+    if (col.calc) {
+      const v = col.calc(statsLike);
+      return v != null ? v.toFixed(1) : '&mdash;';
+    }
+    const v = statsLike[col.key];
     return v != null ? v : 0;
+  }
+  // Sums every raw key a position's columns actually use across a
+  // season's weeks, so the season row's YPT/YPC/etc. are a real full-
+  // season ratio (total yards / total targets) rather than an average of
+  // weekly averages.
+  function pmGlSumStats(weekRows, groups) {
+    const sum = {};
+    groups.forEach(gr => gr.cols.forEach(col => {
+      if (!col.key) return;
+      sum[col.key] = weekRows.reduce((s, r) => s + (Number(r.stats[col.key]) || 0), 0);
+    }));
+    return sum;
+  }
+  // Real recorded offensive snap count for this player that week, shown as
+  // a % of the highest offensive snap count recorded on their own team
+  // that week -- Sleeper's per-player payload doesn't carry an explicit
+  // team-total-snaps field, so the team's own high-snap player (almost
+  // always the QB) stands in for "the team's offensive snaps," same
+  // approximation other fantasy sites use when a real team total isn't
+  // published.
+  function pmComputeSnapPct(statsMap, metaMap, playerId) {
+    const myMeta = metaMap[playerId];
+    const myStats = statsMap[playerId];
+    if (!myMeta || !myStats || myStats.off_snp == null) return null;
+    let maxSnaps = 0;
+    Object.keys(metaMap).forEach(pid => {
+      if (metaMap[pid].team !== myMeta.team) return;
+      const snp = statsMap[pid] && statsMap[pid].off_snp;
+      if (snp != null && snp > maxSnaps) maxSnaps = snp;
+    });
+    if (!maxSnaps) return null;
+    return Math.round((myStats.off_snp / maxSnaps) * 100);
   }
 
   function pmCurrentSeasonWeek() {
@@ -17518,19 +17581,25 @@
 
   // Walks every week of a season fetching the *whole league's* real stat
   // line (window.sleeperGetWeekStats, already cached per season/week) so
-  // this player's own weekly rows and a real position-rank (weekly and
-  // season-long) can both be pulled from the same fetch instead of a
-  // second network round trip.
+  // this player's own weekly rows, a real position-rank (weekly and
+  // season-long), the real opponent, and a real snap-% can all be pulled
+  // from the same fetch instead of extra network round trips.
   async function pmFetchSeasonGameLog(playerId, dict, season, throughWeek) {
     const targetPos = pmPlayerPosition(dict, playerId);
     const weekRows = [];
     const posTotals = {};
+    let lastTeam = null;
     for (let w = 1; w <= throughWeek; w++) {
       let statsMap = {};
       if (window.sleeperGetWeekStats) {
         try { statsMap = (await window.sleeperGetWeekStats(season, w)) || {}; } catch (e) {}
       }
       const myStats = statsMap[playerId];
+      if (!myStats) continue;
+      const metaMap = window.sleeperGetWeekStatsMeta ? window.sleeperGetWeekStatsMeta(season, w) : {};
+      const myMeta = metaMap[playerId];
+      if (myMeta && myMeta.team) lastTeam = myMeta.team;
+
       let posRank = null;
       if (targetPos) {
         const posEntries = [];
@@ -17541,20 +17610,26 @@
           posEntries.push([pid, pts]);
           posTotals[pid] = (posTotals[pid] || 0) + pts;
         });
-        if (myStats) {
-          posEntries.sort((a, b) => b[1] - a[1]);
-          const idx = posEntries.findIndex(([pid]) => pid === playerId);
-          posRank = idx >= 0 ? idx + 1 : null;
-        }
+        posEntries.sort((a, b) => b[1] - a[1]);
+        const idx = posEntries.findIndex(([pid]) => pid === playerId);
+        posRank = idx >= 0 ? idx + 1 : null;
       }
-      if (myStats) weekRows.push({ week: w, stats: myStats, posRank });
+
+      weekRows.push({
+        week: w,
+        stats: myStats,
+        posRank,
+        opponent: myMeta ? myMeta.opponent : null,
+        snapPct: pmComputeSnapPct(statsMap, metaMap, playerId),
+      });
     }
     let seasonRank = null;
     if (targetPos && posTotals[playerId] != null) {
       const sorted = Object.entries(posTotals).sort((a, b) => b[1] - a[1]);
       seasonRank = sorted.findIndex(([pid]) => pid === playerId) + 1;
     }
-    return { season, weekRows, seasonRank, pos: targetPos };
+    const team = lastTeam || (dict[playerId] && dict[playerId].team) || null;
+    return { season, weekRows, seasonRank, pos: targetPos, team };
   }
 
   function pmGlSeasonTable(gl, idx) {
@@ -17563,19 +17638,20 @@
     const totalPts = gl.weekRows.reduce((s, r) => s + (pmPts(r.stats) || 0), 0);
     const ppg = g ? totalPts / g : 0;
     const rankText = gl.seasonRank ? `${gl.pos}${gl.seasonRank}` : '&mdash;';
+    const seasonSum = pmGlSumStats(gl.weekRows, groups);
 
     const groupHeadHtml = groups.map(gr => `<th colspan="${gr.cols.length}" class="pm-gl-group-th">${gr.label}</th>`).join('');
-    const subHeadHtml = groups.map(gr => gr.cols.map(([, label]) => `<th>${label}</th>`).join('')).join('');
-    const seasonStatCellsHtml = groups.map(gr => gr.cols.map(([key]) =>
-      `<td>${gl.weekRows.reduce((s, r) => s + (Number(pmGlCell(r.stats, key)) || 0), 0)}</td>`
-    ).join('')).join('');
+    const subHeadHtml = groups.map(gr => gr.cols.map(col => `<th>${col.label}</th>`).join('')).join('');
+    const seasonStatCellsHtml = groups.map(gr => gr.cols.map(col => `<td>${pmGlColCell(col, seasonSum)}</td>`).join('')).join('');
 
     const weekRowsHtml = gl.weekRows.slice().reverse().map(r => {
       const pts = pmPts(r.stats);
       const rk = r.posRank ? `${gl.pos}${r.posRank}` : '&mdash;';
-      const statCellsHtml = groups.map(gr => gr.cols.map(([key]) => `<td>${pmGlCell(r.stats, key)}</td>`).join('')).join('');
+      const statCellsHtml = groups.map(gr => gr.cols.map(col => `<td>${pmGlColCell(col, r.stats)}</td>`).join('')).join('');
       return `<tr>
         <td>Wk ${r.week}</td>
+        <td>${r.opponent || '&mdash;'}</td>
+        <td>${r.snapPct != null ? r.snapPct + '%' : '&mdash;'}</td>
         <td class="pm-gl-fpts">${pts != null ? pts.toFixed(1) : '&mdash;'}</td>
         <td>${rk}</td>
         ${statCellsHtml}
@@ -17588,6 +17664,7 @@
           <thead>
             <tr>
               <th rowspan="2">Season</th>
+              <th rowspan="2">Tm</th>
               <th rowspan="2">G</th>
               <th rowspan="2">FPts</th>
               <th rowspan="2">FPts/G</th>
@@ -17599,6 +17676,7 @@
           <tbody>
             <tr class="pm-gl-season-row" data-gl-toggle="${idx}">
               <td><span class="pm-gl-chevron" data-gl-chevron="${idx}">&rsaquo;</span>${gl.season}</td>
+              <td>${gl.team || '&mdash;'}</td>
               <td>${g}</td>
               <td class="pm-gl-fpts">${totalPts.toFixed(1)}</td>
               <td>${ppg.toFixed(1)}</td>
@@ -17608,7 +17686,7 @@
           </tbody>
         </table>
         <table class="pm-gl-table pm-gl-weeks" id="pmGlWeeks${idx}" hidden>
-          <thead><tr><th>Wk</th><th>FPts</th><th>Rk</th>${subHeadHtml}</tr></thead>
+          <thead><tr><th>Wk</th><th>Opp</th><th>Snp%</th><th>FPts</th><th>Rk</th>${subHeadHtml}</tr></thead>
           <tbody>${weekRowsHtml}</tbody>
         </table>
       </div>
@@ -17634,17 +17712,21 @@
     }
 
     const { season: curSeason, week: curWeek } = pmCurrentSeasonWeek();
-    const seasonSpecs = [
-      { season: curSeason, through: Math.max(curWeek, 1) },
-      { season: curSeason - 1, through: 18 },
-    ];
-
-    const results = [];
-    for (const spec of seasonSpecs) {
-      const gl = await pmFetchSeasonGameLog(playerId, dict, spec.season, spec.through);
-      if (myToken !== pmGameLogToken) return;
-      if (gl.weekRows.length) results.push(gl);
+    // Every season of this player's real career, bounded by Sleeper's
+    // actual years_exp (so a rookie doesn't trigger a decade of empty
+    // fetches) and a sane cap for very long careers.
+    const yearsBack = Math.min((dict[playerId].years_exp != null ? dict[playerId].years_exp : 4) + 1, 15);
+    const seasonSpecs = [];
+    for (let i = 0; i < yearsBack; i++) {
+      const season = curSeason - i;
+      seasonSpecs.push({ season, through: i === 0 ? Math.max(curWeek, 1) : 18 });
     }
+
+    const fetched = await Promise.all(
+      seasonSpecs.map(spec => pmFetchSeasonGameLog(playerId, dict, spec.season, spec.through))
+    );
+    if (myToken !== pmGameLogToken) return;
+    const results = fetched.filter(gl => gl.weekRows.length);
 
     if (!results.length) {
       pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No recorded games found for this player.</p></div>';
