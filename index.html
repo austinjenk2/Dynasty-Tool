@@ -2783,6 +2783,76 @@
     width: 28px; height: 28px; border-radius: 6px; background: var(--green); color: #fff;
     font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
+
+  /* ---------- Trade Calculator ---------- */
+  .tc-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tc-scoring-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 18px; }
+  .tc-scoring-row { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tc-scoring-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 8px; }
+  .tc-scoring-label span { font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .tc-pill-row { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .tc-pill { padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--surface); cursor: pointer; border-right: 1px solid var(--border); white-space: nowrap; }
+  .tc-pill:last-child { border-right: none; }
+  .tc-pill.is-active { background: var(--ink); color: var(--bg); }
+  .tc-teams-grid { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 18px; }
+  .tc-team-panel { flex: 1 1 320px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; position: relative; }
+  .tc-team-panel.tc-drag-over { border-color: var(--green); }
+  .tc-team-head { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink); margin-bottom: 12px; }
+  .tc-team-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .tc-team-total { margin-left: auto; font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 800; }
+  .tc-search-wrap { position: relative; }
+  .tc-search-results {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 12;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 10px 28px -10px rgba(0,0,0,0.25); max-height: 280px; overflow-y: auto; padding: 6px;
+  }
+  .tc-search-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 6px; cursor: pointer; }
+  .tc-search-row:hover { background: var(--bg); }
+  .tc-search-avatar, .tc-pick-badge { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; overflow: hidden; background: var(--bg); }
+  .tc-search-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tc-pick-badge { border-radius: 8px; background: var(--blue); color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .tc-search-name { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .tc-search-sub { font-size: 10.5px; color: var(--faint); margin-top: 1px; }
+  .tc-search-value { margin-left: auto; font-weight: 800; font-size: 12.5px; color: var(--ink); flex-shrink: 0; }
+  .tc-asset-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; min-height: 64px; }
+  .tc-empty {
+    flex: 1; display: flex; align-items: center; justify-content: center; text-align: center;
+    border: 1px dashed var(--border); border-radius: 8px; color: var(--faint); font-size: 12.5px;
+    font-style: italic; padding: 18px 12px;
+  }
+  .tc-asset-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+  }
+  .tc-asset-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; overflow: hidden; background: var(--surface); }
+  .tc-asset-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tc-pick-badge-lg { width: 40px; height: 40px; border-radius: 10px; }
+  .tc-asset-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .tc-asset-sub { font-size: 10.5px; color: var(--faint); margin-top: 1px; }
+  .tc-asset-value { font-weight: 800; font-size: 13.5px; color: var(--ink); margin-left: auto; }
+  .tc-asset-remove { color: var(--faint); font-size: 15px; cursor: pointer; padding: 2px 4px; flex-shrink: 0; }
+  .tc-asset-remove:hover { color: var(--red); }
+  .tc-gap-panel { flex: 0 0 280px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .tc-gap-head { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink); margin-bottom: 6px; }
+  .tc-gap-sub { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+  .tc-gap-sub b { color: var(--ink); }
+  .tc-gap-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border-soft); cursor: pointer; }
+  .tc-gap-row:first-of-type { border-top: none; }
+  .tc-gap-row:hover .tc-gap-name { color: var(--green); }
+  .tc-gap-name { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .tc-gap-sub-line { font-size: 10.5px; color: var(--faint); }
+  .tc-gap-value { margin-left: auto; font-weight: 800; font-size: 12.5px; color: var(--ink); }
+  .tc-verdict { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 22px 18px; text-align: center; }
+  .tc-verdict-sub { font-size: 11px; font-weight: 700; letter-spacing: 0.3px; color: var(--faint); margin-bottom: 6px; }
+  .tc-verdict-main { font-family: 'Source Serif 4', serif; font-size: 26px; font-weight: 800; color: var(--ink); margin-bottom: 18px; }
+  .tc-verdict-bar-row { display: flex; align-items: center; gap: 12px; max-width: 560px; margin: 0 auto; }
+  .tc-verdict-side-val { font-size: 13px; font-weight: 800; flex-shrink: 0; width: 52px; }
+  .tc-verdict-side-val.a { color: var(--blue); text-align: right; }
+  .tc-verdict-side-val.b { color: var(--red); text-align: left; }
+  .tc-verdict-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--border-soft); overflow: hidden; display: flex; }
+  .tc-verdict-fill-a { height: 100%; background: var(--blue); }
+  .tc-verdict-fill-b { height: 100%; background: var(--red); }
+  @media (max-width: 760px) { .tc-gap-panel { flex-basis: 100%; } }
 </style>
 <!-- Rasterizes a trade card to a canvas for the "export as image" feature
      (Trade History's camera icon) -- real, widely-used library, no key. -->
@@ -10214,7 +10284,89 @@
     </div>
   </div>
   <div data-view="records"><div class="placeholder"><h3>Record Book</h3><p>This section is being built.</p></div></div>
-  <div data-view="calculator"><div class="placeholder"><h3>Trade Calculator</h3><p>This section is being built.</p></div></div>
+  <div data-view="calculator">
+    <div class="page-title">
+      <h1>Trade Calculator</h1>
+      <p>Build a trade and see who wins it, using real dynasty player values.</p>
+    </div>
+
+    <div class="tc-toolbar">
+      <div class="sb-view-toggle" id="tcValueToggle">
+        <button type="button" class="sb-view-toggle-btn is-active" data-tc-source="austin">Austin's Rankings</button>
+        <button type="button" class="sb-view-toggle-btn" data-tc-source="dynasty">Dynasty Values</button>
+      </div>
+      <div class="sort-dropdown" id="tcLeagueDropdown">
+        <div class="sort-select" id="tcLeagueSelect"><span id="tcLeagueSelectLabel">Match League Settings&hellip;</span> <span>&#9662;</span></div>
+        <div class="sort-menu" id="tcLeagueMenu" hidden></div>
+      </div>
+      <div class="chip" id="tcFormatChip">12 Teams &middot; 1QB &middot; Full PPR</div>
+      <div class="exp-refresh" id="tcResetBtn" title="Reset trade">&#8635;</div>
+    </div>
+
+    <div class="tc-scoring-panel">
+      <div class="tc-scoring-row">
+        <div class="tc-scoring-group">
+          <div class="tc-scoring-label">TE PREMIUM <span>&middot; measured</span></div>
+          <div class="tc-pill-row" data-tc-group="tep">
+            <div class="tc-pill is-active" data-tc-val="0">Non-TEP</div>
+            <div class="tc-pill" data-tc-val="0.5">0.5 TEP</div>
+            <div class="tc-pill" data-tc-val="0.75">0.75 TEP</div>
+            <div class="tc-pill" data-tc-val="1">1.0 TEP</div>
+          </div>
+        </div>
+        <div class="tc-scoring-group">
+          <div class="tc-scoring-label">POINTS PER CARRY <span>&middot; estimate</span></div>
+          <div class="tc-pill-row" data-tc-group="ppc">
+            <div class="tc-pill is-active" data-tc-val="0">No PPC</div>
+            <div class="tc-pill" data-tc-val="0.1">0.1 PPC</div>
+            <div class="tc-pill" data-tc-val="0.25">0.25 PPC</div>
+          </div>
+        </div>
+        <div class="tc-scoring-group">
+          <div class="tc-scoring-label">RECEPTION <span>&middot; estimate</span></div>
+          <div class="tc-pill-row" data-tc-group="rec">
+            <div class="tc-pill is-active" data-tc-val="1">Full PPR</div>
+            <div class="tc-pill" data-tc-val="0.5">Half PPR</div>
+          </div>
+        </div>
+      </div>
+      <div class="pm-note">Slides values toward a league that scores differently. Match a league above and these set themselves. Not wired into the values yet -- coming soon.</div>
+    </div>
+
+    <div class="tc-teams-grid">
+      <div class="tc-team-panel" data-tc-side="a">
+        <div class="tc-team-head"><span class="tc-team-dot" style="background:var(--blue)"></span>TEAM A RECEIVES <span class="tc-team-total" id="tcTotalA" style="color:var(--blue)">0.00</span></div>
+        <div class="tc-search-wrap">
+          <div class="exp-search"><span>&#128269;</span><input type="text" placeholder="Search for a player or pick" id="tcSearchA" autocomplete="off"></div>
+          <div class="tc-search-results" id="tcResultsA" hidden></div>
+        </div>
+        <div class="tc-asset-list" id="tcListA"><div class="tc-empty">Search a player or pick to add to the trade.</div></div>
+      </div>
+      <div class="tc-team-panel" data-tc-side="b">
+        <div class="tc-team-head"><span class="tc-team-dot" style="background:var(--red)"></span>TEAM B RECEIVES <span class="tc-team-total" id="tcTotalB" style="color:var(--red)">0.00</span></div>
+        <div class="tc-search-wrap">
+          <div class="exp-search"><span>&#128269;</span><input type="text" placeholder="Search for a player or pick" id="tcSearchB" autocomplete="off"></div>
+          <div class="tc-search-results" id="tcResultsB" hidden></div>
+        </div>
+        <div class="tc-asset-list" id="tcListB"><div class="tc-empty">Search a player or pick to add to the trade.</div></div>
+      </div>
+      <div class="tc-gap-panel" id="tcGapPanel" hidden>
+        <div class="tc-gap-head">CLOSE THE GAP</div>
+        <div class="tc-gap-sub" id="tcGapSub"></div>
+        <div class="tc-gap-list" id="tcGapList"></div>
+      </div>
+    </div>
+
+    <div class="tc-verdict" id="tcVerdict" hidden>
+      <div class="tc-verdict-sub">Verdict &middot; <span id="tcVerdictSource">Austin's Rankings</span></div>
+      <div class="tc-verdict-main" id="tcVerdictMain">Fair Trade</div>
+      <div class="tc-verdict-bar-row">
+        <span class="tc-verdict-side-val a" id="tcBarLabelA">0.00</span>
+        <div class="tc-verdict-bar"><div class="tc-verdict-fill-a" id="tcFillA"></div><div class="tc-verdict-fill-b" id="tcFillB"></div></div>
+        <span class="tc-verdict-side-val b" id="tcBarLabelB">0.00</span>
+      </div>
+    </div>
+  </div>
   <div data-view="database"><div class="placeholder"><h3>Trade Database</h3><p>This section is being built.</p></div></div>
   <div data-view="settings">
     <div class="page-title">
@@ -18006,6 +18158,322 @@
       }
     });
   });
+
+  // ---------- Trade Calculator ----------
+  // "Dynasty Values" and "Austin's Rankings" both read the exact same
+  // PP_PLAYER_VALUES table for now -- there's no separate ADP-consensus
+  // dynasty value yet, just the one real ranking source this app has. The
+  // toggle exists so the source label is right once that consensus value
+  // ships; tcValueFor() is the one place that would change.
+  let tcPlayerPool = null;
+  function tcValueFor(playerId, dict) {
+    return ppValueForPlayerId(playerId, dict);
+  }
+  async function tcGetPlayerPool() {
+    if (tcPlayerPool) return tcPlayerPool;
+    const dict = await pmGetPlayerDict();
+    if (!dict) return [];
+    const pool = [];
+    Object.keys(dict).forEach(pid => {
+      const p = dict[pid];
+      if (!p || p.active === false) return;
+      const val = tcValueFor(pid, dict);
+      if (val == null) return;
+      const pos = p.position || (p.fantasy_positions || [])[0] || '';
+      pool.push({
+        id: pid, kind: 'player',
+        name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' '),
+        pos, team: p.team || 'FA', value: val,
+      });
+    });
+    const byPos = {};
+    pool.forEach(e => { (byPos[e.pos] = byPos[e.pos] || []).push(e); });
+    Object.values(byPos).forEach(list => {
+      list.sort((a, b) => b.value - a.value);
+      list.forEach((e, i) => { e.posRank = i + 1; });
+    });
+    pool.sort((a, b) => b.value - a.value);
+    tcPlayerPool = pool;
+    return pool;
+  }
+  // Generic future picks (next 2 draft classes, rounds 1-4) using the same
+  // placeholder round values as the rest of the app (PICK_ROUND_VALUES) --
+  // not tied to any one league's real traded-pick ownership, since the
+  // calculator is a standalone what-if tool.
+  function tcPickPool() {
+    const { season } = pmCurrentSeasonWeek();
+    const roundLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+    const picks = [];
+    [season + 1, season + 2].forEach(y => {
+      [1, 2, 3, 4].forEach(round => {
+        picks.push({
+          id: `pick_${y}_${round}`, kind: 'pick', name: `${y} ${roundLabels[round]}`,
+          pos: null, team: null, value: PICK_ROUND_VALUES[round] || 0, roundLabel: roundLabels[round],
+        });
+      });
+    });
+    return picks;
+  }
+  async function tcSearch(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const pool = await tcGetPlayerPool();
+    const matches = [];
+    pool.forEach(e => { if (e.name.toLowerCase().includes(q)) matches.push(e); });
+    tcPickPool().forEach(e => { if (e.name.toLowerCase().includes(q)) matches.push(e); });
+    matches.sort((a, b) => b.value - a.value);
+    return matches.slice(0, 8);
+  }
+
+  const tcState = { a: [], b: [] };
+  const tcScoring = { tep: 0, ppc: 0, rec: 1 };
+
+  function tcAddAsset(side, asset) {
+    const other = side === 'a' ? 'b' : 'a';
+    tcState[other] = tcState[other].filter(x => x.id !== asset.id);
+    if (!tcState[side].some(x => x.id === asset.id)) tcState[side].push(asset);
+    tcRender();
+  }
+  function tcRemoveAsset(side, id) {
+    tcState[side] = tcState[side].filter(x => x.id !== id);
+    tcRender();
+  }
+
+  const TC_POS_CLASS = { QB: 'pm-qb', RB: 'pm-rb', WR: 'pm-wr', TE: 'pm-te' };
+  function tcPosBadgeHtml(pos, posRank) {
+    if (!pos) return '';
+    const cls = TC_POS_CLASS[pos] || 'pm-qb';
+    return `<span class="pm-pos-badge ${cls}">${pos}${posRank || ''}</span>`;
+  }
+
+  function tcAssetRowHtml(side, asset) {
+    const avatarHtml = asset.kind === 'pick'
+      ? `<div class="tc-pick-badge tc-pick-badge-lg">${asset.roundLabel}</div>`
+      : `<div class="tc-asset-avatar"><img src="${sbHeadshotUrl(asset.id)}" alt="" onerror="this.style.display='none'"></div>`;
+    const subText = asset.kind === 'pick' ? 'Future Pick' : `${asset.pos}${asset.posRank || ''} &middot; ${asset.team || 'FA'}`;
+    return `<div class="tc-asset-row">
+      ${avatarHtml}
+      <div><div class="tc-asset-name">${asset.name}</div><div class="tc-asset-sub">${subText}</div></div>
+      <div class="tc-asset-value">${asset.value.toFixed(2)}</div>
+      <span class="tc-asset-remove" data-tc-remove="${asset.id}" data-tc-side="${side}">&#10005;</span>
+    </div>`;
+  }
+
+  function tcGapRowHtml(entry) {
+    return `<div class="tc-gap-row" data-tc-gap-add="${entry.id}">
+      ${tcPosBadgeHtml(entry.pos, entry.posRank)}
+      <div><div class="tc-gap-name">${entry.name}</div></div>
+      <div class="tc-gap-value">${entry.value.toFixed(2)}</div>
+    </div>`;
+  }
+
+  async function tcUpdateGapPanel(totalA, totalB) {
+    const panel = document.getElementById('tcGapPanel');
+    if (!panel) return;
+    const diff = totalA - totalB;
+    if (Math.abs(diff) < 0.02 || (!tcState.a.length && !tcState.b.length)) {
+      panel.hidden = true;
+      return;
+    }
+    const gap = Math.abs(diff);
+    const shortSide = diff > 0 ? 'b' : 'a';
+    const shortLabel = shortSide === 'a' ? 'Team A' : 'Team B';
+    const usedIds = new Set([...tcState.a, ...tcState.b].map(x => x.id));
+    const pool = await tcGetPlayerPool();
+    const candidates = pool.filter(e => !usedIds.has(e.id));
+    candidates.sort((a, b) => Math.abs(a.value - gap) - Math.abs(b.value - gap));
+    // The 4 closest matches by value, correctness-wise -- just re-ordered
+    // by raw value (descending) for display, since that reads better than
+    // closeness order once they're already this tightly clustered.
+    const closest = candidates.slice(0, 4).sort((a, b) => b.value - a.value);
+    if (!closest.length) { panel.hidden = true; return; }
+    panel.hidden = false;
+    document.getElementById('tcGapSub').innerHTML =
+      `${diff > 0 ? 'Team A' : 'Team B'} is up <b>${gap.toFixed(2)}</b>. Add one of these to <b>${shortLabel}</b> to even it.`;
+    const list = document.getElementById('tcGapList');
+    list.innerHTML = closest.map(tcGapRowHtml).join('');
+    list.querySelectorAll('[data-tc-gap-add]').forEach(row => {
+      row.addEventListener('click', () => {
+        const id = row.dataset.tcGapAdd;
+        const asset = closest.find(e => e.id === id);
+        if (asset) tcAddAsset(shortSide, asset);
+      });
+    });
+  }
+
+  function tcRender() {
+    ['a', 'b'].forEach(side => {
+      const list = document.getElementById(side === 'a' ? 'tcListA' : 'tcListB');
+      if (!list) return;
+      list.innerHTML = tcState[side].length
+        ? tcState[side].map(a => tcAssetRowHtml(side, a)).join('')
+        : '<div class="tc-empty">Search a player or pick to add to the trade.</div>';
+    });
+
+    const totalA = tcState.a.reduce((s, x) => s + x.value, 0);
+    const totalB = tcState.b.reduce((s, x) => s + x.value, 0);
+    document.getElementById('tcTotalA').textContent = totalA.toFixed(2);
+    document.getElementById('tcTotalB').textContent = totalB.toFixed(2);
+
+    const hasAny = tcState.a.length || tcState.b.length;
+    const verdictEl = document.getElementById('tcVerdict');
+    if (verdictEl) verdictEl.hidden = !hasAny;
+    if (hasAny) {
+      const diff = totalA - totalB;
+      const mainEl = document.getElementById('tcVerdictMain');
+      if (Math.abs(diff) < 0.02) mainEl.textContent = 'Fair Trade';
+      else mainEl.textContent = diff > 0 ? `Team A Wins By ${diff.toFixed(2)}` : `Team B Wins By ${Math.abs(diff).toFixed(2)}`;
+      document.getElementById('tcBarLabelA').textContent = totalA.toFixed(2);
+      document.getElementById('tcBarLabelB').textContent = totalB.toFixed(2);
+      const sum = totalA + totalB;
+      const pctA = sum > 0 ? (totalA / sum) * 100 : 50;
+      document.getElementById('tcFillA').style.width = pctA + '%';
+      document.getElementById('tcFillB').style.width = (100 - pctA) + '%';
+    }
+
+    tcUpdateGapPanel(totalA, totalB);
+  }
+
+  function tcSearchRowHtml(entry) {
+    const avatarHtml = entry.kind === 'pick'
+      ? `<div class="tc-pick-badge">${entry.roundLabel}</div>`
+      : `<div class="tc-search-avatar"><img src="${sbHeadshotUrl(entry.id)}" alt="" onerror="this.style.display='none'"></div>`;
+    const subText = entry.kind === 'pick' ? 'Future Pick' : `${entry.pos}${entry.posRank || ''} &middot; ${entry.team || 'FA'}`;
+    return `<div class="tc-search-row" data-tc-add="${entry.id}">
+      ${avatarHtml}
+      <div><div class="tc-search-name">${entry.name}</div><div class="tc-search-sub">${subText}</div></div>
+      <div class="tc-search-value">${entry.value.toFixed(2)}</div>
+    </div>`;
+  }
+
+  function tcSetupSearch(side) {
+    const input = document.getElementById(side === 'a' ? 'tcSearchA' : 'tcSearchB');
+    const results = document.getElementById(side === 'a' ? 'tcResultsA' : 'tcResultsB');
+    if (!input || !results) return;
+    let lastMatches = [];
+    let token = 0;
+    input.addEventListener('input', async () => {
+      const myToken = ++token;
+      const matches = await tcSearch(input.value);
+      if (myToken !== token) return;
+      lastMatches = matches;
+      if (!matches.length) { results.hidden = true; results.innerHTML = ''; return; }
+      results.innerHTML = matches.map(tcSearchRowHtml).join('');
+      results.hidden = false;
+    });
+    results.addEventListener('click', (e) => {
+      const row = e.target.closest('[data-tc-add]');
+      if (!row) return;
+      const asset = lastMatches.find(m => m.id === row.dataset.tcAdd);
+      if (asset) {
+        tcAddAsset(side, asset);
+        input.value = '';
+        results.hidden = true;
+        results.innerHTML = '';
+      }
+    });
+    input.addEventListener('focus', () => { if (lastMatches.length) results.hidden = false; });
+    document.addEventListener('click', (e) => {
+      if (!results.contains(e.target) && e.target !== input) results.hidden = true;
+    });
+  }
+  tcSetupSearch('a');
+  tcSetupSearch('b');
+
+  document.querySelectorAll('.tc-asset-list').forEach(list => {
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-tc-remove]');
+      if (!btn) return;
+      tcRemoveAsset(btn.dataset.tcSide, btn.dataset.tcRemove);
+    });
+  });
+
+  const tcResetBtn = document.getElementById('tcResetBtn');
+  if (tcResetBtn) {
+    tcResetBtn.addEventListener('click', () => {
+      tcState.a = [];
+      tcState.b = [];
+      tcRender();
+    });
+  }
+
+  const tcValueToggle = document.getElementById('tcValueToggle');
+  if (tcValueToggle) {
+    tcValueToggle.querySelectorAll('[data-tc-source]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        tcValueToggle.querySelectorAll('[data-tc-source]').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const label = btn.dataset.tcSource === 'austin' ? "Austin's Rankings" : 'Dynasty Values';
+        const sourceEl = document.getElementById('tcVerdictSource');
+        if (sourceEl) sourceEl.textContent = label;
+        // Both sources read the same PP_PLAYER_VALUES table today (see
+        // tcValueFor's comment) -- nothing to recompute yet, just the label.
+      });
+    });
+  }
+
+  document.querySelectorAll('.tc-pill-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      const pill = e.target.closest('.tc-pill');
+      if (!pill) return;
+      row.querySelectorAll('.tc-pill').forEach(p => p.classList.remove('is-active'));
+      pill.classList.add('is-active');
+      tcScoring[row.dataset.tcGroup] = Number(pill.dataset.tcVal);
+      // Cosmetic for now -- not wired into player values yet.
+    });
+  });
+
+  function tcFormatLeagueChip(league) {
+    const rosterPositions = league.roster_positions || [];
+    const isSF = rosterPositions.includes('SUPER_FLEX') || rosterPositions.filter(p => p === 'QB').length > 1;
+    const teams = league.total_rosters || 12;
+    const s = league.scoring_settings || {};
+    const recLabel = s.rec === 1 ? 'Full PPR' : s.rec === 0.5 ? 'Half PPR' : s.rec ? `${s.rec} PPR` : 'Standard';
+    return `${teams} Teams · ${isSF ? 'Superflex' : '1QB'} · ${recLabel}`;
+  }
+
+  function tcSetupLeagueDropdown() {
+    const select = document.getElementById('tcLeagueSelect');
+    const menu = document.getElementById('tcLeagueMenu');
+    const label = document.getElementById('tcLeagueSelectLabel');
+    const chip = document.getElementById('tcFormatChip');
+    if (!select || !menu) return;
+    select.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const entries = Object.values(window.sleeperLeagueData || {}).filter(en => en.league);
+      if (!entries.length) {
+        menu.innerHTML = '<div class="sort-option">Connect a Sleeper account to match a league.</div>';
+      } else {
+        menu.innerHTML = entries.map(en =>
+          `<div class="sort-option" data-tc-league="${en.league.league_id}">${en.league.name}</div>`
+        ).join('');
+        menu.querySelectorAll('[data-tc-league]').forEach(opt => {
+          opt.addEventListener('click', () => {
+            const entry = entries.find(en => en.league.league_id === opt.dataset.tcLeague);
+            if (!entry) return;
+            label.textContent = entry.league.name;
+            if (chip) chip.textContent = tcFormatLeagueChip(entry.league);
+            // TE premium and reception settings are real Sleeper league
+            // fields -- set the matching scoring pill active. Points per
+            // carry has no standard Sleeper field, so it's left as-is
+            // (that's the "estimate" label above).
+            const s = entry.league.scoring_settings || {};
+            const tepVal = s.bonus_rec_te != null ? s.bonus_rec_te : 0;
+            const recVal = s.rec === 0.5 ? 0.5 : 1;
+            document.querySelectorAll('[data-tc-group="tep"] .tc-pill').forEach(p => p.classList.toggle('is-active', Number(p.dataset.tcVal) === tepVal));
+            document.querySelectorAll('[data-tc-group="rec"] .tc-pill').forEach(p => p.classList.toggle('is-active', Number(p.dataset.tcVal) === recVal));
+            menu.hidden = true;
+          });
+        });
+      }
+      menu.hidden = !menu.hidden;
+    });
+    document.addEventListener('click', () => { menu.hidden = true; });
+    menu.addEventListener('click', (e) => e.stopPropagation());
+  }
+  tcSetupLeagueDropdown();
+
+  tcRender();
 
   refreshExpBoard();
 </script>
