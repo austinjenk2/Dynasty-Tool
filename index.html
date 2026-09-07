@@ -401,8 +401,8 @@
     transition: transform 0.12s ease;
   }
   .track-dot:hover, .track-dot.is-active { transform: translateX(-50%) scaleX(1.6); }
-  .track-dot.track-dot-multi { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
-  .track-dot.track-dot-multi.is-active { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink), 0 0 0 7px rgba(200,16,46,0.25); }
+  .track-dot.track-dot-multi { box-shadow: 0 0 0 2px var(--surface); }
+  .track-dot.track-dot-multi.is-active { box-shadow: 0 0 0 2px var(--surface), 0 0 0 7px rgba(200,16,46,0.25); }
   .track-tooltip { z-index: 6; }
   .track-avg-marker {
     position: absolute;
@@ -537,10 +537,10 @@
   }
   .scatter-dot.scatter-dot-multi {
     filter: brightness(0.8);
-    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink);
+    box-shadow: 0 0 0 2px var(--surface);
   }
   .scatter-dot.scatter-dot-multi.is-active {
-    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink), 0 0 0 7px rgba(200,16,46,0.25);
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 7px rgba(200,16,46,0.25);
   }
   .scatter-axis-label {
     font-size: 11.5px;
@@ -2432,6 +2432,28 @@
     color: var(--green); font-weight: 700; font-size: 13px; cursor: pointer;
   }
   .pm-league-row.pm-league-hidden { display: none; }
+  .pm-section-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; color: var(--faint); margin: 20px 0 10px; }
+  .pm-section-label:first-child { margin-top: 0; }
+  .pm-note { font-size: 11.5px; color: var(--faint); margin-top: 10px; line-height: 1.5; }
+  .pm-contract-type {
+    display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 0.4px;
+    padding: 4px 10px; border-radius: 5px; background: var(--surface);
+    border: 1px solid var(--border); color: var(--ink); margin-bottom: 14px;
+  }
+  .pm-gl-scroll { overflow-x: auto; margin: 0 -24px 18px; padding: 0 24px 2px; }
+  .pm-gl-scroll:last-child { margin-bottom: 0; }
+  .pm-gl-table { border-collapse: collapse; width: 100%; min-width: 600px; font-size: 12.5px; }
+  .pm-gl-table th, .pm-gl-table td { padding: 7px 9px; text-align: center; white-space: nowrap; }
+  .pm-gl-table th { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); border-bottom: 1px solid var(--border); }
+  .pm-gl-table td:first-child, .pm-gl-table th:first-child { text-align: left; }
+  .pm-gl-group-th { border-bottom: 1px solid var(--border); }
+  .pm-gl-season-row { cursor: pointer; border-bottom: 1px solid var(--border); }
+  .pm-gl-season-row:hover { background: var(--surface); }
+  .pm-gl-fpts { font-weight: 800; color: var(--ink); }
+  .pm-gl-chevron { display: inline-block; margin-right: 4px; color: var(--faint); transition: transform 0.15s; }
+  .pm-gl-chevron.is-open { transform: rotate(90deg); }
+  .pm-gl-weeks tbody tr { border-bottom: 1px solid var(--border-soft); }
+  .pm-gl-weeks td:first-child { color: var(--faint); }
 
   /* Record row */
   .record-row {
@@ -2545,8 +2567,8 @@
     background: var(--surface);
     border: 2px solid var(--border-soft);
     border-radius: 5px;
-    padding: 6px;
-    height: 70px;
+    padding: 8px 6px 6px;
+    height: 78px;
     overflow: hidden;
     position: relative;
     display: flex;
@@ -2554,7 +2576,7 @@
     justify-content: flex-start;
   }
   .dr-pick-avatar {
-    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    position: absolute; right: 6px; top: 6px; bottom: 6px; margin: auto 0;
     width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
   }
   .dr-pick-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -2563,15 +2585,15 @@
   .dr-pick.dr-pos-wr { border-color: var(--blue); background: var(--blue); }
   .dr-pick.dr-pos-te { border-color: var(--gold); background: var(--gold); }
   .dr-pick.dr-team-dim { opacity: 0.3; }
-  .dr-pick-num { font-size: 10px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-top: 1px; }
-  .dr-pick-info { min-width: 0; padding-right: 36px; margin-top: 2px; }
+  .dr-pick-num { font-size: 10px; font-weight: 800; color: var(--ink); line-height: 1.3; margin-top: 3px; }
+  .dr-pick-info { min-width: 0; padding-right: 36px; margin-top: 3px; }
   .dr-pick-name {
-    font-size: 11px; font-weight: 800; color: var(--ink); line-height: 1.15;
+    font-size: 11px; font-weight: 800; color: var(--ink); line-height: 1.2;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
   .dr-pick.dr-pos-qb .dr-pick-num, .dr-pick.dr-pos-rb .dr-pick-num, .dr-pick.dr-pos-wr .dr-pick-num, .dr-pick.dr-pos-te .dr-pick-num { color: #fff; }
   .dr-pick.dr-pos-qb .dr-pick-name, .dr-pick.dr-pos-rb .dr-pick-name, .dr-pick.dr-pos-wr .dr-pick-name, .dr-pick.dr-pos-te .dr-pick-name { color: #fff; }
-  .dr-pick-meta { font-size: 7.5px; color: var(--faint); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dr-pick-meta { font-size: 8px; line-height: 1.4; color: var(--faint); font-weight: 700; white-space: nowrap; overflow: visible; text-overflow: clip; }
   .dr-pick.dr-pos-qb .dr-pick-meta, .dr-pick.dr-pos-rb .dr-pick-meta, .dr-pick.dr-pos-wr .dr-pick-meta, .dr-pick.dr-pos-te .dr-pick-meta { color: rgba(255,255,255,0.85); }
   .dr-pick-trade { font-size: 7px; font-weight: 700; color: var(--ink); font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dr-pick.dr-pos-qb .dr-pick-trade, .dr-pick.dr-pos-rb .dr-pick-trade, .dr-pick.dr-pos-wr .dr-pick-trade, .dr-pick.dr-pos-te .dr-pick-trade { color: #fff; }
@@ -2761,6 +2783,76 @@
     width: 28px; height: 28px; border-radius: 6px; background: var(--green); color: #fff;
     font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
+
+  /* ---------- Trade Calculator ---------- */
+  .tc-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tc-scoring-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 18px; }
+  .tc-scoring-row { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tc-scoring-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 8px; }
+  .tc-scoring-label span { font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .tc-pill-row { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .tc-pill { padding: 7px 12px; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--surface); cursor: pointer; border-right: 1px solid var(--border); white-space: nowrap; }
+  .tc-pill:last-child { border-right: none; }
+  .tc-pill.is-active { background: var(--ink); color: var(--bg); }
+  .tc-teams-grid { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 18px; }
+  .tc-team-panel { flex: 1 1 320px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; position: relative; }
+  .tc-team-panel.tc-drag-over { border-color: var(--green); }
+  .tc-team-head { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink); margin-bottom: 12px; }
+  .tc-team-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .tc-team-total { margin-left: auto; font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 800; }
+  .tc-search-wrap { position: relative; }
+  .tc-search-results {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 12;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 10px 28px -10px rgba(0,0,0,0.25); max-height: 280px; overflow-y: auto; padding: 6px;
+  }
+  .tc-search-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 6px; cursor: pointer; }
+  .tc-search-row:hover { background: var(--bg); }
+  .tc-search-avatar, .tc-pick-badge { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; overflow: hidden; background: var(--bg); }
+  .tc-search-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tc-pick-badge { border-radius: 8px; background: var(--blue); color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .tc-search-name { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .tc-search-sub { font-size: 10.5px; color: var(--faint); margin-top: 1px; }
+  .tc-search-value { margin-left: auto; font-weight: 800; font-size: 12.5px; color: var(--ink); flex-shrink: 0; }
+  .tc-asset-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; min-height: 64px; }
+  .tc-empty {
+    flex: 1; display: flex; align-items: center; justify-content: center; text-align: center;
+    border: 1px dashed var(--border); border-radius: 8px; color: var(--faint); font-size: 12.5px;
+    font-style: italic; padding: 18px 12px;
+  }
+  .tc-asset-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+  }
+  .tc-asset-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; overflow: hidden; background: var(--surface); }
+  .tc-asset-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tc-pick-badge-lg { width: 40px; height: 40px; border-radius: 10px; }
+  .tc-asset-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .tc-asset-sub { font-size: 10.5px; color: var(--faint); margin-top: 1px; }
+  .tc-asset-value { font-weight: 800; font-size: 13.5px; color: var(--ink); margin-left: auto; }
+  .tc-asset-remove { color: var(--faint); font-size: 15px; cursor: pointer; padding: 2px 4px; flex-shrink: 0; }
+  .tc-asset-remove:hover { color: var(--red); }
+  .tc-gap-panel { flex: 0 0 280px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .tc-gap-head { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink); margin-bottom: 6px; }
+  .tc-gap-sub { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+  .tc-gap-sub b { color: var(--ink); }
+  .tc-gap-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border-soft); cursor: pointer; }
+  .tc-gap-row:first-of-type { border-top: none; }
+  .tc-gap-row:hover .tc-gap-name { color: var(--green); }
+  .tc-gap-name { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .tc-gap-sub-line { font-size: 10.5px; color: var(--faint); }
+  .tc-gap-value { margin-left: auto; font-weight: 800; font-size: 12.5px; color: var(--ink); }
+  .tc-verdict { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 22px 18px; text-align: center; }
+  .tc-verdict-sub { font-size: 11px; font-weight: 700; letter-spacing: 0.3px; color: var(--faint); margin-bottom: 6px; }
+  .tc-verdict-main { font-family: 'Source Serif 4', serif; font-size: 26px; font-weight: 800; color: var(--ink); margin-bottom: 18px; }
+  .tc-verdict-bar-row { display: flex; align-items: center; gap: 12px; max-width: 560px; margin: 0 auto; }
+  .tc-verdict-side-val { font-size: 13px; font-weight: 800; flex-shrink: 0; width: 52px; }
+  .tc-verdict-side-val.a { color: var(--blue); text-align: right; }
+  .tc-verdict-side-val.b { color: var(--red); text-align: left; }
+  .tc-verdict-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--border-soft); overflow: hidden; display: flex; }
+  .tc-verdict-fill-a { height: 100%; background: var(--blue); }
+  .tc-verdict-fill-b { height: 100%; background: var(--red); }
+  @media (max-width: 760px) { .tc-gap-panel { flex-basis: 100%; } }
 </style>
 <!-- Rasterizes a trade card to a canvas for the "export as image" feature
      (Trade History's camera icon) -- real, widely-used library, no key. -->
@@ -2844,7 +2936,7 @@
       <div class="record-card">
         <div>
           <div class="record-label">PROJECTED WEEKLY RECORD</div>
-          <div class="record-sub">This week's projected wins/losses, all leagues</div>
+          <div class="record-sub">This week's projected wins/losses, all leagues (excluding teams marked as tanking)</div>
         </div>
         <div class="record-value"><span class="win">9</span><span class="sep">-</span><span class="loss">3</span></div>
       </div>
@@ -3602,8 +3694,8 @@
         <div class="ld-rankby-wrap">
           <label for="ldStandingsRankBy">Rank By</label>
           <select id="ldStandingsRankBy">
+            <option value="val" selected>Roster Value</option>
             <option value="con">Contending</option>
-            <option value="val">Roster Value</option>
             <option value="qb">QB Value</option>
             <option value="rb">RB Value</option>
             <option value="wr">WR Value</option>
@@ -10192,7 +10284,89 @@
     </div>
   </div>
   <div data-view="records"><div class="placeholder"><h3>Record Book</h3><p>This section is being built.</p></div></div>
-  <div data-view="calculator"><div class="placeholder"><h3>Trade Calculator</h3><p>This section is being built.</p></div></div>
+  <div data-view="calculator">
+    <div class="page-title">
+      <h1>Trade Calculator</h1>
+      <p>Build a trade and see who wins it, using real dynasty player values.</p>
+    </div>
+
+    <div class="tc-toolbar">
+      <div class="sb-view-toggle" id="tcValueToggle">
+        <button type="button" class="sb-view-toggle-btn is-active" data-tc-source="austin">Austin's Rankings</button>
+        <button type="button" class="sb-view-toggle-btn" data-tc-source="dynasty">Dynasty Values</button>
+      </div>
+      <div class="sort-dropdown" id="tcLeagueDropdown">
+        <div class="sort-select" id="tcLeagueSelect"><span id="tcLeagueSelectLabel">Match League Settings&hellip;</span> <span>&#9662;</span></div>
+        <div class="sort-menu" id="tcLeagueMenu" hidden></div>
+      </div>
+      <div class="chip" id="tcFormatChip">12 Teams &middot; 1QB &middot; Full PPR</div>
+      <div class="exp-refresh" id="tcResetBtn" title="Reset trade">&#8635;</div>
+    </div>
+
+    <div class="tc-scoring-panel">
+      <div class="tc-scoring-row">
+        <div class="tc-scoring-group">
+          <div class="tc-scoring-label">TE PREMIUM <span>&middot; measured</span></div>
+          <div class="tc-pill-row" data-tc-group="tep">
+            <div class="tc-pill is-active" data-tc-val="0">Non-TEP</div>
+            <div class="tc-pill" data-tc-val="0.5">0.5 TEP</div>
+            <div class="tc-pill" data-tc-val="0.75">0.75 TEP</div>
+            <div class="tc-pill" data-tc-val="1">1.0 TEP</div>
+          </div>
+        </div>
+        <div class="tc-scoring-group">
+          <div class="tc-scoring-label">POINTS PER CARRY <span>&middot; estimate</span></div>
+          <div class="tc-pill-row" data-tc-group="ppc">
+            <div class="tc-pill is-active" data-tc-val="0">No PPC</div>
+            <div class="tc-pill" data-tc-val="0.1">0.1 PPC</div>
+            <div class="tc-pill" data-tc-val="0.25">0.25 PPC</div>
+          </div>
+        </div>
+        <div class="tc-scoring-group">
+          <div class="tc-scoring-label">RECEPTION <span>&middot; estimate</span></div>
+          <div class="tc-pill-row" data-tc-group="rec">
+            <div class="tc-pill is-active" data-tc-val="1">Full PPR</div>
+            <div class="tc-pill" data-tc-val="0.5">Half PPR</div>
+          </div>
+        </div>
+      </div>
+      <div class="pm-note">Slides values toward a league that scores differently. Match a league above and these set themselves. Not wired into the values yet -- coming soon.</div>
+    </div>
+
+    <div class="tc-teams-grid">
+      <div class="tc-team-panel" data-tc-side="a">
+        <div class="tc-team-head"><span class="tc-team-dot" style="background:var(--blue)"></span>TEAM A RECEIVES <span class="tc-team-total" id="tcTotalA" style="color:var(--blue)">0.00</span></div>
+        <div class="tc-search-wrap">
+          <div class="exp-search"><span>&#128269;</span><input type="text" placeholder="Search for a player or pick" id="tcSearchA" autocomplete="off"></div>
+          <div class="tc-search-results" id="tcResultsA" hidden></div>
+        </div>
+        <div class="tc-asset-list" id="tcListA"><div class="tc-empty">Search a player or pick to add to the trade.</div></div>
+      </div>
+      <div class="tc-team-panel" data-tc-side="b">
+        <div class="tc-team-head"><span class="tc-team-dot" style="background:var(--red)"></span>TEAM B RECEIVES <span class="tc-team-total" id="tcTotalB" style="color:var(--red)">0.00</span></div>
+        <div class="tc-search-wrap">
+          <div class="exp-search"><span>&#128269;</span><input type="text" placeholder="Search for a player or pick" id="tcSearchB" autocomplete="off"></div>
+          <div class="tc-search-results" id="tcResultsB" hidden></div>
+        </div>
+        <div class="tc-asset-list" id="tcListB"><div class="tc-empty">Search a player or pick to add to the trade.</div></div>
+      </div>
+      <div class="tc-gap-panel" id="tcGapPanel" hidden>
+        <div class="tc-gap-head">CLOSE THE GAP</div>
+        <div class="tc-gap-sub" id="tcGapSub"></div>
+        <div class="tc-gap-list" id="tcGapList"></div>
+      </div>
+    </div>
+
+    <div class="tc-verdict" id="tcVerdict" hidden>
+      <div class="tc-verdict-sub">Verdict &middot; <span id="tcVerdictSource">Austin's Rankings</span></div>
+      <div class="tc-verdict-main" id="tcVerdictMain">Fair Trade</div>
+      <div class="tc-verdict-bar-row">
+        <span class="tc-verdict-side-val a" id="tcBarLabelA">0.00</span>
+        <div class="tc-verdict-bar"><div class="tc-verdict-fill-a" id="tcFillA"></div><div class="tc-verdict-fill-b" id="tcFillB"></div></div>
+        <span class="tc-verdict-side-val b" id="tcBarLabelB">0.00</span>
+      </div>
+    </div>
+  </div>
   <div data-view="database"><div class="placeholder"><h3>Trade Database</h3><p>This section is being built.</p></div></div>
   <div data-view="settings">
     <div class="page-title">
@@ -10264,10 +10438,10 @@
   </div>
 
   <div class="pm-body">
-    <div class="pm-panel" data-pm-panel="overview" hidden><div class="placeholder"><h3>Overview</h3><p>This section is being built.</p></div></div>
+    <div class="pm-panel" data-pm-panel="overview" hidden><div id="pmOverviewList"></div></div>
     <div class="pm-panel" data-pm-panel="ranks" hidden><div class="placeholder"><h3>Paul's Ranks</h3><p>This section is being built.</p></div></div>
     <div class="pm-panel" data-pm-panel="gamelog" hidden><div id="pmGameLogList"></div></div>
-    <div class="pm-panel" data-pm-panel="contract" hidden><div class="placeholder"><h3>Contract</h3><p>This section is being built.</p></div></div>
+    <div class="pm-panel" data-pm-panel="contract" hidden><div id="pmContractList"></div></div>
     <div class="pm-panel" data-pm-panel="exposure">
       <div class="pm-exp-head">EXPOSURE &middot; <b id="pmExpFrac"></b> Leagues &middot; <b id="pmExpPct"></b></div>
       <div class="pm-league-list" id="pmLeagueList"></div>
@@ -13848,6 +14022,34 @@
       }
     }
 
+    // Full-season projection totals (same undocumented CDN as the per-week
+    // endpoint above, just without a /week segment) -- used by the player
+    // modal's Overview tab for "Sleeper Proj (season)" / "Proj PPG". Cached
+    // per season since it's a full-league payload reused across every
+    // player looked up in a session.
+    window.__sleeperSeasonProjCache = window.__sleeperSeasonProjCache || {};
+    async function getSeasonProjections(season) {
+      if (window.__sleeperSeasonProjCache[season]) return window.__sleeperSeasonProjCache[season];
+      const promise = (async () => {
+        try {
+          const list = await sleeperFetchRoot(
+            `/projections/nfl/${season}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
+          );
+          const map = {};
+          (list || []).forEach(p => {
+            if (!p || !p.player_id || !p.stats) return;
+            const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std;
+            if (pts != null) map[p.player_id] = { pts: Number(pts), gp: p.stats.gp || null };
+          });
+          return map;
+        } catch (e) {
+          return {};
+        }
+      })();
+      window.__sleeperSeasonProjCache[season] = promise;
+      return promise;
+    }
+
     // Real recorded per-player stat lines for a week (same undocumented
     // Sleeper CDN shape as /projections, just the "stats" resource instead
     // of "projections") -- live-updating during games, final once they end.
@@ -13856,6 +14058,12 @@
     // which the popup treats as an honest "no stats recorded yet" rather
     // than showing zeroes.
     window.__sleeperStatsCache = window.__sleeperStatsCache || {};
+    // Same payload also carries each entry's real team/opponent for that
+    // week -- captured alongside the stats (not part of getWeekStats's own
+    // return value, so this is purely additive) for the player modal's
+    // Game Log tab, which wants a real "Opp" column and a real team per
+    // team-to-compute-snap-% grouping.
+    window.__sleeperStatsMetaCache = window.__sleeperStatsMetaCache || {};
     async function getWeekStats(season, week) {
       const cacheKey = `${season}_${week}`;
       try {
@@ -13863,17 +14071,21 @@
           `/stats/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
         );
         const statsMap = {};
+        const metaMap = {};
         (list || []).forEach(p => {
           if (!p || !p.player_id || !p.stats) return;
           statsMap[p.player_id] = p.stats;
+          if (p.team) metaMap[p.player_id] = { team: p.team, opponent: p.opponent || null };
         });
         window.__sleeperStatsCache[cacheKey] = statsMap;
+        window.__sleeperStatsMetaCache[cacheKey] = metaMap;
         return statsMap;
       } catch (e) {
         return window.__sleeperStatsCache[cacheKey] || {};
       }
     }
     window.sleeperGetWeekStats = getWeekStats;
+    window.sleeperGetWeekStatsMeta = (season, week) => window.__sleeperStatsMetaCache[`${season}_${week}`] || {};
 
     // Used to look up a different week's schedule (team/opponent pairings
     // only, not points) without touching the current week's cached
@@ -13922,7 +14134,13 @@
         // league_id -- only fetched once per league ever, not every poll.
         window.__sleeperPrevSeasonCache = window.__sleeperPrevSeasonCache || {};
         const [rosters, allMatchups, allUsers, projections, allTransactions, trendingAdds, allTradedPicks, allPrevRosters] = await Promise.all([
-          Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => []))),
+          // null (not []) on failure -- a transient fetch error here used to
+          // silently collapse a league's whole roster list to empty, which
+          // made every one of that league's real players look like a free
+          // agent everywhere allRosters is used (Waivers, standings, dynasty
+          // value). null lets the assembly below fall back to the last
+          // known-good rosters for that league instead of wiping them out.
+          Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => null))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/matchups/${week}`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
           getWeekProjections(season, week),
@@ -13961,9 +14179,15 @@
         window.__sleeperProjections = projections;
         window.__sleeperTrendingAdds = trendingAdds;
 
+        const prevLeagueData = window.sleeperLeagueData || {};
         window.sleeperLeagueData = {};
         const rows = leagues.map((lg, i) => {
-          const leagueRosters = rosters[i] || [];
+          // rosters[i] is null only when this sync's fetch for this specific
+          // league failed -- reuse whatever rosters that league had last
+          // sync rather than treating the whole league as empty (which would
+          // make every real rostered player look like a free agent).
+          const prevEntry = prevLeagueData[lg.league_id];
+          const leagueRosters = rosters[i] || (prevEntry && prevEntry.allRosters) || [];
           const ownedRoster = leagueRosters.find(r => r.owner_id === saved.userId);
           const coOwnedRoster = !ownedRoster
             ? leagueRosters.find(r => (r.co_owners || []).includes(saved.userId))
@@ -14202,7 +14426,7 @@
         if (activeRoster && allRosters.length > 1) {
           ldStandingsList.dataset.leagueId = leagueId;
           const rankBySel = document.getElementById('ldStandingsRankBy');
-          const rankBy = rankBySel ? rankBySel.value : 'con';
+          const rankBy = rankBySel ? rankBySel.value : 'val';
           ldStandingsList.innerHTML = sbBuildLeagueStandingsHtml(entry, activeRoster.roster_id, rankBy);
           sbLoadStandingsLeagueCounts(ldStandingsList, entry.league.season);
           const activeRow = ldRosterExpandEl && ldStandingsList.querySelector(`.league-standings-row[data-roster-id="${activeRoster.roster_id}"]`);
@@ -15003,6 +15227,16 @@
         return out;
       };
 
+      // Tiebreaker for the Roster Value sort: this week's projected points
+      // for that roster's own matchup (same number the Scoreboard shows),
+      // not the whole-league contending rank -- ties in real dynasty value
+      // are rare but not impossible, and "who's projected to score more
+      // this week" is a more direct tiebreak than a different stat.
+      const weeklyPtsByRoster = {};
+      (entry.allMatchups || []).forEach(m => {
+        if (m && m.roster_id != null) weeklyPtsByRoster[m.roster_id] = sbMatchupProjectedTotal(m, null, entry.league);
+      });
+
       const rows = allRosters.map(r => {
         const user = (entry.users || []).find(u => u.user_id === r.owner_id);
         const name = user ? (user.display_name || user.username || 'Unknown') : 'Unknown';
@@ -15011,11 +15245,12 @@
         const conRank = conResult ? conResult.ranks[r.roster_id] : null;
         const valRank = ldRankOf(allRosters, valueOf, r.roster_id);
         const posRanks = posRanksOf(r);
+        const weeklyPts = weeklyPtsByRoster[r.roster_id] != null ? weeklyPtsByRoster[r.roster_id] : -Infinity;
         const type = sbStandingsRosterType(conRank, valRank, half);
-        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar: user ? user.avatar : null, name, wins, losses, conRank, valRank, posRanks, type };
+        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar: user ? user.avatar : null, name, wins, losses, conRank, valRank, posRanks, weeklyPts, type };
       });
       if (sortBy === 'val') {
-        rows.sort((a, b) => (a.valRank || 999) - (b.valRank || 999));
+        rows.sort((a, b) => (a.valRank || 999) - (b.valRank || 999) || (b.weeklyPts - a.weeklyPts));
       } else if (['qb', 'rb', 'wr', 'te'].includes(sortBy)) {
         const pos = sortBy.toUpperCase();
         rows.sort((a, b) => (a.posRanks[pos] || 999) - (b.posRanks[pos] || 999));
@@ -15085,10 +15320,16 @@
     const ldStandingsListEl = document.getElementById('ldStandingsList');
     if (ldStandingsListEl) {
       ldStandingsListEl.addEventListener('click', (e) => {
-        // The export/copy-image icon lives inside the active row now --
-        // let its own document-level handler deal with the click instead
-        // of also treating it as a row toggle.
-        if (e.target.closest('.ld-icon-photo')) return;
+        // The export/copy-image icon (and the Copy Image/Save PNG menu it
+        // opens, appended as a child of this same row) both live inside the
+        // active row -- let the document-level photo-export handler deal
+        // with those clicks instead of also treating them as a row toggle.
+        // Missing the menu case here used to strip the row's is-active
+        // class (closing the roster panel) the instant "Copy Image" was
+        // clicked, which is why exportLeagueDetailImage's own
+        // .league-standings-row.is-active lookup came up empty and the
+        // export silently did nothing.
+        if (e.target.closest('.ld-icon-photo') || e.target.closest('.trade-photo-menu')) return;
         const stRow = e.target.closest('.league-standings-row');
         if (!stRow) return;
         const leagueId = ldStandingsListEl.dataset.leagueId;
@@ -15138,6 +15379,7 @@
     window.sleeperFetch = sleeperFetch;
     window.sleeperReloadData = loadSleeperData;
     window.sleeperGetWeekProjections = getWeekProjections;
+    window.sleeperGetSeasonProjections = getSeasonProjections;
     window.sleeperScoringLabel = scoringLabel;
     window.sleeperGetGameInfoForWeek = getGameInfoForWeek;
 
@@ -15846,6 +16088,85 @@
     const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
     return ppValueForName(name);
   }
+  // Where a player's value ranks among every name Pure Potential covers --
+  // used by the player modal's Overview tab. Ties are fine to break by
+  // insertion order here since values are precise decimals.
+  function ppRankForPlayerId(playerId, dict) {
+    const p = dict && dict[playerId];
+    if (!p) return null;
+    const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+    const norm = ppNormalizeName(name);
+    const stripped = norm.replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
+    const key = PP_PLAYER_VALUES[norm] != null ? norm : (PP_PLAYER_VALUES[stripped] != null ? stripped : null);
+    if (!key) return null;
+    const sortedKeys = Object.keys(PP_PLAYER_VALUES).sort((a, b) => PP_PLAYER_VALUES[b] - PP_PLAYER_VALUES[a]);
+    return sortedKeys.indexOf(key) + 1;
+  }
+
+  // Real-world NFL contract terms for well-known players -- hand-curated
+  // (like PP_PLAYER_VALUES above, this app's other non-Sleeper data source)
+  // and not live-updated, so treat the dollar figures as a rough guide, not
+  // gospel -- a restructure or new extension can go stale here. Everyone
+  // not in this list falls back to a real, Sleeper-sourced rookie/veteran
+  // contract clock derived from years_exp instead (see renderPmContract).
+  const PLAYER_CONTRACTS = {
+    "josh allen": { type: "Veteran Extension", through: 2028, apy: 43.0, total: 258, guaranteed: 150 },
+    "jalen hurts": { type: "Veteran Extension", through: 2028, apy: 51.0, total: 255, guaranteed: 179.3 },
+    "joe burrow": { type: "Veteran Extension", through: 2029, apy: 55.0, total: 275, guaranteed: 219 },
+    "justin herbert": { type: "Veteran Extension", through: 2029, apy: 52.5, total: 262.5, guaranteed: 218.7 },
+    "lamar jackson": { type: "Veteran Extension", through: 2027, apy: 52.0, total: 260, guaranteed: 185 },
+    "patrick mahomes": { type: "Veteran Extension", through: 2031, apy: 45.0, total: 450, guaranteed: 141.5 },
+    "jordan love": { type: "Veteran Extension", through: 2027, apy: 55.0, total: 220, guaranteed: 155 },
+    "dak prescott": { type: "Veteran Extension", through: 2027, apy: 60.0, total: 240, guaranteed: 231 },
+    "trevor lawrence": { type: "Veteran Extension", through: 2029, apy: 55.0, total: 275, guaranteed: 200 },
+    "kyler murray": { type: "Veteran Extension", through: 2028, apy: 46.1, total: 230.5, guaranteed: 103.3 },
+    "tua tagovailoa": { type: "Veteran Extension", through: 2028, apy: 53.1, total: 212.4, guaranteed: 167.1 },
+    "jared goff": { type: "Veteran Extension", through: 2028, apy: 53.0, total: 212, guaranteed: 170 },
+    "baker mayfield": { type: "Veteran Deal", through: 2026, apy: 33.3, total: 100, guaranteed: 66.6 },
+    "sam darnold": { type: "Veteran Deal", through: 2027, apy: 33.5, total: 100.5, guaranteed: 55 },
+    "geno smith": { type: "Veteran Deal", through: 2026, apy: 25.0, total: 50, guaranteed: 30 },
+    "kirk cousins": { type: "Veteran Deal", through: 2027, apy: 45.0, total: 180, guaranteed: 100 },
+    "deshaun watson": { type: "Veteran Extension", through: 2026, apy: 46.0, total: 230, guaranteed: 230 },
+    "derek carr": { type: "Veteran Deal", through: 2026, apy: 37.5, total: 150, guaranteed: 100 },
+    "matthew stafford": { type: "Veteran Extension", through: 2026, apy: 42.0, total: 84, guaranteed: 25 },
+    "brock purdy": { type: "Veteran Extension", through: 2029, apy: 53.0, total: 265, guaranteed: 100 },
+    "christian mccaffrey": { type: "Veteran Extension", through: 2026, apy: 19.0, total: 38, guaranteed: 24 },
+    "saquon barkley": { type: "Veteran Deal", through: 2026, apy: 12.6, total: 37.75, guaranteed: 26 },
+    "derrick henry": { type: "Veteran Deal", through: 2026, apy: 8.0, total: 16, guaranteed: 9 },
+    "josh jacobs": { type: "Veteran Deal", through: 2027, apy: 12.0, total: 48, guaranteed: 29.5 },
+    "jonathan taylor": { type: "Veteran Extension", through: 2026, apy: 20.7, total: 41.75, guaranteed: 26 },
+    "travis etienne": { type: "Veteran Extension", through: 2026, apy: 13.3, total: 40, guaranteed: 20 },
+    "alvin kamara": { type: "Veteran Extension", through: 2026, apy: 13.5, total: 27, guaranteed: 15 },
+    "kyren williams": { type: "Veteran Extension", through: 2027, apy: 10.5, total: 33, guaranteed: 20 },
+    "james cook": { type: "Veteran Extension", through: 2028, apy: 12.5, total: 50, guaranteed: 30 },
+    "rhamondre stevenson": { type: "Veteran Extension", through: 2028, apy: 9.0, total: 36, guaranteed: 18 },
+    "tony pollard": { type: "Veteran Deal", through: 2026, apy: 8.0, total: 24, guaranteed: 14 },
+    "david montgomery": { type: "Veteran Deal", through: 2025, apy: 6.0, total: 18, guaranteed: 12 },
+    "jamarr chase": { type: "Veteran Extension", through: 2029, apy: 40.25, total: 161, guaranteed: 100 },
+    "justin jefferson": { type: "Veteran Extension", through: 2028, apy: 35.0, total: 140, guaranteed: 110 },
+    "ceedee lamb": { type: "Veteran Extension", through: 2028, apy: 34.0, total: 136, guaranteed: 100 },
+    "amonra st brown": { type: "Veteran Extension", through: 2028, apy: 30.0, total: 120, guaranteed: 77 },
+    "nico collins": { type: "Veteran Extension", through: 2027, apy: 24.0, total: 72.75, guaranteed: 39 },
+    "aj brown": { type: "Veteran Extension", through: 2026, apy: 25.0, total: 100, guaranteed: 57 },
+    "tyreek hill": { type: "Veteran Extension", through: 2026, apy: 30.0, total: 120, guaranteed: 72.2 },
+    "davante adams": { type: "Veteran Deal", through: 2026, apy: 22.0, total: 44, guaranteed: 22 },
+    "mike evans": { type: "Veteran Extension", through: 2026, apy: 26.0, total: 52, guaranteed: 33 },
+    "stefon diggs": { type: "Veteran Deal", through: 2027, apy: 22.0, total: 69.5, guaranteed: 27.5 },
+    "terry mclaurin": { type: "Veteran Extension", through: 2028, apy: 30.0, total: 96, guaranteed: 65 },
+    "dk metcalf": { type: "Veteran Extension", through: 2029, apy: 33.0, total: 132, guaranteed: 65 },
+    "jaylen waddle": { type: "Veteran Extension", through: 2027, apy: 28.25, total: 84.75, guaranteed: 47 },
+    "chris godwin": { type: "Veteran Deal", through: 2026, apy: 22.0, total: 66, guaranteed: 33 },
+    "brandon aiyuk": { type: "Veteran Extension", through: 2028, apy: 30.0, total: 120, guaranteed: 76 },
+    "michael pittman": { type: "Veteran Extension", through: 2027, apy: 23.33, total: 70, guaranteed: 46 },
+    "calvin ridley": { type: "Veteran Deal", through: 2027, apy: 23.0, total: 92, guaranteed: 33 },
+    "george kittle": { type: "Veteran Extension", through: 2028, apy: 19.0, total: 76.4, guaranteed: 40.6 },
+    "travis kelce": { type: "Veteran Deal", through: 2026, apy: 17.0, total: 34, guaranteed: 17 },
+    "mark andrews": { type: "Veteran Deal", through: 2026, apy: 14.0, total: 56, guaranteed: 37 },
+    "trey mcbride": { type: "Veteran Extension", through: 2029, apy: 19.0, total: 76, guaranteed: 45 },
+    "evan engram": { type: "Veteran Deal", through: 2026, apy: 13.75, total: 41.25, guaranteed: 23.5 },
+    "dallas goedert": { type: "Veteran Extension", through: 2026, apy: 14.25, total: 57, guaranteed: 26.5 },
+    "david njoku": { type: "Veteran Extension", through: 2027, apy: 12.25, total: 36.75, guaranteed: 24 },
+  };
   // Total real dynasty value of every rostered player (bench included --
   // dynasty value is about assets on hand, not just this week's lineup).
   // Players Pure Potential doesn't rank (deep bench/practice-squad names)
@@ -15923,21 +16244,28 @@
       ties += s.ties || 0;
     });
 
-    // Same exact-decimal record as the Scoreboard's PROJECTED RECORD stat
-    // (sbStatRecordValue) -- each matchup contributes its own win% as a
-    // fraction of a win/loss instead of rounding every matchup to a binary
-    // favorite/underdog, so the two pages can never show different numbers
-    // for the same thing.
+    // Pulled straight from the Scoreboard's own PROJECTED RECORD number
+    // (window.__sbProjectedRecord, set by renderRealScoreboard -- which
+    // always runs before this on every sync/poll) instead of recomputing
+    // the same win-probability sum here against a different league filter.
+    // Recomputing it independently is what let the two pages disagree
+    // whenever a league was excluded from one page's list (Scoreboard's
+    // tanking-teams toggle) but not the other's (co-managed toggle).
     let projWinSum = 0, projLossSum = 0;
-    entries.forEach(e => {
-      if (!e.myMatchup || !e.oppMatchup) return;
-      if (!sbMatchupHasData(e.myMatchup, null, e.league) && !sbMatchupHasData(e.oppMatchup, null, e.league)) return;
-      const myTotal = sbMatchupProjectedTotal(e.myMatchup, null, e.league);
-      const oppTotal = sbMatchupProjectedTotal(e.oppMatchup, null, e.league);
-      const pct = sbWinProbability(myTotal, oppTotal);
-      projWinSum += pct / 100;
-      projLossSum += 1 - pct / 100;
-    });
+    if (window.__sbProjectedRecord) {
+      projWinSum = window.__sbProjectedRecord.winSum;
+      projLossSum = window.__sbProjectedRecord.lossSum;
+    } else {
+      entries.forEach(e => {
+        if (!e.myMatchup || !e.oppMatchup) return;
+        if (!sbMatchupHasData(e.myMatchup, null, e.league) && !sbMatchupHasData(e.oppMatchup, null, e.league)) return;
+        const myTotal = sbMatchupProjectedTotal(e.myMatchup, null, e.league);
+        const oppTotal = sbMatchupProjectedTotal(e.oppMatchup, null, e.league);
+        const pct = sbWinProbability(myTotal, oppTotal);
+        projWinSum += pct / 100;
+        projLossSum += 1 - pct / 100;
+      });
+    }
 
     const recordValues = document.querySelectorAll('.record-row .record-value');
     if (recordValues[0]) {
@@ -16987,6 +17315,11 @@
     // fraction of a win (e.g. 63% win prob = 0.63 wins, 0.37 losses)
     // instead of rounding every matchup to a binary favorite/underdog.
     if (recordValue) recordValue.textContent = `${projWinSum.toFixed(2)}  -  ${projLossSum.toFixed(2)}`;
+    // Shared with the Dashboard's Projected Weekly Record so the two pages
+    // can never disagree -- the Dashboard reads this instead of running its
+    // own version of the same sum against a different (co-managed-only)
+    // league filter than the Scoreboard's own tanking-teams exclusions.
+    window.__sbProjectedRecord = { winSum: projWinSum, lossSum: projLossSum };
     if (winsValue) winsValue.textContent = `${favoredCount} of ${withMatchup}`;
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
@@ -17252,23 +17585,17 @@
     return (matchups || []).find(m => m.roster_id === rosterId) || null;
   }
 
-  let pmGameLogToken = 0;
-  async function renderPmGameLog(playerId) {
-    const pmGameLogList = document.getElementById('pmGameLogList');
-    if (!pmGameLogList) return;
-    if (!playerId || !window.sleeperFetch) {
-      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>Connect a Sleeper account to see weekly scoring.</p></div>';
-      return;
-    }
+  // Shared by the Game Log and Overview tabs -- both want the same
+  // week-by-week scoring for whichever of the user's rosters carries this
+  // player. Recomputed fresh on every call (not memoized) since the live
+  // week's matchup can update between polls; the underlying per-week
+  // matchup fetch (pmFetchWeekMatchup) is already cached, so re-running
+  // this is cheap.
+  async function pmFetchGameLogRows(playerId) {
+    if (!playerId || !window.sleeperFetch) return null;
     const entry = Object.values(window.sleeperLeagueData || {})
       .find(e => e.roster && (e.roster.players || []).includes(playerId));
-    if (!entry) {
-      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No roster data for this player.</p></div>';
-      return;
-    }
-
-    const myToken = ++pmGameLogToken;
-    pmGameLogList.innerHTML = '<div class="ld-loading">Loading game log…</div>';
+    if (!entry) return null;
 
     const currentWeek = entry.week || 1;
     const weeks = [];
@@ -17284,10 +17611,473 @@
       return { week: w, pts: pts != null ? Number(pts) : null };
     }));
 
-    if (myToken !== pmGameLogToken) return; // a newer player was opened meanwhile
-    pmGameLogList.innerHTML = '<div class="pm-league-list">' + rows.map(r =>
-      `<div class="pm-league-row"><span>Week ${r.week}</span><span>${r.pts != null ? r.pts.toFixed(1) + ' pts' : '&mdash;'}</span></div>`
-    ).join('') + '</div>';
+    return { entry, rows };
+  }
+
+  // Real box-score game log (any player, not just ones on your rosters) --
+  // built from Sleeper's actual weekly stat lines rather than fantasy
+  // points alone. Deliberately not tied to any one league's roster, unlike
+  // pmFetchGameLogRows above (kept for Overview's league-scored totals).
+  function pmPts(stats) {
+    if (!stats) return null;
+    const pts = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
+    return pts != null ? Number(pts) : null;
+  }
+  function pmPlayerPosition(dict, playerId) {
+    const p = dict && dict[playerId];
+    if (!p) return null;
+    return p.position || (p.fantasy_positions || [])[0] || null;
+  }
+  // Column defs work off a "stats-like" object -- either one week's raw
+  // stats, or a season's worth of them summed together (pmGlSumStats) --
+  // so the exact same renderer draws both the season row and each week
+  // row. `calc` columns (YPT/YPC/rush YPC) are real per-target/per-catch/
+  // per-carry averages computed from the raw counts, not separate fields.
+  function pmGlColumnGroups(pos) {
+    const RECEIVING = { label: 'RECEIVING', cols: [
+      { key: 'rec_tgt', label: 'Tgt' },
+      { key: 'rec', label: 'Rec' },
+      { key: 'rec_yd', label: 'Yds' },
+      { label: 'YPT', calc: s => (s.rec_tgt ? (s.rec_yd || 0) / s.rec_tgt : null) },
+      { label: 'YPC', calc: s => (s.rec ? (s.rec_yd || 0) / s.rec : null) },
+      { key: 'rec_td', label: 'TD' },
+    ] };
+    const RUSHING = { label: 'RUSHING', cols: [
+      { key: 'rush_att', label: 'Att' },
+      { key: 'rush_yd', label: 'Yds' },
+      { label: 'YPC', calc: s => (s.rush_att ? (s.rush_yd || 0) / s.rush_att : null) },
+      { key: 'rush_td', label: 'TD' },
+    ] };
+    const PASSING = { label: 'PASSING', cols: [
+      { key: 'pass_cmp', label: 'Cmp' },
+      { key: 'pass_att', label: 'Att' },
+      { key: 'pass_yd', label: 'Yds' },
+      { key: 'pass_td', label: 'TD' },
+      { key: 'pass_int', label: 'INT' },
+    ] };
+    if (pos === 'QB') return [PASSING, RUSHING];
+    if (pos === 'RB') return [RUSHING, RECEIVING];
+    // WR/TE and anything else default to this shape.
+    return [RECEIVING, RUSHING];
+  }
+  function pmGlColCell(col, statsLike) {
+    if (col.calc) {
+      const v = col.calc(statsLike);
+      return v != null ? v.toFixed(1) : '&mdash;';
+    }
+    const v = statsLike[col.key];
+    return v != null ? v : 0;
+  }
+  // Sums every raw key a position's columns actually use across a
+  // season's weeks, so the season row's YPT/YPC/etc. are a real full-
+  // season ratio (total yards / total targets) rather than an average of
+  // weekly averages.
+  function pmGlSumStats(weekRows, groups) {
+    const sum = {};
+    groups.forEach(gr => gr.cols.forEach(col => {
+      if (!col.key) return;
+      sum[col.key] = weekRows.reduce((s, r) => s + (Number(r.stats[col.key]) || 0), 0);
+    }));
+    return sum;
+  }
+  // Real recorded offensive snap count for this player that week, shown as
+  // a % of the highest offensive snap count recorded on their own team
+  // that week -- Sleeper's per-player payload doesn't carry an explicit
+  // team-total-snaps field, so the team's own high-snap player (almost
+  // always the QB) stands in for "the team's offensive snaps," same
+  // approximation other fantasy sites use when a real team total isn't
+  // published.
+  function pmComputeSnapPct(statsMap, metaMap, playerId) {
+    const myMeta = metaMap[playerId];
+    const myStats = statsMap[playerId];
+    if (!myMeta || !myStats || myStats.off_snp == null) return null;
+    let maxSnaps = 0;
+    Object.keys(metaMap).forEach(pid => {
+      if (metaMap[pid].team !== myMeta.team) return;
+      const snp = statsMap[pid] && statsMap[pid].off_snp;
+      if (snp != null && snp > maxSnaps) maxSnaps = snp;
+    });
+    if (!maxSnaps) return null;
+    return Math.round((myStats.off_snp / maxSnaps) * 100);
+  }
+
+  function pmCurrentSeasonWeek() {
+    const anyEntry = Object.values(window.sleeperLeagueData || {})[0];
+    if (anyEntry && anyEntry.league && anyEntry.week) {
+      return { season: Number(anyEntry.league.season), week: anyEntry.week };
+    }
+    return { season: new Date().getFullYear(), week: 18 };
+  }
+
+  // Sleeper's real full-season projection for this player, plus where that
+  // projection ranks among every player Sleeper projects at the same
+  // position -- used by Overview's PROJ POINTS / PROJ PPG stats.
+  async function pmSeasonProjWithRank(playerId, dict, season) {
+    if (!window.sleeperGetSeasonProjections) return null;
+    let projMap;
+    try { projMap = await window.sleeperGetSeasonProjections(season); } catch (e) { return null; }
+    const mine = projMap[playerId];
+    if (!mine) return null;
+    const pos = pmPlayerPosition(dict, playerId);
+    let rank = null;
+    if (pos) {
+      const posEntries = Object.entries(projMap)
+        .filter(([pid]) => pmPlayerPosition(dict, pid) === pos)
+        .sort((a, b) => b[1].pts - a[1].pts);
+      const idx = posEntries.findIndex(([pid]) => pid === playerId);
+      rank = idx >= 0 ? idx + 1 : null;
+    }
+    const gp = mine.gp || 17;
+    return { pts: mine.pts, ppg: mine.pts / gp, rank, pos };
+  }
+
+  // Walks every week of a season fetching the *whole league's* real stat
+  // line (window.sleeperGetWeekStats, already cached per season/week) so
+  // this player's own weekly rows, a real position-rank (weekly and
+  // season-long), the real opponent, and a real snap-% can all be pulled
+  // from the same fetch instead of extra network round trips.
+  async function pmFetchSeasonGameLog(playerId, dict, season, throughWeek) {
+    const targetPos = pmPlayerPosition(dict, playerId);
+    const weekRows = [];
+    const posTotals = {};
+    let lastTeam = null;
+    for (let w = 1; w <= throughWeek; w++) {
+      let statsMap = {};
+      if (window.sleeperGetWeekStats) {
+        try { statsMap = (await window.sleeperGetWeekStats(season, w)) || {}; } catch (e) {}
+      }
+      const myStats = statsMap[playerId];
+      if (!myStats) continue;
+      const metaMap = window.sleeperGetWeekStatsMeta ? window.sleeperGetWeekStatsMeta(season, w) : {};
+      const myMeta = metaMap[playerId];
+      if (myMeta && myMeta.team) lastTeam = myMeta.team;
+
+      let posRank = null;
+      if (targetPos) {
+        const posEntries = [];
+        Object.keys(statsMap).forEach(pid => {
+          if (pmPlayerPosition(dict, pid) !== targetPos) return;
+          const pts = pmPts(statsMap[pid]);
+          if (pts == null) return;
+          posEntries.push([pid, pts]);
+          posTotals[pid] = (posTotals[pid] || 0) + pts;
+        });
+        posEntries.sort((a, b) => b[1] - a[1]);
+        const idx = posEntries.findIndex(([pid]) => pid === playerId);
+        posRank = idx >= 0 ? idx + 1 : null;
+      }
+
+      weekRows.push({
+        week: w,
+        stats: myStats,
+        posRank,
+        opponent: myMeta ? myMeta.opponent : null,
+        snapPct: pmComputeSnapPct(statsMap, metaMap, playerId),
+      });
+    }
+    let seasonRank = null;
+    if (targetPos && posTotals[playerId] != null) {
+      const sorted = Object.entries(posTotals).sort((a, b) => b[1] - a[1]);
+      seasonRank = sorted.findIndex(([pid]) => pid === playerId) + 1;
+    }
+    const team = lastTeam || (dict[playerId] && dict[playerId].team) || null;
+    return { season, weekRows, seasonRank, pos: targetPos, team };
+  }
+
+  function pmGlSeasonTable(gl, idx) {
+    const groups = pmGlColumnGroups(gl.pos);
+    const g = gl.weekRows.length;
+    const totalPts = gl.weekRows.reduce((s, r) => s + (pmPts(r.stats) || 0), 0);
+    const ppg = g ? totalPts / g : 0;
+    const rankText = gl.seasonRank ? `${gl.pos}${gl.seasonRank}` : '&mdash;';
+    const seasonSum = pmGlSumStats(gl.weekRows, groups);
+
+    const groupHeadHtml = groups.map(gr => `<th colspan="${gr.cols.length}" class="pm-gl-group-th">${gr.label}</th>`).join('');
+    const subHeadHtml = groups.map(gr => gr.cols.map(col => `<th>${col.label}</th>`).join('')).join('');
+    const seasonStatCellsHtml = groups.map(gr => gr.cols.map(col => `<td>${pmGlColCell(col, seasonSum)}</td>`).join('')).join('');
+
+    const weekRowsHtml = gl.weekRows.slice().reverse().map(r => {
+      const pts = pmPts(r.stats);
+      const rk = r.posRank ? `${gl.pos}${r.posRank}` : '&mdash;';
+      const statCellsHtml = groups.map(gr => gr.cols.map(col => `<td>${pmGlColCell(col, r.stats)}</td>`).join('')).join('');
+      return `<tr>
+        <td>Wk ${r.week}</td>
+        <td>${r.opponent || '&mdash;'}</td>
+        <td>${r.snapPct != null ? r.snapPct + '%' : '&mdash;'}</td>
+        <td class="pm-gl-fpts">${pts != null ? pts.toFixed(1) : '&mdash;'}</td>
+        <td>${rk}</td>
+        ${statCellsHtml}
+      </tr>`;
+    }).join('');
+
+    return `
+      <div class="pm-gl-scroll">
+        <table class="pm-gl-table">
+          <thead>
+            <tr>
+              <th rowspan="2">Season</th>
+              <th rowspan="2">Tm</th>
+              <th rowspan="2">G</th>
+              <th rowspan="2">FPts</th>
+              <th rowspan="2">FPts/G</th>
+              <th rowspan="2">Rk</th>
+              ${groupHeadHtml}
+            </tr>
+            <tr>${subHeadHtml}</tr>
+          </thead>
+          <tbody>
+            <tr class="pm-gl-season-row" data-gl-toggle="${idx}">
+              <td><span class="pm-gl-chevron" data-gl-chevron="${idx}">&rsaquo;</span>${gl.season}</td>
+              <td>${gl.team || '&mdash;'}</td>
+              <td>${g}</td>
+              <td class="pm-gl-fpts">${totalPts.toFixed(1)}</td>
+              <td>${ppg.toFixed(1)}</td>
+              <td>${rankText}</td>
+              ${seasonStatCellsHtml}
+            </tr>
+          </tbody>
+        </table>
+        <table class="pm-gl-table pm-gl-weeks" id="pmGlWeeks${idx}" hidden>
+          <thead><tr><th>Wk</th><th>Opp</th><th>Snp%</th><th>FPts</th><th>Rk</th>${subHeadHtml}</tr></thead>
+          <tbody>${weekRowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  let pmGameLogToken = 0;
+  async function renderPmGameLog(playerId) {
+    const pmGameLogList = document.getElementById('pmGameLogList');
+    if (!pmGameLogList) return;
+    if (!playerId) {
+      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No player selected.</p></div>';
+      return;
+    }
+    const myToken = ++pmGameLogToken;
+    pmGameLogList.innerHTML = '<div class="ld-loading">Loading game log…</div>';
+
+    const dict = await pmGetPlayerDict();
+    if (myToken !== pmGameLogToken) return;
+    if (!dict || !dict[playerId] || !window.sleeperGetWeekStats) {
+      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No game log data available for this player.</p></div>';
+      return;
+    }
+
+    const { season: curSeason, week: curWeek } = pmCurrentSeasonWeek();
+    // Every season of this player's real career, bounded by Sleeper's
+    // actual years_exp (so a rookie doesn't trigger a decade of empty
+    // fetches) and a sane cap for very long careers.
+    const yearsBack = Math.min((dict[playerId].years_exp != null ? dict[playerId].years_exp : 4) + 1, 15);
+    const seasonSpecs = [];
+    for (let i = 0; i < yearsBack; i++) {
+      const season = curSeason - i;
+      seasonSpecs.push({ season, through: i === 0 ? Math.max(curWeek, 1) : 18 });
+    }
+
+    const fetched = await Promise.all(
+      seasonSpecs.map(spec => pmFetchSeasonGameLog(playerId, dict, spec.season, spec.through))
+    );
+    if (myToken !== pmGameLogToken) return;
+    const results = fetched.filter(gl => gl.weekRows.length);
+
+    if (!results.length) {
+      pmGameLogList.innerHTML = '<div class="placeholder"><h3>Game Log</h3><p>No recorded games found for this player.</p></div>';
+      return;
+    }
+
+    pmGameLogList.innerHTML = results.map((gl, i) => pmGlSeasonTable(gl, i)).join('');
+    pmGameLogList.querySelectorAll('[data-gl-toggle]').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = el.dataset.glToggle;
+        const weeksEl = document.getElementById('pmGlWeeks' + idx);
+        if (!weeksEl) return;
+        weeksEl.hidden = !weeksEl.hidden;
+        pmGameLogList.querySelectorAll(`[data-gl-chevron="${idx}"]`).forEach(c => c.classList.toggle('is-open', !weeksEl.hidden));
+      });
+    });
+  }
+
+  // getPlayerDict() itself lives inside loadSleeperData()'s closure and
+  // isn't reachable from here, but it's exposed on window for exactly this
+  // kind of caller. Fall back to the cache it leaves on window (or a bare
+  // fetch) only for the unlikely case that exposure isn't there yet.
+  async function pmGetPlayerDict() {
+    if (window.sleeperGetPlayerDict) return window.sleeperGetPlayerDict();
+    if (window.__sleeperPlayerDict) return window.__sleeperPlayerDict;
+    if (!window.sleeperFetch) return null;
+    try {
+      const dict = await window.sleeperFetch('/players/nfl');
+      window.__sleeperPlayerDict = dict;
+      return dict;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  const PM_ORDINAL_SUFFIX = { 1: 'st', 2: 'nd', 3: 'rd' };
+  function pmOrdinal(n) {
+    const rem100 = n % 100;
+    return n + ((rem100 >= 11 && rem100 <= 13) ? 'th' : (PM_ORDINAL_SUFFIX[n % 10] || 'th'));
+  }
+
+  let pmOverviewToken = 0;
+  async function renderPmOverview(playerId) {
+    const pmOverviewList = document.getElementById('pmOverviewList');
+    if (!pmOverviewList) return;
+    if (!playerId) {
+      pmOverviewList.innerHTML = '<div class="placeholder"><h3>Overview</h3><p>No player selected.</p></div>';
+      return;
+    }
+    const myToken = ++pmOverviewToken;
+    pmOverviewList.innerHTML = '<div class="ld-loading">Loading overview…</div>';
+
+    const dict = await pmGetPlayerDict();
+    if (myToken !== pmOverviewToken) return;
+    const p = dict ? dict[playerId] : null;
+    if (!p) {
+      pmOverviewList.innerHTML = '<div class="placeholder"><h3>Overview</h3><p>No bio data available for this player.</p></div>';
+      return;
+    }
+
+    const heightIn = Number(p.height);
+    const heightStr = heightIn ? `${Math.floor(heightIn / 12)}'${heightIn % 12}"` : '&mdash;';
+    const weightStr = p.weight ? `${p.weight} lbs` : '&mdash;';
+    const expStr = p.years_exp === 0 ? 'Rookie' : (p.years_exp != null ? `${pmOrdinal(p.years_exp)} year` : '&mdash;');
+    const statusStr = p.injury_status || p.status || '&mdash;';
+
+    let html = `
+      <div class="pm-section-label">BIO</div>
+      <div class="ld-stats">
+        <div class="ld-stat-cell"><div class="ld-stat-label">AGE</div><div class="ld-stat-value">${p.age || '&mdash;'}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">HT / WT</div><div class="ld-stat-value">${heightStr} / ${weightStr}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">EXPERIENCE</div><div class="ld-stat-value">${expStr}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">STATUS</div><div class="ld-stat-value">${statusStr}</div></div>
+      </div>
+      <div class="pm-note">${[p.college, p.number != null ? '#' + p.number : null].filter(Boolean).join(' &middot; ')}</div>
+    `;
+
+    const { season: projSeason } = pmCurrentSeasonWeek();
+    const proj = await pmSeasonProjWithRank(playerId, dict, projSeason);
+    if (myToken !== pmOverviewToken) return;
+    const projPtsText = proj ? proj.pts.toFixed(1) : '&mdash;';
+    const projPpgText = proj ? proj.ppg.toFixed(1) : '&mdash;';
+    const projRankText = proj && proj.rank ? `${proj.pos}${proj.rank}` : '';
+    html += `
+      <div class="pm-section-label">${projSeason} PROJECTION</div>
+      <div class="ld-stats">
+        <div class="ld-stat-cell"><div class="ld-stat-label">PROJ POINTS</div><div class="ld-stat-value">${projPtsText}${projRankText ? ` <span class="pm-note" style="display:inline">(${projRankText})</span>` : ''}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">PROJ PPG</div><div class="ld-stat-value">${projPpgText}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">STARTUP ADP</div><div class="ld-stat-value">&mdash;</div></div>
+      </div>
+      ${proj ? '' : '<div class="pm-note">Sleeper hasn\'t published a projection for this player yet.</div>'}
+    `;
+
+    const gl = await pmFetchGameLogRows(playerId);
+    if (myToken !== pmOverviewToken) return;
+    if (gl) {
+      const played = gl.rows.filter(r => r.pts != null);
+      if (played.length) {
+        const total = played.reduce((s, r) => s + r.pts, 0);
+        const avg = total / played.length;
+        const best = played.reduce((b, r) => (r.pts > b.pts ? r : b), played[0]);
+        html += `
+          <div class="pm-section-label">${gl.entry.league.season} SEASON</div>
+          <div class="ld-stats">
+            <div class="ld-stat-cell"><div class="ld-stat-label">TOTAL PTS</div><div class="ld-stat-value">${total.toFixed(1)}</div></div>
+            <div class="ld-stat-divider"></div>
+            <div class="ld-stat-cell"><div class="ld-stat-label">AVG / GM</div><div class="ld-stat-value">${avg.toFixed(1)}</div></div>
+            <div class="ld-stat-divider"></div>
+            <div class="ld-stat-cell"><div class="ld-stat-label">BEST WEEK</div><div class="ld-stat-value">${best.pts.toFixed(1)} (Wk ${best.week})</div></div>
+          </div>
+        `;
+      }
+    }
+
+    if (getSiteMode() === 'dynasty') {
+      const val = ppValueForPlayerId(playerId, dict);
+      if (val != null) {
+        const rank = ppRankForPlayerId(playerId, dict);
+        const total = Object.keys(PP_PLAYER_VALUES).length;
+        html += `
+          <div class="pm-section-label">DYNASTY VALUE</div>
+          <div class="ld-stats">
+            <div class="ld-stat-cell"><div class="ld-stat-label">VALUE</div><div class="ld-stat-value">${val.toFixed(2)}</div></div>
+            <div class="ld-stat-divider"></div>
+            <div class="ld-stat-cell"><div class="ld-stat-label">RANK</div><div class="ld-stat-value">${rank ? '#' + rank + ' of ' + total : '&mdash;'}</div></div>
+          </div>
+        `;
+      }
+    }
+
+    if (myToken !== pmOverviewToken) return;
+    pmOverviewList.innerHTML = html;
+  }
+
+  async function renderPmContract(playerId) {
+    const pmContractList = document.getElementById('pmContractList');
+    if (!pmContractList) return;
+    if (!playerId) {
+      pmContractList.innerHTML = '<div class="placeholder"><h3>Contract</h3><p>No player selected.</p></div>';
+      return;
+    }
+    pmContractList.innerHTML = '<div class="ld-loading">Loading contract…</div>';
+
+    const dict = await pmGetPlayerDict();
+    const p = dict ? dict[playerId] : null;
+    const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : pmName.textContent;
+    const norm = ppNormalizeName(name);
+    const stripped = norm.replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
+    const c = PLAYER_CONTRACTS[norm] || PLAYER_CONTRACTS[stripped];
+
+    const anyEntry = Object.values(window.sleeperLeagueData || {})[0];
+    const currentSeason = Number(anyEntry && anyEntry.league && anyEntry.league.season) || new Date().getFullYear();
+
+    if (c) {
+      const yearsLeft = Math.max(0, c.through - currentSeason);
+      pmContractList.innerHTML = `
+        <div class="pm-contract-type">${c.type.toUpperCase()}</div>
+        <div class="ld-stats">
+          <div class="ld-stat-cell"><div class="ld-stat-label">YEARS LEFT</div><div class="ld-stat-value">${yearsLeft} (thru '${String(c.through).slice(2)})</div></div>
+          <div class="ld-stat-divider"></div>
+          <div class="ld-stat-cell"><div class="ld-stat-label">APY</div><div class="ld-stat-value">$${c.apy.toFixed(1)}M</div></div>
+          <div class="ld-stat-divider"></div>
+          <div class="ld-stat-cell"><div class="ld-stat-label">TOTAL VALUE</div><div class="ld-stat-value">$${c.total.toFixed(1)}M</div></div>
+          <div class="ld-stat-divider"></div>
+          <div class="ld-stat-cell"><div class="ld-stat-label">GUARANTEED</div><div class="ld-stat-value">$${c.guaranteed.toFixed(1)}M</div></div>
+        </div>
+        <div class="pm-note">Approximate, hand-curated terms &mdash; may not reflect the most recent restructure or extension. Verify exact figures with a source like Spotrac or Over The Cap.</div>
+      `;
+      return;
+    }
+
+    if (p && p.years_exp != null && p.years_exp <= 3) {
+      const yearOf = p.years_exp + 1;
+      pmContractList.innerHTML = `
+        <div class="pm-contract-type">ROOKIE CONTRACT</div>
+        <div class="ld-stats">
+          <div class="ld-stat-cell"><div class="ld-stat-label">CONTRACT YEAR</div><div class="ld-stat-value">${yearOf} of 4</div></div>
+          <div class="ld-stat-divider"></div>
+          <div class="ld-stat-cell"><div class="ld-stat-label">YEARS LEFT</div><div class="ld-stat-value">${4 - yearOf}</div></div>
+        </div>
+        <div class="pm-note">Standard 4-year rookie contract under the current CBA (a 5th-year option may apply for 1st-round picks). Exact dollar terms aren't available for this player yet.</div>
+      `;
+      return;
+    }
+
+    if (p && p.years_exp != null) {
+      pmContractList.innerHTML = `
+        <div class="pm-contract-type">VETERAN</div>
+        <div class="placeholder"><h3>Contract</h3><p>Exact contract terms aren't available for this player yet.</p></div>
+      `;
+      return;
+    }
+
+    pmContractList.innerHTML = '<div class="placeholder"><h3>Contract</h3><p>No contract data available for this player.</p></div>';
   }
 
   function openPlayerModal(item) {
@@ -17304,6 +18094,10 @@
     if (pmTradesList) pmTradesList.innerHTML = pmBuildTradesHtml(playerId);
     const pmGameLogList = document.getElementById('pmGameLogList');
     if (pmGameLogList) pmGameLogList.innerHTML = '';
+    const pmOverviewList = document.getElementById('pmOverviewList');
+    if (pmOverviewList) pmOverviewList.innerHTML = '';
+    const pmContractList = document.getElementById('pmContractList');
+    if (pmContractList) pmContractList.innerHTML = '';
 
     pmAvatar.innerHTML = `<img src="${sbHeadshotUrl(playerId)}" alt="" onerror="this.remove()">`;
     pmName.textContent = name;
@@ -17354,8 +18148,332 @@
         const pmGameLogList = document.getElementById('pmGameLogList');
         if (pmGameLogList && !pmGameLogList.innerHTML) renderPmGameLog(playerModal.dataset.playerId);
       }
+      if (target === 'overview') {
+        const pmOverviewList = document.getElementById('pmOverviewList');
+        if (pmOverviewList && !pmOverviewList.innerHTML) renderPmOverview(playerModal.dataset.playerId);
+      }
+      if (target === 'contract') {
+        const pmContractList = document.getElementById('pmContractList');
+        if (pmContractList && !pmContractList.innerHTML) renderPmContract(playerModal.dataset.playerId);
+      }
     });
   });
+
+  // ---------- Trade Calculator ----------
+  // "Dynasty Values" and "Austin's Rankings" both read the exact same
+  // PP_PLAYER_VALUES table for now -- there's no separate ADP-consensus
+  // dynasty value yet, just the one real ranking source this app has. The
+  // toggle exists so the source label is right once that consensus value
+  // ships; tcValueFor() is the one place that would change.
+  let tcPlayerPool = null;
+  function tcValueFor(playerId, dict) {
+    return ppValueForPlayerId(playerId, dict);
+  }
+  async function tcGetPlayerPool() {
+    if (tcPlayerPool) return tcPlayerPool;
+    const dict = await pmGetPlayerDict();
+    if (!dict) return [];
+    const pool = [];
+    Object.keys(dict).forEach(pid => {
+      const p = dict[pid];
+      if (!p || p.active === false) return;
+      const val = tcValueFor(pid, dict);
+      if (val == null) return;
+      const pos = p.position || (p.fantasy_positions || [])[0] || '';
+      pool.push({
+        id: pid, kind: 'player',
+        name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' '),
+        pos, team: p.team || 'FA', value: val,
+      });
+    });
+    const byPos = {};
+    pool.forEach(e => { (byPos[e.pos] = byPos[e.pos] || []).push(e); });
+    Object.values(byPos).forEach(list => {
+      list.sort((a, b) => b.value - a.value);
+      list.forEach((e, i) => { e.posRank = i + 1; });
+    });
+    pool.sort((a, b) => b.value - a.value);
+    tcPlayerPool = pool;
+    return pool;
+  }
+  // Generic future picks (next 2 draft classes, rounds 1-4) using the same
+  // placeholder round values as the rest of the app (PICK_ROUND_VALUES) --
+  // not tied to any one league's real traded-pick ownership, since the
+  // calculator is a standalone what-if tool.
+  function tcPickPool() {
+    const { season } = pmCurrentSeasonWeek();
+    const roundLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+    const picks = [];
+    [season + 1, season + 2].forEach(y => {
+      [1, 2, 3, 4].forEach(round => {
+        picks.push({
+          id: `pick_${y}_${round}`, kind: 'pick', name: `${y} ${roundLabels[round]}`,
+          pos: null, team: null, value: PICK_ROUND_VALUES[round] || 0, roundLabel: roundLabels[round],
+        });
+      });
+    });
+    return picks;
+  }
+  async function tcSearch(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const pool = await tcGetPlayerPool();
+    const matches = [];
+    pool.forEach(e => { if (e.name.toLowerCase().includes(q)) matches.push(e); });
+    tcPickPool().forEach(e => { if (e.name.toLowerCase().includes(q)) matches.push(e); });
+    matches.sort((a, b) => b.value - a.value);
+    return matches.slice(0, 8);
+  }
+
+  const tcState = { a: [], b: [] };
+  const tcScoring = { tep: 0, ppc: 0, rec: 1 };
+
+  function tcAddAsset(side, asset) {
+    const other = side === 'a' ? 'b' : 'a';
+    tcState[other] = tcState[other].filter(x => x.id !== asset.id);
+    if (!tcState[side].some(x => x.id === asset.id)) tcState[side].push(asset);
+    tcRender();
+  }
+  function tcRemoveAsset(side, id) {
+    tcState[side] = tcState[side].filter(x => x.id !== id);
+    tcRender();
+  }
+
+  const TC_POS_CLASS = { QB: 'pm-qb', RB: 'pm-rb', WR: 'pm-wr', TE: 'pm-te' };
+  function tcPosBadgeHtml(pos, posRank) {
+    if (!pos) return '';
+    const cls = TC_POS_CLASS[pos] || 'pm-qb';
+    return `<span class="pm-pos-badge ${cls}">${pos}${posRank || ''}</span>`;
+  }
+
+  function tcAssetRowHtml(side, asset) {
+    const avatarHtml = asset.kind === 'pick'
+      ? `<div class="tc-pick-badge tc-pick-badge-lg">${asset.roundLabel}</div>`
+      : `<div class="tc-asset-avatar"><img src="${sbHeadshotUrl(asset.id)}" alt="" onerror="this.style.display='none'"></div>`;
+    const subText = asset.kind === 'pick' ? 'Future Pick' : `${asset.pos}${asset.posRank || ''} &middot; ${asset.team || 'FA'}`;
+    return `<div class="tc-asset-row">
+      ${avatarHtml}
+      <div><div class="tc-asset-name">${asset.name}</div><div class="tc-asset-sub">${subText}</div></div>
+      <div class="tc-asset-value">${asset.value.toFixed(2)}</div>
+      <span class="tc-asset-remove" data-tc-remove="${asset.id}" data-tc-side="${side}">&#10005;</span>
+    </div>`;
+  }
+
+  function tcGapRowHtml(entry) {
+    return `<div class="tc-gap-row" data-tc-gap-add="${entry.id}">
+      ${tcPosBadgeHtml(entry.pos, entry.posRank)}
+      <div><div class="tc-gap-name">${entry.name}</div></div>
+      <div class="tc-gap-value">${entry.value.toFixed(2)}</div>
+    </div>`;
+  }
+
+  async function tcUpdateGapPanel(totalA, totalB) {
+    const panel = document.getElementById('tcGapPanel');
+    if (!panel) return;
+    const diff = totalA - totalB;
+    if (Math.abs(diff) < 0.02 || (!tcState.a.length && !tcState.b.length)) {
+      panel.hidden = true;
+      return;
+    }
+    const gap = Math.abs(diff);
+    const shortSide = diff > 0 ? 'b' : 'a';
+    const shortLabel = shortSide === 'a' ? 'Team A' : 'Team B';
+    const usedIds = new Set([...tcState.a, ...tcState.b].map(x => x.id));
+    const pool = await tcGetPlayerPool();
+    const candidates = pool.filter(e => !usedIds.has(e.id));
+    candidates.sort((a, b) => Math.abs(a.value - gap) - Math.abs(b.value - gap));
+    // The 4 closest matches by value, correctness-wise -- just re-ordered
+    // by raw value (descending) for display, since that reads better than
+    // closeness order once they're already this tightly clustered.
+    const closest = candidates.slice(0, 4).sort((a, b) => b.value - a.value);
+    if (!closest.length) { panel.hidden = true; return; }
+    panel.hidden = false;
+    document.getElementById('tcGapSub').innerHTML =
+      `${diff > 0 ? 'Team A' : 'Team B'} is up <b>${gap.toFixed(2)}</b>. Add one of these to <b>${shortLabel}</b> to even it.`;
+    const list = document.getElementById('tcGapList');
+    list.innerHTML = closest.map(tcGapRowHtml).join('');
+    list.querySelectorAll('[data-tc-gap-add]').forEach(row => {
+      row.addEventListener('click', () => {
+        const id = row.dataset.tcGapAdd;
+        const asset = closest.find(e => e.id === id);
+        if (asset) tcAddAsset(shortSide, asset);
+      });
+    });
+  }
+
+  function tcRender() {
+    ['a', 'b'].forEach(side => {
+      const list = document.getElementById(side === 'a' ? 'tcListA' : 'tcListB');
+      if (!list) return;
+      list.innerHTML = tcState[side].length
+        ? tcState[side].map(a => tcAssetRowHtml(side, a)).join('')
+        : '<div class="tc-empty">Search a player or pick to add to the trade.</div>';
+    });
+
+    const totalA = tcState.a.reduce((s, x) => s + x.value, 0);
+    const totalB = tcState.b.reduce((s, x) => s + x.value, 0);
+    document.getElementById('tcTotalA').textContent = totalA.toFixed(2);
+    document.getElementById('tcTotalB').textContent = totalB.toFixed(2);
+
+    const hasAny = tcState.a.length || tcState.b.length;
+    const verdictEl = document.getElementById('tcVerdict');
+    if (verdictEl) verdictEl.hidden = !hasAny;
+    if (hasAny) {
+      const diff = totalA - totalB;
+      const mainEl = document.getElementById('tcVerdictMain');
+      if (Math.abs(diff) < 0.02) mainEl.textContent = 'Fair Trade';
+      else mainEl.textContent = diff > 0 ? `Team A Wins By ${diff.toFixed(2)}` : `Team B Wins By ${Math.abs(diff).toFixed(2)}`;
+      document.getElementById('tcBarLabelA').textContent = totalA.toFixed(2);
+      document.getElementById('tcBarLabelB').textContent = totalB.toFixed(2);
+      const sum = totalA + totalB;
+      const pctA = sum > 0 ? (totalA / sum) * 100 : 50;
+      document.getElementById('tcFillA').style.width = pctA + '%';
+      document.getElementById('tcFillB').style.width = (100 - pctA) + '%';
+    }
+
+    tcUpdateGapPanel(totalA, totalB);
+  }
+
+  function tcSearchRowHtml(entry) {
+    const avatarHtml = entry.kind === 'pick'
+      ? `<div class="tc-pick-badge">${entry.roundLabel}</div>`
+      : `<div class="tc-search-avatar"><img src="${sbHeadshotUrl(entry.id)}" alt="" onerror="this.style.display='none'"></div>`;
+    const subText = entry.kind === 'pick' ? 'Future Pick' : `${entry.pos}${entry.posRank || ''} &middot; ${entry.team || 'FA'}`;
+    return `<div class="tc-search-row" data-tc-add="${entry.id}">
+      ${avatarHtml}
+      <div><div class="tc-search-name">${entry.name}</div><div class="tc-search-sub">${subText}</div></div>
+      <div class="tc-search-value">${entry.value.toFixed(2)}</div>
+    </div>`;
+  }
+
+  function tcSetupSearch(side) {
+    const input = document.getElementById(side === 'a' ? 'tcSearchA' : 'tcSearchB');
+    const results = document.getElementById(side === 'a' ? 'tcResultsA' : 'tcResultsB');
+    if (!input || !results) return;
+    let lastMatches = [];
+    let token = 0;
+    input.addEventListener('input', async () => {
+      const myToken = ++token;
+      const matches = await tcSearch(input.value);
+      if (myToken !== token) return;
+      lastMatches = matches;
+      if (!matches.length) { results.hidden = true; results.innerHTML = ''; return; }
+      results.innerHTML = matches.map(tcSearchRowHtml).join('');
+      results.hidden = false;
+    });
+    results.addEventListener('click', (e) => {
+      const row = e.target.closest('[data-tc-add]');
+      if (!row) return;
+      const asset = lastMatches.find(m => m.id === row.dataset.tcAdd);
+      if (asset) {
+        tcAddAsset(side, asset);
+        input.value = '';
+        results.hidden = true;
+        results.innerHTML = '';
+      }
+    });
+    input.addEventListener('focus', () => { if (lastMatches.length) results.hidden = false; });
+    document.addEventListener('click', (e) => {
+      if (!results.contains(e.target) && e.target !== input) results.hidden = true;
+    });
+  }
+  tcSetupSearch('a');
+  tcSetupSearch('b');
+
+  document.querySelectorAll('.tc-asset-list').forEach(list => {
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-tc-remove]');
+      if (!btn) return;
+      tcRemoveAsset(btn.dataset.tcSide, btn.dataset.tcRemove);
+    });
+  });
+
+  const tcResetBtn = document.getElementById('tcResetBtn');
+  if (tcResetBtn) {
+    tcResetBtn.addEventListener('click', () => {
+      tcState.a = [];
+      tcState.b = [];
+      tcRender();
+    });
+  }
+
+  const tcValueToggle = document.getElementById('tcValueToggle');
+  if (tcValueToggle) {
+    tcValueToggle.querySelectorAll('[data-tc-source]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        tcValueToggle.querySelectorAll('[data-tc-source]').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const label = btn.dataset.tcSource === 'austin' ? "Austin's Rankings" : 'Dynasty Values';
+        const sourceEl = document.getElementById('tcVerdictSource');
+        if (sourceEl) sourceEl.textContent = label;
+        // Both sources read the same PP_PLAYER_VALUES table today (see
+        // tcValueFor's comment) -- nothing to recompute yet, just the label.
+      });
+    });
+  }
+
+  document.querySelectorAll('.tc-pill-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      const pill = e.target.closest('.tc-pill');
+      if (!pill) return;
+      row.querySelectorAll('.tc-pill').forEach(p => p.classList.remove('is-active'));
+      pill.classList.add('is-active');
+      tcScoring[row.dataset.tcGroup] = Number(pill.dataset.tcVal);
+      // Cosmetic for now -- not wired into player values yet.
+    });
+  });
+
+  function tcFormatLeagueChip(league) {
+    const rosterPositions = league.roster_positions || [];
+    const isSF = rosterPositions.includes('SUPER_FLEX') || rosterPositions.filter(p => p === 'QB').length > 1;
+    const teams = league.total_rosters || 12;
+    const s = league.scoring_settings || {};
+    const recLabel = s.rec === 1 ? 'Full PPR' : s.rec === 0.5 ? 'Half PPR' : s.rec ? `${s.rec} PPR` : 'Standard';
+    return `${teams} Teams · ${isSF ? 'Superflex' : '1QB'} · ${recLabel}`;
+  }
+
+  function tcSetupLeagueDropdown() {
+    const select = document.getElementById('tcLeagueSelect');
+    const menu = document.getElementById('tcLeagueMenu');
+    const label = document.getElementById('tcLeagueSelectLabel');
+    const chip = document.getElementById('tcFormatChip');
+    if (!select || !menu) return;
+    select.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const entries = Object.values(window.sleeperLeagueData || {}).filter(en => en.league);
+      if (!entries.length) {
+        menu.innerHTML = '<div class="sort-option">Connect a Sleeper account to match a league.</div>';
+      } else {
+        menu.innerHTML = entries.map(en =>
+          `<div class="sort-option" data-tc-league="${en.league.league_id}">${en.league.name}</div>`
+        ).join('');
+        menu.querySelectorAll('[data-tc-league]').forEach(opt => {
+          opt.addEventListener('click', () => {
+            const entry = entries.find(en => en.league.league_id === opt.dataset.tcLeague);
+            if (!entry) return;
+            label.textContent = entry.league.name;
+            if (chip) chip.textContent = tcFormatLeagueChip(entry.league);
+            // TE premium and reception settings are real Sleeper league
+            // fields -- set the matching scoring pill active. Points per
+            // carry has no standard Sleeper field, so it's left as-is
+            // (that's the "estimate" label above).
+            const s = entry.league.scoring_settings || {};
+            const tepVal = s.bonus_rec_te != null ? s.bonus_rec_te : 0;
+            const recVal = s.rec === 0.5 ? 0.5 : 1;
+            document.querySelectorAll('[data-tc-group="tep"] .tc-pill').forEach(p => p.classList.toggle('is-active', Number(p.dataset.tcVal) === tepVal));
+            document.querySelectorAll('[data-tc-group="rec"] .tc-pill').forEach(p => p.classList.toggle('is-active', Number(p.dataset.tcVal) === recVal));
+            menu.hidden = true;
+          });
+        });
+      }
+      menu.hidden = !menu.hidden;
+    });
+    document.addEventListener('click', () => { menu.hidden = true; });
+    menu.addEventListener('click', (e) => e.stopPropagation());
+  }
+  tcSetupLeagueDropdown();
+
+  tcRender();
 
   refreshExpBoard();
 </script>
