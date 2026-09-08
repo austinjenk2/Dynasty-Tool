@@ -2183,7 +2183,9 @@
     padding: 8px 10px;
     border-bottom: 1px solid var(--border-soft);
     font-size: 11.5px;
+    cursor: pointer;
   }
+  .ld-player:hover { background: var(--bg); }
   .ld-player:last-child { border-bottom: none; }
   .ld-pos {
     flex-shrink: 0;
@@ -12486,20 +12488,55 @@
   function saveOrigProjStore(store) {
     try { localStorage.setItem(ORIG_PROJ_KEY, JSON.stringify(store)); } catch (err) {}
   }
-  function origProjFor(season, week, kind, key, liveValue) {
+  // Before a player's real game kicks off, "started at" should keep
+  // tracking the live projection (real news/injury designations can
+  // legitimately move it during the week) instead of freezing on
+  // whatever the very first read happened to be, sometimes days before
+  // kickoff. It only actually freezes once his game has begun -- that's
+  // the real "started at" moment.
+  function origProjFor(season, week, kind, key, liveValue, gameStarted) {
     if (liveValue == null) return null;
     const store = origProjStore();
     const wk = `${season}_${week}`;
     store[wk] = store[wk] || { players: {}, teams: {} };
     const bucket = store[wk][kind] || (store[wk][kind] = {});
-    if (bucket[key] == null) {
-      bucket[key] = liveValue;
-      saveOrigProjStore(store);
+    if (gameStarted) {
+      // If nothing was ever captured before kickoff (e.g. this is the
+      // first time this player's data has loaded and the game's already
+      // underway), fall back to freezing on this first live read rather
+      // than leaving it blank forever.
+      if (bucket[key] == null) {
+        bucket[key] = liveValue;
+        saveOrigProjStore(store);
+      }
+      return bucket[key];
     }
-    return bucket[key];
+    bucket[key] = liveValue;
+    saveOrigProjStore(store);
+    return liveValue;
   }
 
-  function sbLineupRowsHtml(matchup, dict, projMap, league, week) {
+  // Real per-team game state (from ESPN's scoreboard, via
+  // sleeperGetEspnGameData) -- 'in' or 'post' means that team's game has
+  // actually kicked off, which is the real moment a "started at"
+  // projection should freeze.
+  function sbGameStartedForTeam(team, espnGameData) {
+    if (!team || !espnGameData) return false;
+    const info = espnGameData[team];
+    return !!info && (info.state === 'in' || info.state === 'post');
+  }
+  // True once ANY starter on one side has a real team whose game has
+  // kicked off -- used for the team-level (matchup total) "started at",
+  // since a fantasy matchup doesn't have one single kickoff time.
+  function sbAnyStarterGameStarted(starterIds, dict, espnGameData) {
+    if (!espnGameData) return false;
+    return (starterIds || []).some(id => {
+      const p = dict[id];
+      return p && sbGameStartedForTeam(p.team, espnGameData);
+    });
+  }
+
+  function sbLineupRowsHtml(matchup, dict, projMap, league, week, espnGameData) {
     if (!matchup) {
       return '<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:16px 0">No matchup data yet</td></tr>';
     }
@@ -12523,7 +12560,8 @@
       const pts = pointsMap[id] != null ? Number(pointsMap[id]).toFixed(1) : '&mdash;';
       const proj = sbProjectionFor(id, projMap, league);
       const projText = proj != null ? proj.toFixed(1) : '&mdash;';
-      const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, proj) : null;
+      const gameStarted = sbGameStartedForTeam(team, espnGameData);
+      const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, proj, gameStarted) : null;
       const origText = origProj != null ? origProj.toFixed(1) : '&mdash;';
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
@@ -12767,7 +12805,7 @@
   // shared by the Scoreboard's matchup expand (openRealSbExpand) and the
   // standalone Field View page (renderSbFieldView) so both always show
   // the exact same numbers/formations for a given league.
-  function sbBuildFieldContext(entry, override, dict) {
+  function sbBuildFieldContext(entry, override, dict, espnGameData) {
     const myMatchup = override ? override.myMatchup : entry.myMatchup;
     const oppMatchup = override ? override.oppMatchup : entry.oppMatchup;
     const projMap = override ? override.projections : null;
@@ -12780,8 +12818,10 @@
       oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
       myPts = myMatchup ? (myMatchup.points || 0) : 0;
       oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
-      myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj);
-      oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj);
+      const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(myMatchup, entry.league, projMap), dict, espnGameData);
+      const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(oppMatchup, entry.league, projMap), dict, espnGameData);
+      myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj, myStarted);
+      oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj, oppStarted);
       winPct = sbWinProbability(myProj, oppProj);
     }
 
@@ -12808,6 +12848,7 @@
       league: entry.league,
       week,
       dict,
+      espnGameData,
     };
     return { myMatchup, oppMatchup, projMap, week, hasData, winPct, myProj, oppProj, myPts, oppPts, myOrig, oppOrig, teams, fieldRosters, fieldKey, startPct };
   }
@@ -12826,8 +12867,10 @@
       panel.innerHTML = '<div class="ld-loading">Could not load player data from Sleeper.</div>';
       return;
     }
+    const week0 = override ? override.week : entry.week;
+    const espnGameData = window.sleeperGetEspnGameData ? await window.sleeperGetEspnGameData(week0, entry.league.season).catch(() => null) : null;
 
-    const ctx = sbBuildFieldContext(entry, override, dict);
+    const ctx = sbBuildFieldContext(entry, override, dict, espnGameData);
     const { myMatchup, oppMatchup, projMap, week, winPct, teams, fieldRosters, fieldKey, startPct } = ctx;
     const scoreHtml = ctx.hasData
       ? `<span class="sb-exp-score-item"><b>${ctx.myProj.toFixed(1)}</b> vs <b>${ctx.oppProj.toFixed(1)}</b> <i>proj</i></span>` +
@@ -12842,14 +12885,14 @@
           '<div class="sb-lineup-col">' +
             '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
             '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
-            `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
+            `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap, entry.league, week0, espnGameData)}</tbody></table>` +
             '<div class="sb-last-plays-head">LAST 5 PLAYS</div>' +
             '<div class="sb-last-plays sb-last-plays-mine"><div class="ld-loading" style="padding:6px 0">Loading recent plays…</div></div>' +
           '</div>' +
           '<div class="sb-lineup-col">' +
             '<div class="sb-lineup-label sb-lineup-label-opp">OPPONENT LINEUP</div>' +
             '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
-            `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
+            `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league, week0, espnGameData)}</tbody></table>` +
             '<div class="sb-last-plays-head">LAST 5 PLAYS</div>' +
             '<div class="sb-last-plays sb-last-plays-opp"><div class="ld-loading" style="padding:6px 0">Loading recent plays…</div></div>' +
           '</div>' +
@@ -12881,13 +12924,17 @@
       return;
     }
     const override = window.__sleeperScoreboardOverride || null;
+    const fvWeek = override ? override.week : (entries[0] && entries[0].week);
+    const espnGameData = (window.sleeperGetEspnGameData && entries[0])
+      ? await window.sleeperGetEspnGameData(fvWeek, entries[0].league.season).catch(() => null)
+      : null;
 
     // Build each league's field context up front (once) so it can be used
     // both for the card markup below and for sorting by field position,
     // instead of recomputing it a second time per card.
     const built = entries.map(entry => {
       const ov = override ? override.byLeague[entry.league.league_id] : null;
-      const ctx = sbBuildFieldContext(entry, ov, dict);
+      const ctx = sbBuildFieldContext(entry, ov, dict, espnGameData);
       const oppUser = ov ? ov.oppUser : entry.oppUser;
       const oppName = oppUser ? (oppUser.display_name || oppUser.username || 'Opponent') : (entry.myMatchup ? 'TBD' : 'No matchup yet');
       return { entry, ctx, oppName };
@@ -13485,6 +13532,9 @@
       if (window.sleeperGetWeekStats) {
         try { rgActualStatsMap = await window.sleeperGetWeekStats(rgSeason, week) || {}; } catch (err) {}
       }
+      const rgEspnGameData = window.sleeperGetEspnGameData
+        ? await window.sleeperGetEspnGameData(week, rgSeason).catch(() => null)
+        : null;
       function rgBasePprPoints(stats, pos) {
         if (!stats) return null;
         const base = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
@@ -13513,7 +13563,8 @@
         if (!p || !['QB', 'RB', 'WR', 'TE'].includes(pos)) return null;
         const pprPoints = rgBasePprPoints(rgActualStatsMap[id], pos);
         const liveProj = rgBasePprPoints(rgProjStatsMap[id], pos);
-        const origProj = liveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, liveProj) : null;
+        const rgGameStarted = sbGameStartedForTeam(p.team, rgEspnGameData);
+        const origProj = liveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, liveProj, rgGameStarted) : null;
         const poe = (liveProj != null && origProj != null) ? (liveProj - origProj) : null;
         return {
           id,
@@ -14810,8 +14861,14 @@
           // own roster-id-scoped key.
           const mineKey = viewingOther ? `${entry.league.league_id}_${activeRoster.roster_id}` : `${entry.league.league_id}_mine`;
           const oppKey = viewingOther ? `${entry.league.league_id}_${activeRoster.roster_id}_opp` : `${entry.league.league_id}_opp`;
-          const myOrig = origProjFor(entry.league.season, entry.week, 'teams', mineKey, myTotal);
-          const oppOrig = origProjFor(entry.league.season, entry.week, 'teams', oppKey, oppTotal);
+          const ldOrigDict = await getPlayerDict();
+          const ldOrigEspnGameData = window.sleeperGetEspnGameData
+            ? await window.sleeperGetEspnGameData(entry.week, entry.league.season).catch(() => null)
+            : null;
+          const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(rosterMatchup, entry.league, null), ldOrigDict, ldOrigEspnGameData);
+          const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(rosterOppMatchup, entry.league, null), ldOrigDict, ldOrigEspnGameData);
+          const myOrig = origProjFor(entry.league.season, entry.week, 'teams', mineKey, myTotal, myStarted);
+          const oppOrig = origProjFor(entry.league.season, entry.week, 'teams', oppKey, oppTotal, oppStarted);
           ldOrigScoreEl.textContent = `Started at ${myOrig.toFixed(1)} vs ${oppOrig.toFixed(1)}`;
         }
       } else if (rosterMatchup && rosterOppMatchup) {
@@ -14887,7 +14944,7 @@
       ldColumns.innerHTML = Object.keys(groups).map(pos => {
         const posClass = pos.toLowerCase();
         const playerRows = groups[pos].map(p =>
-          '<div class="ld-player">' +
+          `<div class="ld-player" data-player-id="${p.id}" data-name="${sbFieldEsc(p.name)}" data-team="${sbFieldEsc(p.team)}" data-pos="${pos}">` +
             `<span class="ld-pos ${posClass}">${p.slotLabel}</span>` +
             (p.isStarter ? '<span class="ld-star">&#9733;</span>' : '') +
             `<span class="ld-pname">${p.name}</span>` +
@@ -14996,14 +15053,22 @@
     // among just the other unplaced teams, slotted in after every real
     // placement.
     window.__sleeperBracketCache = window.__sleeperBracketCache || {};
+    // Winners_bracket only -- losers_bracket's own `p` field numbers
+    // placements within the CONSOLATION bracket itself (e.g. "1st place
+    // in the loser's bracket"), which is not the same scale as overall
+    // league placement and was showing up here as if it were: a team
+    // that finished 12th in a 14-team league (clearly missed the
+    // playoffs) could still get assigned p:1 out of the losers_bracket
+    // and read as "finished 1st" overall. Everyone not covered by a real
+    // winners_bracket placement instead falls through to the existing
+    // wins/PF-ranked fallback below, which correctly puts a non-playoff
+    // team near the bottom regardless of what the consolation bracket
+    // itself did.
     async function ldrecGetPlacements(leagueId) {
       if (window.__sleeperBracketCache[leagueId]) return window.__sleeperBracketCache[leagueId];
-      const [winners, losers] = await Promise.all([
-        sleeperFetch(`/league/${leagueId}/winners_bracket`).catch(() => []),
-        sleeperFetch(`/league/${leagueId}/losers_bracket`).catch(() => []),
-      ]);
+      const winners = await sleeperFetch(`/league/${leagueId}/winners_bracket`).catch(() => []);
       const placements = {};
-      [...(winners || []), ...(losers || [])].forEach(m => {
+      (winners || []).forEach(m => {
         if (!m || m.p == null) return;
         if (m.w != null) placements[m.w] = m.p;
         if (m.l != null) placements[m.l] = m.p + 1;
@@ -15896,12 +15961,12 @@
             '<div class="sb-lineup-col">' +
               `<div class="sb-lineup-label sb-lineup-label-you">${sbFieldEsc(teams.myName)}</div>` +
               '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
-              `<tbody>${sbLineupRowsHtml(myMatchup, ldmuDict, projMap, r.league, week)}</tbody></table>` +
+              `<tbody>${sbLineupRowsHtml(myMatchup, ldmuDict, projMap, r.league, week, r.espnGameData)}</tbody></table>` +
             '</div>' +
             '<div class="sb-lineup-col">' +
               `<div class="sb-lineup-label sb-lineup-label-opp">${sbFieldEsc(teams.oppName)}</div>` +
               '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
-              `<tbody>${sbLineupRowsHtml(oppMatchup, ldmuDict, projMap, r.league, week)}</tbody></table>` +
+              `<tbody>${sbLineupRowsHtml(oppMatchup, ldmuDict, projMap, r.league, week, r.espnGameData)}</tbody></table>` +
             '</div>' +
           '</div>' +
           sbFieldPanelHtml(startPct, teams) +
@@ -15928,6 +15993,9 @@
       if (window.sleeperGetWeekProjections) {
         try { projMap = await window.sleeperGetWeekProjections(entry.league.season, week); } catch (err) {}
       }
+      const espnGameData = window.sleeperGetEspnGameData
+        ? await window.sleeperGetEspnGameData(week, entry.league.season).catch(() => null)
+        : null;
 
       const byMatchupId = {};
       matchups.forEach(m => { (byMatchupId[m.matchup_id] = byMatchupId[m.matchup_id] || []).push(m); });
@@ -15949,8 +16017,8 @@
         // sbBuildFieldContext's real projMap override shape is
         // { week, projections } -- reuse it directly so live/proj/win%
         // read exactly like every other page that shows them.
-        const ctx = sbBuildFieldContext(syntheticEntry, { week, projections: projMap, oppUser: u2, myMatchup: m1, oppMatchup: m2 }, ldmuDict);
-        return { ctx, u1, u2, league: entry.league };
+        const ctx = sbBuildFieldContext(syntheticEntry, { week, projections: projMap, oppUser: u2, myMatchup: m1, oppMatchup: m2 }, ldmuDict, espnGameData);
+        return { ctx, u1, u2, league: entry.league, espnGameData };
       });
 
       listEl.innerHTML = ldmuRows.map((r, i) => ldmuRowHtml(r, i)).join('');
@@ -19975,6 +20043,28 @@
   }
   window.openPlayerModalData = openPlayerModalData;
 
+  // Generic entry point for anywhere a player is just a name sitting on
+  // the page with no click behavior yet (League Detail's roster columns,
+  // for one) -- works out the real leagues he's rostered in on the fly
+  // and opens the same modal, defaulting to Overview.
+  function openPlayerModalForId(playerId, name, team, pos) {
+    const leagues = [];
+    Object.values(window.sleeperLeagueData || {}).forEach(entry => {
+      if (!entry.roster) return;
+      const players = (entry.roster.players || []).filter(id => id && id !== '0');
+      if (players.includes(playerId)) leagues.push(entry.league.name);
+    });
+    openPlayerModalData({ playerId, name, team, pos, leagues, defaultTab: 'overview' });
+  }
+  window.openPlayerModalForId = openPlayerModalForId;
+
+  document.addEventListener('click', (e) => {
+    const ldPlayer = e.target.closest('.ld-player[data-player-id]');
+    if (ldPlayer) {
+      window.openPlayerModalForId(ldPlayer.dataset.playerId, ldPlayer.dataset.name, ldPlayer.dataset.team, ldPlayer.dataset.pos);
+    }
+  });
+
   document.querySelectorAll('.exp-card, .exp-list-row').forEach(item => {
     item.addEventListener('click', () => openPlayerModal(item));
   });
@@ -20083,21 +20173,45 @@
   // Team A/Team B here, matched by name against the same player/pick
   // pools the search box uses, so the in-depth win/loss breakdown is one
   // click away instead of re-typing the whole trade by hand.
+  // A pick's own text ("2027 2nd") is parsed directly into a pick asset
+  // rather than looked up against tcPickPool()'s fixed 2-future-years
+  // list -- a trade card can carry a pick further out than that (a 2029
+  // 1st, say), and this way it still resolves.
+  const TC_PICK_ROUND_LABEL = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+  function tcPickAssetFromText(text) {
+    const m = text.trim().match(/^(\d{4})\s+(\d+)(?:st|nd|rd|th)$/i);
+    if (!m) return null;
+    const year = Number(m[1]), round = Number(m[2]);
+    const roundLabel = TC_PICK_ROUND_LABEL[round] || `${round}th`;
+    return {
+      id: `pick_${year}_${round}`, kind: 'pick', name: `${year} ${roundLabel}`,
+      pos: null, team: null, value: PICK_ROUND_VALUES[round] || 0, roundLabel,
+    };
+  }
+
   async function tcPopulateFromTradeCard(card) {
     const cols = card.querySelectorAll('.trade-cols .trade-col');
     if (cols.length < 2) return;
     const [gotCol, gaveCol] = cols;
     const pool = await tcGetPlayerPool();
-    const picks = tcPickPool();
     const findAsset = (nameText) => {
+      const pickAsset = tcPickAssetFromText(nameText);
+      if (pickAsset) return pickAsset;
       const norm = nameText.trim().toLowerCase();
       return pool.find(e => e.name.toLowerCase() === norm)
-        || picks.find(e => e.name.toLowerCase() === norm)
         || pool.find(e => e.name.toLowerCase().includes(norm) || norm.includes(e.name.toLowerCase()))
         || null;
     };
+    // A trade can carry the same pick twice (two 2027 2nds) -- give each
+    // occurrence its own id so both actually show up as separate rows
+    // instead of collapsing into one, and so removing one doesn't also
+    // remove the other.
     const assetsFrom = (col) => Array.from(col.querySelectorAll('.trade-asset-name'))
-      .map(el => findAsset(el.textContent))
+      .map((el, idx) => {
+        const asset = findAsset(el.textContent);
+        if (!asset) return null;
+        return asset.kind === 'pick' ? Object.assign({}, asset, { id: `${asset.id}__${idx}` }) : asset;
+      })
       .filter(Boolean);
     tcState.a = assetsFrom(gotCol);
     tcState.b = assetsFrom(gaveCol);
