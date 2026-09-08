@@ -621,20 +621,21 @@
      day (ESPN-style); pick one to see its live play-by-play feed (default)
      or either team's offense box score (live/proj/rooting exposure/
      matchup impact). */
-  .gc-day-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 14px; flex-wrap: wrap; }
-  .gc-day-tabs { display: flex; gap: 8px; overflow-x: auto; flex: 1; }
+  .gc-day-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 4px 0 14px; }
   .gc-day-tab { flex: 0 0 auto; cursor: pointer; padding: 6px 14px; border-radius: 20px; font-size: 12.5px; font-weight: 700; color: var(--muted); background: var(--surface); border: 1px solid var(--border); }
   .gc-day-tab.active { color: #fff; background: var(--navy); border-color: var(--navy); }
-  .gc-compare-toggle { flex-shrink: 0; cursor: pointer; padding: 6px 14px; border-radius: 20px; font-size: 12.5px; font-weight: 700; color: var(--navy); background: var(--surface); border: 1px solid var(--border); }
-  .gc-compare-toggle.active { color: #fff; background: var(--navy); border-color: var(--navy); }
 
   .gc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
   .gc-box {
     cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
     padding: 12px 14px;
   }
+  /* Tapping a second game opens it as a second pane alongside the first
+     (see .gc-panes below) instead of replacing it -- the two highlight
+     colors here match which side of that split view each open game
+     lands on. */
   .gc-box.active { border-color: var(--navy); box-shadow: 0 0 0 1px var(--navy) inset; }
-  .gc-box.gc-box-compare-selected { border-color: var(--green); box-shadow: 0 0 0 1px var(--green) inset; }
+  .gc-box.gc-box-pane2 { border-color: var(--green); box-shadow: 0 0 0 1px var(--green) inset; }
   .gc-box-status { font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; color: var(--faint); margin-bottom: 8px; text-align: center; }
   .gc-box-status.gc-live { color: var(--red); }
   .gc-box-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; }
@@ -661,16 +662,15 @@
   .gc-score-mid-state { font-size: 10.5px; font-weight: 800; letter-spacing: 1px; color: var(--red); }
   .gc-score-mid-situation { font-size: 10.5px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
 
-  /* Side-by-side condensed scoreboards for two picked games at once --
-     just the score/clock/possession/situation line, no box score or
-     feed, so comparing two live games doesn't need two full page
-     scrolls. */
-  .gc-compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 680px) { .gc-compare-grid { grid-template-columns: 1fr; } }
-  .gc-compare-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
-  .gc-compare-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; }
-  .gc-compare-meta { font-size: 10.5px; color: var(--muted); text-align: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-soft); }
-  .gc-compare-hint { padding: 30px 10px; text-align: center; color: var(--faint); font-size: 13px; }
+  .gc-box-situation { font-size: 10.5px; color: var(--muted); text-align: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-soft); }
+
+  /* Two full game panes (score header + Feed/box score tabs) side by
+     side -- picking a second game from the grid opens it here next to
+     the first instead of replacing it. */
+  .gc-panes { display: grid; grid-template-columns: 1fr; gap: 20px; }
+  .gc-panes.gc-panes-2 { grid-template-columns: 1fr 1fr; align-items: start; }
+  @media (max-width: 900px) { .gc-panes.gc-panes-2 { grid-template-columns: 1fr; } }
+  .gc-pane { min-width: 0; }
 
   .gc-detail-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
   .gc-detail-tab { padding: 8px 2px 10px; font-size: 13px; font-weight: 700; color: var(--faint); border-bottom: 2.5px solid transparent; cursor: pointer; }
@@ -4593,12 +4593,9 @@
   <div data-view="gamecast">
     <div class="page-title">
       <h1>GameCast</h1>
-      <p>Every real NFL game this week &mdash; pick one for a full fantasy box score: live vs. projected points, real stats, your exposure, and how each player is swinging your portfolio.</p>
+      <p>Every real NFL game this week &mdash; pick one for a full fantasy box score: live vs. projected points, real stats, your exposure, and how each player is swinging your portfolio. Pick a second to see both box scores side by side.</p>
     </div>
-    <div class="gc-day-row">
-      <div class="gc-day-tabs" id="gcDayTabs"></div>
-      <button type="button" class="gc-compare-toggle" id="gcCompareToggle">Compare 2 Games</button>
-    </div>
+    <div class="gc-day-tabs" id="gcDayTabs"></div>
     <div class="gc-grid" id="gcGrid"><div class="ld-loading">Loading today's games&hellip;</div></div>
     <div id="gcGameBody"><div class="ld-loading">Pick a game above to see its fantasy box score.</div></div>
   </div>
@@ -17759,13 +17756,15 @@
   };
   const GC_FANTASY_POS = ['QB', 'RB', 'WR', 'TE'];
 
-  window.__gcSelectedEventId = window.__gcSelectedEventId || null;
+  // Up to two games can be "open" at once, each rendered as its own full
+  // pane (score header + Feed/box score tabs) side by side -- picking a
+  // second game from the grid opens it next to the first instead of
+  // replacing it. Per-pane state (which detail tab, and its fetched
+  // data) is keyed by eventId so the two panes are fully independent.
   window.__gcSelectedDay = window.__gcSelectedDay || null;
-  window.__gcDetailTab = window.__gcDetailTab || 'feed';
-  window.__gcLoadedEventId = window.__gcLoadedEventId || null;
-  window.__gcCurrentGame = window.__gcCurrentGame || null;
-  window.__gcCompareMode = window.__gcCompareMode || false;
-  window.__gcCompareIds = window.__gcCompareIds || [];
+  window.__gcOpenEventIds = window.__gcOpenEventIds || [];
+  window.__gcPaneDetailTab = window.__gcPaneDetailTab || {};
+  window.__gcPaneData = window.__gcPaneData || {};
   let gcRefreshTimer = null;
 
   window.__gcGamesCache = window.__gcGamesCache || {};
@@ -17873,8 +17872,11 @@
     const el = document.getElementById('gcGrid');
     if (!el) return;
     if (!games.length) { el.innerHTML = '<div class="ld-loading">No NFL games this day.</div>'; return; }
-    el.innerHTML = games.map(g => `
-      <div class="gc-box${(!window.__gcCompareMode && g.eventId === window.__gcSelectedEventId) ? ' active' : ''}${(window.__gcCompareMode && window.__gcCompareIds.includes(g.eventId)) ? ' gc-box-compare-selected' : ''}" data-gc-event="${sbFieldEsc(g.eventId)}">
+    el.innerHTML = games.map(g => {
+      const paneIdx = window.__gcOpenEventIds.indexOf(g.eventId);
+      const paneCls = paneIdx === 0 ? ' active' : (paneIdx === 1 ? ' gc-box-pane2' : '');
+      return `
+      <div class="gc-box${paneCls}" data-gc-event="${sbFieldEsc(g.eventId)}">
         ${gcGameStatusHtml(g)}
         <div class="gc-box-row">
           <div class="gc-box-team"><img src="${sbTeamLogoUrl(g.away.abbr)}" alt="" onerror="this.remove()"><div><div class="gc-box-team-name">${g.away.abbr}${gcBallIconHtml(g, 'away')}</div><div class="gc-box-team-rec">${sbFieldEsc(g.away.record || '')}</div></div></div>
@@ -17884,9 +17886,10 @@
           <div class="gc-box-team"><img src="${sbTeamLogoUrl(g.home.abbr)}" alt="" onerror="this.remove()"><div><div class="gc-box-team-name">${g.home.abbr}${gcBallIconHtml(g, 'home')}</div><div class="gc-box-team-rec">${sbFieldEsc(g.home.record || '')}</div></div></div>
           <div class="gc-box-score">${g.home.score != null ? g.home.score : ''}</div>
         </div>
-        ${g.state === 'in' && g.downDistance ? `<div class="gc-compare-meta">${sbFieldEsc(gcSituationText(g))}</div>` : ''}
+        ${g.state === 'in' && g.downDistance ? `<div class="gc-box-situation">${sbFieldEsc(gcSituationText(g))}</div>` : ''}
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   async function renderRealGameCast() {
@@ -17904,56 +17907,37 @@
     }
     gcRenderDayTabs(dayKeys, gamesByDay);
     const dayGames = window.__gcSelectedDay ? (gamesByDay[window.__gcSelectedDay] || []) : [];
-    if (!window.__gcSelectedEventId || !dayGames.some(g => g.eventId === window.__gcSelectedEventId)) {
+    // Drop any open game that isn't on this day (e.g. after switching
+    // day tabs); default to the live game (or the first game) the very
+    // first time there's nothing open yet.
+    window.__gcOpenEventIds = window.__gcOpenEventIds.filter(id => dayGames.some(g => g.eventId === id));
+    if (!window.__gcOpenEventIds.length) {
       const live = dayGames.find(g => g.state === 'in');
-      window.__gcSelectedEventId = (live || dayGames[0] || {}).eventId || null;
+      const def = (live || dayGames[0] || {}).eventId;
+      if (def) window.__gcOpenEventIds = [def];
     }
     gcRenderGrid(dayGames);
     const gamecastView = document.querySelector('[data-view="gamecast"]');
-    const body = document.getElementById('gcGameBody');
     if (gamecastView && gamecastView.classList.contains('is-active')) {
-      if (window.__gcCompareMode) {
-        gcRenderCompareView(dayGames);
-      } else {
-        const selected = dayGames.find(g => g.eventId === window.__gcSelectedEventId);
-        if (selected) loadGcGameBody(selected, week, season);
-        else if (body) body.innerHTML = '<div class="ld-loading">Pick a game above to see its fantasy box score.</div>';
-      }
+      await gcRenderPanes(dayGames, week, season);
     }
   }
   window.renderRealGameCast = renderRealGameCast;
 
-  // Two condensed live scoreboards side by side (score, live clock/down/
-  // yard line, who has the ball) -- no box score or feed, just the part
-  // of a game people want to glance between while it's actually being
-  // watched. Picked via the Compare toggle + tapping up to two boxes in
-  // the grid above.
-  function gcCompareCardHtml(g) {
-    const stateLabel = g.state === 'in' ? sbFieldEsc(g.detail || 'LIVE') : (g.state === 'post' ? 'FINAL' : sbFieldEsc(new Date(g.when).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })));
-    const situation = gcSituationText(g);
-    return `<div class="gc-compare-card">
-      <div class="gc-box-status${g.state === 'in' ? ' gc-live' : ''}">${stateLabel}</div>
-      <div class="gc-compare-row">
-        <div class="gc-box-team"><img src="${sbTeamLogoUrl(g.away.abbr)}" alt="" onerror="this.remove()"><div class="gc-box-team-name">${sbFieldEsc(g.away.abbr)}${gcBallIconHtml(g, 'away')}</div></div>
-        <div class="gc-box-score">${g.away.score != null ? g.away.score : ''}</div>
-      </div>
-      <div class="gc-compare-row">
-        <div class="gc-box-team"><img src="${sbTeamLogoUrl(g.home.abbr)}" alt="" onerror="this.remove()"><div class="gc-box-team-name">${sbFieldEsc(g.home.abbr)}${gcBallIconHtml(g, 'home')}</div></div>
-        <div class="gc-box-score">${g.home.score != null ? g.home.score : ''}</div>
-      </div>
-      ${situation ? `<div class="gc-compare-meta">${situation}</div>` : ''}
-    </div>`;
-  }
-
-  function gcRenderCompareView(dayGames) {
+  // Renders every currently-open game (1 or 2) as its own full pane --
+  // score header plus independent Feed/box-score tabs -- side by side.
+  async function gcRenderPanes(dayGames, week, season) {
     const body = document.getElementById('gcGameBody');
     if (!body) return;
-    const picked = window.__gcCompareIds.map(id => dayGames.find(g => g.eventId === id)).filter(Boolean);
-    if (picked.length < 2) {
-      body.innerHTML = `<div class="gc-compare-hint">Tap ${2 - picked.length} more game${picked.length === 1 ? '' : 's'} above to compare.</div>`;
-      return;
-    }
-    body.innerHTML = `<div class="gc-compare-grid">${picked.map(gcCompareCardHtml).join('')}</div>`;
+    const ids = window.__gcOpenEventIds;
+    if (!ids.length) { body.innerHTML = '<div class="ld-loading">Pick a game above to see its fantasy box score.</div>'; return; }
+    body.innerHTML = `<div class="gc-panes${ids.length === 2 ? ' gc-panes-2' : ''}">${ids.map(id =>
+      `<div class="gc-pane" id="gcPane-${sbFieldEsc(id)}"><div class="ld-loading">Loading&hellip;</div></div>`
+    ).join('')}</div>`;
+    await Promise.all(ids.map(id => {
+      const game = dayGames.find(g => g.eventId === id);
+      return game ? loadGcPane(game, week, season) : null;
+    }));
   }
 
   // Your real weekly rooting-guide exposure to one player: the net count
@@ -18097,23 +18081,23 @@
     return tables || '<div class="ld-loading">No offensive stats yet for this team.</div>';
   }
 
-  async function loadGcGameBody(game, week, season) {
-    const body = document.getElementById('gcGameBody');
-    if (!body || !game) return;
-    if (window.__gcLoadedEventId !== game.eventId) {
-      window.__gcDetailTab = 'feed';
-      window.__gcLoadedEventId = game.eventId;
-    }
-    body.innerHTML = '<div class="ld-loading">Loading&hellip;</div>';
+  // Loads one open game into its own pane -- an independent score header
+  // plus Feed/box-score tabs -- so two panes open at once never share
+  // state with each other.
+  async function loadGcPane(game, week, season) {
+    const pane = document.getElementById(`gcPane-${game.eventId}`);
+    if (!pane) return;
+    if (!window.__gcPaneDetailTab[game.eventId]) window.__gcPaneDetailTab[game.eventId] = 'feed';
 
     const [dict, statsMap, projMap] = await Promise.all([
       window.sleeperGetPlayerDict ? window.sleeperGetPlayerDict() : {},
       window.sleeperGetWeekStats ? window.sleeperGetWeekStats(season, week) : {},
       window.sleeperGetWeekProjections ? window.sleeperGetWeekProjections(season, week) : {},
     ]);
-    window.__gcCurrentGame = { game, dict, statsMap, projMap };
+    window.__gcPaneData[game.eventId] = { game, dict, statsMap, projMap };
+    const tab = window.__gcPaneDetailTab[game.eventId];
 
-    body.innerHTML = `
+    pane.innerHTML = `
       <div class="gc-score-header">
         <div class="gc-score-side">
           <img src="${sbTeamLogoUrl(game.away.abbr)}" alt="" onerror="this.remove()">
@@ -18129,32 +18113,33 @@
         </div>
       </div>
       <div class="gc-detail-tabs">
-        <div class="gc-detail-tab${window.__gcDetailTab === 'feed' ? ' active' : ''}" data-gc-tab="feed">Feed</div>
-        <div class="gc-detail-tab${window.__gcDetailTab === 'away' ? ' active' : ''}" data-gc-tab="away">${sbFieldEsc(game.away.abbr)}</div>
-        <div class="gc-detail-tab${window.__gcDetailTab === 'home' ? ' active' : ''}" data-gc-tab="home">${sbFieldEsc(game.home.abbr)}</div>
+        <div class="gc-detail-tab${tab === 'feed' ? ' active' : ''}" data-gc-tab="feed">Feed</div>
+        <div class="gc-detail-tab${tab === 'away' ? ' active' : ''}" data-gc-tab="away">${sbFieldEsc(game.away.abbr)}</div>
+        <div class="gc-detail-tab${tab === 'home' ? ' active' : ''}" data-gc-tab="home">${sbFieldEsc(game.home.abbr)}</div>
       </div>
-      <div id="gcDetailBody"></div>
+      <div id="gcDetailBody-${game.eventId}"></div>
     `;
-    await gcRenderDetailTab();
+    await gcRenderPaneDetail(game.eventId);
   }
 
-  async function gcRenderDetailTab() {
-    const el = document.getElementById('gcDetailBody');
-    const cur = window.__gcCurrentGame;
+  async function gcRenderPaneDetail(eventId) {
+    const el = document.getElementById(`gcDetailBody-${eventId}`);
+    const cur = window.__gcPaneData[eventId];
     if (!el || !cur) return;
     const { game, dict, statsMap, projMap } = cur;
-    if (window.__gcDetailTab === 'away') {
+    const tab = window.__gcPaneDetailTab[eventId];
+    if (tab === 'away') {
       el.innerHTML = gcTeamTablesHtml(game.away.abbr, dict, statsMap, projMap);
-    } else if (window.__gcDetailTab === 'home') {
+    } else if (tab === 'home') {
       el.innerHTML = gcTeamTablesHtml(game.home.abbr, dict, statsMap, projMap);
     } else {
-      el.innerHTML = '<div class="gc-feed" id="gcFeedList"><div class="ld-loading">Loading play-by-play&hellip;</div></div>';
+      el.innerHTML = `<div class="gc-feed" id="gcFeedList-${eventId}"><div class="ld-loading">Loading play-by-play&hellip;</div></div>`;
       try {
         const feed = await gcBuildFeed(game, dict);
-        const feedList = document.getElementById('gcFeedList');
+        const feedList = document.getElementById(`gcFeedList-${eventId}`);
         if (feedList) feedList.innerHTML = gcFeedHtml(feed);
       } catch (err) {
-        const feedList = document.getElementById('gcFeedList');
+        const feedList = document.getElementById(`gcFeedList-${eventId}`);
         if (feedList) feedList.innerHTML = '<div class="sb-last-plays-empty">Could not load live plays</div>';
       }
     }
@@ -18236,43 +18221,37 @@
 
   (function initGcClicks() {
     const dayTabs = document.getElementById('gcDayTabs');
-    const compareToggle = document.getElementById('gcCompareToggle');
     const grid = document.getElementById('gcGrid');
     const body = document.getElementById('gcGameBody');
     if (dayTabs) dayTabs.addEventListener('click', (e) => {
       const tab = e.target.closest('.gc-day-tab');
       if (!tab || !tab.dataset.gcDay) return;
       window.__gcSelectedDay = tab.dataset.gcDay;
-      window.__gcSelectedEventId = null;
-      window.__gcCompareIds = [];
+      window.__gcOpenEventIds = [];
       renderRealGameCast();
     });
-    if (compareToggle) compareToggle.addEventListener('click', () => {
-      window.__gcCompareMode = !window.__gcCompareMode;
-      window.__gcCompareIds = [];
-      compareToggle.classList.toggle('active', window.__gcCompareMode);
-      renderRealGameCast();
-    });
+    // Tapping a game toggles it open/closed; a second open game becomes
+    // a second pane next to the first instead of replacing it. Opening a
+    // third bumps whichever was opened first (oldest-out, like tabs).
     if (grid) grid.addEventListener('click', (e) => {
       const box = e.target.closest('.gc-box');
       if (!box || !box.dataset.gcEvent) return;
-      if (window.__gcCompareMode) {
-        const id = box.dataset.gcEvent;
-        const ids = window.__gcCompareIds;
-        const at = ids.indexOf(id);
-        if (at !== -1) ids.splice(at, 1);
-        else { if (ids.length >= 2) ids.shift(); ids.push(id); }
-      } else {
-        window.__gcSelectedEventId = box.dataset.gcEvent;
-      }
+      const id = box.dataset.gcEvent;
+      const ids = window.__gcOpenEventIds;
+      const at = ids.indexOf(id);
+      if (at !== -1) ids.splice(at, 1);
+      else { if (ids.length >= 2) ids.shift(); ids.push(id); }
       renderRealGameCast();
     });
     if (body) body.addEventListener('click', (e) => {
       const tab = e.target.closest('.gc-detail-tab');
       if (tab && tab.dataset.gcTab) {
-        window.__gcDetailTab = tab.dataset.gcTab;
-        document.querySelectorAll('.gc-detail-tab').forEach(t => t.classList.toggle('active', t === tab));
-        gcRenderDetailTab();
+        const pane = tab.closest('.gc-pane');
+        const eventId = pane ? pane.id.replace('gcPane-', '') : null;
+        if (!eventId) return;
+        window.__gcPaneDetailTab[eventId] = tab.dataset.gcTab;
+        pane.querySelectorAll('.gc-detail-tab').forEach(t => t.classList.toggle('active', t === tab));
+        gcRenderPaneDetail(eventId);
         return;
       }
       const impactBtn = e.target.closest('.gc-impact-btn');
