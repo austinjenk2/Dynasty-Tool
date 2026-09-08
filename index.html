@@ -617,6 +617,91 @@
   .sb-view-toggle-btn:last-child { border-right: none; }
   .sb-view-toggle-btn.is-active { background: var(--ink); color: var(--bg); }
 
+  /* GameCast -- day tabs + a grid of every real NFL game on the selected
+     day (ESPN-style); pick one to see its live play-by-play feed (default)
+     or either team's offense box score (live/proj/rooting exposure/
+     matchup impact). */
+  .gc-day-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 4px 0 14px; }
+  .gc-day-tab { flex: 0 0 auto; cursor: pointer; padding: 6px 14px; border-radius: 20px; font-size: 12.5px; font-weight: 700; color: var(--muted); background: var(--surface); border: 1px solid var(--border); }
+  .gc-day-tab.active { color: #fff; background: var(--navy); border-color: var(--navy); }
+
+  .gc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .gc-box {
+    cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px;
+  }
+  /* Tapping a second game opens it as a second pane alongside the first
+     (see .gc-panes below) instead of replacing it -- the two highlight
+     colors here match which side of that split view each open game
+     lands on. */
+  .gc-box.active { border-color: var(--navy); box-shadow: 0 0 0 1px var(--navy) inset; }
+  .gc-box.gc-box-pane2 { border-color: var(--green); box-shadow: 0 0 0 1px var(--green) inset; }
+  .gc-box-status { font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; color: var(--faint); margin-bottom: 8px; text-align: center; }
+  .gc-box-status.gc-live { color: var(--red); }
+  .gc-box-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; }
+  .gc-box-team { display: flex; align-items: center; gap: 8px; }
+  .gc-box-team img { width: 22px; height: 22px; object-fit: contain; }
+  .gc-box-team-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .gc-box-team-rec { font-size: 10.5px; color: var(--faint); }
+  .gc-box-score { font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 700; color: var(--ink); }
+  .gc-ball { font-size: 11px; margin-left: 4px; }
+
+  .gc-score-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 14px; gap: 10px; flex-wrap: wrap;
+  }
+  .gc-score-side { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .gc-score-side-right { flex-direction: row-reverse; text-align: right; }
+  .gc-score-side img { width: 26px; height: 26px; object-fit: contain; }
+  .gc-score-name { font-size: 12px; font-weight: 700; color: var(--muted); display: flex; align-items: center; gap: 3px; }
+  .gc-score-side-right .gc-score-name { justify-content: flex-end; }
+  .gc-score-value { font-family: 'Source Serif 4', serif; font-size: 22px; font-weight: 700; color: var(--navy); margin-top: 1px; }
+  .gc-score-side-right .gc-score-value { color: var(--ink); }
+  .gc-score-mid { flex-shrink: 0; padding: 0 12px; text-align: center; }
+  .gc-score-mid-state { font-size: 10.5px; font-weight: 800; letter-spacing: 1px; color: var(--red); }
+  .gc-score-mid-situation { font-size: 10.5px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
+
+  .gc-box-situation { font-size: 10.5px; color: var(--muted); text-align: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-soft); }
+
+  /* Two full game panes (score header + Feed/box score tabs) side by
+     side -- picking a second game from the grid opens it here next to
+     the first instead of replacing it. */
+  .gc-panes { display: grid; grid-template-columns: 1fr; gap: 20px; }
+  .gc-panes.gc-panes-2 { grid-template-columns: 1fr 1fr; align-items: start; }
+  @media (max-width: 900px) { .gc-panes.gc-panes-2 { grid-template-columns: 1fr; } }
+  .gc-pane { min-width: 0; }
+
+  .gc-detail-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .gc-detail-tab { padding: 8px 2px 10px; font-size: 13px; font-weight: 700; color: var(--faint); border-bottom: 2.5px solid transparent; cursor: pointer; }
+  .gc-detail-tab:hover { color: var(--ink); }
+  .gc-detail-tab.active { color: var(--ink); border-bottom-color: var(--navy); }
+
+  .gc-table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; }
+  .gc-table-label { font-size: 12.5px; font-weight: 800; color: var(--faint); padding: 10px 10px 0; }
+  .gc-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .gc-table th, .gc-table td { padding: 8px 10px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--border-soft); }
+  .gc-table th { font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); border-bottom: 1px solid var(--border); }
+  .gc-table th.gc-th-player, .gc-table td.gc-player-cell { text-align: left; }
+  .gc-player-cell { display: flex; align-items: center; gap: 6px; }
+  .gc-player-name { font-weight: 700; color: var(--ink); }
+  .gc-player-pos { font-size: 9.5px; font-weight: 800; color: var(--faint); }
+  .gc-root-badge { font-size: 10.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: var(--border-soft); }
+  .gc-impact-btn { font-size: 10.5px; font-weight: 700; color: var(--navy); background: none; border: 1px solid var(--border); border-radius: 5px; padding: 3px 8px; cursor: pointer; }
+  .gc-impact-btn:hover { background: var(--border-soft); }
+  .gc-impact-row td { background: var(--bg); text-align: left; }
+  .gc-impact-list { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; padding: 4px 0; }
+  .gc-impact-list span.ldrec-pos, .gc-impact-list span.ldrec-neg { font-weight: 800; }
+
+  .gc-feed-head { font-size: 12.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin: 0 0 8px; }
+  .gc-feed { display: flex; flex-direction: column; gap: 10px; }
+  .gc-feed-play { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+  .gc-play-meta { font-size: 10.5px; font-weight: 700; color: var(--faint); margin-bottom: 4px; }
+  .gc-play-headline { font-family: 'Source Serif 4', serif; font-size: 14.5px; font-weight: 700; color: var(--ink); }
+  .gc-play-player { font-size: 12.5px; font-weight: 700; color: var(--navy); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+  .gc-play-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .gc-play-pts { float: right; font-weight: 800; }
+
   /* Field View -- a grid of every league's live win-probability field at
      once, reusing the same .field-panel markup/animation as the
      Scoreboard's matchup expand so both views always agree. */
@@ -2935,15 +3020,15 @@
   <div class="section-tabs" id="sectionNav">
     <a class="section-tab active" data-section="dashboard">Dashboard</a>
     <a class="section-tab" data-section="leagues">Leagues</a>
-    <a class="section-tab" data-section="lineups">Scoreboard</a>
+    <a class="section-tab" data-section="lineups">Matchup Hub</a>
+    <a class="section-tab" data-section="gamecast">GameCast</a>
     <a class="section-tab" data-section="rooting">Rooting Guide</a>
     <a class="section-tab" data-section="waiver">Waiver Wire</a>
     <a class="section-tab" data-section="draft">Draft Room</a>
     <a class="section-tab" data-section="exposures">Exposures</a>
     <a class="section-tab" data-section="trades">Trade History</a>
-    <a class="section-tab" data-section="records">Record Book</a>
-    <a class="section-tab" data-section="calculator">Trade Calculator</a>
-    <a class="section-tab" data-section="database">Trade Database</a>
+    <a class="section-tab" data-section="records">Results</a>
+    <a class="section-tab" data-section="calculator">Trade Calc</a>
     <a class="section-tab" data-section="settings">Settings</a>
   </div>
 </nav>
@@ -3992,7 +4077,7 @@
     <div class="sb-page">
       <div class="sb-subtabs" id="sbSubtabs">
         <div class="sb-subtabs-left">
-          <h1 style="margin:0">Scoreboard</h1>
+          <h1 style="margin:0">Matchup Hub</h1>
           <div class="sb-view-toggle" id="sbViewToggle">
             <button type="button" class="sb-view-toggle-btn is-active" data-sbv="scoreboard">Standard View</button>
             <button type="button" class="sb-view-toggle-btn" data-sbv="field">Field View</button>
@@ -4504,6 +4589,17 @@
 
     </div>
   </div>
+
+  <div data-view="gamecast">
+    <div class="page-title">
+      <h1>GameCast</h1>
+      <p>Every real NFL game this week &mdash; pick one for a full fantasy box score: live vs. projected points, real stats, your exposure, and how each player is swinging your portfolio. Pick a second to see both box scores side by side.</p>
+    </div>
+    <div class="gc-day-tabs" id="gcDayTabs"></div>
+    <div class="gc-grid" id="gcGrid"><div class="ld-loading">Loading today's games&hellip;</div></div>
+    <div id="gcGameBody"><div class="ld-loading">Pick a game above to see its fantasy box score.</div></div>
+  </div>
+
       <div data-view="rooting">
         <div class="rg-header">
           <div class="rg-header-top">
@@ -10387,14 +10483,14 @@
   </div>
   <div data-view="records">
     <div class="page-title">
-      <h1>Record Book</h1>
+      <h1>Results</h1>
       <p>Every league's season in one grid &mdash; finish, PF rank, playoffs, weekly results, and bracket rounds. Net is entered in Settings.</p>
     </div>
-    <div id="rbBody"><div class="rb-empty">Connect your Sleeper account to see your Record Book.</div></div>
+    <div id="rbBody"><div class="rb-empty">Connect your Sleeper account to see your results.</div></div>
   </div>
   <div data-view="calculator">
     <div class="page-title">
-      <h1>Trade Calculator</h1>
+      <h1>Trade Calc</h1>
       <p>Build a trade and see who wins it, using real dynasty player values.</p>
     </div>
 
@@ -10475,7 +10571,6 @@
       </div>
     </div>
   </div>
-  <div data-view="database"><div class="placeholder"><h3>Trade Database</h3><p>This section is being built.</p></div></div>
   <div data-view="settings">
     <div class="page-title">
       <h1>Settings</h1>
@@ -10518,7 +10613,7 @@
 
     <div class="settings-panel">
       <div class="settings-label">League Money (this season)</div>
-      <div class="settings-sub">No Sleeper league tracks real side-pot money, so this is the one manually-entered number in the app -- your net for each league this season, shown on the Record Book's Net column. Leave a league blank to show a dash there instead of $0.</div>
+      <div class="settings-sub">No Sleeper league tracks real side-pot money, so this is the one manually-entered number in the app -- your net for each league this season, shown on the Results page's Net column. Leave a league blank to show a dash there instead of $0.</div>
       <div id="rbMoneyList" style="margin-top:12px"></div>
     </div>
   </div>
@@ -14103,6 +14198,10 @@
       }
       return cachedNflState;
     }
+    // Exposed globally: GameCast lives in a separate top-level scope from
+    // this Sleeper-integration IIFE and needs the real current week/season
+    // too.
+    window.getNflState = getNflState;
 
     function extractGameInfo(list) {
       const games = {};
@@ -14394,6 +14493,7 @@
         setSyncState('ok', 'Synced just now');
         if (window.renderRealExposures) window.renderRealExposures();
         if (window.renderRealScoreboard) window.renderRealScoreboard();
+        if (window.renderRealGameCast) window.renderRealGameCast();
         if (window.renderRealTrades) window.renderRealTrades();
         if (window.renderRealWaiverWire) window.renderRealWaiverWire();
         if (window.renderRealRootingGuide) window.renderRealRootingGuide();
@@ -14421,6 +14521,7 @@
         if (window.sleeperGetPlayerDict && !window.__sleeperPlayerDict) {
           window.sleeperGetPlayerDict().then(() => {
             if (window.renderRealScoreboard) window.renderRealScoreboard();
+            if (window.renderRealGameCast) window.renderRealGameCast();
             if (window.renderRealDashboard) window.renderRealDashboard();
             if (window.renderContendingRanks) window.renderContendingRanks();
           }).catch(() => {});
@@ -15218,7 +15319,7 @@
       if (!body) return;
       const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
       if (!entries.length) {
-        body.innerHTML = '<div class="rb-empty">Connect your Sleeper account to see your Record Book.</div>';
+        body.innerHTML = '<div class="rb-empty">Connect your Sleeper account to see your results.</div>';
         return;
       }
       const sorted = [...entries].sort((a, b) => a.league.name.localeCompare(b.league.name));
@@ -17485,6 +17586,14 @@
             text: play.text,
             wallclock: play.wallclock || null,
             seq: Number(play.sequenceNumber || play.id || 0),
+            // Real per-play game state (score/quarter/clock/down), when ESPN
+            // includes it -- GameCast's play-by-play meta line uses this;
+            // sbGetLast5Plays/gcGetAllPlays ignore it, purely additive.
+            period: play.period ? play.period.number : null,
+            clock: play.clock ? play.clock.displayValue : null,
+            downDistance: play.start ? play.start.downDistanceText : null,
+            awayScore: play.awayScore != null ? play.awayScore : null,
+            homeScore: play.homeScore != null ? play.homeScore : null,
           });
         });
       });
@@ -17627,6 +17736,555 @@
       if (oppEl) oppEl.innerHTML = '<div class="sb-last-plays-empty">Could not load recent plays</div>';
     }
   }
+
+  // ---- GameCast -- every real NFL game this week (ESPN scoreboard),
+  // grouped into day tabs like ESPN's own scoreboard. Pick a game to see
+  // its live play-by-play feed (cumulative stats + fantasy points per
+  // play) or either team's offense-only box score: live points, live
+  // projection, points-over-expectation, your weekly rooting-guide
+  // exposure to that player, and how his current performance is swinging
+  // each of your fantasy matchups he's rostered/started in this week. ----
+
+  // League-agnostic games have no scoring_settings to score against, so
+  // this view uses a standard full-PPR line -- same fallback convention
+  // sbProjectionFor already uses when no league context is available.
+  const GC_DEFAULT_SCORING = {
+    pass_yd: 0.04, pass_td: 4, pass_int: -2, pass_2pt: 2,
+    rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
+    rec: 1, rec_yd: 0.1, rec_td: 6, rec_2pt: 2,
+    fum_lost: -2,
+  };
+  const GC_FANTASY_POS = ['QB', 'RB', 'WR', 'TE'];
+
+  // Up to two games can be "open" at once, each rendered as its own full
+  // pane (score header + Feed/box score tabs) side by side -- picking a
+  // second game from the grid opens it next to the first instead of
+  // replacing it. Per-pane state (which detail tab, and its fetched
+  // data) is keyed by eventId so the two panes are fully independent.
+  window.__gcSelectedDay = window.__gcSelectedDay || null;
+  window.__gcOpenEventIds = window.__gcOpenEventIds || [];
+  window.__gcPaneDetailTab = window.__gcPaneDetailTab || {};
+  window.__gcPaneData = window.__gcPaneData || {};
+  let gcRefreshTimer = null;
+
+  window.__gcGamesCache = window.__gcGamesCache || {};
+  const GC_GAMES_TTL = 15 * 1000;
+  async function gcGetGamesList(season, week) {
+    const key = `${season}_${week}`;
+    const cached = window.__gcGamesCache[key];
+    if (cached && (Date.now() - cached.at < GC_GAMES_TTL)) return cached.games;
+    let games = [];
+    try {
+      const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}&year=${season}&seasontype=2`);
+      if (res.ok) {
+        const data = await res.json();
+        games = (data.events || []).map(ev => {
+          const comp = ev.competitions && ev.competitions[0];
+          if (!comp) return null;
+          const statusType = comp.status && comp.status.type;
+          const teamOf = (side) => {
+            const c = (comp.competitors || []).find(x => x.homeAway === side);
+            if (!c || !c.team) return null;
+            const abbr = ESPN_TEAM_ABBR_FIX[c.team.abbreviation] || c.team.abbreviation;
+            const totalRec = (c.records || []).find(r => r.type === 'total');
+            return { abbr, id: String(c.team.id), score: c.score != null ? Number(c.score) : null, record: totalRec ? totalRec.summary : null };
+          };
+          const situation = comp.situation || null;
+          return {
+            eventId: ev.id,
+            when: comp.date || ev.date,
+            state: statusType ? statusType.state : null,
+            detail: statusType ? statusType.shortDetail : null,
+            // Real live clock/possession/down-distance-and-yard-line, when
+            // ESPN's scoreboard includes it (only while a game is in
+            // progress) -- used for the "who has the ball, what down, what
+            // yard line" line in both the score header and Compare view.
+            period: comp.status ? comp.status.period : null,
+            clock: comp.status ? comp.status.displayClock : null,
+            possession: situation ? (situation.possession != null ? String(situation.possession) : null) : null,
+            downDistance: situation ? situation.downDistanceText : null,
+            away: teamOf('away'),
+            home: teamOf('home'),
+          };
+        }).filter(g => g && g.away && g.home);
+      }
+    } catch (e) { /* fall through to empty/cached list below */ }
+    if (!games.length && cached) games = cached.games;
+    window.__gcGamesCache[key] = { games, at: Date.now() };
+    return games;
+  }
+
+  function gcGameStatusHtml(g) {
+    if (g.state === 'in') return `<div class="gc-box-status gc-live">${sbFieldEsc(g.detail || 'LIVE')}</div>`;
+    if (g.state === 'post') return `<div class="gc-box-status">FINAL</div>`;
+    const when = g.when ? new Date(g.when) : null;
+    const label = when ? when.toLocaleString(undefined, { hour: 'numeric', minute: '2-digit' }) : 'Scheduled';
+    return `<div class="gc-box-status">${sbFieldEsc(label)}</div>`;
+  }
+
+  // "Q2 8:03 &middot; 2nd & 7 at NE 35" -- real live quarter/clock plus
+  // ESPN's own down-distance-and-yard-line text (it already includes the
+  // yard line, e.g. "2nd & 7 at NE 35"), for the score header and the
+  // Compare view.
+  function gcSituationText(g) {
+    if (g.state !== 'in') return '';
+    const parts = [];
+    if (g.period) parts.push(`Q${g.period}`);
+    if (g.clock) parts.push(g.clock);
+    if (g.downDistance) parts.push(g.downDistance);
+    return parts.join(' &middot; ');
+  }
+
+  // A small football next to whichever team currently has the ball.
+  function gcBallIconHtml(g, side) {
+    if (g.state !== 'in' || !g.possession) return '';
+    const team = side === 'away' ? g.away : g.home;
+    return team && team.id === g.possession ? '<span class="gc-ball">&#127944;</span>' : '';
+  }
+
+  // Local calendar day (not raw UTC date) so a Monday-night kickoff at
+  // 8pm ET still groups under "Mon" instead of spilling into "Tue".
+  function gcDayKey(whenStr) {
+    const d = whenStr ? new Date(whenStr) : null;
+    if (!d || isNaN(d.getTime())) return 'unknown';
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  }
+  function gcDayLabel(whenStr) {
+    const d = new Date(whenStr);
+    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function gcGroupGamesByDay(games) {
+    const map = {};
+    games.forEach(g => { (map[gcDayKey(g.when)] = map[gcDayKey(g.when)] || []).push(g); });
+    return map;
+  }
+
+  function gcRenderDayTabs(dayKeys, gamesByDay) {
+    const el = document.getElementById('gcDayTabs');
+    if (!el) return;
+    el.innerHTML = dayKeys.map(key => {
+      const sample = gamesByDay[key][0];
+      return `<div class="gc-day-tab${key === window.__gcSelectedDay ? ' active' : ''}" data-gc-day="${sbFieldEsc(key)}">${sbFieldEsc(gcDayLabel(sample.when))}</div>`;
+    }).join('');
+  }
+
+  function gcRenderGrid(games) {
+    const el = document.getElementById('gcGrid');
+    if (!el) return;
+    if (!games.length) { el.innerHTML = '<div class="ld-loading">No NFL games this day.</div>'; return; }
+    el.innerHTML = games.map(g => {
+      const paneIdx = window.__gcOpenEventIds.indexOf(g.eventId);
+      const paneCls = paneIdx === 0 ? ' active' : (paneIdx === 1 ? ' gc-box-pane2' : '');
+      return `
+      <div class="gc-box${paneCls}" data-gc-event="${sbFieldEsc(g.eventId)}">
+        ${gcGameStatusHtml(g)}
+        <div class="gc-box-row">
+          <div class="gc-box-team"><img src="${sbTeamLogoUrl(g.away.abbr)}" alt="" onerror="this.remove()"><div><div class="gc-box-team-name">${g.away.abbr}${gcBallIconHtml(g, 'away')}</div><div class="gc-box-team-rec">${sbFieldEsc(g.away.record || '')}</div></div></div>
+          <div class="gc-box-score">${g.away.score != null ? g.away.score : ''}</div>
+        </div>
+        <div class="gc-box-row">
+          <div class="gc-box-team"><img src="${sbTeamLogoUrl(g.home.abbr)}" alt="" onerror="this.remove()"><div><div class="gc-box-team-name">${g.home.abbr}${gcBallIconHtml(g, 'home')}</div><div class="gc-box-team-rec">${sbFieldEsc(g.home.record || '')}</div></div></div>
+          <div class="gc-box-score">${g.home.score != null ? g.home.score : ''}</div>
+        </div>
+        ${g.state === 'in' && g.downDistance ? `<div class="gc-box-situation">${sbFieldEsc(gcSituationText(g))}</div>` : ''}
+      </div>
+    `;
+    }).join('');
+  }
+
+  async function renderRealGameCast() {
+    const grid = document.getElementById('gcGrid');
+    if (!grid) return;
+    if (!window.getNflState) return;
+    const { week, season } = await window.getNflState();
+    const games = await gcGetGamesList(season, week);
+    const gamesByDay = gcGroupGamesByDay(games);
+    const dayKeys = Object.keys(gamesByDay).sort((a, b) => new Date(gamesByDay[a][0].when) - new Date(gamesByDay[b][0].when));
+    if (!window.__gcSelectedDay || !dayKeys.includes(window.__gcSelectedDay)) {
+      const liveDay = dayKeys.find(k => gamesByDay[k].some(g => g.state === 'in'));
+      const todayKey = gcDayKey(new Date().toISOString());
+      window.__gcSelectedDay = liveDay || (dayKeys.includes(todayKey) ? todayKey : dayKeys[0]) || null;
+    }
+    gcRenderDayTabs(dayKeys, gamesByDay);
+    const dayGames = window.__gcSelectedDay ? (gamesByDay[window.__gcSelectedDay] || []) : [];
+    // Drop any open game that isn't on this day (e.g. after switching
+    // day tabs); default to the live game (or the first game) the very
+    // first time there's nothing open yet.
+    window.__gcOpenEventIds = window.__gcOpenEventIds.filter(id => dayGames.some(g => g.eventId === id));
+    if (!window.__gcOpenEventIds.length) {
+      const live = dayGames.find(g => g.state === 'in');
+      const def = (live || dayGames[0] || {}).eventId;
+      if (def) window.__gcOpenEventIds = [def];
+    }
+    gcRenderGrid(dayGames);
+    const gamecastView = document.querySelector('[data-view="gamecast"]');
+    if (gamecastView && gamecastView.classList.contains('is-active')) {
+      await gcRenderPanes(dayGames, week, season);
+    }
+  }
+  window.renderRealGameCast = renderRealGameCast;
+
+  // Renders every currently-open game (1 or 2) as its own full pane --
+  // score header plus independent Feed/box-score tabs -- side by side.
+  async function gcRenderPanes(dayGames, week, season) {
+    const body = document.getElementById('gcGameBody');
+    if (!body) return;
+    const ids = window.__gcOpenEventIds;
+    if (!ids.length) { body.innerHTML = '<div class="ld-loading">Pick a game above to see its fantasy box score.</div>'; return; }
+    body.innerHTML = `<div class="gc-panes${ids.length === 2 ? ' gc-panes-2' : ''}">${ids.map(id =>
+      `<div class="gc-pane" id="gcPane-${sbFieldEsc(id)}"><div class="ld-loading">Loading&hellip;</div></div>`
+    ).join('')}</div>`;
+    await Promise.all(ids.map(id => {
+      const game = dayGames.find(g => g.eventId === id);
+      return game ? loadGcPane(game, week, season) : null;
+    }));
+  }
+
+  // Your real weekly rooting-guide exposure to one player: the net count
+  // of your connected leagues where he's started on your side (helps you)
+  // minus leagues where he's started against you (hurts you) -- the same
+  // for/against split the Rooting Guide page itself computes.
+  function gcRootingDelta(playerId) {
+    const forLeagues = [], againstLeagues = [];
+    Object.values(window.sleeperLeagueData || {}).forEach(e => {
+      if (!e || !e.myMatchup || !e.oppMatchup || !e.league) return;
+      const mine = (e.myMatchup.starters || []).filter(Boolean);
+      const opp = (e.oppMatchup.starters || []).filter(Boolean);
+      if (mine.includes(playerId)) forLeagues.push(e.league.name);
+      else if (opp.includes(playerId)) againstLeagues.push(e.league.name);
+    });
+    return { delta: forLeagues.length - againstLeagues.length, forLeagues, againstLeagues };
+  }
+
+  function gcRootBadgeHtml(playerId) {
+    const { delta, forLeagues, againstLeagues } = gcRootingDelta(playerId);
+    if (!forLeagues.length && !againstLeagues.length) return '';
+    const cls = delta > 0 ? 'ldrec-pos' : (delta < 0 ? 'ldrec-neg' : '');
+    const text = delta > 0 ? '+' + delta : String(delta);
+    const title = [...forLeagues.map(l => '+ ' + l), ...againstLeagues.map(l => '- ' + l)].join('\n');
+    return `<span class="gc-root-badge ${cls}" title="${sbFieldEsc(title)}">${text}</span>`;
+  }
+
+  // How much this player's real performance so far is swinging each of
+  // your live fantasy matchups he's started in -- his own league (rather
+  // than the league-agnostic full-PPR line) actually scores him, using
+  // Sleeper's real players_points for that matchup, then the app's own
+  // trusted win-probability model (sbWinProbability) compares "matchup as
+  // it stands" against "matchup with his points zeroed out."
+  function gcMatchupImpact(playerId) {
+    const out = [];
+    Object.values(window.sleeperLeagueData || {}).forEach(e => {
+      if (!e || !e.myMatchup || !e.oppMatchup || !e.league) return;
+      const mine = (e.myMatchup.starters || []).filter(Boolean);
+      const opp = (e.oppMatchup.starters || []).filter(Boolean);
+      const onMySide = mine.includes(playerId);
+      const onOppSide = !onMySide && opp.includes(playerId);
+      if (!onMySide && !onOppSide) return;
+      const myPts = e.myMatchup.points || 0;
+      const oppPts = e.oppMatchup.points || 0;
+      const playerPts = ((onMySide ? e.myMatchup.players_points : e.oppMatchup.players_points) || {})[playerId] || 0;
+      const nowProb = sbWinProbability(myPts, oppPts);
+      const withoutProb = onMySide
+        ? sbWinProbability(myPts - playerPts, oppPts)
+        : sbWinProbability(myPts, oppPts - playerPts);
+      out.push({ league: e.league.name, impact: nowProb - withoutProb, playerPts, onMySide });
+    });
+    return out;
+  }
+
+  function gcImpactBtnHtml(playerId) {
+    const impacts = gcMatchupImpact(playerId);
+    if (!impacts.length) return '&mdash;';
+    return `<button type="button" class="gc-impact-btn" data-gc-impact="${sbFieldEsc(playerId)}">Impact (${impacts.length})</button>`;
+  }
+
+  function gcImpactRowHtml(playerId) {
+    const impacts = gcMatchupImpact(playerId);
+    if (!impacts.length) return 'Not started in any of your leagues this week.';
+    return `<div class="gc-impact-list">${impacts.map(i => {
+      const cls = i.impact > 0 ? 'ldrec-pos' : (i.impact < 0 ? 'ldrec-neg' : '');
+      const sign = i.impact > 0 ? '+' : '';
+      return `<span class="${cls}">${sbFieldEsc(i.league)}: ${sign}${i.impact}%</span>`;
+    }).join('')}</div>`;
+  }
+
+  function gcPlayerMetaHtml(id, p) {
+    const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+    return `<td class="gc-player-cell">
+      <img class="exp-list-avatar" src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()" style="width:26px;height:26px;border-radius:50%;object-fit:cover">
+      <span><span class="gc-player-name">${sbFieldEsc(name)}</span> <span class="gc-player-pos">${p.position}</span> ${gcRootBadgeHtml(id)}</span>
+    </td>`;
+  }
+
+  function gcTailCellsHtml(id, statsMap, projMap) {
+    const stats = statsMap[id];
+    const livePts = stats ? (stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std) : null;
+    const projPts = projMap[id];
+    const expDiff = (livePts != null && projPts != null) ? livePts - projPts : null;
+    const expCls = expDiff == null ? '' : (expDiff > 0 ? 'ldrec-pos' : (expDiff < 0 ? 'ldrec-neg' : ''));
+    return `
+      <td>${livePts != null ? livePts.toFixed(1) : '&mdash;'}</td>
+      <td>${projPts != null ? projPts.toFixed(1) : '&mdash;'}</td>
+      <td class="${expCls}">${expDiff != null ? (expDiff > 0 ? '+' : '') + expDiff.toFixed(1) : '&mdash;'}</td>
+      <td>${gcImpactBtnHtml(id)}</td>
+    `;
+  }
+
+  function gcStatGroupTableHtml(title, columns, rows) {
+    if (!rows.length) return '';
+    return `<div class="gc-table-wrap">
+      <div class="gc-table-label">${title}</div>
+      <table class="gc-table">
+        <thead><tr><th class="gc-th-player">Player</th>${columns.map(c => `<th>${c}</th>`).join('')}<th>Live</th><th>Proj</th><th>+/- Exp</th><th>Impact</th></tr></thead>
+        <tbody>${rows.join('')}</tbody>
+      </table>
+    </div>`;
+  }
+
+  // Offense-only box score, split into real stat-line categories (a dual
+  // threat QB/RB can show up in more than one) -- no team-totals header,
+  // no defense, and no QB rating: just completions/attempts/yards/TDs,
+  // carries/yards/TDs, catches/yards/TDs, the way ESPN's own box score
+  // groups them.
+  function gcTeamTablesHtml(abbr, dict, statsMap, projMap) {
+    const ids = Object.keys(dict).filter(id => dict[id] && dict[id].team === abbr && GC_FANTASY_POS.includes(dict[id].position));
+    const passing = [], rushing = [], receiving = [];
+    ids.forEach(id => {
+      const p = dict[id];
+      const s = statsMap[id] || {};
+      if (s.pass_att) passing.push({ id, p, sort: s.pass_yd || 0 });
+      if (s.rush_att) rushing.push({ id, p, sort: s.rush_yd || 0 });
+      if (s.rec) receiving.push({ id, p, sort: s.rec_yd || 0 });
+    });
+    const byBest = (a, b) => b.sort - a.sort;
+    passing.sort(byBest); rushing.sort(byBest); receiving.sort(byBest);
+
+    const row = (id, p, cells) => `<tr data-player-id="${sbFieldEsc(id)}">${gcPlayerMetaHtml(id, p)}${cells}${gcTailCellsHtml(id, statsMap, projMap)}</tr>`;
+    const passRows = passing.map(({ id, p }) => {
+      const s = statsMap[id] || {};
+      return row(id, p, `<td>${s.pass_cmp || 0}/${s.pass_att || 0}</td><td>${Math.round(s.pass_yd || 0)}</td><td>${s.pass_td || 0}</td>`);
+    });
+    const rushRows = rushing.map(({ id, p }) => {
+      const s = statsMap[id] || {};
+      return row(id, p, `<td>${s.rush_att || 0}</td><td>${Math.round(s.rush_yd || 0)}</td><td>${s.rush_td || 0}</td>`);
+    });
+    const recRows = receiving.map(({ id, p }) => {
+      const s = statsMap[id] || {};
+      return row(id, p, `<td>${s.rec || 0}</td><td>${Math.round(s.rec_yd || 0)}</td><td>${s.rec_td || 0}</td>`);
+    });
+
+    const tables = [
+      gcStatGroupTableHtml('Passing', ['CMP/ATT', 'YDS', 'TD'], passRows),
+      gcStatGroupTableHtml('Rushing', ['ATT', 'YDS', 'TD'], rushRows),
+      gcStatGroupTableHtml('Receiving', ['REC', 'YDS', 'TD'], recRows),
+    ].filter(Boolean).join('');
+    return tables || '<div class="ld-loading">No offensive stats yet for this team.</div>';
+  }
+
+  // Loads one open game into its own pane -- an independent score header
+  // plus Feed/box-score tabs -- so two panes open at once never share
+  // state with each other.
+  async function loadGcPane(game, week, season) {
+    const pane = document.getElementById(`gcPane-${game.eventId}`);
+    if (!pane) return;
+    if (!window.__gcPaneDetailTab[game.eventId]) window.__gcPaneDetailTab[game.eventId] = 'feed';
+
+    const [dict, statsMap, projMap] = await Promise.all([
+      window.sleeperGetPlayerDict ? window.sleeperGetPlayerDict() : {},
+      window.sleeperGetWeekStats ? window.sleeperGetWeekStats(season, week) : {},
+      window.sleeperGetWeekProjections ? window.sleeperGetWeekProjections(season, week) : {},
+    ]);
+    window.__gcPaneData[game.eventId] = { game, dict, statsMap, projMap };
+    const tab = window.__gcPaneDetailTab[game.eventId];
+
+    pane.innerHTML = `
+      <div class="gc-score-header">
+        <div class="gc-score-side">
+          <img src="${sbTeamLogoUrl(game.away.abbr)}" alt="" onerror="this.remove()">
+          <div><div class="gc-score-name">${game.away.abbr}${gcBallIconHtml(game, 'away')}</div><div class="gc-score-value">${game.away.score != null ? game.away.score : '&mdash;'}</div></div>
+        </div>
+        <div class="gc-score-mid">
+          <div class="gc-score-mid-state">${game.state === 'in' ? sbFieldEsc(game.detail || 'LIVE') : (game.state === 'post' ? 'FINAL' : 'UPCOMING')}</div>
+          ${gcSituationText(game) ? `<div class="gc-score-mid-situation">${gcSituationText(game)}</div>` : ''}
+        </div>
+        <div class="gc-score-side gc-score-side-right">
+          <img src="${sbTeamLogoUrl(game.home.abbr)}" alt="" onerror="this.remove()">
+          <div><div class="gc-score-name">${game.home.abbr}${gcBallIconHtml(game, 'home')}</div><div class="gc-score-value">${game.home.score != null ? game.home.score : '&mdash;'}</div></div>
+        </div>
+      </div>
+      <div class="gc-detail-tabs">
+        <div class="gc-detail-tab${tab === 'feed' ? ' active' : ''}" data-gc-tab="feed">Feed</div>
+        <div class="gc-detail-tab${tab === 'away' ? ' active' : ''}" data-gc-tab="away">${sbFieldEsc(game.away.abbr)}</div>
+        <div class="gc-detail-tab${tab === 'home' ? ' active' : ''}" data-gc-tab="home">${sbFieldEsc(game.home.abbr)}</div>
+      </div>
+      <div id="gcDetailBody-${game.eventId}"></div>
+    `;
+    await gcRenderPaneDetail(game.eventId);
+  }
+
+  async function gcRenderPaneDetail(eventId) {
+    const el = document.getElementById(`gcDetailBody-${eventId}`);
+    const cur = window.__gcPaneData[eventId];
+    if (!el || !cur) return;
+    const { game, dict, statsMap, projMap } = cur;
+    const tab = window.__gcPaneDetailTab[eventId];
+    if (tab === 'away') {
+      el.innerHTML = gcTeamTablesHtml(game.away.abbr, dict, statsMap, projMap);
+    } else if (tab === 'home') {
+      el.innerHTML = gcTeamTablesHtml(game.home.abbr, dict, statsMap, projMap);
+    } else {
+      el.innerHTML = `<div class="gc-feed" id="gcFeedList-${eventId}"><div class="ld-loading">Loading play-by-play&hellip;</div></div>`;
+      try {
+        const feed = await gcBuildFeed(game, dict);
+        const feedList = document.getElementById(`gcFeedList-${eventId}`);
+        if (feedList) feedList.innerHTML = gcFeedHtml(feed);
+      } catch (err) {
+        const feedList = document.getElementById(`gcFeedList-${eventId}`);
+        if (feedList) feedList.innerHTML = '<div class="sb-last-plays-empty">Could not load live plays</div>';
+      }
+    }
+  }
+
+  // Real ESPN play-by-play (chronological), fantasy-scored with the
+  // standard full-PPR line since a real game has no single league's
+  // scoring settings to use, tracking each fantasy-relevant player's
+  // cumulative stat line and points as the game progresses -- ESPN's
+  // "Feed" tab shows the same thing: a headline for the play itself, then
+  // the player's updated total for the game so far.
+  async function gcBuildFeed(game, dict) {
+    const relevant = Object.keys(dict).filter(id => {
+      const p = dict[id];
+      return p && (p.team === game.away.abbr || p.team === game.home.abbr) && GC_FANTASY_POS.includes(p.position);
+    });
+    if (!relevant.length) return [];
+
+    const shortNameMap = {};
+    relevant.forEach(id => {
+      const p = dict[id];
+      const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+      shortNameMap[sbEspnShortName(full)] = id;
+    });
+
+    const plays = await getEspnPlayByPlay(game.eventId);
+    const cum = {};
+    const feed = [];
+    plays.forEach((play, idx) => {
+      sbParsePlayEvents(play.text).forEach(ev => {
+        const playerId = shortNameMap[ev.name];
+        if (!playerId) return;
+        const p = dict[playerId];
+        const acc = cum[playerId] = cum[playerId] || {};
+        Object.keys(ev.stats).forEach(k => { acc[k] = (acc[k] || 0) + ev.stats[k]; });
+        const cumPoints = sbCustomScoreFor(acc, GC_DEFAULT_SCORING) || 0;
+        const playPoints = sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING) || 0;
+        const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : ev.name;
+        feed.push({
+          playerId, name, team: p ? p.team : null,
+          headline: `${name} ${ev.desc}`, playPoints,
+          summary: gcCumSummary(acc, cumPoints),
+          period: play.period, clock: play.clock, downDistance: play.downDistance,
+          awayScore: play.awayScore, homeScore: play.homeScore,
+          order: play.wallclock ? new Date(play.wallclock).getTime() : (play.seq || idx),
+        });
+      });
+    });
+    return feed.sort((a, b) => b.order - a.order);
+  }
+
+  // "5 catches for 87 yards and 13.7 PPR points" -- a player's real
+  // cumulative game-so-far stat line plus fantasy points, phrased like
+  // ESPN's own Feed tab.
+  function gcCumSummary(s, points) {
+    s = s || {};
+    const parts = [];
+    if (s.pass_att) parts.push(`${s.pass_cmp || 0}-${s.pass_att} passing for ${Math.round(s.pass_yd || 0)} yards${s.pass_td ? ' and ' + s.pass_td + ' TD' + (s.pass_td > 1 ? 's' : '') : ''}`);
+    if (s.rush_att) parts.push(`${s.rush_att} carries for ${Math.round(s.rush_yd || 0)} yards${s.rush_td ? ' and ' + s.rush_td + ' TD' + (s.rush_td > 1 ? 's' : '') : ''}`);
+    if (s.rec) parts.push(`${s.rec} catches for ${Math.round(s.rec_yd || 0)} yards${s.rec_td ? ' and ' + s.rec_td + ' TD' + (s.rec_td > 1 ? 's' : '') : ''}`);
+    const pointsText = `${points.toFixed(1)} PPR points`;
+    return parts.length ? `${parts.join(', ')} and ${pointsText}` : pointsText;
+  }
+
+  function gcFeedHtml(plays) {
+    if (!plays.length) return '<div class="sb-last-plays-empty">No fantasy-relevant plays yet</div>';
+    return plays.map(p => {
+      const scoreText = (p.awayScore != null && p.homeScore != null) ? `${p.awayScore}-${p.homeScore}` : '';
+      const metaParts = [p.period ? `Q${p.period}` : '', p.clock, p.downDistance, scoreText].filter(Boolean);
+      const ptsCls = p.playPoints > 0 ? 'ldrec-pos' : '';
+      return `<div class="gc-feed-play">
+        <div class="gc-play-meta">${sbFieldEsc(metaParts.join(' &middot; '))}</div>
+        <div class="gc-play-headline">${sbFieldEsc(p.headline)} <span class="gc-play-pts ${ptsCls}">${p.playPoints > 0 ? '+' : ''}${p.playPoints.toFixed(1)}</span></div>
+        <div class="gc-play-player">${sbFieldEsc(p.team || '')} ${gcRootBadgeHtml(p.playerId)}</div>
+        <div class="gc-play-sub">${sbFieldEsc(p.summary)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  (function initGcClicks() {
+    const dayTabs = document.getElementById('gcDayTabs');
+    const grid = document.getElementById('gcGrid');
+    const body = document.getElementById('gcGameBody');
+    if (dayTabs) dayTabs.addEventListener('click', (e) => {
+      const tab = e.target.closest('.gc-day-tab');
+      if (!tab || !tab.dataset.gcDay) return;
+      window.__gcSelectedDay = tab.dataset.gcDay;
+      window.__gcOpenEventIds = [];
+      renderRealGameCast();
+    });
+    // Tapping a game toggles it open/closed; a second open game becomes
+    // a second pane next to the first instead of replacing it. Opening a
+    // third bumps whichever was opened first (oldest-out, like tabs).
+    if (grid) grid.addEventListener('click', (e) => {
+      const box = e.target.closest('.gc-box');
+      if (!box || !box.dataset.gcEvent) return;
+      const id = box.dataset.gcEvent;
+      const ids = window.__gcOpenEventIds;
+      const at = ids.indexOf(id);
+      if (at !== -1) ids.splice(at, 1);
+      else { if (ids.length >= 2) ids.shift(); ids.push(id); }
+      renderRealGameCast();
+    });
+    if (body) body.addEventListener('click', (e) => {
+      const tab = e.target.closest('.gc-detail-tab');
+      if (tab && tab.dataset.gcTab) {
+        const pane = tab.closest('.gc-pane');
+        const eventId = pane ? pane.id.replace('gcPane-', '') : null;
+        if (!eventId) return;
+        window.__gcPaneDetailTab[eventId] = tab.dataset.gcTab;
+        pane.querySelectorAll('.gc-detail-tab').forEach(t => t.classList.toggle('active', t === tab));
+        gcRenderPaneDetail(eventId);
+        return;
+      }
+      const impactBtn = e.target.closest('.gc-impact-btn');
+      if (impactBtn && impactBtn.dataset.gcImpact) {
+        const tr = impactBtn.closest('tr');
+        if (!tr) return;
+        const nextRow = tr.nextElementSibling;
+        if (nextRow && nextRow.classList.contains('gc-impact-row')) { nextRow.remove(); return; }
+        document.querySelectorAll('.gc-impact-row').forEach(r => r.remove());
+        const newRow = document.createElement('tr');
+        newRow.className = 'gc-impact-row';
+        newRow.innerHTML = `<td colspan="${tr.children.length}">${gcImpactRowHtml(impactBtn.dataset.gcImpact)}</td>`;
+        tr.after(newRow);
+      }
+    });
+  })();
+
+  document.querySelectorAll('.section-tab').forEach(tab => {
+    if (tab.dataset.section !== 'gamecast') return;
+    tab.addEventListener('click', () => {
+      renderRealGameCast();
+      if (gcRefreshTimer) clearInterval(gcRefreshTimer);
+      gcRefreshTimer = setInterval(() => {
+        const view = document.querySelector('[data-view="gamecast"]');
+        if (view && view.classList.contains('is-active')) {
+          renderRealGameCast();
+        } else {
+          clearInterval(gcRefreshTimer);
+          gcRefreshTimer = null;
+        }
+      }, 20000);
+    });
+  });
 
   window.__sleeperScheduleCache = window.__sleeperScheduleCache || {};
 
