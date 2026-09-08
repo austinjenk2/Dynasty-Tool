@@ -2055,11 +2055,15 @@
   /* Nav row + rank/search filter row -- visual scaffolding for League
      Detail's sub-sections. Only Rank By is wired up right now; the rest
      are placeholders for later. */
-  .ld-nav-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  /* All 6 nav buttons (League Matchups leftmost, then Records/Settings/
+     Insights/Waivers/Notes) fit on one row -- nowrap + an even flex-basis
+     instead of the old wrap-friendly 160px minimum, so adding League
+     Matchups didn't mean the row just grew to two lines. */
+  .ld-nav-row { display: flex; flex-wrap: nowrap; gap: 8px; margin-bottom: 14px; overflow-x: auto; }
   .ld-nav-btn {
-    flex: 1 1 160px;
+    flex: 1 1 0; min-width: 0;
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 14px; display: flex; flex-direction: column; gap: 3px;
+    padding: 8px 10px; display: flex; flex-direction: column; gap: 2px;
   }
   /* Only the wired-up nav buttons carry an id (Insights is still a
      placeholder) -- give just those the clickable affordance so they read
@@ -2067,8 +2071,8 @@
   .ld-nav-btn[id] { cursor: pointer; transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s; }
   .ld-nav-btn[id]:hover { border-color: var(--green); box-shadow: 0 2px 8px rgba(0,0,0,0.08); transform: translateY(-1px); }
   .ld-nav-btn[id]:active { transform: translateY(0); }
-  .ld-nav-title { font-size: 13px; font-weight: 700; color: var(--ink); }
-  .ld-nav-sub { font-size: 10.5px; color: var(--faint); }
+  .ld-nav-title { font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ld-nav-sub { font-size: 9.5px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ld-filter-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
   .ld-rankby-wrap { display: flex; align-items: center; gap: 8px; }
   .ld-rankby-wrap label { font-size: 11px; font-weight: 700; color: var(--faint); text-transform: uppercase; letter-spacing: 0.03em; }
@@ -3838,6 +3842,7 @@
       </div>
 
       <div class="ld-nav-row">
+        <div class="ld-nav-btn" id="ldNavMatchups"><span class="ld-nav-title">League Matchups</span><span class="ld-nav-sub">Every Matchup This Week</span></div>
         <div class="ld-nav-btn" id="ldNavRecords"><span class="ld-nav-title">Records</span><span class="ld-nav-sub">Transactions &middot; League History</span></div>
         <div class="ld-nav-btn" id="ldNavSettings"><span class="ld-nav-title">Settings</span><span class="ld-nav-sub">Scoring &middot; Roster &middot; League Rules</span></div>
         <div class="ld-nav-btn"><span class="ld-nav-title">Insights</span><span class="ld-nav-sub">WAR &middot; Value &middot; Trade Activity</span></div>
@@ -4039,6 +4044,25 @@
     </div>
 
     <div class="ww-list" id="ldwvList"><div class="exp-loading">Loading...</div></div>
+  </div>
+
+  <div class="ldrec-overlay" id="ldmuOverlay" hidden></div>
+  <div class="ldrec-modal" id="ldmuModal" hidden>
+    <div class="ldrec-head">
+      <div class="ldrec-title">League Matchups <span class="ldrec-title-sub" id="ldmuTitleLeague">League</span></div>
+      <div class="ldrec-close" id="ldmuClose">&#10005;</div>
+    </div>
+    <div class="ldwv-banner">
+      <div class="ldwv-banner-left">
+        <span class="ldwv-banner-label">EVERY MATCHUP</span>
+        <span class="ldwv-banner-note">Not just yours &mdash; every real matchup in this league, this week.</span>
+      </div>
+      <span class="week-dropdown" id="ldmuWeekDropdown">
+        <span class="week-select" id="ldmuWeekSelect">WEEK <span id="ldmuWeekLabel">1</span> <span>&#9662;</span></span>
+        <span class="week-menu" id="ldmuWeekMenu" hidden></span>
+      </span>
+    </div>
+    <div class="ww-list" id="ldmuList"><div class="exp-loading">Loading...</div></div>
   </div>
 
   <div class="ldrec-overlay" id="ldsOverlay" hidden></div>
@@ -15818,6 +15842,191 @@
           ldwvRenderList();
         });
       });
+    }
+
+    // League Detail -> League Matchups modal: every real matchup in this
+    // league for a given week, not just your own -- reuses the exact same
+    // lineup-table/win-probability-field building blocks Matchup Hub's own
+    // matchup expand uses (sbBuildFieldContext/sbLineupRowsHtml/
+    // sbFieldPanelHtml/animateSbFieldPanel) so the numbers can never
+    // disagree between the two. Lives only here (opened from inside one
+    // league) -- Matchup Hub itself stays scoped to your own matchups.
+    let ldmuEntry = null;
+    let ldmuDict = null;
+    let ldmuRows = [];
+
+    function ldmuRowHtml(r, i) {
+      const name1 = sbFieldEsc((r.u1 && (r.u1.display_name || r.u1.username)) || 'Team A');
+      const name2 = sbFieldEsc((r.u2 && (r.u2.display_name || r.u2.username)) || 'Team B');
+      const ctx = r.ctx;
+      const scoreHtml = ctx.hasData
+        ? `<span class="sb-score-mine">${ctx.myProj.toFixed(1)}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${ctx.oppProj.toFixed(1)}</span>`
+        : '<span class="sb-score-vs">No projections yet</span>';
+      const metaText = ctx.winPct != null ? `${ctx.winPct}% / ${100 - ctx.winPct}% win probability` : `${(ctx.myPts || 0).toFixed(1)} vs ${(ctx.oppPts || 0).toFixed(1)} live`;
+      return `<div class="sb-card ldmu-row" data-ldmu-idx="${i}">
+          <div class="sb-card-main">
+            <div class="sb-card-name">${name1} <span style="color:var(--faint);font-weight:500">vs</span> ${name2}</div>
+            <div class="sb-card-meta">${metaText}</div>
+          </div>
+          <div class="sb-card-score">${scoreHtml}</div>
+          <div class="sb-chevron">&#9662;</div>
+        </div>`;
+    }
+
+    function ldmuToggleExpand(rowEl, r) {
+      const next = rowEl.nextElementSibling;
+      const alreadyOpen = next && next.classList.contains('sb-expand');
+      document.querySelectorAll('#ldmuList .sb-expand').forEach(el => el.remove());
+      document.querySelectorAll('#ldmuList .ldmu-row.is-open').forEach(el => el.classList.remove('is-open'));
+      if (alreadyOpen) return;
+      rowEl.classList.add('is-open');
+
+      const ctx = r.ctx;
+      const { myMatchup, oppMatchup, projMap, week, winPct, teams, fieldRosters, startPct } = ctx;
+      const panel = document.createElement('div');
+      panel.className = 'sb-expand';
+      const scoreHtml = ctx.hasData
+        ? `<span class="sb-exp-score-item"><b>${ctx.myProj.toFixed(1)}</b> vs <b>${ctx.oppProj.toFixed(1)}</b> <i>proj</i></span>` +
+          `<span class="sb-exp-score-item">${ctx.myPts.toFixed(1)} vs ${ctx.oppPts.toFixed(1)} <i>live</i></span>`
+        : '';
+      panel.innerHTML =
+        `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
+        '<div class="sb-exp-body">' +
+          '<div class="sb-lineups-cols">' +
+            '<div class="sb-lineup-col">' +
+              `<div class="sb-lineup-label sb-lineup-label-you">${sbFieldEsc(teams.myName)}</div>` +
+              '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+              `<tbody>${sbLineupRowsHtml(myMatchup, ldmuDict, projMap, r.league, week)}</tbody></table>` +
+            '</div>' +
+            '<div class="sb-lineup-col">' +
+              `<div class="sb-lineup-label sb-lineup-label-opp">${sbFieldEsc(teams.oppName)}</div>` +
+              '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+              `<tbody>${sbLineupRowsHtml(oppMatchup, ldmuDict, projMap, r.league, week)}</tbody></table>` +
+            '</div>' +
+          '</div>' +
+          sbFieldPanelHtml(startPct, teams) +
+        '</div>';
+      rowEl.after(panel);
+      animateSbFieldPanel(panel, `ldmu_${r.league.league_id}_${week}_${rowEl.dataset.ldmuIdx}`, winPct, fieldRosters);
+    }
+
+    async function ldmuLoadWeek(week) {
+      const listEl = document.getElementById('ldmuList');
+      const entry = ldmuEntry;
+      if (!entry || !listEl) return;
+      listEl.innerHTML = '<div class="exp-loading">Loading matchups...</div>';
+
+      let matchups;
+      try { matchups = await window.sleeperFetch(`/league/${entry.league.league_id}/matchups/${week}`); }
+      catch (err) { matchups = []; }
+      if (!matchups || !matchups.length) {
+        listEl.innerHTML = '<div class="exp-loading">No matchups found for this week.</div>';
+        return;
+      }
+
+      let projMap = null;
+      if (window.sleeperGetWeekProjections) {
+        try { projMap = await window.sleeperGetWeekProjections(entry.league.season, week); } catch (err) {}
+      }
+
+      const byMatchupId = {};
+      matchups.forEach(m => { (byMatchupId[m.matchup_id] = byMatchupId[m.matchup_id] || []).push(m); });
+      const pairs = Object.values(byMatchupId).filter(g => g.length === 2);
+      if (!pairs.length) {
+        listEl.innerHTML = '<div class="exp-loading">No matchups found for this week.</div>';
+        return;
+      }
+
+      ldmuRows = pairs.map(([m1, m2]) => {
+        const r1 = (entry.allRosters || []).find(r => r.roster_id === m1.roster_id);
+        const r2 = (entry.allRosters || []).find(r => r.roster_id === m2.roster_id);
+        const u1 = r1 ? (entry.users || []).find(u => u.user_id === r1.owner_id) : null;
+        const u2 = r2 ? (entry.users || []).find(u => u.user_id === r2.owner_id) : null;
+        const syntheticEntry = {
+          league: entry.league, roster: r1, users: entry.users,
+          myMatchup: m1, oppMatchup: m2, oppUser: u2, week,
+        };
+        // sbBuildFieldContext's real projMap override shape is
+        // { week, projections } -- reuse it directly so live/proj/win%
+        // read exactly like every other page that shows them.
+        const ctx = sbBuildFieldContext(syntheticEntry, { week, projections: projMap, oppUser: u2, myMatchup: m1, oppMatchup: m2 }, ldmuDict);
+        return { ctx, u1, u2, league: entry.league };
+      });
+
+      listEl.innerHTML = ldmuRows.map((r, i) => ldmuRowHtml(r, i)).join('');
+      listEl.querySelectorAll('.ldmu-row').forEach((rowEl, i) => {
+        rowEl.addEventListener('click', () => ldmuToggleExpand(rowEl, ldmuRows[i]));
+      });
+    }
+
+    function ldmuBuildWeekMenu(currentWeek) {
+      const menu = document.getElementById('ldmuWeekMenu');
+      const label = document.getElementById('ldmuWeekLabel');
+      if (!menu) return;
+      if (label) label.textContent = currentWeek;
+      menu.innerHTML = Array.from({ length: 18 }, (_, i) => i + 1).map(w =>
+        `<span class="week-option${w === currentWeek ? ' active' : ''}" data-ldmu-week="${w}">Week ${w}</span>`
+      ).join('');
+      menu.querySelectorAll('.week-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+          menu.hidden = true;
+          menu.querySelectorAll('.week-option').forEach(o => o.classList.remove('active'));
+          opt.classList.add('active');
+          const w = Number(opt.dataset.ldmuWeek);
+          if (label) label.textContent = w;
+          ldmuLoadWeek(w);
+        });
+      });
+    }
+
+    async function ldmuOpen() {
+      const standingsListEl = document.getElementById('ldStandingsList');
+      const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
+      const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+      if (!entry) return;
+      ldmuEntry = entry;
+
+      const overlay = document.getElementById('ldmuOverlay');
+      const modal = document.getElementById('ldmuModal');
+      const titleLeagueEl = document.getElementById('ldmuTitleLeague');
+      if (titleLeagueEl) titleLeagueEl.textContent = entry.league.name;
+      if (overlay) overlay.hidden = false;
+      if (modal) modal.hidden = false;
+
+      const listEl = document.getElementById('ldmuList');
+      if (listEl) listEl.innerHTML = '<div class="exp-loading">Loading...</div>';
+      if (!window.sleeperGetPlayerDict) return;
+      try { ldmuDict = await window.sleeperGetPlayerDict(); } catch (err) { return; }
+
+      const currentWeek = entry.week || 1;
+      ldmuBuildWeekMenu(currentWeek);
+      await ldmuLoadWeek(currentWeek);
+    }
+
+    function ldmuClose() {
+      const overlay = document.getElementById('ldmuOverlay');
+      const modal = document.getElementById('ldmuModal');
+      if (overlay) overlay.hidden = true;
+      if (modal) modal.hidden = true;
+    }
+
+    const ldNavMatchupsEl = document.getElementById('ldNavMatchups');
+    if (ldNavMatchupsEl) ldNavMatchupsEl.addEventListener('click', ldmuOpen);
+    const ldmuCloseEl = document.getElementById('ldmuClose');
+    if (ldmuCloseEl) ldmuCloseEl.addEventListener('click', ldmuClose);
+    const ldmuOverlayEl = document.getElementById('ldmuOverlay');
+    if (ldmuOverlayEl) ldmuOverlayEl.addEventListener('click', ldmuClose);
+    const ldmuWeekDropdownEl = document.getElementById('ldmuWeekDropdown');
+    if (ldmuWeekDropdownEl) {
+      const select = ldmuWeekDropdownEl.querySelector('.week-select');
+      const menu = ldmuWeekDropdownEl.querySelector('.week-menu');
+      if (select && menu) {
+        select.addEventListener('click', (e) => {
+          e.stopPropagation();
+          menu.hidden = !menu.hidden;
+        });
+        document.addEventListener('click', () => { menu.hidden = true; });
+      }
     }
 
     // League Detail -> Settings modal: a read-only summary of the league's
