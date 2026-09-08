@@ -2055,11 +2055,15 @@
   /* Nav row + rank/search filter row -- visual scaffolding for League
      Detail's sub-sections. Only Rank By is wired up right now; the rest
      are placeholders for later. */
-  .ld-nav-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  /* All 6 nav buttons (League Matchups leftmost, then Records/Settings/
+     Insights/Waivers/Notes) fit on one row -- nowrap + an even flex-basis
+     instead of the old wrap-friendly 160px minimum, so adding League
+     Matchups didn't mean the row just grew to two lines. */
+  .ld-nav-row { display: flex; flex-wrap: nowrap; gap: 8px; margin-bottom: 14px; overflow-x: auto; }
   .ld-nav-btn {
-    flex: 1 1 160px;
+    flex: 1 1 0; min-width: 0;
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 14px; display: flex; flex-direction: column; gap: 3px;
+    padding: 8px 10px; display: flex; flex-direction: column; gap: 2px;
   }
   /* Only the wired-up nav buttons carry an id (Insights is still a
      placeholder) -- give just those the clickable affordance so they read
@@ -2067,8 +2071,8 @@
   .ld-nav-btn[id] { cursor: pointer; transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s; }
   .ld-nav-btn[id]:hover { border-color: var(--green); box-shadow: 0 2px 8px rgba(0,0,0,0.08); transform: translateY(-1px); }
   .ld-nav-btn[id]:active { transform: translateY(0); }
-  .ld-nav-title { font-size: 13px; font-weight: 700; color: var(--ink); }
-  .ld-nav-sub { font-size: 10.5px; color: var(--faint); }
+  .ld-nav-title { font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ld-nav-sub { font-size: 9.5px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ld-filter-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
   .ld-rankby-wrap { display: flex; align-items: center; gap: 8px; }
   .ld-rankby-wrap label { font-size: 11px; font-weight: 700; color: var(--faint); text-transform: uppercase; letter-spacing: 0.03em; }
@@ -2179,7 +2183,9 @@
     padding: 8px 10px;
     border-bottom: 1px solid var(--border-soft);
     font-size: 11.5px;
+    cursor: pointer;
   }
+  .ld-player:hover { background: var(--bg); }
   .ld-player:last-child { border-bottom: none; }
   .ld-pos {
     flex-shrink: 0;
@@ -2853,8 +2859,8 @@
   .trade-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
   .trade-card-title { font-size: 13.5px; font-weight: 700; color: var(--ink); }
   .trade-card-icons { display: flex; gap: 6px; color: var(--faint); font-size: 13px; flex-shrink: 0; }
-  .trade-icon-photo { cursor: pointer; }
-  .trade-icon-photo:hover { color: var(--ink); }
+  .trade-icon-photo, .trade-icon-calc { cursor: pointer; }
+  .trade-icon-photo:hover, .trade-icon-calc:hover { color: var(--ink); }
   .trade-photo-menu {
     position: absolute;
     top: 36px; right: 16px;
@@ -3838,6 +3844,7 @@
       </div>
 
       <div class="ld-nav-row">
+        <div class="ld-nav-btn" id="ldNavMatchups"><span class="ld-nav-title">League Matchups</span><span class="ld-nav-sub">Every Matchup This Week</span></div>
         <div class="ld-nav-btn" id="ldNavRecords"><span class="ld-nav-title">Records</span><span class="ld-nav-sub">Transactions &middot; League History</span></div>
         <div class="ld-nav-btn" id="ldNavSettings"><span class="ld-nav-title">Settings</span><span class="ld-nav-sub">Scoring &middot; Roster &middot; League Rules</span></div>
         <div class="ld-nav-btn"><span class="ld-nav-title">Insights</span><span class="ld-nav-sub">WAR &middot; Value &middot; Trade Activity</span></div>
@@ -4039,6 +4046,25 @@
     </div>
 
     <div class="ww-list" id="ldwvList"><div class="exp-loading">Loading...</div></div>
+  </div>
+
+  <div class="ldrec-overlay" id="ldmuOverlay" hidden></div>
+  <div class="ldrec-modal" id="ldmuModal" hidden>
+    <div class="ldrec-head">
+      <div class="ldrec-title">League Matchups <span class="ldrec-title-sub" id="ldmuTitleLeague">League</span></div>
+      <div class="ldrec-close" id="ldmuClose">&#10005;</div>
+    </div>
+    <div class="ldwv-banner">
+      <div class="ldwv-banner-left">
+        <span class="ldwv-banner-label">EVERY MATCHUP</span>
+        <span class="ldwv-banner-note">Not just yours &mdash; every real matchup in this league, this week.</span>
+      </div>
+      <span class="week-dropdown" id="ldmuWeekDropdown">
+        <span class="week-select" id="ldmuWeekSelect">WEEK <span id="ldmuWeekLabel">1</span> <span>&#9662;</span></span>
+        <span class="week-menu" id="ldmuWeekMenu" hidden></span>
+      </span>
+    </div>
+    <div class="ww-list" id="ldmuList"><div class="exp-loading">Loading...</div></div>
   </div>
 
   <div class="ldrec-overlay" id="ldsOverlay" hidden></div>
@@ -10186,7 +10212,7 @@
         <div class="trade-card" data-league="PURPLE PEOPLE" data-date="2026-08-29" data-players="CeeDee Lamb,Rhamondre Stevenson,A.J. Brown,Breece Hall">
           <div class="trade-card-head">
             <div class="trade-card-title">PURPLE PEOPLE &middot; Aug 29, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 5pt Pass TD &middot; Full PPR &middot; 0.75 TEP</div>
           <div class="trade-card-with">with <b>PaulPatterson</b></div>
@@ -10222,7 +10248,7 @@
         <div class="trade-card" data-league="Blockbuster Dynasty" data-date="2026-08-27" data-players="Ashton Jeanty">
           <div class="trade-card-head">
             <div class="trade-card-title">Blockbuster Dynasty &middot; Aug 27, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Tiered PPR (RB 0.5, WR 1, TE 1.5)</div>
           <div class="trade-card-with">with <b>Heerag</b></div>
@@ -10254,7 +10280,7 @@
         <div class="trade-card" data-league="Grandpa Phil" data-date="2026-08-26" data-players="Jordyn Tyson,Elijah Sarratt,Dalton Schultz,Makai Lemon">
           <div class="trade-card-head">
             <div class="trade-card-title">Grandpa Phil &middot; Aug 26, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>PaulPatterson</b></div>
@@ -10286,7 +10312,7 @@
         <div class="trade-card" data-league="Degens from Up Country" data-date="2026-08-23" data-players="Matt Hibner">
           <div class="trade-card-head">
             <div class="trade-card-title">Degens from Up Country &middot; Aug 23, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Prophet93</b></div>
@@ -10310,7 +10336,7 @@
         <div class="trade-card" data-league="Degens from Up Country" data-date="2026-08-21" data-players="Stefon Diggs,Marquise Brown,Malachi Fields">
           <div class="trade-card-head">
             <div class="trade-card-title">Degens from Up Country &middot; Aug 21, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Prophet93</b></div>
@@ -10338,7 +10364,7 @@
         <div class="trade-card" data-league="The Doctor's" data-date="2026-08-20" data-players="Jordyn Tyson,KC Concepcion">
           <div class="trade-card-head">
             <div class="trade-card-title">The Doctor's &middot; Aug 20, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Maxminette</b></div>
@@ -10374,7 +10400,7 @@
         <div class="trade-card" data-league="Empire Entertainment" data-date="2026-07-30" data-players="Chris Olave,Rome Odunze">
           <div class="trade-card-head">
             <div class="trade-card-title">Empire Entertainment &middot; Jul 30, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; Non-TEP</div>
           <div class="trade-card-with">with <b>okNikolai</b></div>
@@ -10402,7 +10428,7 @@
         <div class="trade-card" data-league="OTTOMAN" data-date="2026-07-18" data-players="Bo Nix,Kyler Murray">
           <div class="trade-card-head">
             <div class="trade-card-title">OTTOMAN &middot; Jul 18, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>carsonfrye12</b></div>
@@ -10430,7 +10456,7 @@
         <div class="trade-card" data-league="StatChasers BestBall & Chill 5.0" data-date="2026-06-12" data-players="Isaiah Likely,Jonnu Smith">
           <div class="trade-card-head">
             <div class="trade-card-title">StatChasers BestBall & Chill 5.0 &middot; Jun 12, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 1.0 TEP</div>
           <div class="trade-card-with">with <b>WesB69</b></div>
@@ -10458,7 +10484,7 @@
         <div class="trade-card" data-league="Blitz Dynasty Football" data-date="2026-05-05" data-players="Kyren Williams">
           <div class="trade-card-head">
             <div class="trade-card-title">Blitz Dynasty Football &middot; May 5, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>KingProfitVII</b></div>
@@ -10482,9 +10508,15 @@
     </div>
   </div>
   <div data-view="records">
-    <div class="page-title">
-      <h1>Results</h1>
-      <p>Every league's season in one grid &mdash; finish, PF rank, playoffs, weekly results, and bracket rounds. Net is entered in Settings.</p>
+    <div class="page-title" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div>
+        <h1>Results</h1>
+        <p>Every league's season in one grid &mdash; finish, PF rank, playoffs, weekly results, and bracket rounds. Net is entered in Settings.</p>
+      </div>
+      <span class="week-dropdown" id="rbYearDropdown">
+        <span class="week-select" id="rbYearSelect"><span id="rbYearLabel">Year</span> <span>&#9662;</span></span>
+        <span class="week-menu" id="rbYearMenu" hidden></span>
+      </span>
     </div>
     <div id="rbBody"><div class="rb-empty">Connect your Sleeper account to see your results.</div></div>
   </div>
@@ -10639,7 +10671,7 @@
 
   <div class="pm-tabs">
     <span class="pm-tab" data-pm-tab="overview">Overview</span>
-    <span class="pm-tab" data-pm-tab="ranks">Paul's Ranks</span>
+    <span class="pm-tab" data-pm-tab="ranks">Austin's Ranks</span>
     <span class="pm-tab" data-pm-tab="gamelog">Game Log</span>
     <span class="pm-tab" data-pm-tab="contract">Contract</span>
     <span class="pm-tab active" data-pm-tab="exposure">Exposure</span>
@@ -10648,7 +10680,7 @@
 
   <div class="pm-body">
     <div class="pm-panel" data-pm-panel="overview" hidden><div id="pmOverviewList"></div></div>
-    <div class="pm-panel" data-pm-panel="ranks" hidden><div class="placeholder"><h3>Paul's Ranks</h3><p>This section is being built.</p></div></div>
+    <div class="pm-panel" data-pm-panel="ranks" hidden><div id="pmRanksList"></div></div>
     <div class="pm-panel" data-pm-panel="gamelog" hidden><div id="pmGameLogList"></div></div>
     <div class="pm-panel" data-pm-panel="contract" hidden><div id="pmContractList"></div></div>
     <div class="pm-panel" data-pm-panel="exposure">
@@ -11861,7 +11893,7 @@
         return `<div class="trade-card" data-league="${entry.league.name}" data-date="${dateIso}" data-players="${players}">
             <div class="trade-card-head">
               <div class="trade-card-title">${entry.league.name} &middot; ${dateLabel}</div>
-              <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Trade calculator (coming soon)">&#128425;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+              <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
             </div>
             <div class="trade-card-meta">${entry.league.total_rosters || 12} Teams</div>
             <div class="trade-card-with">with <b>${withName}</b></div>
@@ -12092,6 +12124,12 @@
   }
 
   document.addEventListener('click', (e) => {
+    const tradeCalcIcon = e.target.closest('.trade-icon-calc');
+    if (tradeCalcIcon) {
+      const card = tradeCalcIcon.closest('.trade-card');
+      if (card && window.tcPopulateFromTradeCard) window.tcPopulateFromTradeCard(card);
+      return;
+    }
     const tradePhotoIcon = e.target.closest('.trade-icon-photo');
     if (tradePhotoIcon) {
       const card = tradePhotoIcon.closest('.trade-card');
@@ -12450,20 +12488,55 @@
   function saveOrigProjStore(store) {
     try { localStorage.setItem(ORIG_PROJ_KEY, JSON.stringify(store)); } catch (err) {}
   }
-  function origProjFor(season, week, kind, key, liveValue) {
+  // Before a player's real game kicks off, "started at" should keep
+  // tracking the live projection (real news/injury designations can
+  // legitimately move it during the week) instead of freezing on
+  // whatever the very first read happened to be, sometimes days before
+  // kickoff. It only actually freezes once his game has begun -- that's
+  // the real "started at" moment.
+  function origProjFor(season, week, kind, key, liveValue, gameStarted) {
     if (liveValue == null) return null;
     const store = origProjStore();
     const wk = `${season}_${week}`;
     store[wk] = store[wk] || { players: {}, teams: {} };
     const bucket = store[wk][kind] || (store[wk][kind] = {});
-    if (bucket[key] == null) {
-      bucket[key] = liveValue;
-      saveOrigProjStore(store);
+    if (gameStarted) {
+      // If nothing was ever captured before kickoff (e.g. this is the
+      // first time this player's data has loaded and the game's already
+      // underway), fall back to freezing on this first live read rather
+      // than leaving it blank forever.
+      if (bucket[key] == null) {
+        bucket[key] = liveValue;
+        saveOrigProjStore(store);
+      }
+      return bucket[key];
     }
-    return bucket[key];
+    bucket[key] = liveValue;
+    saveOrigProjStore(store);
+    return liveValue;
   }
 
-  function sbLineupRowsHtml(matchup, dict, projMap, league, week) {
+  // Real per-team game state (from ESPN's scoreboard, via
+  // sleeperGetEspnGameData) -- 'in' or 'post' means that team's game has
+  // actually kicked off, which is the real moment a "started at"
+  // projection should freeze.
+  function sbGameStartedForTeam(team, espnGameData) {
+    if (!team || !espnGameData) return false;
+    const info = espnGameData[team];
+    return !!info && (info.state === 'in' || info.state === 'post');
+  }
+  // True once ANY starter on one side has a real team whose game has
+  // kicked off -- used for the team-level (matchup total) "started at",
+  // since a fantasy matchup doesn't have one single kickoff time.
+  function sbAnyStarterGameStarted(starterIds, dict, espnGameData) {
+    if (!espnGameData) return false;
+    return (starterIds || []).some(id => {
+      const p = dict[id];
+      return p && sbGameStartedForTeam(p.team, espnGameData);
+    });
+  }
+
+  function sbLineupRowsHtml(matchup, dict, projMap, league, week, espnGameData) {
     if (!matchup) {
       return '<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:16px 0">No matchup data yet</td></tr>';
     }
@@ -12487,7 +12560,8 @@
       const pts = pointsMap[id] != null ? Number(pointsMap[id]).toFixed(1) : '&mdash;';
       const proj = sbProjectionFor(id, projMap, league);
       const projText = proj != null ? proj.toFixed(1) : '&mdash;';
-      const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, proj) : null;
+      const gameStarted = sbGameStartedForTeam(team, espnGameData);
+      const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, proj, gameStarted) : null;
       const origText = origProj != null ? origProj.toFixed(1) : '&mdash;';
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
@@ -12731,7 +12805,7 @@
   // shared by the Scoreboard's matchup expand (openRealSbExpand) and the
   // standalone Field View page (renderSbFieldView) so both always show
   // the exact same numbers/formations for a given league.
-  function sbBuildFieldContext(entry, override, dict) {
+  function sbBuildFieldContext(entry, override, dict, espnGameData) {
     const myMatchup = override ? override.myMatchup : entry.myMatchup;
     const oppMatchup = override ? override.oppMatchup : entry.oppMatchup;
     const projMap = override ? override.projections : null;
@@ -12744,8 +12818,10 @@
       oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
       myPts = myMatchup ? (myMatchup.points || 0) : 0;
       oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
-      myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj);
-      oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj);
+      const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(myMatchup, entry.league, projMap), dict, espnGameData);
+      const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(oppMatchup, entry.league, projMap), dict, espnGameData);
+      myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj, myStarted);
+      oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj, oppStarted);
       winPct = sbWinProbability(myProj, oppProj);
     }
 
@@ -12772,6 +12848,7 @@
       league: entry.league,
       week,
       dict,
+      espnGameData,
     };
     return { myMatchup, oppMatchup, projMap, week, hasData, winPct, myProj, oppProj, myPts, oppPts, myOrig, oppOrig, teams, fieldRosters, fieldKey, startPct };
   }
@@ -12790,8 +12867,10 @@
       panel.innerHTML = '<div class="ld-loading">Could not load player data from Sleeper.</div>';
       return;
     }
+    const week0 = override ? override.week : entry.week;
+    const espnGameData = window.sleeperGetEspnGameData ? await window.sleeperGetEspnGameData(week0, entry.league.season).catch(() => null) : null;
 
-    const ctx = sbBuildFieldContext(entry, override, dict);
+    const ctx = sbBuildFieldContext(entry, override, dict, espnGameData);
     const { myMatchup, oppMatchup, projMap, week, winPct, teams, fieldRosters, fieldKey, startPct } = ctx;
     const scoreHtml = ctx.hasData
       ? `<span class="sb-exp-score-item"><b>${ctx.myProj.toFixed(1)}</b> vs <b>${ctx.oppProj.toFixed(1)}</b> <i>proj</i></span>` +
@@ -12806,14 +12885,14 @@
           '<div class="sb-lineup-col">' +
             '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
             '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
-            `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
+            `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap, entry.league, week0, espnGameData)}</tbody></table>` +
             '<div class="sb-last-plays-head">LAST 5 PLAYS</div>' +
             '<div class="sb-last-plays sb-last-plays-mine"><div class="ld-loading" style="padding:6px 0">Loading recent plays…</div></div>' +
           '</div>' +
           '<div class="sb-lineup-col">' +
             '<div class="sb-lineup-label sb-lineup-label-opp">OPPONENT LINEUP</div>' +
             '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
-            `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league, override ? override.week : entry.week)}</tbody></table>` +
+            `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league, week0, espnGameData)}</tbody></table>` +
             '<div class="sb-last-plays-head">LAST 5 PLAYS</div>' +
             '<div class="sb-last-plays sb-last-plays-opp"><div class="ld-loading" style="padding:6px 0">Loading recent plays…</div></div>' +
           '</div>' +
@@ -12845,13 +12924,17 @@
       return;
     }
     const override = window.__sleeperScoreboardOverride || null;
+    const fvWeek = override ? override.week : (entries[0] && entries[0].week);
+    const espnGameData = (window.sleeperGetEspnGameData && entries[0])
+      ? await window.sleeperGetEspnGameData(fvWeek, entries[0].league.season).catch(() => null)
+      : null;
 
     // Build each league's field context up front (once) so it can be used
     // both for the card markup below and for sorting by field position,
     // instead of recomputing it a second time per card.
     const built = entries.map(entry => {
       const ov = override ? override.byLeague[entry.league.league_id] : null;
-      const ctx = sbBuildFieldContext(entry, ov, dict);
+      const ctx = sbBuildFieldContext(entry, ov, dict, espnGameData);
       const oppUser = ov ? ov.oppUser : entry.oppUser;
       const oppName = oppUser ? (oppUser.display_name || oppUser.username || 'Opponent') : (entry.myMatchup ? 'TBD' : 'No matchup yet');
       return { entry, ctx, oppName };
@@ -13449,6 +13532,9 @@
       if (window.sleeperGetWeekStats) {
         try { rgActualStatsMap = await window.sleeperGetWeekStats(rgSeason, week) || {}; } catch (err) {}
       }
+      const rgEspnGameData = window.sleeperGetEspnGameData
+        ? await window.sleeperGetEspnGameData(week, rgSeason).catch(() => null)
+        : null;
       function rgBasePprPoints(stats, pos) {
         if (!stats) return null;
         const base = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
@@ -13477,7 +13563,8 @@
         if (!p || !['QB', 'RB', 'WR', 'TE'].includes(pos)) return null;
         const pprPoints = rgBasePprPoints(rgActualStatsMap[id], pos);
         const liveProj = rgBasePprPoints(rgProjStatsMap[id], pos);
-        const origProj = liveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, liveProj) : null;
+        const rgGameStarted = sbGameStartedForTeam(p.team, rgEspnGameData);
+        const origProj = liveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, liveProj, rgGameStarted) : null;
         const poe = (liveProj != null && origProj != null) ? (liveProj - origProj) : null;
         return {
           id,
@@ -14774,8 +14861,14 @@
           // own roster-id-scoped key.
           const mineKey = viewingOther ? `${entry.league.league_id}_${activeRoster.roster_id}` : `${entry.league.league_id}_mine`;
           const oppKey = viewingOther ? `${entry.league.league_id}_${activeRoster.roster_id}_opp` : `${entry.league.league_id}_opp`;
-          const myOrig = origProjFor(entry.league.season, entry.week, 'teams', mineKey, myTotal);
-          const oppOrig = origProjFor(entry.league.season, entry.week, 'teams', oppKey, oppTotal);
+          const ldOrigDict = await getPlayerDict();
+          const ldOrigEspnGameData = window.sleeperGetEspnGameData
+            ? await window.sleeperGetEspnGameData(entry.week, entry.league.season).catch(() => null)
+            : null;
+          const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(rosterMatchup, entry.league, null), ldOrigDict, ldOrigEspnGameData);
+          const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(rosterOppMatchup, entry.league, null), ldOrigDict, ldOrigEspnGameData);
+          const myOrig = origProjFor(entry.league.season, entry.week, 'teams', mineKey, myTotal, myStarted);
+          const oppOrig = origProjFor(entry.league.season, entry.week, 'teams', oppKey, oppTotal, oppStarted);
           ldOrigScoreEl.textContent = `Started at ${myOrig.toFixed(1)} vs ${oppOrig.toFixed(1)}`;
         }
       } else if (rosterMatchup && rosterOppMatchup) {
@@ -14851,7 +14944,7 @@
       ldColumns.innerHTML = Object.keys(groups).map(pos => {
         const posClass = pos.toLowerCase();
         const playerRows = groups[pos].map(p =>
-          '<div class="ld-player">' +
+          `<div class="ld-player" data-player-id="${p.id}" data-name="${sbFieldEsc(p.name)}" data-team="${sbFieldEsc(p.team)}" data-pos="${pos}">` +
             `<span class="ld-pos ${posClass}">${p.slotLabel}</span>` +
             (p.isStarter ? '<span class="ld-star">&#9733;</span>' : '') +
             `<span class="ld-pname">${p.name}</span>` +
@@ -14960,14 +15053,22 @@
     // among just the other unplaced teams, slotted in after every real
     // placement.
     window.__sleeperBracketCache = window.__sleeperBracketCache || {};
+    // Winners_bracket only -- losers_bracket's own `p` field numbers
+    // placements within the CONSOLATION bracket itself (e.g. "1st place
+    // in the loser's bracket"), which is not the same scale as overall
+    // league placement and was showing up here as if it were: a team
+    // that finished 12th in a 14-team league (clearly missed the
+    // playoffs) could still get assigned p:1 out of the losers_bracket
+    // and read as "finished 1st" overall. Everyone not covered by a real
+    // winners_bracket placement instead falls through to the existing
+    // wins/PF-ranked fallback below, which correctly puts a non-playoff
+    // team near the bottom regardless of what the consolation bracket
+    // itself did.
     async function ldrecGetPlacements(leagueId) {
       if (window.__sleeperBracketCache[leagueId]) return window.__sleeperBracketCache[leagueId];
-      const [winners, losers] = await Promise.all([
-        sleeperFetch(`/league/${leagueId}/winners_bracket`).catch(() => []),
-        sleeperFetch(`/league/${leagueId}/losers_bracket`).catch(() => []),
-      ]);
+      const winners = await sleeperFetch(`/league/${leagueId}/winners_bracket`).catch(() => []);
       const placements = {};
-      [...(winners || []), ...(losers || [])].forEach(m => {
+      (winners || []).forEach(m => {
         if (!m || m.p == null) return;
         if (m.w != null) placements[m.w] = m.p;
         if (m.l != null) placements[m.l] = m.p + 1;
@@ -15169,7 +15270,10 @@
         pfRank, finishRank, seasonDecided, madePlayoffs, ptsFromMin,
         regularWeeks, weekResults,
         wc: bracketResults.WC || null, sf: bracketResults.SF || null, chip: bracketResults.CHIP || null,
-        net: rbGetNet(league.league_id, league.season),
+        // No games played yet this season -- whatever's entered in
+        // Settings is a target/plan, not a real result, so show $0
+        // instead of implying money has already been won or lost.
+        net: (wins + losses + ties) === 0 ? 0 : rbGetNet(league.league_id, league.season),
       };
     }
 
@@ -15268,6 +15372,12 @@
     let rbMaxRegWeeks = 0;
     let rbSortKey = null;
     let rbSortDir = 'desc';
+    // null = the live/current season; otherwise a season string ("2025")
+    // picked from the Year dropdown, showing each current league's own
+    // past season instead (walked via Sleeper's previous_league_id chain
+    // -- the same chain League Detail's Seasons tab already walks).
+    let rbSelectedYear = null;
+    let rbYearChains = null;
 
     function rbRenderTable() {
       const body = document.getElementById('rbBody');
@@ -15314,6 +15424,62 @@
       });
     }
 
+    // Builds the Year dropdown's options -- the union of every season
+    // found across all of the user's current leagues' own chains -- and
+    // caches each league's chain so picking a past year doesn't re-walk
+    // previous_league_id every time.
+    async function rbBuildYearChains(entries) {
+      if (rbYearChains) return rbYearChains;
+      const chains = await Promise.all(entries.map(e => getLeagueSeasonChain(e.league).catch(() => [e.league])));
+      rbYearChains = entries.map((e, i) => ({ entry: e, chain: chains[i] }));
+      return rbYearChains;
+    }
+
+    function rbRenderYearMenu(currentYear) {
+      const menu = document.getElementById('rbYearMenu');
+      const label = document.getElementById('rbYearLabel');
+      if (!menu || !rbYearChains) return;
+      const years = Array.from(new Set(rbYearChains.flatMap(x => x.chain.map(lg => String(lg.season)))))
+        .sort((a, b) => Number(b) - Number(a));
+      const activeYear = rbSelectedYear || currentYear;
+      if (label) label.textContent = activeYear;
+      menu.innerHTML = years.map(y =>
+        `<span class="week-option${y === activeYear ? ' active' : ''}" data-rb-year="${sbFieldEsc(y)}">${sbFieldEsc(y)}</span>`
+      ).join('');
+      menu.querySelectorAll('.week-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+          menu.hidden = true;
+          const y = opt.dataset.rbYear;
+          rbSelectedYear = (y === currentYear) ? null : y;
+          renderRealRecordBook();
+        });
+      });
+    }
+
+    // Every current league's own result for one past season -- finds
+    // that season's league object in each chain, the roster the user
+    // owned in it that year, then computes the same row shape as the
+    // live season (finish, PF rank, playoffs, weekly W/L, bracket).
+    async function rbComputeRowsForYear(year) {
+      const saved = getSavedUser();
+      if (!saved) return [];
+      const targets = rbYearChains
+        .map(({ chain }) => chain.find(lg => String(lg.season) === year))
+        .filter(Boolean);
+      const rows = [];
+      await Promise.all(targets.map(async (lg) => {
+        try {
+          const { rosters, users } = await loadSeasonRostersUsers(lg);
+          const myRoster = rosters.find(r => r.owner_id === saved.userId);
+          if (!myRoster) return;
+          const row = await rbComputeLeagueRow({ league: lg, roster: myRoster, allRosters: rosters, users, isCoOwned: false });
+          if (row) rows.push(row);
+        } catch (err) { /* skip leagues that fail to load for this year */ }
+      }));
+      rows.sort((a, b) => a.league.name.localeCompare(b.league.name));
+      return rows;
+    }
+
     async function renderRealRecordBook() {
       const body = document.getElementById('rbBody');
       if (!body) return;
@@ -15322,10 +15488,19 @@
         body.innerHTML = '<div class="rb-empty">Connect your Sleeper account to see your results.</div>';
         return;
       }
-      const sorted = [...entries].sort((a, b) => a.league.name.localeCompare(b.league.name));
-      const rows = (await Promise.all(sorted.map(e => rbComputeLeagueRow(e).catch(() => null)))).filter(Boolean);
+      const currentYear = String(entries[0].league.season);
+      await rbBuildYearChains(entries);
+      rbRenderYearMenu(currentYear);
+
+      let rows;
+      if (!rbSelectedYear || rbSelectedYear === currentYear) {
+        const sorted = [...entries].sort((a, b) => a.league.name.localeCompare(b.league.name));
+        rows = (await Promise.all(sorted.map(e => rbComputeLeagueRow(e).catch(() => null)))).filter(Boolean);
+      } else {
+        rows = await rbComputeRowsForYear(rbSelectedYear);
+      }
       if (!rows.length) {
-        body.innerHTML = '<div class="rb-empty">No league data available yet.</div>';
+        body.innerHTML = `<div class="rb-empty">No league data available for ${sbFieldEsc(rbSelectedYear || currentYear)}.</div>`;
         return;
       }
       rbRows = rows;
@@ -15333,6 +15508,18 @@
       rbRenderTable();
     }
     window.renderRealRecordBook = renderRealRecordBook;
+
+    (function initRbYearDropdown() {
+      const wrap = document.getElementById('rbYearDropdown');
+      const select = wrap ? wrap.querySelector('.week-select') : null;
+      const menu = wrap ? wrap.querySelector('.week-menu') : null;
+      if (!select || !menu) return;
+      select.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.hidden = !menu.hidden;
+      });
+      document.addEventListener('click', () => { menu.hidden = true; });
+    })();
 
     // Settings -> League Money: the one place NET (side-pot dues/winnings)
     // gets entered, keyed per league per current season (same store the
@@ -15652,9 +15839,15 @@
         return projections[id] != null ? Number(projections[id]) : null;
       }
 
+      // Sleeper's full player pool carries some stale/duplicate entries
+      // (retired or otherwise defunct players Sleeper flags inactive) --
+      // without this, one can surface here as a "free agent" under the
+      // wrong position (the real, currently-rostered player of the same
+      // name gets correctly excluded by rosteredHere, but the stale
+      // duplicate doesn't).
       ldwvRows = Object.keys(dict).filter(id => {
         const p = dict[id];
-        return p && FA_POSITIONS.has(p.position) && !rosteredHere.has(id);
+        return p && p.active !== false && FA_POSITIONS.has(p.position) && !rosteredHere.has(id);
       }).map(id => {
         const p = dict[id];
         const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id;
@@ -15714,6 +15907,194 @@
           ldwvRenderList();
         });
       });
+    }
+
+    // League Detail -> League Matchups modal: every real matchup in this
+    // league for a given week, not just your own -- reuses the exact same
+    // lineup-table/win-probability-field building blocks Matchup Hub's own
+    // matchup expand uses (sbBuildFieldContext/sbLineupRowsHtml/
+    // sbFieldPanelHtml/animateSbFieldPanel) so the numbers can never
+    // disagree between the two. Lives only here (opened from inside one
+    // league) -- Matchup Hub itself stays scoped to your own matchups.
+    let ldmuEntry = null;
+    let ldmuDict = null;
+    let ldmuRows = [];
+
+    function ldmuRowHtml(r, i) {
+      const name1 = sbFieldEsc((r.u1 && (r.u1.display_name || r.u1.username)) || 'Team A');
+      const name2 = sbFieldEsc((r.u2 && (r.u2.display_name || r.u2.username)) || 'Team B');
+      const ctx = r.ctx;
+      const scoreHtml = ctx.hasData
+        ? `<span class="sb-score-mine">${ctx.myProj.toFixed(1)}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${ctx.oppProj.toFixed(1)}</span>`
+        : '<span class="sb-score-vs">No projections yet</span>';
+      const metaText = ctx.winPct != null ? `${ctx.winPct}% / ${100 - ctx.winPct}% win probability` : `${(ctx.myPts || 0).toFixed(1)} vs ${(ctx.oppPts || 0).toFixed(1)} live`;
+      return `<div class="sb-card ldmu-row" data-ldmu-idx="${i}">
+          <div class="sb-card-main">
+            <div class="sb-card-name">${name1} <span style="color:var(--faint);font-weight:500">vs</span> ${name2}</div>
+            <div class="sb-card-meta">${metaText}</div>
+          </div>
+          <div class="sb-card-score">${scoreHtml}</div>
+          <div class="sb-chevron">&#9662;</div>
+        </div>`;
+    }
+
+    function ldmuToggleExpand(rowEl, r) {
+      const next = rowEl.nextElementSibling;
+      const alreadyOpen = next && next.classList.contains('sb-expand');
+      document.querySelectorAll('#ldmuList .sb-expand').forEach(el => el.remove());
+      document.querySelectorAll('#ldmuList .ldmu-row.is-open').forEach(el => el.classList.remove('is-open'));
+      if (alreadyOpen) return;
+      rowEl.classList.add('is-open');
+
+      const ctx = r.ctx;
+      const { myMatchup, oppMatchup, projMap, week, winPct, teams, fieldRosters, startPct } = ctx;
+      const panel = document.createElement('div');
+      panel.className = 'sb-expand';
+      const scoreHtml = ctx.hasData
+        ? `<span class="sb-exp-score-item"><b>${ctx.myProj.toFixed(1)}</b> vs <b>${ctx.oppProj.toFixed(1)}</b> <i>proj</i></span>` +
+          `<span class="sb-exp-score-item">${ctx.myPts.toFixed(1)} vs ${ctx.oppPts.toFixed(1)} <i>live</i></span>`
+        : '';
+      panel.innerHTML =
+        `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
+        '<div class="sb-exp-body">' +
+          '<div class="sb-lineups-cols">' +
+            '<div class="sb-lineup-col">' +
+              `<div class="sb-lineup-label sb-lineup-label-you">${sbFieldEsc(teams.myName)}</div>` +
+              '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+              `<tbody>${sbLineupRowsHtml(myMatchup, ldmuDict, projMap, r.league, week, r.espnGameData)}</tbody></table>` +
+            '</div>' +
+            '<div class="sb-lineup-col">' +
+              `<div class="sb-lineup-label sb-lineup-label-opp">${sbFieldEsc(teams.oppName)}</div>` +
+              '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+              `<tbody>${sbLineupRowsHtml(oppMatchup, ldmuDict, projMap, r.league, week, r.espnGameData)}</tbody></table>` +
+            '</div>' +
+          '</div>' +
+          sbFieldPanelHtml(startPct, teams) +
+        '</div>';
+      rowEl.after(panel);
+      animateSbFieldPanel(panel, `ldmu_${r.league.league_id}_${week}_${rowEl.dataset.ldmuIdx}`, winPct, fieldRosters);
+    }
+
+    async function ldmuLoadWeek(week) {
+      const listEl = document.getElementById('ldmuList');
+      const entry = ldmuEntry;
+      if (!entry || !listEl) return;
+      listEl.innerHTML = '<div class="exp-loading">Loading matchups...</div>';
+
+      let matchups;
+      try { matchups = await window.sleeperFetch(`/league/${entry.league.league_id}/matchups/${week}`); }
+      catch (err) { matchups = []; }
+      if (!matchups || !matchups.length) {
+        listEl.innerHTML = '<div class="exp-loading">No matchups found for this week.</div>';
+        return;
+      }
+
+      let projMap = null;
+      if (window.sleeperGetWeekProjections) {
+        try { projMap = await window.sleeperGetWeekProjections(entry.league.season, week); } catch (err) {}
+      }
+      const espnGameData = window.sleeperGetEspnGameData
+        ? await window.sleeperGetEspnGameData(week, entry.league.season).catch(() => null)
+        : null;
+
+      const byMatchupId = {};
+      matchups.forEach(m => { (byMatchupId[m.matchup_id] = byMatchupId[m.matchup_id] || []).push(m); });
+      const pairs = Object.values(byMatchupId).filter(g => g.length === 2);
+      if (!pairs.length) {
+        listEl.innerHTML = '<div class="exp-loading">No matchups found for this week.</div>';
+        return;
+      }
+
+      ldmuRows = pairs.map(([m1, m2]) => {
+        const r1 = (entry.allRosters || []).find(r => r.roster_id === m1.roster_id);
+        const r2 = (entry.allRosters || []).find(r => r.roster_id === m2.roster_id);
+        const u1 = r1 ? (entry.users || []).find(u => u.user_id === r1.owner_id) : null;
+        const u2 = r2 ? (entry.users || []).find(u => u.user_id === r2.owner_id) : null;
+        const syntheticEntry = {
+          league: entry.league, roster: r1, users: entry.users,
+          myMatchup: m1, oppMatchup: m2, oppUser: u2, week,
+        };
+        // sbBuildFieldContext's real projMap override shape is
+        // { week, projections } -- reuse it directly so live/proj/win%
+        // read exactly like every other page that shows them.
+        const ctx = sbBuildFieldContext(syntheticEntry, { week, projections: projMap, oppUser: u2, myMatchup: m1, oppMatchup: m2 }, ldmuDict, espnGameData);
+        return { ctx, u1, u2, league: entry.league, espnGameData };
+      });
+
+      listEl.innerHTML = ldmuRows.map((r, i) => ldmuRowHtml(r, i)).join('');
+      listEl.querySelectorAll('.ldmu-row').forEach((rowEl, i) => {
+        rowEl.addEventListener('click', () => ldmuToggleExpand(rowEl, ldmuRows[i]));
+      });
+    }
+
+    function ldmuBuildWeekMenu(currentWeek) {
+      const menu = document.getElementById('ldmuWeekMenu');
+      const label = document.getElementById('ldmuWeekLabel');
+      if (!menu) return;
+      if (label) label.textContent = currentWeek;
+      menu.innerHTML = Array.from({ length: 18 }, (_, i) => i + 1).map(w =>
+        `<span class="week-option${w === currentWeek ? ' active' : ''}" data-ldmu-week="${w}">Week ${w}</span>`
+      ).join('');
+      menu.querySelectorAll('.week-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+          menu.hidden = true;
+          menu.querySelectorAll('.week-option').forEach(o => o.classList.remove('active'));
+          opt.classList.add('active');
+          const w = Number(opt.dataset.ldmuWeek);
+          if (label) label.textContent = w;
+          ldmuLoadWeek(w);
+        });
+      });
+    }
+
+    async function ldmuOpen() {
+      const standingsListEl = document.getElementById('ldStandingsList');
+      const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
+      const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+      if (!entry) return;
+      ldmuEntry = entry;
+
+      const overlay = document.getElementById('ldmuOverlay');
+      const modal = document.getElementById('ldmuModal');
+      const titleLeagueEl = document.getElementById('ldmuTitleLeague');
+      if (titleLeagueEl) titleLeagueEl.textContent = entry.league.name;
+      if (overlay) overlay.hidden = false;
+      if (modal) modal.hidden = false;
+
+      const listEl = document.getElementById('ldmuList');
+      if (listEl) listEl.innerHTML = '<div class="exp-loading">Loading...</div>';
+      if (!window.sleeperGetPlayerDict) return;
+      try { ldmuDict = await window.sleeperGetPlayerDict(); } catch (err) { return; }
+
+      const currentWeek = entry.week || 1;
+      ldmuBuildWeekMenu(currentWeek);
+      await ldmuLoadWeek(currentWeek);
+    }
+
+    function ldmuClose() {
+      const overlay = document.getElementById('ldmuOverlay');
+      const modal = document.getElementById('ldmuModal');
+      if (overlay) overlay.hidden = true;
+      if (modal) modal.hidden = true;
+    }
+
+    const ldNavMatchupsEl = document.getElementById('ldNavMatchups');
+    if (ldNavMatchupsEl) ldNavMatchupsEl.addEventListener('click', ldmuOpen);
+    const ldmuCloseEl = document.getElementById('ldmuClose');
+    if (ldmuCloseEl) ldmuCloseEl.addEventListener('click', ldmuClose);
+    const ldmuOverlayEl = document.getElementById('ldmuOverlay');
+    if (ldmuOverlayEl) ldmuOverlayEl.addEventListener('click', ldmuClose);
+    const ldmuWeekDropdownEl = document.getElementById('ldmuWeekDropdown');
+    if (ldmuWeekDropdownEl) {
+      const select = ldmuWeekDropdownEl.querySelector('.week-select');
+      const menu = ldmuWeekDropdownEl.querySelector('.week-menu');
+      if (select && menu) {
+        select.addEventListener('click', (e) => {
+          e.stopPropagation();
+          menu.hidden = !menu.hidden;
+        });
+        document.addEventListener('click', () => { menu.hidden = true; });
+      }
     }
 
     // League Detail -> Settings modal: a read-only summary of the league's
@@ -16759,7 +17140,10 @@
     const nameToId = {};
     Object.keys(dict).forEach(id => {
       const pl = dict[id];
-      if (!pl || !EXP_POS_COLOR[pl.position]) return;
+      // Skip Sleeper's stale/inactive duplicate entries -- otherwise a
+      // defunct player sharing a real player's name can get picked over
+      // the real one here, showing up under the wrong position/team.
+      if (!pl || pl.active === false || !EXP_POS_COLOR[pl.position]) return;
       const norm = ppNormalizeName(pl.full_name || [pl.first_name, pl.last_name].filter(Boolean).join(' '));
       if (norm && !nameToId[norm]) nameToId[norm] = id;
     });
@@ -16854,16 +17238,46 @@
   // Where a player's value ranks among every name Pure Potential covers --
   // used by the player modal's Overview tab. Ties are fine to break by
   // insertion order here since values are precise decimals.
-  function ppRankForPlayerId(playerId, dict) {
+  function ppKeyForPlayerId(playerId, dict) {
     const p = dict && dict[playerId];
     if (!p) return null;
     const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
     const norm = ppNormalizeName(name);
     const stripped = norm.replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
-    const key = PP_PLAYER_VALUES[norm] != null ? norm : (PP_PLAYER_VALUES[stripped] != null ? stripped : null);
+    return PP_PLAYER_VALUES[norm] != null ? norm : (PP_PLAYER_VALUES[stripped] != null ? stripped : null);
+  }
+  function ppRankForPlayerId(playerId, dict) {
+    const key = ppKeyForPlayerId(playerId, dict);
     if (!key) return null;
     const sortedKeys = Object.keys(PP_PLAYER_VALUES).sort((a, b) => PP_PLAYER_VALUES[b] - PP_PLAYER_VALUES[a]);
     return sortedKeys.indexOf(key) + 1;
+  }
+  // Name -> position, built once from the full Sleeper player pool, so a
+  // positional rank (e.g. "RB6 of 45") can be worked out among just the
+  // other PP_PLAYER_VALUES entries at the same position -- PP_PLAYER_VALUES
+  // itself only stores name -> value, no position.
+  let ppNameToPosCache = null;
+  function ppBuildNameToPos(dict) {
+    if (ppNameToPosCache) return ppNameToPosCache;
+    const map = {};
+    Object.values(dict || {}).forEach(p => {
+      if (!p) return;
+      const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+      if (!name || !p.position) return;
+      map[ppNormalizeName(name)] = p.position;
+    });
+    ppNameToPosCache = map;
+    return map;
+  }
+  function ppPositionalRankForPlayerId(playerId, dict) {
+    const p = dict && dict[playerId];
+    const key = ppKeyForPlayerId(playerId, dict);
+    if (!p || !p.position || !key) return null;
+    const nameToPos = ppBuildNameToPos(dict);
+    const sameCategory = Object.keys(PP_PLAYER_VALUES).filter(k => nameToPos[k] === p.position);
+    sameCategory.sort((a, b) => PP_PLAYER_VALUES[b] - PP_PLAYER_VALUES[a]);
+    const idx = sameCategory.indexOf(key);
+    return idx === -1 ? null : { rank: idx + 1, total: sameCategory.length };
   }
 
   // Real-world NFL contract terms for well-known players -- hand-curated
@@ -17264,8 +17678,9 @@
     leagueEntries.forEach(entry => {
       const players = (entry.roster.players || []).filter(id => id && id !== '0');
       players.forEach(id => {
-        if (!exposureMap[id]) exposureMap[id] = { count: 0 };
+        if (!exposureMap[id]) exposureMap[id] = { count: 0, leagues: [] };
         exposureMap[id].count++;
+        exposureMap[id].leagues.push(entry.league.name);
       });
     });
 
@@ -17279,6 +17694,7 @@
         team: p.team || 'FA',
         pos: p.position,
         count: exposureMap[id].count,
+        leagues: exposureMap[id].leagues,
         pct: Math.round((exposureMap[id].count / totalLeagues) * 100),
         isRookie: p.years_exp === 0,
       };
@@ -17316,7 +17732,7 @@
     }
     gridEl.innerHTML = top.map(r => {
       const posClass = r.pos.toLowerCase();
-      return `<div class="dash-exp-card dash-exp-${posClass}">
+      return `<div class="dash-exp-card dash-exp-${posClass}" data-player-id="${r.id}" data-name="${sbFieldEsc(r.name)}" data-team="${sbFieldEsc(r.team)}" data-pos="${r.pos}" data-pct="${r.pct}" data-leagues="${r.leagues.map(sbFieldEsc).join('|')}">
           <div class="dash-exp-team-icon"><img src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" loading="lazy" onerror="this.remove()"></div>
           <div class="dash-exp-avatar-wrap">
             <div class="dash-exp-avatar"><img src="${sbHeadshotUrl(r.id)}" alt="" loading="lazy" onerror="this.remove()"></div>
@@ -17327,6 +17743,16 @@
           <div class="dash-exp-bar-bg"><div class="dash-exp-bar-fill dash-exp-${posClass}" style="width:${r.pct}%"></div></div>
         </div>`;
     }).join('');
+    gridEl.querySelectorAll('.dash-exp-card').forEach(card => {
+      card.addEventListener('click', () => {
+        if (!window.openPlayerModalData) return;
+        window.openPlayerModalData({
+          playerId: card.dataset.playerId, name: card.dataset.name, team: card.dataset.team,
+          pos: card.dataset.pos, leagues: card.dataset.leagues ? card.dataset.leagues.split('|') : [],
+          pct: Number(card.dataset.pct), defaultTab: 'overview',
+        });
+      });
+    });
   }
 
   // How many picks of one round/season a single league entry's manager
@@ -18421,12 +18847,29 @@
     const badge = teamAbbr && teamAbbr !== 'fa'
       ? `<img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/${teamAbbr}.png" alt="${row.team}" onerror="this.style.display='none'">`
       : '';
-    return '<div class="sweat-card ' + (isFor ? 'for' : 'against') + '">' + badge +
+    const leagues = [...row.for, ...row.against];
+    return '<div class="sweat-card ' + (isFor ? 'for' : 'against') + '"' +
+      ` data-player-id="${row.id}" data-name="${sbFieldEsc(row.name)}" data-team="${sbFieldEsc(row.team || 'FA')}"` +
+      ` data-pos="${row.pos}" data-leagues="${leagues.map(sbFieldEsc).join('|')}">` + badge +
       `<div class="sweat-avatar"><img src="${sbHeadshotUrl(row.id)}" alt="" loading="lazy" onerror="this.remove()"></div>` +
       `<div class="sweat-pos ${posClass}">${row.pos}</div>` +
       `<div class="sweat-name">${row.name}</div>` +
       `<div class="sweat-count ${isFor ? 'for' : 'against'}">${deltaText} <span>${noteParts.join(' &middot; ')}</span></div>` +
     '</div>';
+  }
+
+  function initSweatCardClicks(container) {
+    if (!container) return;
+    container.querySelectorAll('.sweat-card').forEach(card => {
+      card.addEventListener('click', () => {
+        if (!window.openPlayerModalData) return;
+        window.openPlayerModalData({
+          playerId: card.dataset.playerId, name: card.dataset.name, team: card.dataset.team,
+          pos: card.dataset.pos, leagues: card.dataset.leagues ? card.dataset.leagues.split('|') : [],
+          defaultTab: 'overview',
+        });
+      });
+    });
   }
 
   // Same source data as the Rooting Guide (window.__sleeperRootingRows, set
@@ -18455,6 +18898,8 @@
     againstCards.innerHTML = againstTop.length
       ? againstTop.map(r => sweatCardHtml(r, false)).join('')
       : '<div class="placeholder"><p>No standout players to root against this week.</p></div>';
+    initSweatCardClicks(forCards);
+    initSweatCardClicks(againstCards);
   }
   window.renderWeeklySweats = renderWeeklySweats;
 
@@ -19423,24 +19868,48 @@
       }
     }
 
-    if (getSiteMode() === 'dynasty') {
-      const val = ppValueForPlayerId(playerId, dict);
-      if (val != null) {
-        const rank = ppRankForPlayerId(playerId, dict);
-        const total = Object.keys(PP_PLAYER_VALUES).length;
-        html += `
-          <div class="pm-section-label">DYNASTY VALUE</div>
-          <div class="ld-stats">
-            <div class="ld-stat-cell"><div class="ld-stat-label">VALUE</div><div class="ld-stat-value">${val.toFixed(2)}</div></div>
-            <div class="ld-stat-divider"></div>
-            <div class="ld-stat-cell"><div class="ld-stat-label">RANK</div><div class="ld-stat-value">${rank ? '#' + rank + ' of ' + total : '&mdash;'}</div></div>
-          </div>
-        `;
-      }
-    }
-
     if (myToken !== pmOverviewToken) return;
     pmOverviewList.innerHTML = html;
+  }
+
+  // Austin's own hand-curated dynasty rankings (PP_PLAYER_VALUES -- same
+  // source Trade Calc's "Austin's Rankings" toggle reads) -- moved off
+  // Overview into its own tab, with a positional rank added alongside
+  // the overall one so "ranked 6th" also says what that means within
+  // the player's own position (e.g. "RB6 of 45").
+  let pmRanksToken = 0;
+  async function renderPmRanks(playerId) {
+    const pmRanksList = document.getElementById('pmRanksList');
+    if (!pmRanksList) return;
+    const myToken = ++pmRanksToken;
+    if (!playerId) {
+      pmRanksList.innerHTML = '<div class="placeholder"><h3>Austin\'s Ranks</h3><p>No player selected.</p></div>';
+      return;
+    }
+    pmRanksList.innerHTML = '<div class="ld-loading">Loading&hellip;</div>';
+    const dict = await pmGetPlayerDict();
+    if (myToken !== pmRanksToken) return;
+    const p = dict ? dict[playerId] : null;
+    const val = p ? ppValueForPlayerId(playerId, dict) : null;
+    if (!p || val == null) {
+      pmRanksList.innerHTML = '<div class="placeholder"><h3>Austin\'s Ranks</h3><p>This player isn\'t in Austin\'s dynasty rankings yet.</p></div>';
+      return;
+    }
+    const rank = ppRankForPlayerId(playerId, dict);
+    const total = Object.keys(PP_PLAYER_VALUES).length;
+    const posRank = ppPositionalRankForPlayerId(playerId, dict);
+    const posRankText = posRank ? `${p.position}${posRank.rank} of ${posRank.total}` : '&mdash;';
+    pmRanksList.innerHTML = `
+      <div class="pm-section-label">AUSTIN'S DYNASTY VALUE</div>
+      <div class="ld-stats">
+        <div class="ld-stat-cell"><div class="ld-stat-label">VALUE</div><div class="ld-stat-value">${val.toFixed(2)}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">OVERALL RANK</div><div class="ld-stat-value">${rank ? '#' + rank + ' of ' + total : '&mdash;'}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">POSITION RANK</div><div class="ld-stat-value">${posRankText}</div></div>
+      </div>
+      <div class="pm-note">Austin's own hand-curated dynasty rankings &mdash; the same source Trade Calc's "Austin's Rankings" toggle uses. A comparison against consensus/expert rankings is planned but not built yet.</div>
+    `;
   }
 
   async function renderPmContract(playerId) {
@@ -19513,6 +19982,17 @@
     const pct = Number(item.dataset.pct);
     const leagues = item.dataset.leagues ? item.dataset.leagues.split('|') : [];
     const playerId = item.dataset.playerId || '';
+    openPlayerModalData({ playerId, name, team, pos, leagues, pct, defaultTab: 'exposure' });
+  }
+
+  // Shared by every entry point that opens the player modal (the
+  // Exposures board/list, and the Dashboard's Highest Exposures / Weekly
+  // Sweats cards below) so they all show the same real overview instead
+  // of each rolling their own popup. `defaultTab` picks which tab is
+  // showing when the modal opens -- Exposures opens straight to its own
+  // tab (it already has the % on screen); everywhere else defaults to
+  // Overview.
+  function openPlayerModalData({ playerId, name, team, pos, leagues, pct, defaultTab }) {
     playerModal.dataset.playerId = playerId;
 
     const pmTradesList = document.getElementById('pmTradesList');
@@ -19521,6 +20001,8 @@
     if (pmGameLogList) pmGameLogList.innerHTML = '';
     const pmOverviewList = document.getElementById('pmOverviewList');
     if (pmOverviewList) pmOverviewList.innerHTML = '';
+    const pmRanksList = document.getElementById('pmRanksList');
+    if (pmRanksList) pmRanksList.innerHTML = '';
     const pmContractList = document.getElementById('pmContractList');
     if (pmContractList) pmContractList.innerHTML = '';
 
@@ -19532,7 +20014,8 @@
 
     const totalLeagueCount = (window.sleeperLeagueData && Object.keys(window.sleeperLeagueData).length) || 18;
     pmExpFrac.textContent = `${leagues.length} of ${totalLeagueCount}`;
-    pmExpPct.textContent = pct > 0 ? `${pct}%` : '0%';
+    const pctVal = pct != null && !isNaN(pct) ? pct : (totalLeagueCount ? Math.round((leagues.length / totalLeagueCount) * 100) : 0);
+    pmExpPct.textContent = pctVal > 0 ? `${pctVal}%` : '0%';
 
     pmLeagueList.innerHTML = '';
     leagues.forEach((league) => {
@@ -19547,12 +20030,40 @@
     });
     pmShowAll.hidden = true;
 
-    document.querySelectorAll('.pm-tab').forEach(t => t.classList.toggle('active', t.dataset.pmTab === 'exposure'));
-    document.querySelectorAll('.pm-panel').forEach(p => { p.hidden = p.dataset.pmPanel !== 'exposure'; });
+    const tab = defaultTab || 'exposure';
+    document.querySelectorAll('.pm-tab').forEach(t => t.classList.toggle('active', t.dataset.pmTab === tab));
+    document.querySelectorAll('.pm-panel').forEach(p => { p.hidden = p.dataset.pmPanel !== tab; });
+    if (tab === 'overview') renderPmOverview(playerId);
+    if (tab === 'ranks') renderPmRanks(playerId);
+    if (tab === 'gamelog') renderPmGameLog(playerId);
+    if (tab === 'contract') renderPmContract(playerId);
 
     playerModal.hidden = false;
     window.scrollTo(0, 0);
   }
+  window.openPlayerModalData = openPlayerModalData;
+
+  // Generic entry point for anywhere a player is just a name sitting on
+  // the page with no click behavior yet (League Detail's roster columns,
+  // for one) -- works out the real leagues he's rostered in on the fly
+  // and opens the same modal, defaulting to Overview.
+  function openPlayerModalForId(playerId, name, team, pos) {
+    const leagues = [];
+    Object.values(window.sleeperLeagueData || {}).forEach(entry => {
+      if (!entry.roster) return;
+      const players = (entry.roster.players || []).filter(id => id && id !== '0');
+      if (players.includes(playerId)) leagues.push(entry.league.name);
+    });
+    openPlayerModalData({ playerId, name, team, pos, leagues, defaultTab: 'overview' });
+  }
+  window.openPlayerModalForId = openPlayerModalForId;
+
+  document.addEventListener('click', (e) => {
+    const ldPlayer = e.target.closest('.ld-player[data-player-id]');
+    if (ldPlayer) {
+      window.openPlayerModalForId(ldPlayer.dataset.playerId, ldPlayer.dataset.name, ldPlayer.dataset.team, ldPlayer.dataset.pos);
+    }
+  });
 
   document.querySelectorAll('.exp-card, .exp-list-row').forEach(item => {
     item.addEventListener('click', () => openPlayerModal(item));
@@ -19576,6 +20087,10 @@
       if (target === 'overview') {
         const pmOverviewList = document.getElementById('pmOverviewList');
         if (pmOverviewList && !pmOverviewList.innerHTML) renderPmOverview(playerModal.dataset.playerId);
+      }
+      if (target === 'ranks') {
+        const pmRanksList = document.getElementById('pmRanksList');
+        if (pmRanksList && !pmRanksList.innerHTML) renderPmRanks(playerModal.dataset.playerId);
       }
       if (target === 'contract') {
         const pmContractList = document.getElementById('pmContractList');
@@ -19652,6 +20167,59 @@
 
   const tcState = { a: [], b: [] };
   const tcScoring = { tep: 0, ppc: 0, rec: 1 };
+
+  // Trade History's calculator icon -- reads the trade card's own "YOU
+  // GOT"/"YOU GAVE" columns straight out of the DOM and drops them into
+  // Team A/Team B here, matched by name against the same player/pick
+  // pools the search box uses, so the in-depth win/loss breakdown is one
+  // click away instead of re-typing the whole trade by hand.
+  // A pick's own text ("2027 2nd") is parsed directly into a pick asset
+  // rather than looked up against tcPickPool()'s fixed 2-future-years
+  // list -- a trade card can carry a pick further out than that (a 2029
+  // 1st, say), and this way it still resolves.
+  const TC_PICK_ROUND_LABEL = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+  function tcPickAssetFromText(text) {
+    const m = text.trim().match(/^(\d{4})\s+(\d+)(?:st|nd|rd|th)$/i);
+    if (!m) return null;
+    const year = Number(m[1]), round = Number(m[2]);
+    const roundLabel = TC_PICK_ROUND_LABEL[round] || `${round}th`;
+    return {
+      id: `pick_${year}_${round}`, kind: 'pick', name: `${year} ${roundLabel}`,
+      pos: null, team: null, value: PICK_ROUND_VALUES[round] || 0, roundLabel,
+    };
+  }
+
+  async function tcPopulateFromTradeCard(card) {
+    const cols = card.querySelectorAll('.trade-cols .trade-col');
+    if (cols.length < 2) return;
+    const [gotCol, gaveCol] = cols;
+    const pool = await tcGetPlayerPool();
+    const findAsset = (nameText) => {
+      const pickAsset = tcPickAssetFromText(nameText);
+      if (pickAsset) return pickAsset;
+      const norm = nameText.trim().toLowerCase();
+      return pool.find(e => e.name.toLowerCase() === norm)
+        || pool.find(e => e.name.toLowerCase().includes(norm) || norm.includes(e.name.toLowerCase()))
+        || null;
+    };
+    // A trade can carry the same pick twice (two 2027 2nds) -- give each
+    // occurrence its own id so both actually show up as separate rows
+    // instead of collapsing into one, and so removing one doesn't also
+    // remove the other.
+    const assetsFrom = (col) => Array.from(col.querySelectorAll('.trade-asset-name'))
+      .map((el, idx) => {
+        const asset = findAsset(el.textContent);
+        if (!asset) return null;
+        return asset.kind === 'pick' ? Object.assign({}, asset, { id: `${asset.id}__${idx}` }) : asset;
+      })
+      .filter(Boolean);
+    tcState.a = assetsFrom(gotCol);
+    tcState.b = assetsFrom(gaveCol);
+    tcRender();
+    goToSection('calculator');
+    window.scrollTo(0, 0);
+  }
+  window.tcPopulateFromTradeCard = tcPopulateFromTradeCard;
 
   function tcAddAsset(side, asset) {
     const other = side === 'a' ? 'b' : 'a';
