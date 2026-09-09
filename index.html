@@ -11151,15 +11151,28 @@
       // .rg-team holds a team logo image now, not the abbreviation text, so
       // this has to read the row's own data-team instead of scraping text.
       if (!row.dataset.team || !teamCodes.includes(row.dataset.team)) return;
-      const deltaEl = row.querySelector('.rg-delta');
       const nameEl = row.querySelector('.rg-name');
-      if (!deltaEl || !nameEl) return;
-      const deltaNum = parseInt(deltaEl.textContent.replace(/−/g, '-'), 10);
+      if (!nameEl) return;
+      // Raw numbers straight off the row's own dataset (set by
+      // recomputeRootingGuide alongside its formatted "+$325"/"+3" display
+      // text) rather than parsing that formatted text back out -- and pick
+      // whichever one matches the Rooting Guide's current $ / league-count
+      // toggle, so this list agrees with it instead of always showing the
+      // league-count number.
+      const isMoney = !!window.__rgMoneyMode;
+      const deltaNum = Number(row.dataset[isMoney ? 'dollar' : 'delta']);
       if (!deltaNum) return;
-      matches.push({ id: row.dataset.playerId, name: nameEl.textContent.trim(), delta: deltaNum });
+      matches.push({ id: row.dataset.playerId, name: nameEl.textContent.trim(), delta: deltaNum, isMoney });
     });
     matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     return matches;
+  }
+  // Formats one match's delta for display -- "+$325"/"-$50" in $ mode,
+  // "+4"/"-2" in league-count mode -- shared by every place that renders
+  // getRootingDeltasForTeams() results as a chip.
+  function rgChipDeltaText(m) {
+    if (m.isMoney) return m.delta > 0 ? `+$${m.delta}` : `-$${Math.abs(m.delta)}`;
+    return m.delta > 0 ? `+${m.delta}` : `${m.delta}`;
   }
 
   // "1-on-1 Slates" -- every real game this week grouped into the same
@@ -11249,8 +11262,7 @@
       const matches = getRootingDeltasForTeams(teamCodes);
       const chipHtml = m => {
         const cls = m.delta > 0 ? 'rg-chip-pos' : 'rg-chip-neg';
-        const sign = m.delta > 0 ? '+' : '';
-        return `<span class="rg-chip" data-player-id="${m.id}">${sbFieldEsc(m.name)} <span class="${cls}">${sign}${m.delta}</span></span>`;
+        return `<span class="rg-chip" data-player-id="${m.id}">${sbFieldEsc(m.name)} <span class="${cls}">${rgChipDeltaText(m)}</span></span>`;
       };
       const shown = matches.slice(0, RG_SLATE_CHIP_LIMIT).map(chipHtml).join('');
       const extra = matches.slice(RG_SLATE_CHIP_LIMIT);
@@ -11291,8 +11303,7 @@
       } else {
         const chips = matches.map(m => {
           const cls = m.delta > 0 ? 'schedule-expand-pos' : 'schedule-expand-neg';
-          const sign = m.delta > 0 ? '+' : '';
-          return `<span class="schedule-expand-chip" data-player-id="${m.id}">${m.name} <b class="${cls}">${sign}${m.delta}</b></span>`;
+          return `<span class="schedule-expand-chip" data-player-id="${m.id}">${m.name} <b class="${cls}">${rgChipDeltaText(m)}</b></span>`;
         }).join('');
         expand.innerHTML =
           `<p class="schedule-expand-count">${matches.length} player${matches.length > 1 ? 's' : ''} affect your exposure in this game</p>` +
@@ -11521,7 +11532,7 @@
         const color = DR_ROSTER_COLORS[i % DR_ROSTER_COLORS.length];
         return '<div class="dr-draft-row" data-league="' + name + '" data-draft-id="' + entry.draftId + '">' +
           '<div class="dr-draft-status ' + status.cls + '">' + status.label + '</div>' +
-          '<div class="league-logo" style="background:' + color + '">' + drInitials(name) + sbLeagueLogoImgHtml(entry.league) + '</div>' +
+          '<div class="league-logo" style="background:' + color + '">' + sbLeagueLogoImgHtml(entry.league) + '</div>' +
           '<div class="dr-draft-main">' +
             '<div class="dr-draft-name">' + name + '</div>' +
             '<div class="dr-draft-meta">' + monthLabel + ' &middot; ' + typeLabel + ' Draft &middot; ' + teams + ' teams &middot; ' + rounds + ' rounds</div>' +
@@ -12221,14 +12232,24 @@
   function sbTeamLogoUrl(team) {
     return team && team !== 'FA' ? `https://sleepercdn.com/images/team_logos/nfl/${team.toLowerCase()}.png` : '';
   }
-  // A league only has a real logo on Sleeper's CDN if its commissioner set
-  // a custom avatar -- most don't, so this returns '' (render nothing) and
-  // callers keep their colored-initials fallback instead of requesting a
-  // broken image.
+  // Always returns the colored-initials fallback text plus (when the league
+  // has a real Sleeper avatar) an absolutely-positioned <img> overlaid on
+  // top of it -- every .league-logo/.ld-league-logo/.ww-league-logo/
+  // .sb-card-logo container already CSS-overlays its img this way. If the
+  // avatar image 404s or otherwise fails to load, onerror removes just the
+  // <img>, leaving the initials underneath instead of a blank box -- a
+  // league with no avatar set skips the <img> entirely and shows initials
+  // right away.
   function sbLeagueLogoImgHtml(league) {
     const avatar = league && league.avatar;
-    if (!avatar) return '';
-    return `<img src="https://sleepercdn.com/avatars/thumbs/${avatar}" alt="" loading="lazy" onerror="this.remove()">`;
+    const name = (league && league.name) || '';
+    const words = name.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
+    const initials = !words.length ? '??'
+      : words.length === 1 ? words[0].slice(0, 2).toUpperCase()
+      : (words[0][0] + words[1][0]).toUpperCase();
+    const initialsHtml = sbFieldEsc(initials);
+    if (!avatar) return initialsHtml;
+    return `${initialsHtml}<img src="https://sleepercdn.com/avatars/thumbs/${avatar}" alt="" loading="lazy" onerror="this.remove()">`;
   }
 
   // A player's projection depends on the league's own scoring format (PPR/
@@ -12682,6 +12703,23 @@
     }
     return fallbackText;
   }
+  // Same idea as sbLeagueLogoImgHtml: initials text as the base layer, with
+  // up to two real images stacked on top of it via the container's existing
+  // position:absolute overlay CSS. A custom per-league team image (set in
+  // Sleeper's "Edit Team") takes priority; if it 404s or otherwise fails to
+  // load, onerror removes just that <img>, revealing the manager's regular
+  // Sleeper profile picture underneath -- and if that fails too (or was
+  // never set), the initials underneath both are all that's left.
+  function sbTeamAvatarHtml(customAvatarId, accountAvatarId, fallbackText) {
+    let html = sbFieldEsc(fallbackText);
+    if (accountAvatarId) {
+      html += `<img src="https://sleepercdn.com/avatars/thumbs/${accountAvatarId}" alt="" loading="lazy" onerror="this.remove()">`;
+    }
+    if (customAvatarId && customAvatarId !== accountAvatarId) {
+      html += `<img src="https://sleepercdn.com/avatars/thumbs/${customAvatarId}" alt="" loading="lazy" onerror="this.remove()">`;
+    }
+    return html;
+  }
   // Lays a real position group out across a horizontal band (from% to
   // to%), evenly spaced -- a single player centers in the band.
   function sbFieldSpread(ids, placements, from, to) {
@@ -12789,8 +12827,8 @@
   }
   function sbFieldPanelHtml(startPct, teams) {
     const clamped = Math.max(2, Math.min(98, startPct));
-    const myInitial = (teams.myName || 'Y').charAt(0).toUpperCase();
-    const oppInitial = (teams.oppName || 'O').charAt(0).toUpperCase();
+    const myInitial = sbLeagueInitials(teams.myName || 'Y');
+    const oppInitial = sbLeagueInitials(teams.oppName || 'O');
     return (
       '<div class="field-panel">' +
         '<div class="field-panel-head">' +
@@ -13413,6 +13451,11 @@
           rgSortToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           recomputeRootingGuide();
+          // 1-on-1 Slates reads its chip numbers off .rg-row's dataset,
+          // which recomputeRootingGuide() just updated -- but the slate
+          // cards themselves were built once already and won't reflect
+          // that on their own, so rebuild them too.
+          if (window.renderRootingSlates) window.renderRootingSlates();
         });
       });
     }
@@ -13498,9 +13541,12 @@
       });
       return map;
     }
-
     function recomputeRootingGuide() {
       const dollarMap = rgLeagueDollarMap();
+      // Exposed so other places that read a player's rooting impact off
+      // .rg-row (Weekly Schedule's exposure preview, the Rooting Guide's
+      // own 1-on-1 Slates) know whether to show dollars or league count.
+      window.__rgMoneyMode = rgSortCriterion === 'leagues';
       const buckets = { for: [], against: [], even: [] };
       rgRows.forEach(r => {
         const f = r.forAll.filter(l => !rgBlacklist.has(l));
@@ -13517,6 +13563,13 @@
         // the win-count delta above uses, just weighted by real dollars
         // instead of by 1 per league.
         const dollarNet = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
+        // Raw numbers (not the formatted display text below) so anything
+        // reading a player's rooting impact off this row -- the Weekly
+        // Schedule's exposure preview, the Rooting Guide's own 1-on-1
+        // Slates -- can pick the right one for the current mode without
+        // parsing "+$325" back out of a string.
+        r.el.dataset.delta = String(delta);
+        r.el.dataset.dollar = String(dollarNet);
         const deltaEl = r.el.querySelector('.rg-delta');
         const noteEl = r.el.querySelector('.rg-note');
         deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
@@ -14275,13 +14328,6 @@
 
     const ROSTER_COLORS = ['var(--navy)', 'var(--red)', '#3f6b4a', '#1d3557', '#8a5a2b', '#5b6f5b', '#b23a5a', '#1c7a8c', '#4a3f36', '#3b4f8a', '#8a7a2f', '#6b3fa0', '#2d2d33', '#a3441f', '#2f4f7a', '#7a3f2f', '#3f3f8a', '#6b6b74'];
 
-    function leagueInitials(name) {
-      const words = name.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
-      if (!words.length) return '??';
-      if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-
     function scoringLabel(league) {
       const s = league.scoring_settings || {};
       const rec = s.rec ? (s.rec === 1 ? 'PPR' : s.rec === 0.5 ? 'Half PPR' : `${s.rec} PPR`) : 'Standard';
@@ -14295,7 +14341,6 @@
       const wins = roster && roster.settings ? (roster.settings.wins || 0) : 0;
       const losses = roster && roster.settings ? (roster.settings.losses || 0) : 0;
       const color = ROSTER_COLORS[index % ROSTER_COLORS.length];
-      const initials = leagueInitials(league.name);
       const row = document.createElement('div');
       row.className = 'league-row';
       row.dataset.index = String(index);
@@ -14349,7 +14394,7 @@
 
       row.innerHTML =
         '<div class="league-id">' +
-          `<div class="league-logo" style="background:${color}">${initials}${sbLeagueLogoImgHtml(league)}</div>` +
+          `<div class="league-logo" style="background:${color}">${sbLeagueLogoImgHtml(league)}</div>` +
           `<div><div class="league-name">${league.name}</div><div class="league-meta">${scoringLabel(league)}</div></div>` +
         '</div>' +
         `<div class="matchup-col">${matchupHtml}</div>` +
@@ -14902,10 +14947,7 @@
       const ldLeagueLogoEl = document.getElementById('ldLeagueLogo');
       const ldLeagueNameEl = document.getElementById('ldLeagueName');
       const ldLeagueSettingsEl = document.getElementById('ldLeagueSettings');
-      if (ldLeagueLogoEl) {
-        const logoHtml = sbLeagueLogoImgHtml(entry.league);
-        ldLeagueLogoEl.innerHTML = logoHtml || sbFieldEsc(leagueInitials(entry.league.name));
-      }
+      if (ldLeagueLogoEl) ldLeagueLogoEl.innerHTML = sbLeagueLogoImgHtml(entry.league);
       if (ldLeagueNameEl) ldLeagueNameEl.textContent = entry.league.name;
       if (ldLeagueSettingsEl) ldLeagueSettingsEl.innerHTML = scoringLabel(entry.league);
 
@@ -15830,7 +15872,7 @@
       const logoEl = document.getElementById('ldrecLogo');
       const nameEl = document.getElementById('ldrecLeagueName');
       if (nameEl) nameEl.textContent = league.name;
-      if (logoEl) logoEl.innerHTML = sbLeagueLogoImgHtml(league) || leagueInitials(league.name);
+      if (logoEl) logoEl.innerHTML = sbLeagueLogoImgHtml(league);
 
       try {
         const { rosters, users } = await loadSeasonRostersUsers(league);
@@ -15930,7 +15972,7 @@
             const typeLabel = draft.type ? draft.type[0].toUpperCase() + draft.type.slice(1) : 'Draft';
             return '<div class="dr-draft-row" data-league="' + sbFieldEsc(lg.name) + '" data-draft-id="' + lg.draft_id + '">' +
               '<div class="dr-draft-status ' + status.cls + '">' + status.label + '</div>' +
-              '<div class="league-logo" style="background:var(--navy)">' + (sbLeagueLogoImgHtml(lg) || leagueInitials(lg.name)) + '</div>' +
+              '<div class="league-logo" style="background:var(--navy)">' + sbLeagueLogoImgHtml(lg) + '</div>' +
               '<div class="dr-draft-main">' +
                 '<div class="dr-draft-name">' + sbFieldEsc(lg.name) + '</div>' +
                 '<div class="dr-draft-meta">' + monthLabel + ' &middot; ' + typeLabel + ' Draft &middot; ' + teams + ' teams &middot; ' + rounds + ' rounds</div>' +
@@ -16667,7 +16709,12 @@
         const teamName = userMeta.team_name || null;
         const name = teamName || userName;
         const subName = teamName ? userName : null;
-        const avatar = userMeta.avatar || (user ? user.avatar : null);
+        // Kept separate (not collapsed into one "avatar" pick) so a custom
+        // team image that fails to load can fall back to the manager's
+        // regular Sleeper profile picture instead of jumping straight to
+        // initials -- see sbTeamAvatarHtml.
+        const customAvatar = userMeta.avatar || null;
+        const accountAvatar = user ? user.avatar : null;
         const wins = (r.settings && r.settings.wins) || 0;
         const losses = (r.settings && r.settings.losses) || 0;
         const ties = (r.settings && r.settings.ties) || 0;
@@ -16676,7 +16723,7 @@
         const posRanks = posRanksOf(r);
         const weeklyPts = weeklyPtsByRoster[r.roster_id] != null ? weeklyPtsByRoster[r.roster_id] : -Infinity;
         const type = sbStandingsRosterType(conRank, valRank, half);
-        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar, name, subName, wins, losses, ties, conRank, valRank, posRanks, weeklyPts, type };
+        return { rosterId: r.roster_id, ownerId: r.owner_id, customAvatar, accountAvatar, name, subName, wins, losses, ties, conRank, valRank, posRanks, weeklyPts, type };
       });
       if (sortBy === 'val') {
         rows.sort((a, b) => (a.valRank || 999) - (b.valRank || 999) || (b.weeklyPts - a.weeklyPts));
@@ -16691,7 +16738,12 @@
       }
 
       return rows.map((row, i) => {
-        const initial = (row.name || '?').charAt(0).toUpperCase();
+        // A real avatar that 404s or otherwise fails to load falls back to
+        // this via sbFieldAvatarHtml's onerror -- a real 2-letter "ID logo"
+        // (matching the league logos elsewhere) reads better than a single
+        // initial for a team that has no avatar at all or whose real one
+        // didn't load.
+        const initial = sbLeagueInitials(row.name || '?');
         const pillHtml = row.type
           ? `<div class="roster-pill${row.type.cls ? ' ' + row.type.cls : ''}">${row.type.label}</div>`
           : '<div class="roster-pill">&mdash;</div>';
@@ -16701,7 +16753,7 @@
         return `<div class="league-standings-row${isMe ? ' is-me' : ''}${isActive ? ' is-active' : ''}" data-roster-id="${row.rosterId}">` +
           '<div class="ld-header-left">' +
             `<div class="league-standings-rank">${i + 1}</div>` +
-            `<div class="ld-avatar" style="background:var(--navy)">${sbFieldAvatarHtml(row.avatar, initial)}</div>` +
+            `<div class="ld-avatar" style="background:var(--navy)">${sbTeamAvatarHtml(row.customAvatar, row.accountAvatar, initial)}</div>` +
             '<div>' +
               `<div class="ld-name">${sbFieldEsc(row.name)}</div>` +
               (row.subName ? `<div class="ld-subname">${sbFieldEsc(row.subName)}</div>` : '') +
@@ -16837,6 +16889,11 @@
       userChip.textContent = saved.username;
       loadSleeperData();
       startPolling();
+    } else {
+      // No connected account yet -- the chip's markup ships with a mockup
+      // placeholder name, which would otherwise read as an already-connected
+      // user on a fresh visit. Replace it with a real call to action.
+      userChip.textContent = 'Enter Sleeper ID';
     }
 
     // First-run mode chooser -- once picked, it's remembered (localStorage)
@@ -17191,7 +17248,6 @@
     if (leaguesGrid) {
       leaguesGrid.innerHTML = entries.map((entry, i) => {
         const color = SB_ROSTER_COLORS[i % SB_ROSTER_COLORS.length];
-        const initials = sbLeagueInitials(entry.league.name);
         const settings = entry.league.settings || {};
         const total = settings.waiver_budget || 100;
         const used = (entry.roster.settings && entry.roster.settings.waiver_budget_used) || 0;
@@ -17199,7 +17255,7 @@
         const pct = total ? Math.round((remaining / total) * 100) : 0;
         const typeLabel = WW_WAIVER_TYPE_LABEL[settings.waiver_type] || 'Waivers';
         return `<div class="ww-league-card">
-            <div class="ww-league-logo" style="background:${color}">${initials}${sbLeagueLogoImgHtml(entry.league)}</div>
+            <div class="ww-league-logo" style="background:${color}">${sbLeagueLogoImgHtml(entry.league)}</div>
             <div class="ww-league-main">
               <div class="ww-league-name">${entry.league.name}</div>
               <div class="ww-league-meta">${typeLabel}</div>
@@ -19438,7 +19494,6 @@
       const projMap = override ? override.projections : null;
 
       const color = SB_ROSTER_COLORS[i % SB_ROSTER_COLORS.length];
-      const initials = sbLeagueInitials(entry.league.name);
       const rosterSettings = entry.roster && entry.roster.settings;
       const recordText = rosterSettings ? `${rosterSettings.wins || 0}-${rosterSettings.losses || 0}` : null;
       const myPts = myMatchup ? (myMatchup.points || 0) : 0;
@@ -19486,7 +19541,7 @@
         : '';
 
       return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}" data-order="${i}" data-name="${entry.league.name}" data-winpct="${winPctForSort}" data-score="${hasData ? headlineMine : -1}">
-          <div class="sb-card-logo" style="background:${color}">${initials}${sbLeagueLogoImgHtml(entry.league)}</div>
+          <div class="sb-card-logo" style="background:${color}">${sbLeagueLogoImgHtml(entry.league)}</div>
           <div class="sb-card-main">
             <div class="sb-card-name">${entry.league.name}${recordText ? `<span class="sb-card-record">${recordText}</span>` : ''}</div>
             <div class="sb-card-meta">vs ${oppName}</div>
@@ -20512,7 +20567,12 @@
   // 1st, say), and this way it still resolves.
   const TC_PICK_ROUND_LABEL = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
   function tcPickAssetFromText(text) {
-    const m = text.trim().match(/^(\d{4})\s+(\d+)(?:st|nd|rd|th)$/i);
+    // Trade History's real pick labels (tradePickAssetHtml) append the
+    // original owner in parens for a pick that's already changed hands once
+    // before -- "2027 2nd (jtford23)" -- which the old anchored-to-end regex
+    // didn't tolerate, silently dropping every once-traded pick. Strip that
+    // suffix before matching.
+    const m = text.trim().replace(/\s*\([^)]*\)\s*$/, '').match(/^(\d{4})\s+(\d+)(?:st|nd|rd|th)$/i);
     if (!m) return null;
     const year = Number(m[1]), round = Number(m[2]);
     const roundLabel = TC_PICK_ROUND_LABEL[round] || `${round}th`;
