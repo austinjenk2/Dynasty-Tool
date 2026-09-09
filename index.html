@@ -2288,6 +2288,10 @@
   .rb-wl-chip.rb-wl-w { background: #22c55e; }
   .rb-wl-chip.rb-wl-l { background: #ef4444; }
   .rb-wl-chip.rb-wl-none { background: var(--border-soft); }
+  .rb-wl-chip.rb-wl-t { background: var(--faint); }
+  /* League median play: the head-to-head chip and the vs.-median chip
+     for the same week sit side by side in one cell. */
+  td.rb-wl-pair { display: flex; align-items: center; justify-content: center; gap: 3px; }
   .rb-po-col { border-left: 2px solid var(--border); }
   .rb-total-row td { font-weight: 800; border-top: 2px solid var(--border); border-bottom: none; color: var(--ink); }
   .rb-total-row .rb-league-name { color: var(--ink); }
@@ -15278,6 +15282,7 @@
     function rbWlChipHtml(res) {
       if (res === 'W') return '<span class="rb-wl-chip rb-wl-w">W</span>';
       if (res === 'L') return '<span class="rb-wl-chip rb-wl-l">L</span>';
+      if (res === 'T') return '<span class="rb-wl-chip rb-wl-t">T</span>';
       return '<span class="rb-wl-chip rb-wl-none">&mdash;</span>';
     }
 
@@ -15315,11 +15320,30 @@
       const playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
       const regularWeeks = Math.max(0, playoffStart - 1);
       const byWeek = await loadSeasonAllWeekMatchups(league.league_id);
+      // League median (Sleeper's "league_average_match") gives every team a
+      // real second result each week -- win or lose against that week's
+      // median score, on top of the normal head-to-head -- and that extra
+      // W/L is already baked into the league's real wins/losses above.
+      // hasMedian just controls whether the weekly cell also shows that
+      // second real result alongside the head-to-head one.
+      const hasMedian = !!(league.settings && league.settings.league_average_match);
       const weekResults = [];
+      const weekMedianResults = hasMedian ? [] : null;
       for (let week = 1; week <= regularWeeks; week++) {
-        const row = ldrecWeekRow(byWeek[week - 1], myRoster.roster_id);
+        const weekMatchups = byWeek[week - 1];
+        const row = ldrecWeekRow(weekMatchups, myRoster.roster_id);
         const notPlayed = !row || (row.myScore === 0 && row.oppScore === 0);
         weekResults.push(notPlayed ? null : (row.win ? 'W' : 'L'));
+        if (hasMedian) {
+          if (notPlayed || !weekMatchups || !weekMatchups.length) {
+            weekMedianResults.push(null);
+          } else {
+            const scores = weekMatchups.map(m => m.points || 0).sort((a, b) => a - b);
+            const mid = scores.length / 2;
+            const median = scores.length % 2 === 0 ? (scores[mid - 1] + scores[mid]) / 2 : scores[Math.floor(mid)];
+            weekMedianResults.push(row.myScore === median ? 'T' : (row.myScore > median ? 'W' : 'L'));
+          }
+        }
       }
 
       const bracketResults = await rbBracketRoundResults(league.league_id, myRoster.roster_id);
@@ -15329,7 +15353,7 @@
         wins, losses, ties, record,
         pfRank, finishRank, seasonDecided, madePlayoffs, ptsFromMin,
         totalPf: pfOf(myRoster),
-        regularWeeks, weekResults,
+        regularWeeks, weekResults, weekMedianResults, hasMedian,
         wc: bracketResults.WC || null, sf: bracketResults.SF || null, chip: bracketResults.CHIP || null,
         // No games played yet this season -- whatever's entered in
         // Settings is a target/plan, not a real result, so show $0
@@ -15349,7 +15373,18 @@
       let weekCellsHtml = '';
       for (let i = 0; i < maxRegWeeks; i++) {
         const res = i < row.weekResults.length ? row.weekResults[i] : undefined;
-        weekCellsHtml += `<td>${res == null ? '&mdash;' : rbWlChipHtml(res)}</td>`;
+        if (row.hasMedian) {
+          // League median play gives every team a real second result each
+          // week (vs. that week's median score, on top of the normal
+          // head-to-head) -- show both chips together in the one cell.
+          const medRes = row.weekMedianResults && i < row.weekMedianResults.length ? row.weekMedianResults[i] : undefined;
+          const cellContent = (res == null && medRes == null)
+            ? '&mdash;'
+            : `${res == null ? '' : rbWlChipHtml(res)}${medRes == null ? '' : rbWlChipHtml(medRes)}`;
+          weekCellsHtml += `<td class="rb-wl-pair">${cellContent}</td>`;
+        } else {
+          weekCellsHtml += `<td>${res == null ? '&mdash;' : rbWlChipHtml(res)}</td>`;
+        }
       }
 
       return `<tr data-league-id="${sbFieldEsc(row.league.league_id)}" data-league-name="${sbFieldEsc(row.league.name)}">
@@ -15396,7 +15431,14 @@
       let weekCellsHtml = '';
       for (let i = 0; i < maxRegWeeks; i++) {
         const results = rows.map(r => (i < r.weekResults.length ? r.weekResults[i] : null)).filter(Boolean);
-        weekCellsHtml += `<td>${results.length ? weeklyRecordOf(results) : '&mdash;'}</td>`;
+        // Include median results in the combined weekly count too, for any
+        // league that has them, so the footer isn't undercounting real
+        // results for median leagues.
+        const medianResults = rows
+          .flatMap(r => (r.hasMedian && r.weekMedianResults && i < r.weekMedianResults.length) ? [r.weekMedianResults[i]] : [])
+          .filter(Boolean);
+        const combined = [...results, ...medianResults];
+        weekCellsHtml += `<td>${combined.length ? weeklyRecordOf(combined) : '&mdash;'}</td>`;
       }
       const roundRecordOf = (key) => weeklyRecordOf(rows.map(r => r[key]).filter(Boolean));
 
