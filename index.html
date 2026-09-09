@@ -2041,7 +2041,7 @@
   .ld-meta { font-size: 11.5px; color: var(--faint); margin-top: 2px; }
   /* Real record, right next to the roster-type pill, so every manager's
      W-L shows in the standings list without having to click into them. */
-  .ld-record-tag { font-size: 11.5px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .ld-record-tag { font-size: 15px; font-weight: 800; color: var(--ink); white-space: nowrap; }
   .ld-tags { display: flex; flex-wrap: wrap; gap: 6px; }
   .ld-tag {
     font-size: 10.5px;
@@ -2171,37 +2171,27 @@
   @media (max-width: 980px) { .ld-stat-divider { width: auto; height: 1px; margin: 0; } }
   .ld-stat-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
   .ld-stat-value { font-family: 'Source Serif 4', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 2px; }
-  .ld-firsts { display: flex; gap: 16px; margin-top: 4px; }
+  .ld-firsts { display: flex; gap: 10px; margin-top: 2px; }
   .ld-firsts > div { display: flex; flex-direction: column; align-items: center; }
-  .ld-firsts-year { font-size: 9.5px; color: var(--faint); font-weight: 600; }
-  .ld-firsts-num { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; color: var(--ink); }
-  .ld-opp { font-size: 11px; font-weight: 600; color: var(--muted); margin-left: 4px; }
-  .ld-proj-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-  .ld-proj-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; text-align: right; }
+  .ld-firsts-year { font-size: 9px; color: var(--faint); font-weight: 600; }
+  .ld-firsts-num { font-family: 'Source Serif 4', serif; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .ld-opp { font-size: 11px; font-weight: 600; color: var(--muted); }
 
-  /* Per-roster stat row (VALUE first, then grouped Record/Seed and PF
-     Rank/vs #1, then the real Average Firsts/League and Trade Activity
-     cards) -- separate rounded cards instead of one continuous strip, so
-     it reads cleaner and each group is scannable on its own. */
-  .ld-stat-cards { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-  .ld-stat-card {
-    flex: 1 1 150px; min-width: 0;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 12px 14px;
-  }
-  .ld-stat-card-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-  .ld-stat-card-row + .ld-stat-card-row { margin-top: 8px; }
-  .ld-stat-value-sm { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; color: var(--ink); }
-  .ld-trade-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
-  .ld-trade-badge { font-size: 10px; font-weight: 800; letter-spacing: 0.4px; padding: 2px 8px; border-radius: 10px; }
+  /* Per-roster stat row -- one tight strip (reusing the existing .ld-stats
+     cell/divider styling) instead of separate rounded cards, so Value,
+     Seed, PF Rank, Max PF, vs #1, Average Firsts/League, Trade Activity and
+     the live/projected matchup all read on one line with no wasted space. */
+  .ld-trade-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; flex-wrap: wrap; }
+  .ld-trade-badge { font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
   .ld-trade-badge.ld-trade-active { background: var(--green-bg); color: var(--green); }
   .ld-trade-badge.ld-trade-medium { background: var(--border-soft); color: var(--muted); }
   .ld-trade-badge.ld-trade-inactive { background: var(--red-bg); color: var(--red); }
-  .ld-trade-rank { font-size: 11px; color: var(--faint); }
-  .ld-proj-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 12px 14px; margin-bottom: 20px;
-  }
+  .ld-trade-rank { font-size: 10.5px; color: var(--faint); white-space: nowrap; }
+  .ld-stat-proj .ld-proj-line { display: flex; align-items: baseline; gap: 6px; margin-top: 2px; flex-wrap: wrap; }
+  .ld-stat-proj .proj-score { font-size: 14px; }
+  .ld-stat-proj .favored-tag { font-size: 10px; padding: 1px 6px; }
+  .ld-stat-proj .matchup-live-score { font-size: 11px; }
+  .ld-stat-proj .ld-orig-score { font-size: 9.5px; margin-top: 0; }
 
   .ld-columns {
     display: grid;
@@ -2334,7 +2324,7 @@
   .rb-wl-chip.rb-wl-t { background: var(--faint); }
   /* League median play: the head-to-head chip and the vs.-median chip
      for the same week sit side by side in one cell. */
-  td.rb-wl-pair { display: flex; align-items: center; justify-content: center; gap: 3px; }
+  .rb-wl-pair-inner { display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
   .rb-po-col { border-left: 2px solid var(--border); }
   .rb-total-row td { font-weight: 800; border-top: 2px solid var(--border); border-bottom: none; color: var(--ink); }
   .rb-total-row .rb-league-name { color: var(--ink); }
@@ -3931,43 +3921,51 @@
       <div class="league-standings-list" id="ldStandingsList"></div>
 
       <div id="ldRosterExpand">
-      <div class="ld-stat-cards" id="ldStats">
-        <div class="ld-stat-card">
+      <div class="ld-stats" id="ldStats">
+        <div class="ld-stat-cell">
           <div class="ld-stat-label">VALUE</div>
           <div class="ld-stat-value" id="ldValue">&mdash;</div>
         </div>
-        <div class="ld-stat-card">
-          <div class="ld-stat-card-row"><span class="ld-stat-label">RECORD</span><span class="ld-stat-value-sm" id="ldRecord">9-5</span></div>
-          <div class="ld-stat-card-row"><span class="ld-stat-label">SEED</span><span class="ld-stat-value-sm" id="ldSeed">2nd</span></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell">
+          <div class="ld-stat-label">SEED</div>
+          <div class="ld-stat-value" id="ldSeed">2nd</div>
         </div>
-        <div class="ld-stat-card">
-          <div class="ld-stat-card-row"><span class="ld-stat-label">PF RANK</span><span class="ld-stat-value-sm" id="ldPfRank">4th</span></div>
-          <div class="ld-stat-card-row"><span class="ld-stat-label">VS #1</span><span class="ld-stat-value-sm" id="ldVsTop">14.6</span></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell">
+          <div class="ld-stat-label">PF RANK</div>
+          <div class="ld-stat-value" id="ldPfRank">4th</div>
         </div>
-        <div class="ld-stat-card">
-          <div class="ld-stat-label">AVERAGE FIRSTS/LEAGUE</div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell">
+          <div class="ld-stat-label">MAX PF</div>
+          <div class="ld-stat-value" id="ldMaxPf">&mdash;</div>
+        </div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell">
+          <div class="ld-stat-label">VS #1</div>
+          <div class="ld-stat-value" id="ldVsTop">14.6</div>
+        </div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell">
+          <div class="ld-stat-label">AVG FIRSTS/LEAGUE</div>
           <div id="ldFirstsRow">&mdash;</div>
         </div>
-        <div class="ld-stat-card">
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell">
           <div class="ld-stat-label">TRADE ACTIVITY</div>
           <div class="ld-trade-row" id="ldTradeRow">&mdash;</div>
         </div>
-      </div>
-      <div class="ld-proj-card" id="ldProjCard">
-        <div class="ld-proj-top">
-          <div>
-            <div class="ld-stat-label">WEEK <span id="ldProjWeek">1</span> PROJECTED</div>
-            <div class="matchup-scores" style="margin-top:4px">
-              <span class="proj-score mine" id="ldProjMine">187.8</span>
-              <span class="matchup-vs">vs</span>
-              <span class="proj-score theirs" id="ldProjTheirs">116.0</span>
-            </div>
-            <div class="ld-opp" id="ldOpp" style="margin-left:0">jtford23</div>
-          </div>
-          <div class="ld-proj-side">
-            <div class="favored-tag" id="ldFavoredTag">Favored by 71.8</div>
-            <div class="matchup-live-score" id="ldLiveScore"></div>
-            <div class="ld-orig-score" id="ldOrigScore"></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell ld-stat-cell-wide ld-stat-proj" id="ldProjCard">
+          <div class="ld-stat-label">WK <span id="ldProjWeek">1</span> PROJ &middot; vs <span class="ld-opp" id="ldOpp">jtford23</span></div>
+          <div class="ld-proj-line">
+            <span class="proj-score mine" id="ldProjMine">187.8</span>
+            <span class="matchup-vs">vs</span>
+            <span class="proj-score theirs" id="ldProjTheirs">116.0</span>
+            <span class="favored-tag" id="ldFavoredTag">Favored by 71.8</span>
+            <span class="matchup-live-score" id="ldLiveScore"></span>
+            <span class="ld-orig-score" id="ldOrigScore"></span>
           </div>
         </div>
       </div>
@@ -13539,8 +13537,14 @@
         noteEl.innerHTML = noteParts.join(' &middot; ');
         const proj = Number(r.el.dataset.proj) || 0;
         const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, proj };
-        if (delta > 0) buckets.for.push(bucket);
-        else if (delta < 0) buckets.against.push(bucket);
+        // In $ mode, which bucket a player belongs in is decided by real
+        // dollars at stake, not league count -- a player can be a league-count
+        // "against" but still help you overall once you weigh in that your
+        // for-leagues carry more money than your against-leagues (and vice
+        // versa), so re-bucket by dollarNet's sign instead of delta's.
+        const bucketKey = rgSortCriterion === 'leagues' ? dollarNet : delta;
+        if (bucketKey > 0) buckets.for.push(bucket);
+        else if (bucketKey < 0) buckets.against.push(bucket);
         else buckets.even.push(bucket);
       });
       // A tied delta (or tied $ net) is broken by whoever's currently
@@ -14777,30 +14781,61 @@
       return sorted.length;
     }
 
-    // Non-blocking: fetches this league's real transaction feed (all weeks
-    // played so far), counts completed trades per roster, and renders the
-    // Trade Activity card. Called without awaiting so it never delays the
-    // roster-columns render.
+    // Real per-league completed-trade counts by roster, cached per league_id
+    // across calls (re-expanding teams/leagues shouldn't re-fetch the same
+    // league's transaction feed every time).
+    const __ldTradeTxCache = {};
+    async function ldTradeCountsFor(e) {
+      const leagueId = e.league.league_id;
+      if (__ldTradeTxCache[leagueId]) return __ldTradeTxCache[leagueId];
+      const weekCount = e.week || 1;
+      const weeks = Array.from({ length: Math.max(1, weekCount) }, (_, i) => i + 1);
+      const byWeek = await Promise.all(weeks.map(w => sleeperFetch(`/league/${leagueId}/transactions/${w}`).catch(() => [])));
+      const counts = {};
+      byWeek.flat().forEach(tx => {
+        if (!tx || tx.type !== 'trade' || tx.status !== 'complete') return;
+        (tx.roster_ids || []).forEach(rid => { counts[rid] = (counts[rid] || 0) + 1; });
+      });
+      const result = { counts, weekCount };
+      __ldTradeTxCache[leagueId] = result;
+      return result;
+    }
+
+    // Non-blocking: for every manager in this league, averages their real
+    // trades-per-month rate across every league of theirs this app has real
+    // data for (not just this one -- a manager who trades a lot elsewhere
+    // but is quiet here should still read as Active), then ranks this
+    // league's managers by that average into Active/Medium/Inactive thirds.
+    // Called without awaiting so it never delays the roster-columns render.
     async function ldLoadTradeActivity(entry, activeRoster, ldTradeRowEl) {
       try {
-        const currentWeek = entry.week || 1;
-        const weeks = Array.from({ length: Math.max(1, currentWeek) }, (_, i) => i + 1);
-        const byWeek = await Promise.all(weeks.map(w => sleeperFetch(`/league/${entry.league.league_id}/transactions/${w}`).catch(() => [])));
-        const tradeCounts = {};
-        (entry.allRosters || []).forEach(r => { tradeCounts[r.roster_id] = 0; });
-        byWeek.flat().forEach(tx => {
-          if (!tx || tx.type !== 'trade' || tx.status !== 'complete') return;
-          (tx.roster_ids || []).forEach(rid => { tradeCounts[rid] = (tradeCounts[rid] || 0) + 1; });
-        });
+        const allEntries = Object.values(window.sleeperLeagueData || {}).filter(e => e && e.league && (e.allRosters || []).length);
+        const monthsElapsed = (weekCount) => Math.max(1, weekCount / 4.345);
+
+        const avgRateByRoster = {};
+        for (const r of (entry.allRosters || [])) {
+          const ownerId = r.owner_id;
+          const ownerEntries = allEntries.filter(e => (e.allRosters || []).some(rr => rr.owner_id === ownerId));
+          let total = 0, n = 0;
+          for (const e of ownerEntries) {
+            const { counts, weekCount } = await ldTradeCountsFor(e);
+            const myRoster = e.allRosters.find(rr => rr.owner_id === ownerId);
+            if (!myRoster) continue;
+            total += (counts[myRoster.roster_id] || 0) / monthsElapsed(weekCount);
+            n++;
+          }
+          avgRateByRoster[r.roster_id] = n ? total / n : 0;
+        }
+
+        if (!document.body.contains(ldTradeRowEl)) return;
         const totalRosters = (entry.allRosters || []).length;
-        const myCount = tradeCounts[activeRoster.roster_id] || 0;
-        const rank = ldRankOf(entry.allRosters || [], r => tradeCounts[r.roster_id] || 0, activeRoster.roster_id);
+        const myRate = avgRateByRoster[activeRoster.roster_id] || 0;
+        const rank = ldRankOf(entry.allRosters || [], r => avgRateByRoster[r.roster_id] || 0, activeRoster.roster_id);
         const third = Math.ceil(totalRosters / 3);
         const level = rank <= third ? { label: 'ACTIVE', cls: 'ld-trade-active' }
           : rank > totalRosters - third ? { label: 'INACTIVE', cls: 'ld-trade-inactive' }
           : { label: 'MEDIUM', cls: 'ld-trade-medium' };
-        if (!document.body.contains(ldTradeRowEl)) return;
-        ldTradeRowEl.innerHTML = `<span class="ld-trade-badge ${level.cls}">${level.label}</span><span class="ld-trade-rank">${ldOrdinal(rank)} of ${totalRosters} &middot; ${myCount} trade${myCount === 1 ? '' : 's'}</span>`;
+        ldTradeRowEl.innerHTML = `<span class="ld-trade-badge ${level.cls}">${level.label}</span><span class="ld-trade-rank">${ldOrdinal(rank)} of ${totalRosters} &middot; ${myRate.toFixed(1)}/mo avg</span>`;
       } catch (err) {
         if (document.body.contains(ldTradeRowEl)) ldTradeRowEl.textContent = '—';
       }
@@ -15487,7 +15522,7 @@
           const cellContent = (res == null && medRes == null)
             ? '&mdash;'
             : `${res == null ? '' : rbWlChipHtml(res)}${medRes == null ? '' : rbWlChipHtml(medRes)}`;
-          weekCellsHtml += `<td class="rb-wl-pair">${cellContent}</td>`;
+          weekCellsHtml += `<td><span class="rb-wl-pair-inner">${cellContent}</span></td>`;
         } else {
           weekCellsHtml += `<td>${res == null ? '&mdash;' : rbWlChipHtml(res)}</td>`;
         }
@@ -16623,15 +16658,16 @@
       const rows = allRosters.map(r => {
         const user = (entry.users || []).find(u => u.user_id === r.owner_id);
         const userName = user ? (user.display_name || user.username || 'Unknown') : 'Unknown';
-        // A manager's real Sleeper team name (roster.metadata.team_name) and
-        // team logo (roster.metadata.avatar) take priority over their
-        // account name/avatar when set -- falls back to the Sleeper
-        // username/avatar for anyone who hasn't customized a team name.
-        const meta = r.metadata || {};
-        const teamName = meta.team_name || null;
+        // A manager's real per-league team name/logo customization lives on
+        // the league-user object's metadata (user.metadata.team_name/avatar
+        // from /league/{id}/users), not the roster's own metadata -- Sleeper
+        // does not put it there. Falls back to the Sleeper username/avatar
+        // for anyone who hasn't customized a team name.
+        const userMeta = (user && user.metadata) || {};
+        const teamName = userMeta.team_name || null;
         const name = teamName || userName;
         const subName = teamName ? userName : null;
-        const avatar = meta.avatar || (user ? user.avatar : null);
+        const avatar = userMeta.avatar || (user ? user.avatar : null);
         const wins = (r.settings && r.settings.wins) || 0;
         const losses = (r.settings && r.settings.losses) || 0;
         const ties = (r.settings && r.settings.ties) || 0;
