@@ -449,8 +449,11 @@
   .dash-exp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .dash-exp-head h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.6px; color: var(--faint); margin: 0; }
   .dash-exp-head .sort-select { height: 28px; padding: 0 10px; font-size: 11.5px; }
-  .dash-exp-note { font-size: 10.5px; color: var(--faint); font-style: italic; margin: -6px 0 10px; }
-  .dash-exp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  /* One row per position (QB/RB/WR/TE, top to bottom), 4 cards across
+     each -- default row-by-row flow, since renderHighestExposures already
+     builds the cards in QB-then-RB-then-WR-then-TE order and each group
+     is exactly 4 wide. */
+  .dash-exp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   @media (max-width: 560px) { .dash-exp-grid { grid-template-columns: repeat(2, 1fr); } }
 
   .dash-exp-card {
@@ -3309,18 +3312,17 @@
           <div class="dash-exp-head">
             <h3>HIGHEST EXPOSURES</h3>
             <div class="sort-dropdown" id="dashExpFilterDropdown">
-              <div class="sort-select" id="dashExpFilterSelect"><span id="dashExpFilterLabel">All Players</span> <span>&#9662;</span></div>
+              <div class="sort-select" id="dashExpFilterSelect"><span id="dashExpFilterLabel">Top 150</span> <span>&#9662;</span></div>
               <div class="sort-menu" id="dashExpFilterMenu" hidden style="left:auto;right:0">
-                <div class="sort-option active" data-filter="all">All Players</div>
+                <div class="sort-option" data-filter="all">All Players</div>
                 <div class="sort-option" data-filter="top50">Top 50</div>
                 <div class="sort-option" data-filter="top100">Top 100</div>
-                <div class="sort-option" data-filter="top150">Top 150</div>
+                <div class="sort-option active" data-filter="top150">Top 150</div>
                 <div class="sort-option" data-filter="top200">Top 200</div>
                 <div class="sort-option" data-filter="rookies">Rookies Only</div>
               </div>
             </div>
           </div>
-          <p class="dash-exp-note" id="dashExpFilterNote" hidden>Player value rankings aren't available yet, so this is showing every player -- Top N will filter to real rankings once that data exists.</p>
           <div class="dash-exp-grid" id="dashHighestExposuresGrid"></div>
         </div>
       </div>
@@ -16893,7 +16895,7 @@
       // No connected account yet -- the chip's markup ships with a mockup
       // placeholder name, which would otherwise read as an already-connected
       // user on a fresh visit. Replace it with a real call to action.
-      userChip.textContent = 'Enter Sleeper ID';
+      userChip.textContent = 'Enter ID here';
     }
 
     // First-run mode chooser -- once picked, it's remembered (localStorage)
@@ -16908,6 +16910,16 @@
           if (window.refreshSettingsModeOptions) window.refreshSettingsModeOptions();
           if (window.updateModeToggleBtn) window.updateModeToggleBtn();
           if (window.sleeperReloadData) window.sleeperReloadData();
+          // Picking a mode with no Sleeper account connected yet would
+          // otherwise just drop you on an empty Dashboard with no obvious
+          // next step -- open the connect prompt right away instead of
+          // relying on someone noticing the small account chip. Deferred a
+          // tick so it opens *after* this same click finishes bubbling to
+          // document's own listener, which closes the panel on any outside
+          // click -- opening it inline here would have it close itself.
+          if (!getSavedUser()) {
+            setTimeout(() => { connectPanel.hidden = false; usernameInput.focus(); }, 0);
+          }
         });
       });
     }
@@ -18028,7 +18040,7 @@
   // Top exposure players, dynasty mode only -- same computation as the
   // Exposures page (real roster counts across your connected leagues),
   // just the top handful shown as a compact preview on the Dashboard.
-  let dashExpFilter = 'all';
+  let dashExpFilter = 'top150';
   const dashExpFilterSelect = document.getElementById('dashExpFilterSelect');
   const dashExpFilterMenu = document.getElementById('dashExpFilterMenu');
   const dashExpFilterLabel = document.getElementById('dashExpFilterLabel');
@@ -18091,28 +18103,28 @@
 
     if (!rows.length) { section.hidden = true; return; }
 
-    // "Top 50/100/150/200" is meant to scope this to real player-value
-    // rankings once that data exists -- there's no real valuation source
-    // yet, so those options currently show everyone (with a note saying
-    // so) rather than silently truncating to a fabricated ranking.
-    // "Rookies Only" already has a real field to filter on (years_exp).
+    // "Top 50/100/150/200" scopes this to Austin's real dynasty rankings
+    // (PP_PLAYER_VALUES, the same source Trade Calc/the player modal's
+    // Austin's Ranks tab use) -- a player outside that overall rank (or
+    // not in the list at all) is filtered out. "Rookies Only" uses the
+    // real years_exp field instead.
     const filter = dashExpFilter;
-    const noteEl = document.getElementById('dashExpFilterNote');
     if (filter === 'rookies') {
       rows = rows.filter(r => r.isRookie);
-      if (noteEl) noteEl.hidden = true;
     } else if (filter !== 'all') {
-      if (noteEl) noteEl.hidden = false;
-    } else if (noteEl) {
-      noteEl.hidden = true;
+      const maxRank = { top50: 50, top100: 100, top150: 150, top200: 200 }[filter];
+      rows = rows.filter(r => {
+        const rank = ppRankForPlayerId(r.id, dict);
+        return rank != null && rank <= maxRank;
+      });
     }
 
-    // Top 3 per position (QB/RB/WR/TE, in that order) instead of one
+    // Top 4 per position (QB/RB/WR/TE, in that order) instead of one
     // overall top-N list, so every position group gets its own spotlight.
     const byPos = { QB: [], RB: [], WR: [], TE: [] };
     rows.forEach(r => byPos[r.pos].push(r));
     const top = ['QB', 'RB', 'WR', 'TE'].flatMap(pos =>
-      byPos[pos].sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name)).slice(0, 3));
+      byPos[pos].sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name)).slice(0, 4));
 
     section.hidden = false;
     if (!top.length) {
