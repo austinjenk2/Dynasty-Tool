@@ -2635,10 +2635,6 @@
   }
   .pm-league-row:hover { border-color: var(--faint); }
   .pm-league-row span:last-child { color: var(--faint); font-weight: 400; }
-  .rg-league-dollar { font-size: 12.5px; font-weight: 800; }
-  .rg-league-dollar.rg-delta-pos { color: var(--green); }
-  .rg-league-dollar.rg-delta-neg { color: var(--red); }
-  .rg-league-dollar.rg-delta-even { color: var(--gold); }
   .pm-show-all {
     text-align: center; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-soft);
     color: var(--green); font-weight: 700; font-size: 13px; cursor: pointer;
@@ -11155,15 +11151,28 @@
       // .rg-team holds a team logo image now, not the abbreviation text, so
       // this has to read the row's own data-team instead of scraping text.
       if (!row.dataset.team || !teamCodes.includes(row.dataset.team)) return;
-      const deltaEl = row.querySelector('.rg-delta');
       const nameEl = row.querySelector('.rg-name');
-      if (!deltaEl || !nameEl) return;
-      const deltaNum = parseInt(deltaEl.textContent.replace(/−/g, '-'), 10);
+      if (!nameEl) return;
+      // Raw numbers straight off the row's own dataset (set by
+      // recomputeRootingGuide alongside its formatted "+$325"/"+3" display
+      // text) rather than parsing that formatted text back out -- and pick
+      // whichever one matches the Rooting Guide's current $ / league-count
+      // toggle, so this list agrees with it instead of always showing the
+      // league-count number.
+      const isMoney = !!window.__rgMoneyMode;
+      const deltaNum = Number(row.dataset[isMoney ? 'dollar' : 'delta']);
       if (!deltaNum) return;
-      matches.push({ id: row.dataset.playerId, name: nameEl.textContent.trim(), delta: deltaNum });
+      matches.push({ id: row.dataset.playerId, name: nameEl.textContent.trim(), delta: deltaNum, isMoney });
     });
     matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     return matches;
+  }
+  // Formats one match's delta for display -- "+$325"/"-$50" in $ mode,
+  // "+4"/"-2" in league-count mode -- shared by every place that renders
+  // getRootingDeltasForTeams() results as a chip.
+  function rgChipDeltaText(m) {
+    if (m.isMoney) return m.delta > 0 ? `+$${m.delta}` : `-$${Math.abs(m.delta)}`;
+    return m.delta > 0 ? `+${m.delta}` : `${m.delta}`;
   }
 
   // "1-on-1 Slates" -- every real game this week grouped into the same
@@ -11253,8 +11262,7 @@
       const matches = getRootingDeltasForTeams(teamCodes);
       const chipHtml = m => {
         const cls = m.delta > 0 ? 'rg-chip-pos' : 'rg-chip-neg';
-        const sign = m.delta > 0 ? '+' : '';
-        return `<span class="rg-chip" data-player-id="${m.id}">${sbFieldEsc(m.name)} <span class="${cls}">${sign}${m.delta}</span></span>`;
+        return `<span class="rg-chip" data-player-id="${m.id}">${sbFieldEsc(m.name)} <span class="${cls}">${rgChipDeltaText(m)}</span></span>`;
       };
       const shown = matches.slice(0, RG_SLATE_CHIP_LIMIT).map(chipHtml).join('');
       const extra = matches.slice(RG_SLATE_CHIP_LIMIT);
@@ -11295,8 +11303,7 @@
       } else {
         const chips = matches.map(m => {
           const cls = m.delta > 0 ? 'schedule-expand-pos' : 'schedule-expand-neg';
-          const sign = m.delta > 0 ? '+' : '';
-          return `<span class="schedule-expand-chip" data-player-id="${m.id}">${m.name} <b class="${cls}">${sign}${m.delta}</b></span>`;
+          return `<span class="schedule-expand-chip" data-player-id="${m.id}">${m.name} <b class="${cls}">${rgChipDeltaText(m)}</b></span>`;
         }).join('');
         expand.innerHTML =
           `<p class="schedule-expand-count">${matches.length} player${matches.length > 1 ? 's' : ''} affect your exposure in this game</p>` +
@@ -12803,8 +12810,8 @@
   }
   function sbFieldPanelHtml(startPct, teams) {
     const clamped = Math.max(2, Math.min(98, startPct));
-    const myInitial = (teams.myName || 'Y').charAt(0).toUpperCase();
-    const oppInitial = (teams.oppName || 'O').charAt(0).toUpperCase();
+    const myInitial = sbLeagueInitials(teams.myName || 'Y');
+    const oppInitial = sbLeagueInitials(teams.oppName || 'O');
     return (
       '<div class="field-panel">' +
         '<div class="field-panel-head">' +
@@ -13325,31 +13332,16 @@
     });
   }
 
-  // Real $ at stake in one league, from the same Net-per-league store the
-  // rooting guide's $ toggle and the Record Book both read from -- so the
-  // per-league breakdown here always agrees with the aggregate number.
-  function rgLeagueDollarAmount(name) {
-    const dollarMap = window.rgLeagueDollarMap ? window.rgLeagueDollarMap() : null;
-    return dollarMap ? (dollarMap[name] || 0) : null;
-  }
-  function rgDollarAmountHtml(amt) {
-    if (amt == null) return '';
-    const cls = amt > 0 ? 'rg-delta-pos' : (amt < 0 ? 'rg-delta-neg' : 'rg-delta-even');
-    const text = amt > 0 ? '+$' + amt : (amt < 0 ? '-$' + Math.abs(amt) : '$0');
-    return `<span class="rg-league-dollar ${cls}">${text}</span>`;
-  }
-
   function rgLeagueRowsHtml(leagues) {
     if (!leagues.length) return '<div class="pm-league-row" style="cursor:default"><span style="color:var(--faint);font-weight:500">None this week</span></div>';
     return leagues.map(name =>
-      `<div class="pm-league-row" data-league="${name.replace(/"/g, '&quot;')}"><span>${name}</span>${rgDollarAmountHtml(rgLeagueDollarAmount(name))}<span>&rsaquo;</span></div>`
+      `<div class="pm-league-row" data-league="${name.replace(/"/g, '&quot;')}"><span>${name}</span><span>&rsaquo;</span></div>`
     ).join('');
   }
 
   // Inline expand under the clicked row (not a full-screen takeover) so you
   // can still scroll and open other players' league lists on the same page
-  // without having to back out first. Each league now shows its own real $
-  // at stake (game by game), not just the player's one aggregate delta.
+  // without having to back out first.
   function rgExpandHtml(row) {
     const forLeagues = (row.dataset.for || '').split(' &middot; ').filter(Boolean);
     const againstLeagues = (row.dataset.against || '').split(' &middot; ').filter(Boolean);
@@ -13442,6 +13434,11 @@
           rgSortToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           recomputeRootingGuide();
+          // 1-on-1 Slates reads its chip numbers off .rg-row's dataset,
+          // which recomputeRootingGuide() just updated -- but the slate
+          // cards themselves were built once already and won't reflect
+          // that on their own, so rebuild them too.
+          if (window.renderRootingSlates) window.renderRootingSlates();
         });
       });
     }
@@ -13527,12 +13524,12 @@
       });
       return map;
     }
-    // Exposed so the rooting-guide row expand (defined earlier in the file,
-    // outside this IIFE) can show each league's real $ next to its name.
-    window.rgLeagueDollarMap = rgLeagueDollarMap;
-
     function recomputeRootingGuide() {
       const dollarMap = rgLeagueDollarMap();
+      // Exposed so other places that read a player's rooting impact off
+      // .rg-row (Weekly Schedule's exposure preview, the Rooting Guide's
+      // own 1-on-1 Slates) know whether to show dollars or league count.
+      window.__rgMoneyMode = rgSortCriterion === 'leagues';
       const buckets = { for: [], against: [], even: [] };
       rgRows.forEach(r => {
         const f = r.forAll.filter(l => !rgBlacklist.has(l));
@@ -13549,6 +13546,13 @@
         // the win-count delta above uses, just weighted by real dollars
         // instead of by 1 per league.
         const dollarNet = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
+        // Raw numbers (not the formatted display text below) so anything
+        // reading a player's rooting impact off this row -- the Weekly
+        // Schedule's exposure preview, the Rooting Guide's own 1-on-1
+        // Slates -- can pick the right one for the current mode without
+        // parsing "+$325" back out of a string.
+        r.el.dataset.delta = String(delta);
+        r.el.dataset.dollar = String(dollarNet);
         const deltaEl = r.el.querySelector('.rg-delta');
         const noteEl = r.el.querySelector('.rg-note');
         deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
@@ -16712,7 +16716,12 @@
       }
 
       return rows.map((row, i) => {
-        const initial = (row.name || '?').charAt(0).toUpperCase();
+        // A real avatar that 404s or otherwise fails to load falls back to
+        // this via sbFieldAvatarHtml's onerror -- a real 2-letter "ID logo"
+        // (matching the league logos elsewhere) reads better than a single
+        // initial for a team that has no avatar at all or whose real one
+        // didn't load.
+        const initial = sbLeagueInitials(row.name || '?');
         const pillHtml = row.type
           ? `<div class="roster-pill${row.type.cls ? ' ' + row.type.cls : ''}">${row.type.label}</div>`
           : '<div class="roster-pill">&mdash;</div>';
