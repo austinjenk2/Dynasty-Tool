@@ -2037,7 +2037,11 @@
   }
   .ld-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .ld-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .ld-subname { font-size: 10.5px; font-weight: 600; color: var(--faint); margin-top: 1px; }
   .ld-meta { font-size: 11.5px; color: var(--faint); margin-top: 2px; }
+  /* Real record, right next to the roster-type pill, so every manager's
+     W-L shows in the standings list without having to click into them. */
+  .ld-record-tag { font-size: 11.5px; font-weight: 700; color: var(--ink); white-space: nowrap; }
   .ld-tags { display: flex; flex-wrap: wrap; gap: 6px; }
   .ld-tag {
     font-size: 10.5px;
@@ -2092,11 +2096,26 @@
     font-size: 12.5px; font-weight: 600; color: var(--ink); background: var(--surface);
     border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
   }
+  .ld-player-search-wrap { position: relative; flex: 1 1 220px; }
   .ld-player-search {
-    flex: 1 1 220px; font-size: 12.5px; background: var(--surface); color: var(--ink);
+    width: 100%; font-size: 12.5px; background: var(--surface); color: var(--ink);
     border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px;
   }
   .ld-player-search:disabled { color: var(--faint); cursor: not-allowed; }
+  .ld-player-search-results {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-height: 320px; overflow-y: auto;
+  }
+  .ld-player-search-row {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer;
+    font-size: 12.5px; color: var(--ink);
+  }
+  .ld-player-search-row:hover { background: var(--bg); }
+  .ld-player-search-row img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+  .ld-player-search-team { color: var(--faint); font-size: 11px; }
+  .ld-player-search-owner { margin-left: auto; color: var(--faint); font-size: 11px; white-space: nowrap; }
+  .ld-player-search-empty { padding: 10px 12px; font-size: 12px; color: var(--faint); }
 
   /* League Standings list -- lives inside the League Detail page itself
      (its own view, not scrollable alongside other leagues) and lists
@@ -2159,6 +2178,30 @@
   .ld-opp { font-size: 11px; font-weight: 600; color: var(--muted); margin-left: 4px; }
   .ld-proj-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
   .ld-proj-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; text-align: right; }
+
+  /* Per-roster stat row (VALUE first, then grouped Record/Seed and PF
+     Rank/vs #1, then the real Average Firsts/League and Trade Activity
+     cards) -- separate rounded cards instead of one continuous strip, so
+     it reads cleaner and each group is scannable on its own. */
+  .ld-stat-cards { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .ld-stat-card {
+    flex: 1 1 150px; min-width: 0;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .ld-stat-card-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .ld-stat-card-row + .ld-stat-card-row { margin-top: 8px; }
+  .ld-stat-value-sm { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; color: var(--ink); }
+  .ld-trade-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .ld-trade-badge { font-size: 10px; font-weight: 800; letter-spacing: 0.4px; padding: 2px 8px; border-radius: 10px; }
+  .ld-trade-badge.ld-trade-active { background: var(--green-bg); color: var(--green); }
+  .ld-trade-badge.ld-trade-medium { background: var(--border-soft); color: var(--muted); }
+  .ld-trade-badge.ld-trade-inactive { background: var(--red-bg); color: var(--red); }
+  .ld-trade-rank { font-size: 11px; color: var(--faint); }
+  .ld-proj-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 20px;
+  }
 
   .ld-columns {
     display: grid;
@@ -3872,65 +3915,59 @@
           <select id="ldStandingsRankBy">
             <option value="val" selected>Roster Value</option>
             <option value="con">Contending</option>
+            <option value="record">Record</option>
             <option value="qb">QB Value</option>
             <option value="rb">RB Value</option>
             <option value="wr">WR Value</option>
             <option value="te">TE Value</option>
           </select>
         </div>
-        <input class="ld-player-search" type="text" placeholder="Search any player..." disabled title="Coming soon">
+        <div class="ld-player-search-wrap">
+          <input class="ld-player-search" type="text" placeholder="Search any player...">
+          <div class="ld-player-search-results" id="ldPlayerSearchResults" hidden></div>
+        </div>
       </div>
 
       <div class="league-standings-list" id="ldStandingsList"></div>
 
       <div id="ldRosterExpand">
-      <div class="ld-stats" id="ldStats">
-        <div class="ld-stat-cell">
-          <div class="ld-stat-label">RECORD</div>
-          <div class="ld-stat-value" id="ldRecord">9-5</div>
-        </div>
-        <div class="ld-stat-divider"></div>
-        <div class="ld-stat-cell">
+      <div class="ld-stat-cards" id="ldStats">
+        <div class="ld-stat-card">
           <div class="ld-stat-label">VALUE</div>
           <div class="ld-stat-value" id="ldValue">&mdash;</div>
         </div>
-        <div class="ld-stat-divider"></div>
-        <div class="ld-stat-cell">
-          <div class="ld-stat-label">SEED</div>
-          <div class="ld-stat-value" id="ldSeed">2nd</div>
+        <div class="ld-stat-card">
+          <div class="ld-stat-card-row"><span class="ld-stat-label">RECORD</span><span class="ld-stat-value-sm" id="ldRecord">9-5</span></div>
+          <div class="ld-stat-card-row"><span class="ld-stat-label">SEED</span><span class="ld-stat-value-sm" id="ldSeed">2nd</span></div>
         </div>
-        <div class="ld-stat-divider"></div>
-        <div class="ld-stat-cell">
-          <div class="ld-stat-label">PF RANK</div>
-          <div class="ld-stat-value" id="ldPfRank">4th</div>
+        <div class="ld-stat-card">
+          <div class="ld-stat-card-row"><span class="ld-stat-label">PF RANK</span><span class="ld-stat-value-sm" id="ldPfRank">4th</span></div>
+          <div class="ld-stat-card-row"><span class="ld-stat-label">VS #1</span><span class="ld-stat-value-sm" id="ldVsTop">14.6</span></div>
         </div>
-        <div class="ld-stat-divider"></div>
-        <div class="ld-stat-cell">
-          <div class="ld-stat-label">MAX PF</div>
-          <div class="ld-stat-value" id="ldMaxPf">&mdash;</div>
+        <div class="ld-stat-card">
+          <div class="ld-stat-label">AVERAGE FIRSTS/LEAGUE</div>
+          <div id="ldFirstsRow">&mdash;</div>
         </div>
-        <div class="ld-stat-divider"></div>
-        <div class="ld-stat-cell">
-          <div class="ld-stat-label">VS #1</div>
-          <div class="ld-stat-value" id="ldVsTop">14.6</div>
+        <div class="ld-stat-card">
+          <div class="ld-stat-label">TRADE ACTIVITY</div>
+          <div class="ld-trade-row" id="ldTradeRow">&mdash;</div>
         </div>
-        <div class="ld-stat-divider"></div>
-        <div class="ld-stat-cell ld-stat-cell-wide">
-          <div class="ld-proj-top">
-            <div>
-              <div class="ld-stat-label">WEEK <span id="ldProjWeek">1</span> PROJECTED</div>
-              <div class="matchup-scores" style="margin-top:4px">
-                <span class="proj-score mine" id="ldProjMine">187.8</span>
-                <span class="matchup-vs">vs</span>
-                <span class="proj-score theirs" id="ldProjTheirs">116.0</span>
-              </div>
-              <div class="ld-opp" id="ldOpp" style="margin-left:0">jtford23</div>
+      </div>
+      <div class="ld-proj-card" id="ldProjCard">
+        <div class="ld-proj-top">
+          <div>
+            <div class="ld-stat-label">WEEK <span id="ldProjWeek">1</span> PROJECTED</div>
+            <div class="matchup-scores" style="margin-top:4px">
+              <span class="proj-score mine" id="ldProjMine">187.8</span>
+              <span class="matchup-vs">vs</span>
+              <span class="proj-score theirs" id="ldProjTheirs">116.0</span>
             </div>
-            <div class="ld-proj-side">
-              <div class="favored-tag" id="ldFavoredTag">Favored by 71.8</div>
-              <div class="matchup-live-score" id="ldLiveScore"></div>
-              <div class="ld-orig-score" id="ldOrigScore"></div>
-            </div>
+            <div class="ld-opp" id="ldOpp" style="margin-left:0">jtford23</div>
+          </div>
+          <div class="ld-proj-side">
+            <div class="favored-tag" id="ldFavoredTag">Favored by 71.8</div>
+            <div class="matchup-live-score" id="ldLiveScore"></div>
+            <div class="ld-orig-score" id="ldOrigScore"></div>
           </div>
         </div>
       </div>
@@ -14740,6 +14777,35 @@
       return sorted.length;
     }
 
+    // Non-blocking: fetches this league's real transaction feed (all weeks
+    // played so far), counts completed trades per roster, and renders the
+    // Trade Activity card. Called without awaiting so it never delays the
+    // roster-columns render.
+    async function ldLoadTradeActivity(entry, activeRoster, ldTradeRowEl) {
+      try {
+        const currentWeek = entry.week || 1;
+        const weeks = Array.from({ length: Math.max(1, currentWeek) }, (_, i) => i + 1);
+        const byWeek = await Promise.all(weeks.map(w => sleeperFetch(`/league/${entry.league.league_id}/transactions/${w}`).catch(() => [])));
+        const tradeCounts = {};
+        (entry.allRosters || []).forEach(r => { tradeCounts[r.roster_id] = 0; });
+        byWeek.flat().forEach(tx => {
+          if (!tx || tx.type !== 'trade' || tx.status !== 'complete') return;
+          (tx.roster_ids || []).forEach(rid => { tradeCounts[rid] = (tradeCounts[rid] || 0) + 1; });
+        });
+        const totalRosters = (entry.allRosters || []).length;
+        const myCount = tradeCounts[activeRoster.roster_id] || 0;
+        const rank = ldRankOf(entry.allRosters || [], r => tradeCounts[r.roster_id] || 0, activeRoster.roster_id);
+        const third = Math.ceil(totalRosters / 3);
+        const level = rank <= third ? { label: 'ACTIVE', cls: 'ld-trade-active' }
+          : rank > totalRosters - third ? { label: 'INACTIVE', cls: 'ld-trade-inactive' }
+          : { label: 'MEDIUM', cls: 'ld-trade-medium' };
+        if (!document.body.contains(ldTradeRowEl)) return;
+        ldTradeRowEl.innerHTML = `<span class="ld-trade-badge ${level.cls}">${level.label}</span><span class="ld-trade-rank">${ldOrdinal(rank)} of ${totalRosters} &middot; ${myCount} trade${myCount === 1 ? '' : 's'}</span>`;
+      } catch (err) {
+        if (document.body.contains(ldTradeRowEl)) ldTradeRowEl.textContent = '—';
+      }
+    }
+
     // Real future draft-pick ownership for one roster in one league, dynasty
     // mode only -- same "walk every original slot through traded_picks"
     // approach as the Portfolio Health Draft Capital section, just scoped to
@@ -14968,6 +15034,46 @@
         } else {
           ldValueEl.textContent = '—';
         }
+      }
+
+      // Average Firsts/League: real 1st-round pick ownership (same
+      // dcPickCountForLeague the Dashboard's Draft Capital section
+      // averages), for the next two draft classes, across ALL your
+      // connected dynasty leagues -- not just this one -- shown here as
+      // context for how this league's draft capital compares to your
+      // overall portfolio.
+      const ldFirstsRowEl = document.getElementById('ldFirstsRow');
+      if (ldFirstsRowEl) {
+        const dynastyEntries = dcCurrentDynastyEntries();
+        if (getSiteMode() === 'dynasty' && dynastyEntries.length) {
+          const currentSeason = Number(dynastyEntries[0].league.season) || new Date().getFullYear();
+          const years = [currentSeason + 1, currentSeason + 2];
+          const avgs = years.map(y => {
+            let total = 0;
+            dynastyEntries.forEach(e => { total += dcPickCountForLeague(e, y, 1); });
+            return total / dynastyEntries.length;
+          });
+          ldFirstsRowEl.className = 'ld-firsts';
+          ldFirstsRowEl.innerHTML = years.map((y, i) =>
+            `<div><span class="ld-firsts-year">'${String(y).slice(2)}</span><span class="ld-firsts-num">${avgs[i].toFixed(1)}</span></div>`
+          ).join('');
+        } else {
+          ldFirstsRowEl.className = '';
+          ldFirstsRowEl.textContent = '—';
+        }
+      }
+
+      // Trade Activity: real trade count this season for every roster in
+      // THIS league (Sleeper's own transactions feed, type "trade"),
+      // ranked against the rest of the league -- top third reads ACTIVE,
+      // middle third MEDIUM, bottom third INACTIVE. Runs in the
+      // background (not awaited) since it can mean fetching one request
+      // per week played so far -- the roster columns below shouldn't
+      // have to wait on it.
+      const ldTradeRowEl = document.getElementById('ldTradeRow');
+      if (ldTradeRowEl) {
+        ldTradeRowEl.textContent = 'Loading…';
+        ldLoadTradeActivity(entry, activeRoster, ldTradeRowEl);
       }
 
       const starters = new Set((activeRoster.starters || []).filter(id => id && id !== '0'));
@@ -16214,6 +16320,64 @@
       }
     }
 
+    // League Detail -> "Search any player" -- type any name rostered
+    // anywhere in the CURRENT league and jump straight to whichever
+    // manager has him (same navigation as clicking their standings row).
+    (function initLdPlayerSearch() {
+      const input = document.querySelector('.ld-player-search');
+      const results = document.getElementById('ldPlayerSearchResults');
+      if (!input || !results) return;
+      let searchToken = 0;
+      input.addEventListener('input', async () => {
+        const q = input.value.trim().toLowerCase();
+        const myToken = ++searchToken;
+        if (!q) { results.hidden = true; results.innerHTML = ''; return; }
+        const standingsListEl = document.getElementById('ldStandingsList');
+        const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
+        const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+        if (!entry || !window.sleeperGetPlayerDict) { results.hidden = true; return; }
+        let dict;
+        try { dict = await window.sleeperGetPlayerDict(); } catch (err) { return; }
+        if (myToken !== searchToken) return;
+
+        const matches = [];
+        (entry.allRosters || []).forEach(r => {
+          (r.players || []).forEach(id => {
+            const p = dict[id];
+            if (!p) return;
+            const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+            if (!name.toLowerCase().includes(q)) return;
+            const user = (entry.users || []).find(u => u.user_id === r.owner_id);
+            const teamName = (r.metadata && r.metadata.team_name) || (user ? (user.display_name || user.username) : 'Unknown');
+            matches.push({ id, name, team: p.team || 'FA', pos: p.position || '', rosterId: r.roster_id, ownerName: teamName });
+          });
+        });
+        matches.sort((a, b) => a.name.localeCompare(b.name));
+        const top = matches.slice(0, 12);
+        results.innerHTML = top.length
+          ? top.map(m => `<div class="ld-player-search-row" data-roster-id="${m.rosterId}">
+              <img src="${sbHeadshotUrl(m.id)}" alt="" loading="lazy" onerror="this.remove()">
+              <span>${sbFieldEsc(m.name)} <span class="ld-player-search-team">${sbFieldEsc(m.pos)} &middot; ${sbFieldEsc(m.team)}</span></span>
+              <span class="ld-player-search-owner">${sbFieldEsc(m.ownerName)}</span>
+            </div>`).join('')
+          : '<div class="ld-player-search-empty">No players match.</div>';
+        results.hidden = false;
+      });
+      results.addEventListener('click', (e) => {
+        const row = e.target.closest('.ld-player-search-row[data-roster-id]');
+        if (!row) return;
+        const rosterId = Number(row.dataset.rosterId);
+        const standingsListEl = document.getElementById('ldStandingsList');
+        const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
+        results.hidden = true;
+        input.value = '';
+        if (leagueId && window.renderRealLeagueDetail) window.renderRealLeagueDetail(leagueId, rosterId);
+      });
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.ld-player-search-wrap')) results.hidden = true;
+      });
+    })();
+
     // League Detail -> Settings modal: a read-only summary of the league's
     // real Sleeper settings (scoring_settings, roster_positions, and the
     // settings object) -- nothing here is editable, since all of it lives
@@ -16458,21 +16622,34 @@
 
       const rows = allRosters.map(r => {
         const user = (entry.users || []).find(u => u.user_id === r.owner_id);
-        const name = user ? (user.display_name || user.username || 'Unknown') : 'Unknown';
+        const userName = user ? (user.display_name || user.username || 'Unknown') : 'Unknown';
+        // A manager's real Sleeper team name (roster.metadata.team_name) and
+        // team logo (roster.metadata.avatar) take priority over their
+        // account name/avatar when set -- falls back to the Sleeper
+        // username/avatar for anyone who hasn't customized a team name.
+        const meta = r.metadata || {};
+        const teamName = meta.team_name || null;
+        const name = teamName || userName;
+        const subName = teamName ? userName : null;
+        const avatar = meta.avatar || (user ? user.avatar : null);
         const wins = (r.settings && r.settings.wins) || 0;
         const losses = (r.settings && r.settings.losses) || 0;
+        const ties = (r.settings && r.settings.ties) || 0;
         const conRank = conResult ? conResult.ranks[r.roster_id] : null;
         const valRank = ldRankOf(allRosters, valueOf, r.roster_id);
         const posRanks = posRanksOf(r);
         const weeklyPts = weeklyPtsByRoster[r.roster_id] != null ? weeklyPtsByRoster[r.roster_id] : -Infinity;
         const type = sbStandingsRosterType(conRank, valRank, half);
-        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar: user ? user.avatar : null, name, wins, losses, conRank, valRank, posRanks, weeklyPts, type };
+        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar, name, subName, wins, losses, ties, conRank, valRank, posRanks, weeklyPts, type };
       });
       if (sortBy === 'val') {
         rows.sort((a, b) => (a.valRank || 999) - (b.valRank || 999) || (b.weeklyPts - a.weeklyPts));
       } else if (['qb', 'rb', 'wr', 'te'].includes(sortBy)) {
         const pos = sortBy.toUpperCase();
         rows.sort((a, b) => (a.posRanks[pos] || 999) - (b.posRanks[pos] || 999));
+      } else if (sortBy === 'record') {
+        const winPctOf = (r) => (r.wins + r.losses + r.ties) ? r.wins / (r.wins + r.losses + r.ties) : 0;
+        rows.sort((a, b) => winPctOf(b) - winPctOf(a) || (b.weeklyPts - a.weeklyPts));
       } else {
         rows.sort((a, b) => (a.conRank || 999) - (b.conRank || 999));
       }
@@ -16484,15 +16661,18 @@
           : '<div class="roster-pill">&mdash;</div>';
         const isMe = entry.roster && row.rosterId === entry.roster.roster_id;
         const isActive = activeRosterId != null && row.rosterId === activeRosterId;
+        const recordText = `${row.wins}-${row.losses}${row.ties ? '-' + row.ties : ''}`;
         return `<div class="league-standings-row${isMe ? ' is-me' : ''}${isActive ? ' is-active' : ''}" data-roster-id="${row.rosterId}">` +
           '<div class="ld-header-left">' +
             `<div class="league-standings-rank">${i + 1}</div>` +
             `<div class="ld-avatar" style="background:var(--navy)">${sbFieldAvatarHtml(row.avatar, initial)}</div>` +
             '<div>' +
               `<div class="ld-name">${sbFieldEsc(row.name)}</div>` +
-              `<div class="ld-meta">${row.wins}-${row.losses} &middot; <span class="lst-league-count" data-owner-id="${row.ownerId}">…</span></div>` +
+              (row.subName ? `<div class="ld-subname">${sbFieldEsc(row.subName)}</div>` : '') +
+              `<div class="ld-meta"><span class="lst-league-count" data-owner-id="${row.ownerId}">…</span></div>` +
             '</div>' +
             pillHtml +
+            `<span class="ld-record-tag">${recordText}</span>` +
           '</div>' +
           '<div class="ld-tags">' +
             `<span class="ld-tag">CON <b>${row.conRank != null ? ldOrdinal(row.conRank) : '—'}</b></span>` +
