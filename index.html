@@ -12703,6 +12703,23 @@
     }
     return fallbackText;
   }
+  // Same idea as sbLeagueLogoImgHtml: initials text as the base layer, with
+  // up to two real images stacked on top of it via the container's existing
+  // position:absolute overlay CSS. A custom per-league team image (set in
+  // Sleeper's "Edit Team") takes priority; if it 404s or otherwise fails to
+  // load, onerror removes just that <img>, revealing the manager's regular
+  // Sleeper profile picture underneath -- and if that fails too (or was
+  // never set), the initials underneath both are all that's left.
+  function sbTeamAvatarHtml(customAvatarId, accountAvatarId, fallbackText) {
+    let html = sbFieldEsc(fallbackText);
+    if (accountAvatarId) {
+      html += `<img src="https://sleepercdn.com/avatars/thumbs/${accountAvatarId}" alt="" loading="lazy" onerror="this.remove()">`;
+    }
+    if (customAvatarId && customAvatarId !== accountAvatarId) {
+      html += `<img src="https://sleepercdn.com/avatars/thumbs/${customAvatarId}" alt="" loading="lazy" onerror="this.remove()">`;
+    }
+    return html;
+  }
   // Lays a real position group out across a horizontal band (from% to
   // to%), evenly spaced -- a single player centers in the band.
   function sbFieldSpread(ids, placements, from, to) {
@@ -16692,7 +16709,12 @@
         const teamName = userMeta.team_name || null;
         const name = teamName || userName;
         const subName = teamName ? userName : null;
-        const avatar = userMeta.avatar || (user ? user.avatar : null);
+        // Kept separate (not collapsed into one "avatar" pick) so a custom
+        // team image that fails to load can fall back to the manager's
+        // regular Sleeper profile picture instead of jumping straight to
+        // initials -- see sbTeamAvatarHtml.
+        const customAvatar = userMeta.avatar || null;
+        const accountAvatar = user ? user.avatar : null;
         const wins = (r.settings && r.settings.wins) || 0;
         const losses = (r.settings && r.settings.losses) || 0;
         const ties = (r.settings && r.settings.ties) || 0;
@@ -16701,7 +16723,7 @@
         const posRanks = posRanksOf(r);
         const weeklyPts = weeklyPtsByRoster[r.roster_id] != null ? weeklyPtsByRoster[r.roster_id] : -Infinity;
         const type = sbStandingsRosterType(conRank, valRank, half);
-        return { rosterId: r.roster_id, ownerId: r.owner_id, avatar, name, subName, wins, losses, ties, conRank, valRank, posRanks, weeklyPts, type };
+        return { rosterId: r.roster_id, ownerId: r.owner_id, customAvatar, accountAvatar, name, subName, wins, losses, ties, conRank, valRank, posRanks, weeklyPts, type };
       });
       if (sortBy === 'val') {
         rows.sort((a, b) => (a.valRank || 999) - (b.valRank || 999) || (b.weeklyPts - a.weeklyPts));
@@ -16731,7 +16753,7 @@
         return `<div class="league-standings-row${isMe ? ' is-me' : ''}${isActive ? ' is-active' : ''}" data-roster-id="${row.rosterId}">` +
           '<div class="ld-header-left">' +
             `<div class="league-standings-rank">${i + 1}</div>` +
-            `<div class="ld-avatar" style="background:var(--navy)">${sbFieldAvatarHtml(row.avatar, initial)}</div>` +
+            `<div class="ld-avatar" style="background:var(--navy)">${sbTeamAvatarHtml(row.customAvatar, row.accountAvatar, initial)}</div>` +
             '<div>' +
               `<div class="ld-name">${sbFieldEsc(row.name)}</div>` +
               (row.subName ? `<div class="ld-subname">${sbFieldEsc(row.subName)}</div>` : '') +
