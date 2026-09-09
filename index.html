@@ -1640,6 +1640,18 @@
   .exp-card.exp-wr { border-color: var(--blue); }
   .exp-card.exp-te { border-color: var(--gold); }
   .exp-card.exp-empty { opacity: 0.45; }
+  /* A player rostered in none of your leagues (0% exposure) reads as
+     fully desaturated -- position color ring, badge, team logo, headshot
+     and the big % number all go gray/black-and-white -- so "you don't
+     have this guy anywhere" is obvious at a glance instead of looking
+     just like every rostered player. */
+  .exp-card.exp-zero { border-color: var(--border-soft); }
+  .exp-card.exp-zero .exp-team-icon img,
+  .exp-card.exp-zero .exp-avatar img { filter: grayscale(100%); opacity: 0.55; }
+  .exp-card.exp-zero .exp-pos-badge { background: var(--faint); }
+  .exp-card.exp-zero .exp-pct,
+  .exp-card.exp-zero .exp-dollar { color: var(--faint); }
+  .exp-card.exp-zero .exp-bar { background: var(--border-soft); }
   .exp-rank { position: absolute; top: 8px; left: 9px; font-size: 11px; font-weight: 700; color: var(--faint); }
   .exp-team-icon {
     position: absolute;
@@ -2285,8 +2297,6 @@
   .rb-table tbody tr[data-league-name] { cursor: pointer; }
   .rb-table tbody tr[data-league-name]:hover td { background: var(--border-soft); }
   .rb-table tbody tr[data-league-name]:hover td.rb-league-cell { background: var(--border-soft); }
-  .rb-wl-w { background: rgba(34,197,94,0.16); color: #16a34a; }
-  .rb-wl-l { background: rgba(239,68,68,0.16); color: #dc2626; }
   .rb-empty { text-align: center; color: var(--faint); font-size: 13px; padding: 40px 0; }
   .ldrec-draft-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 
@@ -12299,11 +12309,48 @@
   // value) so an unset lineup doesn't understate a team's real projection.
   // Falls back to just the filled starters when the league's roster slot
   // order or the player dictionary isn't available yet.
+  // Best ball rosters have no manager-set lineup at all -- Sleeper only
+  // resolves the real optimal lineup after a week is fully played out, so
+  // matchup.starters can hold an arbitrary or zero-projected player (or be
+  // empty) the whole week. Until then, and continuously as the week plays
+  // out, the "starting" lineup is always the highest-value eligible player
+  // per slot -- his real live points once his game has kicked off,
+  // otherwise his projection -- so a bench player who overtakes a
+  // "starter" in projection (or scores more once live) moves onto the
+  // lineup automatically instead of the app just echoing Sleeper's
+  // meaningless pre-resolution starters array.
+  function sbBestBallEffectiveStarters(matchup, league, projMap, playerDict) {
+    const startSlots = (league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+    const pool = (matchup.players || []).filter(id => id && id !== '0');
+    if (!pool.length) return null;
+    const pointsMap = matchup.players_points || {};
+    const chosen = new Set();
+    const assigned = [];
+    startSlots.forEach(slot => {
+      const eligible = SB_SLOT_ELIGIBLE[slot];
+      if (!eligible) return;
+      let best = null, bestVal = -Infinity;
+      pool.forEach(pid => {
+        if (chosen.has(pid)) return;
+        const p = playerDict[pid];
+        if (!p || !eligible.includes(p.position)) return;
+        const val = sbEffectivePoints(pid, pointsMap, projMap, league);
+        if (val > bestVal) { bestVal = val; best = pid; }
+      });
+      if (best) { chosen.add(best); assigned.push(best); }
+    });
+    return assigned;
+  }
+
   function sbEffectiveStarters(matchup, league, projMap) {
+    const playerDict = window.__sleeperPlayerDict;
+    if (matchup && league && league.settings && league.settings.best_ball && league.roster_positions && playerDict && matchup.players) {
+      const bb = sbBestBallEffectiveStarters(matchup, league, projMap, playerDict);
+      if (bb && bb.length) return bb;
+    }
     const raw = (matchup && matchup.starters) || [];
     const filled = raw.filter(id => id && id !== '0');
     if (filled.length === raw.length) return filled;
-    const playerDict = window.__sleeperPlayerDict;
     if (!league || !league.roster_positions || !playerDict || !matchup.players) return filled;
 
     const startSlots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
@@ -13449,21 +13496,26 @@
         if (f.length) noteParts.push(f.length + ' <span class="rg-note-for">for</span>');
         if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
         noteEl.innerHTML = noteParts.join(' &middot; ');
-        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet };
+        const proj = Number(r.el.dataset.proj) || 0;
+        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, proj };
         if (delta > 0) buckets.for.push(bucket);
         else if (delta < 0) buckets.against.push(bucket);
         else buckets.even.push(bucket);
       });
+      // A tied delta (or tied $ net) is broken by whoever's currently
+      // projected for more points -- live, since this re-runs on every
+      // sync poll and dataset.proj gets refreshed with it -- instead of
+      // whatever arbitrary order the players happened to be built in.
       if (rgSortCriterion === 'leagues') {
         // Most real dollars in your favor first for Root For, most real
         // dollars against you first for Root Against.
-        buckets.for.sort((a, b) => b.dollarNet - a.dollarNet);
-        buckets.against.sort((a, b) => a.dollarNet - b.dollarNet);
+        buckets.for.sort((a, b) => (b.dollarNet - a.dollarNet) || (b.proj - a.proj));
+        buckets.against.sort((a, b) => (a.dollarNet - b.dollarNet) || (b.proj - a.proj));
       } else {
-        buckets.for.sort((a, b) => b.delta - a.delta);
-        buckets.against.sort((a, b) => a.delta - b.delta);
+        buckets.for.sort((a, b) => (b.delta - a.delta) || (b.proj - a.proj));
+        buckets.against.sort((a, b) => (a.delta - b.delta) || (b.proj - a.proj));
       }
-      buckets.even.sort((a, b) => b.total - a.total);
+      buckets.even.sort((a, b) => (b.total - a.total) || (b.proj - a.proj));
       forListEl.innerHTML = '';
       againstListEl.innerHTML = '';
       evenListEl.innerHTML = '';
@@ -13545,8 +13597,14 @@
 
       const byPlayer = {};
       entries.forEach(entry => {
-        const myStarters = (entry.myMatchup.starters || []).filter(id => id && id !== '0');
-        const oppStarters = (entry.oppMatchup.starters || []).filter(id => id && id !== '0');
+        // Best ball leagues have no manager-set starters -- use the same
+        // real highest-value-per-slot lineup Matchup Hub computes instead
+        // of Sleeper's meaningless raw starters array for them. sbProjectionFor
+        // expects a projMap wrapper shaped { __statsMap }, not the bare
+        // stats map rgProjStatsMap already is.
+        const rgProjMapForStarters = { __statsMap: rgProjStatsMap };
+        const myStarters = sbEffectiveStarters(entry.myMatchup, entry.league, rgProjMapForStarters);
+        const oppStarters = sbEffectiveStarters(entry.oppMatchup, entry.league, rgProjMapForStarters);
         myStarters.forEach(id => {
           byPlayer[id] = byPlayer[id] || { for: [], against: [] };
           byPlayer[id].for.push(entry.league.name);
@@ -13575,6 +13633,7 @@
           against: byPlayer[id].against,
           pprPoints: pprPoints != null ? pprPoints : 0,
           poe,
+          liveProj: liveProj != null ? liveProj : 0,
         };
       }).filter(Boolean);
 
@@ -13608,6 +13667,7 @@
         el.dataset.name = r.name;
         el.dataset.team = r.team;
         el.dataset.pos = r.pos;
+        el.dataset.proj = r.liveProj;
         el.innerHTML =
           '<div class="rg-row-main">' +
             `<span class="rg-delta ${deltaClass}">${deltaText}</span>` +
@@ -15268,6 +15328,7 @@
         league, entry,
         wins, losses, ties, record,
         pfRank, finishRank, seasonDecided, madePlayoffs, ptsFromMin,
+        totalPf: pfOf(myRoster),
         regularWeeks, weekResults,
         wc: bracketResults.WC || null, sf: bracketResults.SF || null, chip: bracketResults.CHIP || null,
         // No games played yet this season -- whatever's entered in
@@ -15370,7 +15431,10 @@
     };
     let rbRows = [];
     let rbMaxRegWeeks = 0;
-    let rbSortKey = null;
+    // Defaults to best record first (Rec column) -- tiebroken by PF rank
+    // (better rank first), then by real total points, matching how a
+    // league's own standings normally break a tied record.
+    let rbSortKey = 'rec';
     let rbSortDir = 'desc';
     // null = the live/current season; otherwise a season string ("2025")
     // picked from the Year dropdown, showing each current league's own
@@ -15383,7 +15447,18 @@
       const body = document.getElementById('rbBody');
       if (!body) return;
       const rows = [...rbRows];
-      if (rbSortKey) {
+      if (rbSortKey === 'rec') {
+        // Record ties broken by PF rank (1 = best, so ascending), then by
+        // real total points (descending) if PF rank is somehow also tied.
+        rows.sort((a, b) => {
+          const diff = RB_SORT_KEYS.rec(b) - RB_SORT_KEYS.rec(a);
+          const primary = rbSortDir === 'desc' ? diff : -diff;
+          if (primary !== 0) return primary;
+          const pfDiff = a.pfRank - b.pfRank;
+          if (pfDiff !== 0) return pfDiff;
+          return b.totalPf - a.totalPf;
+        });
+      } else if (rbSortKey) {
         const valueOf = RB_SORT_KEYS[rbSortKey];
         rows.sort((a, b) => {
           const va = valueOf(a), vb = valueOf(b);
@@ -17167,7 +17242,7 @@
     expGrid.innerHTML = rows.map((r, i) => {
       const posClass = r.pos.toLowerCase();
       const dollarHtml = r.count ? `<span class="exp-dollar exp-${posClass}">${dollarText(r.dollars)}</span>` : '';
-      return `<div class="exp-card exp-${posClass}" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-dollar="${r.dollars}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}" data-team="${r.team}">
+      return `<div class="exp-card exp-${posClass}${r.count ? '' : ' exp-zero'}" data-pct="${r.pct}" data-adp="${adpSortVal(r)}" data-dollar="${r.dollars}" data-pos="${r.pos}" data-year="${r.yearTag}" data-leagues="${r.leagues.join('|')}" data-player-id="${r.id}" data-team="${r.team}">
           <div class="exp-rank">${i + 1}</div>
           <div class="exp-team-icon"><img src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" title="${r.team}" loading="lazy" onerror="this.remove()"></div>
           <div class="exp-avatar-wrap">
