@@ -12701,14 +12701,22 @@
   // Sleeper's real curve is this much flatter than a naive point-diff model
   // would suggest.
   function sbWinProbability(myTotal, oppTotal) {
-    // Sleeper doesn't expose its real win% formula. Fit against ~18 real
-    // Sleeper-displayed win% + point-total pairs showed a flat logistic
-    // slope (k) underfits: implied k trends from ~0.022 at small point
-    // diffs up to ~0.035 at diffs of 100+. Ramp k with |diff| instead of
-    // using one constant to track that curve more closely across the range.
+    // Sleeper doesn't expose its real win% formula. Fit against ~37 real
+    // Sleeper-displayed win% + point-total pairs (an original ~18-pair
+    // sample plus 19 more pulled straight from Sleeper's own live
+    // scoreboard) showed a flat logistic slope (k) underfits: implied k
+    // trends from ~0.021 at small point diffs up to ~0.038 at diffs of
+    // 130+. Ramp k with |diff| instead of using one constant to track
+    // that curve more closely across the range. A couple of real-world
+    // pairs at very lopsided diffs (-68 pts -> 5% shown, right next to
+    // -90 pts -> also 5%) don't fit any smooth monotonic curve -- Sleeper
+    // likely factors in something beyond raw point differential there
+    // (e.g. remaining-player variance) -- so this is tuned for lowest
+    // average error across the real sample, not a perfect fit to every
+    // single pair.
     const diff = myTotal - oppTotal;
     const absDiff = Math.abs(diff);
-    const k = 0.022 + Math.min(1, absDiff / 100) * (0.035 - 0.022);
+    const k = 0.0214 + Math.min(1, absDiff / 135) * (0.0384 - 0.0214);
     const pct = 1 / (1 + Math.exp(-k * diff));
     return Math.round(Math.min(99, Math.max(1, pct * 100)));
   }
