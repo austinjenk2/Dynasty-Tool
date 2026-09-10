@@ -1317,6 +1317,11 @@
 
   .rg-row { border: 1px solid var(--border-soft); border-radius: 6px; cursor: pointer; }
   .rg-row:hover { border-color: var(--border); }
+  .rg-row-flash { animation: rgRowFlash 1.4s ease; }
+  @keyframes rgRowFlash {
+    0% { background: var(--green-soft, rgba(46,160,67,0.18)); border-color: var(--green, #2ea043); }
+    100% { background: transparent; }
+  }
   .rg-expand { padding: 12px; margin-top: -1px; background: var(--bg); border: 1px solid var(--border-soft); border-top: none; border-radius: 0 0 6px 6px; }
   .rg-expand .pm-league-row { padding: 9px 12px; font-size: 12.5px; }
   .rg-row-main { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
@@ -4712,6 +4717,7 @@
         </div>
 
         <div class="rg-leagues-dropdown" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="exp-search" id="rgSearchWrap" style="max-width:220px"><input type="text" id="rgSearchInput" placeholder="Search player..."></div>
           <div class="rg-leagues-toggle" id="rgLeaguesBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="rgLeaguesCount">(18 of 18)</span></div>
           <div class="rg-sort-toggle" id="rgSortToggle">
             <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="value">Leagues</button>
@@ -11199,6 +11205,109 @@
     return m.delta > 0 ? `+${m.delta}` : `${m.delta}`;
   }
 
+  // getRootingDeltasForTeams() above only ever reads whatever week the
+  // Rooting Guide page itself last rendered into .rg-row -- fine as long
+  // as the thing asking is on that same page, but the Dashboard's Weekly
+  // Schedule has its own independent week dropdown, and used to just
+  // refuse to show an exposure preview for any week but the current one.
+  // This rebuilds the same for/against starters computation
+  // renderRealRootingGuide() does, for an arbitrary week, without touching
+  // the Rooting Guide's own DOM -- so picking a future week on the
+  // Schedule doesn't disturb whatever week the Rooting Guide is pinned to.
+  window.__rgWeekRowsCache = window.__rgWeekRowsCache || {};
+  async function computeRootingRowsForWeek(week) {
+    const allEntries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
+    if (!allEntries.length || !window.sleeperGetPlayerDict) return [];
+    const currentWeek = allEntries[0].week;
+    const isCurrentWeek = week === currentWeek;
+    const season = allEntries[0].league.season;
+    const cacheKey = `${season}_${week}`;
+    if (window.__rgWeekRowsCache[cacheKey]) return window.__rgWeekRowsCache[cacheKey];
+
+    const promise = (async () => {
+      const dict = await window.sleeperGetPlayerDict().catch(() => null);
+      if (!dict) return [];
+
+      const entries = [];
+      await Promise.all(allEntries.map(async (entry) => {
+        let myMatchup, oppMatchup;
+        if (isCurrentWeek) {
+          myMatchup = entry.myMatchup;
+          oppMatchup = entry.oppMatchup;
+        } else if (typeof sleeperGetWeekMatchups === 'function') {
+          const matchups = await sleeperGetWeekMatchups(entry.league.league_id, week);
+          myMatchup = matchups.find(m => m.roster_id === entry.roster.roster_id) || null;
+          oppMatchup = myMatchup
+            ? matchups.find(m => m.matchup_id === myMatchup.matchup_id && m.roster_id !== entry.roster.roster_id)
+            : null;
+        }
+        if (myMatchup && oppMatchup) entries.push({ league: entry.league, myMatchup, oppMatchup });
+      }));
+      if (!entries.length) return [];
+
+      let rgProjStatsMap = window.__sleeperProjectionStats || {};
+      if (!isCurrentWeek && window.sleeperGetWeekProjections) {
+        try {
+          const pm = await window.sleeperGetWeekProjections(season, week);
+          rgProjStatsMap = (pm && pm.__statsMap) || {};
+        } catch (err) {}
+      }
+      const rgProjMapForStarters = { __statsMap: rgProjStatsMap };
+
+      const byPlayer = {};
+      entries.forEach(entry => {
+        const myStarters = sbEffectiveStarters(entry.myMatchup, entry.league, rgProjMapForStarters);
+        const oppStarters = sbEffectiveStarters(entry.oppMatchup, entry.league, rgProjMapForStarters);
+        myStarters.forEach(id => {
+          byPlayer[id] = byPlayer[id] || { for: [], against: [] };
+          byPlayer[id].for.push(entry.league.name);
+        });
+        oppStarters.forEach(id => {
+          byPlayer[id] = byPlayer[id] || { for: [], against: [] };
+          byPlayer[id].against.push(entry.league.name);
+        });
+      });
+
+      return Object.keys(byPlayer).map(id => {
+        const p = dict[id];
+        const pos = p ? p.position : null;
+        if (!p || !['QB', 'RB', 'WR', 'TE'].includes(pos)) return null;
+        return {
+          id,
+          name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
+          team: p.team || 'FA',
+          for: byPlayer[id].for,
+          against: byPlayer[id].against,
+        };
+      }).filter(Boolean);
+    })();
+    window.__rgWeekRowsCache[cacheKey] = promise;
+    return promise;
+  }
+
+  // Same shape/sort as getRootingDeltasForTeams(), but works for any week
+  // (current or not) and respects the Rooting Guide's own excluded-league
+  // list and $ / league-count mode via the globals it exposes.
+  async function getRootingDeltasForTeamsForWeek(teamCodes, week) {
+    const rows = await computeRootingRowsForWeek(week);
+    const blacklist = window.__rgBlacklistSet || new Set();
+    const dollarMap = window.__rgLeagueDollarMap ? window.__rgLeagueDollarMap() : {};
+    const isMoney = !!window.__rgMoneyMode;
+    const matches = [];
+    rows.forEach(r => {
+      if (!teamCodes.includes(r.team)) return;
+      const f = r.for.filter(l => !blacklist.has(l));
+      const a = r.against.filter(l => !blacklist.has(l));
+      const deltaNum = isMoney
+        ? f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0)
+        : f.length - a.length;
+      if (!deltaNum) return;
+      matches.push({ id: r.id, name: r.name, delta: deltaNum, isMoney });
+    });
+    matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+    return matches;
+  }
+
   // "1-on-1 Slates" -- every real game this week grouped into the same
   // kickoff buckets as the Weekly Schedule, each showing the real players
   // (from .rg-row, so the same for/against data everywhere else on the
@@ -11312,32 +11421,44 @@
   window.renderRootingSlates = renderRootingSlates;
 
   const scheduleGroupsEl = document.getElementById('scheduleGroups');
-  function openScheduleExpand(chip) {
-    const expand = document.createElement('div');
-    expand.className = 'schedule-expand';
-    if (scheduleGroupsEl.dataset.currentWeek === '0') {
-      // .rg-row data reflects this week's actual starters, so a
-      // different week's schedule can't show an accurate exposure match.
-      expand.innerHTML = '<p class="schedule-expand-count">Exposure preview is only available for the current week.</p>';
+  function renderScheduleExpandMatches(expand, matches) {
+    if (matches.length === 0) {
+      expand.innerHTML = '<p class="schedule-expand-count">No plus/minus exposure for you in this game.</p>';
     } else {
-      const teamCodes = Array.from(chip.querySelectorAll('.schedule-team span')).map(s => s.textContent.trim());
-      const matches = getRootingDeltasForTeams(teamCodes);
-      if (matches.length === 0) {
-        expand.innerHTML = '<p class="schedule-expand-count">No plus/minus exposure for you in this game.</p>';
-      } else {
-        const chips = matches.map(m => {
-          const cls = m.delta > 0 ? 'schedule-expand-pos' : 'schedule-expand-neg';
-          return `<span class="schedule-expand-chip" data-player-id="${m.id}">${m.name} <b class="${cls}">${rgChipDeltaText(m)}</b></span>`;
-        }).join('');
-        expand.innerHTML =
-          `<p class="schedule-expand-count">${matches.length} player${matches.length > 1 ? 's' : ''} affect your exposure in this game</p>` +
-          `<div class="schedule-expand-chips">${chips}</div>` +
-          `<a class="schedule-expand-guide">Full Rooting Guide &rarr;</a>`;
-      }
+      const chips = matches.map(m => {
+        const cls = m.delta > 0 ? 'schedule-expand-pos' : 'schedule-expand-neg';
+        return `<span class="schedule-expand-chip" data-player-id="${m.id}">${m.name} <b class="${cls}">${rgChipDeltaText(m)}</b></span>`;
+      }).join('');
+      expand.innerHTML =
+        `<p class="schedule-expand-count">${matches.length} player${matches.length > 1 ? 's' : ''} affect your exposure in this game</p>` +
+        `<div class="schedule-expand-chips">${chips}</div>` +
+        `<a class="schedule-expand-guide">Full Rooting Guide &rarr;</a>`;
     }
-    chip.after(expand);
     const guideLink = expand.querySelector('.schedule-expand-guide');
     if (guideLink) guideLink.addEventListener('click', () => goToRootingGuide());
+  }
+  async function openScheduleExpand(chip) {
+    const expand = document.createElement('div');
+    expand.className = 'schedule-expand';
+    const teamCodes = Array.from(chip.querySelectorAll('.schedule-team span')).map(s => s.textContent.trim());
+    if (scheduleGroupsEl.dataset.currentWeek === '0') {
+      // A week other than the currently-synced one has no .rg-row data to
+      // read off (that always reflects whichever week the Rooting Guide
+      // page itself is showing) -- compute this week's own starters
+      // instead of just refusing to show anything.
+      expand.innerHTML = '<p class="schedule-expand-count">Loading exposure preview&hellip;</p>';
+      chip.after(expand);
+      const week = Number((document.getElementById('scheduleWeekLabel') || {}).textContent) || undefined;
+      const matches = week ? await getRootingDeltasForTeamsForWeek(teamCodes, week) : [];
+      // The chip's expand panel may have been closed/removed while the
+      // week's data was loading -- don't resurrect it underneath nothing.
+      if (!expand.isConnected) return;
+      renderScheduleExpandMatches(expand, matches);
+      return;
+    }
+    const matches = getRootingDeltasForTeams(teamCodes);
+    renderScheduleExpandMatches(expand, matches);
+    chip.after(expand);
   }
   if (scheduleGroupsEl) {
     // Delegated (not bound per-chip at load) since renderRealSchedule()
@@ -13512,6 +13633,10 @@
     // renderRealRootingGuide() rebuilds these chips on every 60s poll, and
     // used to always reset them all back to included.
     const rgBlacklist = loadRgBlacklist();
+    // Exposed so the Dashboard's Weekly Schedule can compute a future
+    // week's exposure preview with the same excluded leagues the Rooting
+    // Guide itself is using, instead of guessing at "everything included".
+    window.__rgBlacklistSet = rgBlacklist;
     let rgRows = Array.from(document.querySelectorAll('.rg-row')).map(el => ({
       el,
       forAll: (el.dataset.for || '').split(' &middot; ').filter(Boolean),
@@ -13579,6 +13704,7 @@
       });
       return map;
     }
+    window.__rgLeagueDollarMap = rgLeagueDollarMap;
     function recomputeRootingGuide() {
       const dollarMap = rgLeagueDollarMap();
       // Exposed so other places that read a player's rooting impact off
@@ -13864,6 +13990,42 @@
       if (window.renderRootingSlates) window.renderRootingSlates(overrideWeek);
     }
     window.renderRealRootingGuide = renderRealRootingGuide;
+  })();
+
+  // Rooting Guide player search -- jumps straight to a player's row (Root
+  // For, Root Against, or the even/no-impact list) instead of making
+  // someone scroll through everyone to find one player. Rebinds off
+  // .rg-row every time since renderRealRootingGuide() rebuilds those from
+  // scratch on each sync.
+  (function initRootingGuideSearch() {
+    const input = document.getElementById('rgSearchInput');
+    if (!input) return;
+    let rgSearchTimer = null;
+    function jumpToPlayer(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return;
+      const rows = Array.from(document.querySelectorAll('.rg-row'));
+      const match = rows.find(r => (r.dataset.name || '').toLowerCase().startsWith(q))
+        || rows.find(r => (r.dataset.name || '').toLowerCase().includes(q));
+      if (!match) return;
+      match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      match.classList.remove('rg-row-flash');
+      // Force a reflow so re-adding the class restarts the flash animation
+      // if the same player is searched twice in a row.
+      void match.offsetWidth;
+      match.classList.add('rg-row-flash');
+    }
+    input.addEventListener('input', () => {
+      clearTimeout(rgSearchTimer);
+      rgSearchTimer = setTimeout(() => jumpToPlayer(input.value), 250);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(rgSearchTimer);
+        jumpToPlayer(input.value);
+      }
+    });
   })();
 
   document.querySelectorAll('.rg-chip-more').forEach(more => {
@@ -14789,12 +14951,12 @@
         if (window.renderRealGameCast) window.renderRealGameCast();
         if (window.renderRealTrades) window.renderRealTrades();
         if (window.renderRealWaiverWire) window.renderRealWaiverWire();
-        if (window.renderRealRootingGuide) window.renderRealRootingGuide();
+        if (window.renderRealRootingGuide) window.renderRealRootingGuide(window.__rgSelectedWeek || undefined);
         if (window.renderRealDraftRoom) window.renderRealDraftRoom();
         if (window.renderRealMyAdp) window.renderRealMyAdp();
         if (window.renderRealDashboard) window.renderRealDashboard();
         if (window.renderRealNotebook) window.renderRealNotebook();
-        if (window.renderRealSchedule) window.renderRealSchedule();
+        if (window.renderRealSchedule) window.renderRealSchedule(window.__scheduleSelectedWeek || undefined);
         if (window.renderRealRecordBook) window.renderRealRecordBook();
         if (window.renderRecordBookMoneySettings) window.renderRecordBookMoneySettings();
         renderLeagueBlacklistSettings();
@@ -17088,6 +17250,7 @@
 
   setupWeekDropdown('weekSelect', 'weekMenu', 'weekSelectLabel', (week) => { loadLeaguesWeek(week); });
   setupWeekDropdown('scheduleWeekSelect', 'scheduleWeekMenu', 'scheduleWeekLabel', (week) => {
+    window.__scheduleSelectedWeek = Number(week);
     if (window.renderRealSchedule) window.renderRealSchedule(Number(week));
   });
 
@@ -17135,8 +17298,16 @@
   // subtab sharing one week control) -- it gets its own dropdown, and
   // renderRealRootingGuide already knows how to fetch an arbitrary week's
   // matchups on its own, no scoreboard override needed here.
+  //
+  // The picked week is remembered on window.__rgSelectedWeek so the 60s
+  // background sync poll (loadSleeperData) can re-render this same week
+  // instead of silently falling back to the live current week -- it used
+  // to call renderRealRootingGuide() with no argument, which reset the
+  // data to week 1 while this dropdown kept showing whatever week the
+  // person had picked.
   setupWeekDropdown('rgWeekSelect', 'rgWeekMenu', 'rgWeekLabel', (week) => {
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
+    window.__rgSelectedWeek = Number(week);
     if (window.renderRealRootingGuide) window.renderRealRootingGuide(Number(week));
   });
 
