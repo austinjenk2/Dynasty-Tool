@@ -1190,7 +1190,6 @@
   .sb-exp-pts.sb-pos-te { color: var(--gold); }
   .sb-exp-pts.sb-pos-sfl { color: #7c5cbf; }
   .sb-exp-proj { text-align: right; color: var(--gold); font-weight: 700; }
-  .sb-exp-orig { text-align: right; color: var(--faint); font-weight: 600; font-size: 11px; }
   .sb-exp-footer { margin-top: 14px; }
   .sb-exp-full {
     display: block;
@@ -12647,7 +12646,7 @@
 
   function sbLineupRowsHtml(matchup, dict, projMap, league, week, espnGameData) {
     if (!matchup) {
-      return '<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:16px 0">No matchup data yet</td></tr>';
+      return '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:16px 0">No matchup data yet</td></tr>';
     }
     // Includes the same predicted fill-in for an unset lineup slot that the
     // matchup total uses (sbEffectiveStarters), so this table's player count
@@ -12657,7 +12656,7 @@
     const starters = sbEffectiveStarters(matchup, league, projMap);
     const pointsMap = matchup.players_points || {};
     if (!starters.length) {
-      return '<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:16px 0">No starters set yet</td></tr>';
+      return '<tr><td colspan="3" style="text-align:center;color:var(--faint);padding:16px 0">No starters set yet</td></tr>';
     }
     return starters.map(id => {
       const p = dict[id];
@@ -12668,10 +12667,16 @@
       const predicted = !rawStarters.has(id);
       const pts = pointsMap[id] != null ? Number(pointsMap[id]).toFixed(1) : '&mdash;';
       const proj = sbProjectionFor(id, projMap, league);
-      const projText = proj != null ? proj.toFixed(1) : '&mdash;';
       const gameStarted = sbGameStartedForTeam(team, espnGameData);
+      // Sleeper's own weekly projection is fixed before kickoff and never
+      // moves once the game is live -- showing it as a separate "LIVE"
+      // column next to the frozen "started at" one always read the exact
+      // same number twice. Just the one real Proj column now: tracks the
+      // current pregame projection until kickoff, then freezes (so a
+      // post-kickoff injury/role change to a projection elsewhere doesn't
+      // retroactively redraw this player's number).
       const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, proj, gameStarted) : null;
-      const origText = origProj != null ? origProj.toFixed(1) : '&mdash;';
+      const projText = origProj != null ? origProj.toFixed(1) : '&mdash;';
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
       return `<tr class="sb-lineup-row" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}">` +
@@ -12682,7 +12687,6 @@
         '</td>' +
         `<td class="sb-exp-pts sb-pos-${posClass}">${pts}</td>` +
         `<td class="sb-exp-proj">${projText}</td>` +
-        `<td class="sb-exp-orig">${origText}</td>` +
       '</tr>';
     }).join('');
   }
@@ -13010,16 +13014,16 @@
         '<div class="sb-lineups-cols">' +
           '<div class="sb-lineup-col">' +
             '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
-            '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+            '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
             `<tbody>${sbLineupRowsHtml(myMatchup, dict, projMap, entry.league, week0, espnGameData)}</tbody></table>` +
-            '<div class="sb-last-plays-head">LAST 5 PLAYS</div>' +
+            '<div class="sb-last-plays-head">SCORING PLAYS</div>' +
             '<div class="sb-last-plays sb-last-plays-mine"><div class="ld-loading" style="padding:6px 0">Loading recent plays…</div></div>' +
           '</div>' +
           '<div class="sb-lineup-col">' +
             '<div class="sb-lineup-label sb-lineup-label-opp">OPPONENT LINEUP</div>' +
-            '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+            '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
             `<tbody>${sbLineupRowsHtml(oppMatchup, dict, projMap, entry.league, week0, espnGameData)}</tbody></table>` +
-            '<div class="sb-last-plays-head">LAST 5 PLAYS</div>' +
+            '<div class="sb-last-plays-head">SCORING PLAYS</div>' +
             '<div class="sb-last-plays sb-last-plays-opp"><div class="ld-loading" style="padding:6px 0">Loading recent plays…</div></div>' +
           '</div>' +
         '</div>' +
@@ -13723,7 +13727,14 @@
         const liveProj = rgBasePprPoints(rgProjStatsMap[id], pos);
         const rgGameStarted = sbGameStartedForTeam(p.team, rgEspnGameData);
         const origProj = liveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, liveProj, rgGameStarted) : null;
-        const poe = (liveProj != null && origProj != null) ? (liveProj - origProj) : null;
+        // Real points scored so far vs. his real pregame projection --
+        // NOT liveProj vs. origProj: Sleeper's own weekly projection is a
+        // fixed pregame number that never moves during the game itself, so
+        // that comparison was silently always +0.0 once frozen. Only
+        // meaningful once his game has actually started (pprPoints is a
+        // real 0 before that, which would otherwise misread as "way under
+        // expectation" for someone who simply hasn't played yet).
+        const poe = (rgGameStarted && pprPoints != null && origProj != null) ? (pprPoints - origProj) : null;
         return {
           id,
           name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
@@ -13775,7 +13786,7 @@
             `<span class="rg-name">${r.name}</span>` +
             `<span class="rg-team"><img class="rg-team-logo" src="${sbTeamLogoUrl(r.team)}" alt="${r.team}" title="${r.team}" loading="lazy" onerror="var p=this.parentNode;this.remove();p.textContent='${r.team}'"></span>` +
             `<span class="rg-stat">PPR Points: <b>${pprText}</b></span>` +
-            `<span class="rg-stat rg-poe ${poeClass}">Projection Over Expected: <b>${poeText}</b></span>` +
+            `<span class="rg-stat rg-poe ${poeClass}">Points Over Expected: <b>${poeText}</b></span>` +
             `<span class="rg-note">${noteParts.join(' &middot; ')}</span>` +
           '</div>';
         return { el, forAll: r.for.slice(), againstAll: r.against.slice() };
@@ -16262,12 +16273,12 @@
           '<div class="sb-lineups-cols">' +
             '<div class="sb-lineup-col">' +
               `<div class="sb-lineup-label sb-lineup-label-you">${sbFieldEsc(teams.myName)}</div>` +
-              '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+              '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
               `<tbody>${sbLineupRowsHtml(myMatchup, ldmuDict, projMap, r.league, week, r.espnGameData)}</tbody></table>` +
             '</div>' +
             '<div class="sb-lineup-col">' +
               `<div class="sb-lineup-label sb-lineup-label-opp">${sbFieldEsc(teams.oppName)}</div>` +
-              '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>LIVE</th><th>ORIG</th></tr></thead>' +
+              '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th></tr></thead>' +
               `<tbody>${sbLineupRowsHtml(oppMatchup, ldmuDict, projMap, r.league, week, r.espnGameData)}</tbody></table>` +
             '</div>' +
           '</div>' +
@@ -18414,8 +18425,8 @@
             wallclock: play.wallclock || null,
             seq: Number(play.sequenceNumber || play.id || 0),
             // Real per-play game state (score/quarter/clock/down), when ESPN
-            // includes it -- GameCast's play-by-play meta line uses this;
-            // sbGetLast5Plays/gcGetAllPlays ignore it, purely additive.
+            // includes it -- carried in case a future caller wants it;
+            // sbGetScoringPlays/gcBuildFeed currently ignore it.
             period: play.period ? play.period.number : null,
             clock: play.clock ? play.clock.displayValue : null,
             downDistance: play.start ? play.start.downDistanceText : null,
@@ -18483,9 +18494,11 @@
     return [];
   }
 
-  // Builds the last 5 fantasy-relevant plays for one side of a matchup,
-  // scored using that league's own scoring settings.
-  async function sbGetLast5Plays(starterIds, dict, league, espnGames) {
+  // Builds every fantasy-relevant scoring play for one side of a matchup
+  // (not capped to a fixed count -- every real play that moved one of
+  // these starters' score shows up), using that league's own scoring
+  // settings.
+  async function sbGetScoringPlays(starterIds, dict, league, espnGames) {
     const relevant = (starterIds || []).filter(id => {
       const p = dict[id];
       return p && ['QB', 'RB', 'WR', 'TE'].includes(p.position);
@@ -18530,7 +18543,7 @@
     });
 
     found.sort((a, b) => b.order - a.order);
-    return found.slice(0, 5);
+    return found;
   }
 
   function sbLast5PlaysHtml(plays) {
@@ -18546,7 +18559,7 @@
     }).join('');
   }
 
-  // Fills in a matchup expand panel's two "Last 5 Plays" sections --
+  // Fills in a matchup expand panel's two "Scoring Plays" sections --
   // separate from the panel's main render since it needs its own (slower,
   // multi-game) ESPN fetches and shouldn't block the lineup tables from
   // showing immediately.
@@ -18557,8 +18570,8 @@
     try {
       const espnGames = await getEspnGameDataCached(week, league.season);
       const [minePlays, oppPlays] = await Promise.all([
-        sbGetLast5Plays(myIds, dict, league, espnGames),
-        sbGetLast5Plays(oppIds, dict, league, espnGames),
+        sbGetScoringPlays(myIds, dict, league, espnGames),
+        sbGetScoringPlays(oppIds, dict, league, espnGames),
       ]);
       if (mineEl) mineEl.innerHTML = sbLast5PlaysHtml(minePlays);
       if (oppEl) oppEl.innerHTML = sbLast5PlaysHtml(oppPlays);
@@ -19028,8 +19041,6 @@
       });
       return {
         headline: play.text, statLines,
-        period: play.period, clock: play.clock, downDistance: play.downDistance,
-        awayScore: play.awayScore, homeScore: play.homeScore,
         order: play.wallclock ? new Date(play.wallclock).getTime() : (play.seq || idx),
       };
     }).sort((a, b) => b.order - a.order);
@@ -19051,15 +19062,12 @@
   function gcFeedHtml(plays) {
     if (!plays.length) return '<div class="sb-last-plays-empty">No plays yet</div>';
     return plays.map(p => {
-      const scoreText = (p.awayScore != null && p.homeScore != null) ? `${p.awayScore}-${p.homeScore}` : '';
-      const metaParts = [p.period ? `Q${p.period}` : '', p.clock, p.downDistance, scoreText].filter(Boolean);
       const statLinesHtml = (p.statLines || []).map(s => {
         const ptsCls = s.playPoints > 0 ? 'ldrec-pos' : '';
         return `<div class="gc-play-player">${sbFieldEsc(s.name)}${s.team ? ' &middot; ' + sbFieldEsc(s.team) : ''} ${gcRootBadgeHtml(s.playerId)} <span class="gc-play-pts ${ptsCls}">${s.playPoints > 0 ? '+' : ''}${s.playPoints.toFixed(1)}</span></div>
           <div class="gc-play-sub">${sbFieldEsc(s.summary)}</div>`;
       }).join('');
       return `<div class="gc-feed-play">
-        <div class="gc-play-meta">${sbFieldEsc(metaParts.join(' &middot; '))}</div>
         <div class="gc-play-headline">${sbFieldEsc(p.headline)}</div>
         ${statLinesHtml}
       </div>`;
