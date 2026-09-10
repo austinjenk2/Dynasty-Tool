@@ -12667,16 +12667,7 @@
       const predicted = !rawStarters.has(id);
       const pts = pointsMap[id] != null ? Number(pointsMap[id]).toFixed(1) : '&mdash;';
       const proj = sbProjectionFor(id, projMap, league);
-      const gameStarted = sbGameStartedForTeam(team, espnGameData);
-      // Sleeper's own weekly projection is fixed before kickoff and never
-      // moves once the game is live -- showing it as a separate "LIVE"
-      // column next to the frozen "started at" one always read the exact
-      // same number twice. Just the one real Proj column now: tracks the
-      // current pregame projection until kickoff, then freezes (so a
-      // post-kickoff injury/role change to a projection elsewhere doesn't
-      // retroactively redraw this player's number).
-      const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, proj, gameStarted) : null;
-      const projText = origProj != null ? origProj.toFixed(1) : '&mdash;';
+      const projText = proj != null ? proj.toFixed(1) : '&mdash;';
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
       return `<tr class="sb-lineup-row" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}">` +
@@ -18494,56 +18485,70 @@
     return [];
   }
 
-  // Builds every fantasy-relevant scoring play for one side of a matchup
-  // (not capped to a fixed count -- every real play that moved one of
-  // these starters' score shows up), using that league's own scoring
-  // settings.
-  async function sbGetScoringPlays(starterIds, dict, league, espnGames) {
+  // Real per-poll stat deltas -- NOT ESPN play-by-play text parsing. That
+  // approach only ever matched the small handful of exact English phrasings
+  // sbParsePlayEvents knew about, so a real 6-yard catch or a 3-yard run
+  // (any wording ESPN happened to use that didn't line up) silently
+  // produced nothing, while a touchdown's "...for N yards, TOUCHDOWN"
+  // suffix still matched the same "for N yards" pattern -- from the
+  // outside, that reads as "only touchdowns show up." Diffing each
+  // relevant starter's real cumulative live stat line (the same one
+  // gcTailCellsHtml/+/- Exp already trusts) against what it was last time
+  // this ran catches every real stat change -- a catch, a handful of
+  // rushing yards, a turnover -- not just the plays a regex could parse,
+  // and needs no ESPN text at all. Accumulated into a per-league/week log
+  // (keyed off window.sleeperLeagueData's own polling, not a fresh fetch
+  // here) so reopening the panel still shows everything that's happened
+  // so far, not just what changed since the last poll.
+  window.__sbStatSnapshots = window.__sbStatSnapshots || {};
+  window.__sbScoringPlaysLog = window.__sbScoringPlaysLog || {};
+  const SB_STAT_DELTA_KEYS = ['rec', 'rec_yd', 'rec_td', 'rush_att', 'rush_yd', 'rush_td', 'pass_att', 'pass_cmp', 'pass_yd', 'pass_td', 'pass_int', 'fum_lost'];
+  function sbStatDeltaDesc(delta) {
+    const parts = [];
+    if (delta.rec_td) parts.push(`${delta.rec_td} receiving TD${delta.rec_td > 1 ? 's' : ''}`);
+    else if (delta.rec) parts.push(`${delta.rec} catch${delta.rec > 1 ? 'es' : ''}${delta.rec_yd ? ` for ${Math.round(delta.rec_yd)} yds` : ''}`);
+    if (delta.rush_td) parts.push(`${delta.rush_td} rushing TD${delta.rush_td > 1 ? 's' : ''}`);
+    else if (delta.rush_att) parts.push(`${delta.rush_att} carr${delta.rush_att > 1 ? 'ies' : 'y'}${delta.rush_yd ? ` for ${Math.round(delta.rush_yd)} yds` : ''}`);
+    if (delta.pass_td) parts.push(`${delta.pass_td} passing TD${delta.pass_td > 1 ? 's' : ''}`);
+    else if (delta.pass_cmp) parts.push(`${delta.pass_cmp}/${delta.pass_att || delta.pass_cmp} for ${Math.round(delta.pass_yd || 0)} yds`);
+    if (delta.pass_int) parts.push('INT thrown');
+    if (delta.fum_lost) parts.push('fumble lost');
+    return parts.length ? parts.join(', ') : 'stat update';
+  }
+
+  async function sbGetScoringPlays(starterIds, dict, league, week) {
     const relevant = (starterIds || []).filter(id => {
       const p = dict[id];
       return p && ['QB', 'RB', 'WR', 'TE'].includes(p.position);
     });
-    if (!relevant.length) return [];
+    if (!relevant.length || !league || !window.sleeperGetWeekStats) return [];
 
-    const shortNameMap = {};
+    const statsMap = await window.sleeperGetWeekStats(league.season, week) || {};
+    const snapKey = `${league.league_id}_${league.season}_${week}`;
+    const snapshot = window.__sbStatSnapshots[snapKey] = window.__sbStatSnapshots[snapKey] || {};
+    const log = window.__sbScoringPlaysLog[snapKey] = window.__sbScoringPlaysLog[snapKey] || {};
+
     relevant.forEach(id => {
-      const p = dict[id];
-      const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-      shortNameMap[sbEspnShortName(full)] = id;
-    });
-
-    // Multiple starters often share the same real NFL game -- fetch each
-    // game's play-by-play once regardless of how many rostered players
-    // are in it.
-    const eventIds = new Set();
-    relevant.forEach(id => {
-      const info = espnGames[dict[id].team];
-      if (info && info.eventId) eventIds.add(info.eventId);
-    });
-    if (!eventIds.size) return [];
-
-    const gamesPlays = await Promise.all(Array.from(eventIds).map(getEspnPlayByPlay));
-
-    const found = [];
-    gamesPlays.forEach(plays => {
-      plays.forEach((play, idx) => {
-        sbParsePlayEvents(play.text).forEach(ev => {
-          const playerId = shortNameMap[ev.name];
-          if (!playerId) return;
-          const points = sbCustomScoreFor(ev.stats, league.scoring_settings);
-          if (points == null) return;
-          const p = dict[playerId];
-          const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : ev.name;
-          found.push({
-            name, desc: ev.desc, points,
-            order: play.wallclock ? new Date(play.wallclock).getTime() : idx,
-          });
-        });
+      const cur = statsMap[id];
+      if (!cur) return;
+      const prev = snapshot[id] || {};
+      const delta = {};
+      let changed = false;
+      SB_STAT_DELTA_KEYS.forEach(k => {
+        const d = (cur[k] || 0) - (prev[k] || 0);
+        if (d > 0) { delta[k] = d; changed = true; }
       });
+      snapshot[id] = Object.assign({}, cur);
+      if (!changed) return;
+      const points = sbCustomScoreFor(delta, league.scoring_settings);
+      if (points == null) return;
+      const p = dict[id];
+      const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : id;
+      log[id] = log[id] || [];
+      log[id].push({ name, desc: sbStatDeltaDesc(delta), points, order: Date.now() });
     });
 
-    found.sort((a, b) => b.order - a.order);
-    return found;
+    return relevant.flatMap(id => log[id] || []).sort((a, b) => b.order - a.order);
   }
 
   function sbLast5PlaysHtml(plays) {
@@ -18568,10 +18573,9 @@
     const oppEl = panel.querySelector('.sb-last-plays-opp');
     if (!mineEl && !oppEl) return;
     try {
-      const espnGames = await getEspnGameDataCached(week, league.season);
       const [minePlays, oppPlays] = await Promise.all([
-        sbGetScoringPlays(myIds, dict, league, espnGames),
-        sbGetScoringPlays(oppIds, dict, league, espnGames),
+        sbGetScoringPlays(myIds, dict, league, week),
+        sbGetScoringPlays(oppIds, dict, league, week),
       ]);
       if (mineEl) mineEl.innerHTML = sbLast5PlaysHtml(minePlays);
       if (oppEl) oppEl.innerHTML = sbLast5PlaysHtml(oppPlays);
