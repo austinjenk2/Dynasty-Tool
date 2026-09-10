@@ -12656,6 +12656,17 @@
     const info = espnGameData[team];
     return !!info && (info.state === 'in' || info.state === 'post');
   }
+  // Once a player's real game is over there's no more time left for him to
+  // score -- Sleeper's own "live" projection number doesn't reflect that
+  // (it just keeps echoing back a number close to the original pregame
+  // projection), so the live Proj column would otherwise look stuck at a
+  // stale number even on a finished game. Anywhere a final/live score is
+  // available, a finished game's Proj should just be his real final score.
+  function sbGameFinishedForTeam(team, espnGameData) {
+    if (!team || !espnGameData) return false;
+    const info = espnGameData[team];
+    return !!info && info.state === 'post';
+  }
   // True once ANY starter on one side has a real team whose game has
   // kicked off -- used for the team-level (matchup total) "started at",
   // since a fantasy matchup doesn't have one single kickoff time.
@@ -12688,12 +12699,15 @@
       const team = p ? (p.team || 'FA') : '';
       const posClass = pos.toLowerCase();
       const predicted = !rawStarters.has(id);
-      const pts = pointsMap[id] != null ? Number(pointsMap[id]).toFixed(1) : '&mdash;';
-      const proj = sbProjectionFor(id, projMap, league);
-      const projText = proj != null ? proj.toFixed(1) : '&mdash;';
+      const livePtsNum = pointsMap[id] != null ? Number(pointsMap[id]) : null;
+      const pts = livePtsNum != null ? livePtsNum.toFixed(1) : '&mdash;';
+      const rawProj = sbProjectionFor(id, projMap, league);
       const gameStarted = sbGameStartedForTeam(team, espnGameData);
-      const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, proj, gameStarted) : null;
+      const gameFinished = sbGameFinishedForTeam(team, espnGameData);
+      const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, rawProj, gameStarted) : null;
       const origText = origProj != null ? origProj.toFixed(1) : '&mdash;';
+      const proj = (gameFinished && livePtsNum != null) ? livePtsNum : rawProj;
+      const projText = proj != null ? proj.toFixed(1) : '&mdash;';
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
       return `<tr class="sb-lineup-row" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}">` +
@@ -13742,9 +13756,15 @@
         const pos = p ? p.position : null;
         if (!p || !['QB', 'RB', 'WR', 'TE'].includes(pos)) return null;
         const pprPoints = rgBasePprPoints(rgActualStatsMap[id], pos);
-        const liveProj = rgBasePprPoints(rgProjStatsMap[id], pos);
+        const rawLiveProj = rgBasePprPoints(rgProjStatsMap[id], pos);
         const rgGameStarted = sbGameStartedForTeam(p.team, rgEspnGameData);
-        const origProj = liveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, liveProj, rgGameStarted) : null;
+        const rgGameFinished = sbGameFinishedForTeam(p.team, rgEspnGameData);
+        const origProj = rawLiveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, rawLiveProj, rgGameStarted) : null;
+        // Once his real game is over there's no more time left to score --
+        // Sleeper's own live projection number doesn't reflect that (it
+        // just keeps echoing something close to the pregame number), so a
+        // finished game's live projection is just his real final score.
+        const liveProj = (rgGameFinished && pprPoints != null) ? pprPoints : rawLiveProj;
         // Real points scored so far vs. his real pregame projection --
         // NOT liveProj vs. origProj: Sleeper's own weekly projection is a
         // fixed pregame number that never moves during the game itself, so
@@ -18913,13 +18933,18 @@
     </td>`;
   }
 
-  function gcTailCellsHtml(id, statsMap, projMap, gameStarted, season, week) {
+  function gcTailCellsHtml(id, statsMap, projMap, gameStarted, gameFinished, season, week) {
     const stats = statsMap[id];
     const livePts = stats ? (stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std) : null;
-    const projPts = projMap[id];
-    const origPts = (projPts != null && season != null && week != null)
-      ? origProjFor(season, week, 'gc_players', id, projPts, !!gameStarted)
+    const rawProjPts = projMap[id];
+    const origPts = (rawProjPts != null && season != null && week != null)
+      ? origProjFor(season, week, 'gc_players', id, rawProjPts, !!gameStarted)
       : null;
+    // Once the game is over there's no more time left for him to score --
+    // Sleeper's own live projection number doesn't reflect that (it just
+    // keeps echoing something close to the original pregame number), so a
+    // finished game's live projection is just his real final score.
+    const projPts = (gameFinished && livePts != null) ? livePts : rawProjPts;
     const expDiff = (livePts != null && origPts != null) ? livePts - origPts : null;
     const expCls = expDiff == null ? '' : (expDiff > 0 ? 'ldrec-pos' : (expDiff < 0 ? 'ldrec-neg' : ''));
     return `
@@ -18947,7 +18972,7 @@
   // no defense, and no QB rating: just completions/attempts/yards/TDs,
   // carries/yards/TDs, catches/yards/TDs, the way ESPN's own box score
   // groups them.
-  function gcTeamTablesHtml(abbr, dict, statsMap, projMap, gameStarted, season, week) {
+  function gcTeamTablesHtml(abbr, dict, statsMap, projMap, gameStarted, gameFinished, season, week) {
     const ids = Object.keys(dict).filter(id => dict[id] && dict[id].team === abbr && GC_FANTASY_POS.includes(dict[id].position));
     const passing = [], rushing = [], receiving = [];
     ids.forEach(id => {
@@ -18960,7 +18985,7 @@
     const byBest = (a, b) => b.sort - a.sort;
     passing.sort(byBest); rushing.sort(byBest); receiving.sort(byBest);
 
-    const row = (id, p, cells) => `<tr data-player-id="${sbFieldEsc(id)}">${gcPlayerMetaHtml(id, p)}${cells}${gcTailCellsHtml(id, statsMap, projMap, gameStarted, season, week)}</tr>`;
+    const row = (id, p, cells) => `<tr data-player-id="${sbFieldEsc(id)}">${gcPlayerMetaHtml(id, p)}${cells}${gcTailCellsHtml(id, statsMap, projMap, gameStarted, gameFinished, season, week)}</tr>`;
     const passRows = passing.map(({ id, p }) => {
       const s = statsMap[id] || {};
       return row(id, p, `<td>${s.pass_cmp || 0}/${s.pass_att || 0}</td><td>${Math.round(s.pass_yd || 0)}</td><td>${s.pass_td || 0}</td>`);
@@ -19030,10 +19055,11 @@
     const { game, dict, statsMap, projMap, season, week } = cur;
     const tab = window.__gcPaneDetailTab[eventId];
     const gameStarted = game.state === 'in' || game.state === 'post';
+    const gameFinished = game.state === 'post';
     if (tab === 'away') {
-      el.innerHTML = gcTeamTablesHtml(game.away.abbr, dict, statsMap, projMap, gameStarted, season, week);
+      el.innerHTML = gcTeamTablesHtml(game.away.abbr, dict, statsMap, projMap, gameStarted, gameFinished, season, week);
     } else if (tab === 'home') {
-      el.innerHTML = gcTeamTablesHtml(game.home.abbr, dict, statsMap, projMap, gameStarted, season, week);
+      el.innerHTML = gcTeamTablesHtml(game.home.abbr, dict, statsMap, projMap, gameStarted, gameFinished, season, week);
     } else {
       el.innerHTML = `<div class="gc-feed" id="gcFeedList-${eventId}"><div class="ld-loading">Loading play-by-play&hellip;</div></div>`;
       try {
