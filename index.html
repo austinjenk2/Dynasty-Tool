@@ -12796,6 +12796,49 @@
     const info = espnGameData[team];
     return !!info && info.state === 'post';
   }
+
+  // Sleeper's own /projections number doesn't move during a live game --
+  // it just echoes back something close to the pregame value the whole
+  // way through (see origProjFor above) -- so there's no live projection
+  // to read off Sleeper's API once a game kicks off. This estimates one
+  // instead: real points scored so far, plus the player's pregame
+  // projection scaled down by how much of the game clock is actually
+  // left. NFL regulation is 4 x 15-minute quarters; overtime is treated
+  // as "essentially done" (2% of the game left) rather than modeled
+  // exactly, since fantasy-relevant scoring swings from it are rare and
+  // ESPN's clock format there isn't worth special-casing.
+  function sbElapsedFractionFromPeriodClock(period, clock, state) {
+    if (state === 'post') return 1;
+    if (state !== 'in' || !period) return 0;
+    if (period > 4) return 0.98;
+    const parts = String(clock || '15:00').split(':').map(Number);
+    const remainingSec = (parts.length === 2 && !parts.some(isNaN))
+      ? parts[0] * 60 + parts[1] : 900;
+    const QUARTER_SEC = 900;
+    const elapsedSec = (period - 1) * QUARTER_SEC + (QUARTER_SEC - Math.max(0, Math.min(QUARTER_SEC, remainingSec)));
+    return Math.max(0, Math.min(1, elapsedSec / (4 * QUARTER_SEC)));
+  }
+  function sbGameElapsedFraction(team, espnGameData) {
+    if (!team || !espnGameData) return 0;
+    const info = espnGameData[team];
+    if (!info) return 0;
+    return sbElapsedFractionFromPeriodClock(info.period, info.clock, info.state);
+  }
+  // origProj is the frozen pregame number (origProjFor); actualPts is
+  // real points scored so far this week. Before kickoff there's nothing
+  // to blend yet, so this is just the pregame number; once the game ends
+  // there's no time left for him to add to it, so it's just his real
+  // final score (matches the "finished game" fallback already used for
+  // the Proj column everywhere).
+  function sbEstimateLiveProjection(actualPts, origProj, elapsedFraction, gameStarted, gameFinished) {
+    if (origProj == null) return actualPts != null ? actualPts : null;
+    if (!gameStarted) return origProj;
+    if (gameFinished) return actualPts != null ? actualPts : origProj;
+    if (actualPts == null) return origProj;
+    const frac = elapsedFraction == null ? 0 : elapsedFraction;
+    return actualPts + origProj * (1 - frac);
+  }
+
   // True once ANY starter on one side has a real team whose game has
   // kicked off -- used for the team-level (matchup total) "started at",
   // since a fantasy matchup doesn't have one single kickoff time.
@@ -12835,7 +12878,8 @@
       const gameFinished = sbGameFinishedForTeam(team, espnGameData);
       const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, rawProj, gameStarted) : null;
       const origText = origProj != null ? origProj.toFixed(1) : '&mdash;';
-      const proj = (gameFinished && livePtsNum != null) ? livePtsNum : rawProj;
+      const elapsedFraction = sbGameElapsedFraction(team, espnGameData);
+      const proj = sbEstimateLiveProjection(livePtsNum, origProj != null ? origProj : rawProj, elapsedFraction, gameStarted, gameFinished);
       const projText = proj != null ? proj.toFixed(1) : '&mdash;';
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
@@ -13894,19 +13938,19 @@
         const rgGameStarted = sbGameStartedForTeam(p.team, rgEspnGameData);
         const rgGameFinished = sbGameFinishedForTeam(p.team, rgEspnGameData);
         const origProj = rawLiveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, rawLiveProj, rgGameStarted) : null;
-        // Once his real game is over there's no more time left to score --
-        // Sleeper's own live projection number doesn't reflect that (it
-        // just keeps echoing something close to the pregame number), so a
-        // finished game's live projection is just his real final score.
-        const liveProj = (rgGameFinished && pprPoints != null) ? pprPoints : rawLiveProj;
-        // Real points scored so far vs. his real pregame projection --
-        // NOT liveProj vs. origProj: Sleeper's own weekly projection is a
-        // fixed pregame number that never moves during the game itself, so
-        // that comparison was silently always +0.0 once frozen. Only
-        // meaningful once his game has actually started (pprPoints is a
-        // real 0 before that, which would otherwise misread as "way under
-        // expectation" for someone who simply hasn't played yet).
-        const poe = (rgGameStarted && pprPoints != null && origProj != null) ? (pprPoints - origProj) : null;
+        // Sleeper's own /projections number doesn't move during the game
+        // (it just echoes back the pregame value), so it can't be used as
+        // a live number on its own -- sbEstimateLiveProjection blends his
+        // real points-so-far with his pregame projection's remaining share
+        // (via the live game clock) into a genuine live estimate, and
+        // "Projection Over Expected" is how far that's moved from his
+        // frozen pregame number -- e.g. a player pacing well under his
+        // projection shows a negative POE well before his game is over,
+        // instead of POE reading (mostly) 0 all game and only swinging
+        // once the final score lands.
+        const rgElapsedFraction = sbGameElapsedFraction(p.team, rgEspnGameData);
+        const liveProj = sbEstimateLiveProjection(pprPoints, origProj != null ? origProj : rawLiveProj, rgElapsedFraction, rgGameStarted, rgGameFinished);
+        const poe = (rgGameStarted && liveProj != null && origProj != null) ? (liveProj - origProj) : null;
         return {
           id,
           name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
@@ -18586,6 +18630,12 @@
             detail: statusType ? statusType.shortDetail : null,
             hasBall: !!(possessionTeamId && c.team && String(c.team.id) === String(possessionTeamId)),
             eventId: ev.id,
+            // Real live quarter + clock (only present while a game is
+            // 'in'), so a live projection estimate can be blended in as
+            // the game actually progresses instead of jumping straight
+            // from pregame to final -- see sbEstimateLiveProjection.
+            period: comp.status ? comp.status.period : null,
+            clock: comp.status ? comp.status.displayClock : null,
           };
         });
       });
@@ -19112,19 +19162,23 @@
     </td>`;
   }
 
-  function gcTailCellsHtml(id, statsMap, projMap, gameStarted, gameFinished, season, week) {
+  function gcTailCellsHtml(id, statsMap, projMap, gameStarted, gameFinished, elapsedFraction, season, week) {
     const stats = statsMap[id];
     const livePts = stats ? (stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std) : null;
     const rawProjPts = projMap[id];
     const origPts = (rawProjPts != null && season != null && week != null)
       ? origProjFor(season, week, 'gc_players', id, rawProjPts, !!gameStarted)
       : null;
-    // Once the game is over there's no more time left for him to score --
-    // Sleeper's own live projection number doesn't reflect that (it just
-    // keeps echoing something close to the original pregame number), so a
-    // finished game's live projection is just his real final score.
-    const projPts = (gameFinished && livePts != null) ? livePts : rawProjPts;
-    const expDiff = (livePts != null && origPts != null) ? livePts - origPts : null;
+    // Sleeper's /projections number doesn't move during the game (it just
+    // echoes back the pregame value), so it's not itself a live number --
+    // blend his real points-so-far with his pregame projection's
+    // remaining share (via the live game clock) into a genuine live
+    // estimate. "+/- Exp" is then how far that live estimate has moved
+    // from his frozen pregame number, not his partial actual score against
+    // a full-game projection (which reads as deeply negative for anyone
+    // who hasn't finished playing yet, regardless of pace).
+    const projPts = sbEstimateLiveProjection(livePts, origPts != null ? origPts : rawProjPts, elapsedFraction, gameStarted, gameFinished);
+    const expDiff = (projPts != null && origPts != null) ? projPts - origPts : null;
     const expCls = expDiff == null ? '' : (expDiff > 0 ? 'ldrec-pos' : (expDiff < 0 ? 'ldrec-neg' : ''));
     return `
       <td>${livePts != null ? livePts.toFixed(1) : '&mdash;'}</td>
@@ -19151,7 +19205,7 @@
   // no defense, and no QB rating: just completions/attempts/yards/TDs,
   // carries/yards/TDs, catches/yards/TDs, the way ESPN's own box score
   // groups them.
-  function gcTeamTablesHtml(abbr, dict, statsMap, projMap, gameStarted, gameFinished, season, week) {
+  function gcTeamTablesHtml(abbr, dict, statsMap, projMap, gameStarted, gameFinished, elapsedFraction, season, week) {
     const ids = Object.keys(dict).filter(id => dict[id] && dict[id].team === abbr && GC_FANTASY_POS.includes(dict[id].position));
     const passing = [], rushing = [], receiving = [];
     ids.forEach(id => {
@@ -19164,7 +19218,7 @@
     const byBest = (a, b) => b.sort - a.sort;
     passing.sort(byBest); rushing.sort(byBest); receiving.sort(byBest);
 
-    const row = (id, p, cells) => `<tr data-player-id="${sbFieldEsc(id)}">${gcPlayerMetaHtml(id, p)}${cells}${gcTailCellsHtml(id, statsMap, projMap, gameStarted, gameFinished, season, week)}</tr>`;
+    const row = (id, p, cells) => `<tr data-player-id="${sbFieldEsc(id)}">${gcPlayerMetaHtml(id, p)}${cells}${gcTailCellsHtml(id, statsMap, projMap, gameStarted, gameFinished, elapsedFraction, season, week)}</tr>`;
     const passRows = passing.map(({ id, p }) => {
       const s = statsMap[id] || {};
       return row(id, p, `<td>${s.pass_cmp || 0}/${s.pass_att || 0}</td><td>${Math.round(s.pass_yd || 0)}</td><td>${s.pass_td || 0}</td>`);
@@ -19235,10 +19289,11 @@
     const tab = window.__gcPaneDetailTab[eventId];
     const gameStarted = game.state === 'in' || game.state === 'post';
     const gameFinished = game.state === 'post';
+    const elapsedFraction = sbElapsedFractionFromPeriodClock(game.period, game.clock, game.state);
     if (tab === 'away') {
-      el.innerHTML = gcTeamTablesHtml(game.away.abbr, dict, statsMap, projMap, gameStarted, gameFinished, season, week);
+      el.innerHTML = gcTeamTablesHtml(game.away.abbr, dict, statsMap, projMap, gameStarted, gameFinished, elapsedFraction, season, week);
     } else if (tab === 'home') {
-      el.innerHTML = gcTeamTablesHtml(game.home.abbr, dict, statsMap, projMap, gameStarted, gameFinished, season, week);
+      el.innerHTML = gcTeamTablesHtml(game.home.abbr, dict, statsMap, projMap, gameStarted, gameFinished, elapsedFraction, season, week);
     } else {
       el.innerHTML = `<div class="gc-feed" id="gcFeedList-${eventId}"><div class="ld-loading">Loading play-by-play&hellip;</div></div>`;
       try {
