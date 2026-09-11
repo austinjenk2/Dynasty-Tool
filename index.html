@@ -12861,13 +12861,37 @@
   function sbPlayerIsInactive(p) {
     return !!p && (p.injury_status === 'Out' || p.injury_status === 'IR' || p.status === 'Inactive');
   }
+  // Calibrated against real live/orig Sleeper readings mid-game (see the
+  // 2026 W1 CMC/Puka/Kyren samples): a flat "actual + pregame's remaining
+  // share" always assumes a player keeps producing at his ORIGINAL
+  // expected rate for the rest of the game, which overshoots badly for
+  // anyone who's actually running cold (Puka: 21 pregame, only 6.5 through
+  // 55% of the game -- his real live number tracked his own quiet pace,
+  // not his pregame one) and also overshoots a hot start off one big play
+  // (Kyren: nearly his whole 14.6 pregame number by halftime -- Sleeper's
+  // real number barely moved past that, it didn't extrapolate his hot
+  // pace forward). The fix: use whichever full-game rate is LOWER, his
+  // own pace so far or his pregame rate -- a cold pace is trusted outright
+  // (he's actually been this quiet), a hot one caps back toward pregame
+  // (one big early play doesn't get assumed to repeat).
+  const SB_LIVE_PROJ_PACE_TRUST_FLOOR = 0.2;
   function sbEstimateLiveProjection(actualPts, origProj, elapsedFraction, gameStarted, gameFinished) {
     if (origProj == null) return actualPts != null ? actualPts : null;
     if (!gameStarted) return origProj;
     if (gameFinished) return actualPts != null ? actualPts : origProj;
     if (actualPts == null) return origProj;
-    const frac = elapsedFraction == null ? 0 : elapsedFraction;
-    return actualPts + origProj * (1 - frac);
+    const frac = elapsedFraction == null ? 0 : Math.max(0, Math.min(1, elapsedFraction));
+    if (frac <= 0) return origProj;
+    if (frac >= 1) return actualPts;
+    // Below this floor his own pace is too small a sample to trust (0
+    // points 5 minutes in just means he hasn't touched the ball yet, not
+    // that he's been shut out all game) -- lean on the pregame rate alone
+    // until there's enough game behind him for his own rate to mean
+    // anything.
+    if (frac < SB_LIVE_PROJ_PACE_TRUST_FLOOR) return actualPts + origProj * (1 - frac);
+    const paceRate = actualPts / frac;
+    const remainingRate = Math.min(paceRate, origProj);
+    return actualPts + remainingRate * (1 - frac);
   }
 
   // True once ANY starter on one side has a real team whose game has
