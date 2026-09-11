@@ -433,16 +433,10 @@
   .ph-dc-season::after { content: ' \203A'; font-weight: 500; color: var(--faint); }
   .ph-dc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .ph-dc-round { width: 26px; flex-shrink: 0; font-size: 12px; font-weight: 800; }
-  .ph-dc-round.ph-dc-round-1 { color: var(--blue); }
-  .ph-dc-round.ph-dc-round-2 { color: var(--green); }
-  .ph-dc-round.ph-dc-round-3 { color: var(--gold); }
-  .ph-dc-round.ph-dc-round-4 { color: #7c5cbf; }
+  .ph-dc-round.ph-dc-round-1, .ph-dc-round.ph-dc-round-2, .ph-dc-round.ph-dc-round-3, .ph-dc-round.ph-dc-round-4 { color: var(--blue); }
   .ph-dc-bar-bg { flex: 1; height: 8px; border-radius: 4px; background: var(--border-soft); position: relative; overflow: hidden; }
   .ph-dc-bar-fill { position: absolute; inset: 0; width: 0; border-radius: 4px; }
-  .ph-dc-bar-fill.ph-dc-round-1 { background: var(--blue); }
-  .ph-dc-bar-fill.ph-dc-round-2 { background: var(--green); }
-  .ph-dc-bar-fill.ph-dc-round-3 { background: var(--gold); }
-  .ph-dc-bar-fill.ph-dc-round-4 { background: #7c5cbf; }
+  .ph-dc-bar-fill.ph-dc-round-1, .ph-dc-bar-fill.ph-dc-round-2, .ph-dc-bar-fill.ph-dc-round-3, .ph-dc-bar-fill.ph-dc-round-4 { background: var(--blue); }
   .ph-dc-value { width: 40px; flex-shrink: 0; text-align: right; font-weight: 700; font-size: 14px; color: var(--ink); }
 
   .dash-exp { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-soft); }
@@ -1184,11 +1178,8 @@
   .sb-exp-q { color: var(--gold); font-weight: 800; margin-left: 4px; }
   .sb-exp-psub { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
   .sb-exp-pts { text-align: right; color: var(--faint); font-weight: 600; }
-  .sb-exp-pts.sb-pos-qb { color: var(--red); }
-  .sb-exp-pts.sb-pos-rb { color: var(--green); }
-  .sb-exp-pts.sb-pos-wr { color: var(--blue); }
-  .sb-exp-pts.sb-pos-te { color: var(--gold); }
-  .sb-exp-pts.sb-pos-sfl { color: #7c5cbf; }
+  .sb-exp-pts.sb-pts-over { color: var(--green); }
+  .sb-exp-pts.sb-pts-under { color: var(--red); }
   .sb-exp-proj { text-align: right; color: var(--gold); font-weight: 700; }
   .sb-exp-orig { text-align: right; color: var(--faint); font-weight: 600; font-size: 11px; }
   .sb-exp-footer { margin-top: 14px; }
@@ -3083,8 +3074,8 @@
     <a class="section-tab" data-section="leagues">Leagues</a>
     <a class="section-tab" data-section="lineups">Matchup Hub</a>
     <a class="section-tab" data-section="gamecast">GameCast</a>
-    <a class="section-tab" data-section="rooting">Rooting Guide</a>
-    <a class="section-tab" data-section="waiver">Waiver Wire</a>
+    <a class="section-tab" data-section="rooting">Weekly Sweats</a>
+    <a class="section-tab" data-section="waiver">Waiver Radar</a>
     <a class="section-tab" data-section="draft">Draft Room</a>
     <a class="section-tab" data-section="exposures">Exposures</a>
     <a class="section-tab" data-section="trades">Trade History</a>
@@ -3334,74 +3325,6 @@
 
     </div>
 
-    <div class="sweats-panel">
-      <h2>Weekly Sweats</h2>
-      <p class="sweats-sub">The players deciding your fantasy week.</p>
-
-      <div class="sweats-columns">
-
-        <div class="sweats-col">
-          <div class="sweats-col-head">
-            <span class="sweats-label root-for">ROOT FOR</span>
-            <span class="sweats-guide">Full Guide &rarr;</span>
-          </div>
-          <div class="sweats-cards" id="sweatsForCards">
-            <div class="sweat-card for">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/bal.png" alt="BAL" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:var(--navy)">ZF</div>
-              <div class="sweat-pos wr">WR</div>
-              <div class="sweat-name">Zay Flowers</div>
-              <div class="sweat-count for">+7 <span>7 for</span></div>
-            </div>
-            <div class="sweat-card for">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/ari.png" alt="ARI" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:#3f6b4a">JL</div>
-              <div class="sweat-pos rb">RB</div>
-              <div class="sweat-name">Jeremiyah Love</div>
-              <div class="sweat-count for">+6 <span>6 for</span></div>
-            </div>
-            <div class="sweat-card for">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/lv.png" alt="LV" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:#3f6b4a">AJ</div>
-              <div class="sweat-pos rb">RB</div>
-              <div class="sweat-name">Ashton Jeanty</div>
-              <div class="sweat-count for">+5 <span>5 for</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="sweats-col">
-          <div class="sweats-col-head">
-            <span class="sweats-label root-against">ROOT AGAINST</span>
-            <span class="sweats-guide">Full Guide &rarr;</span>
-          </div>
-          <div class="sweats-cards" id="sweatsAgainstCards">
-            <div class="sweat-card against">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/was.png" alt="WSH" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:var(--navy)">TM</div>
-              <div class="sweat-pos wr">WR</div>
-              <div class="sweat-name">Terry McLaurin</div>
-              <div class="sweat-count against">-4 <span>5 vs &middot; 1 for</span></div>
-            </div>
-            <div class="sweat-card against">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/ari.png" alt="ARI" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:var(--navy)">MW</div>
-              <div class="sweat-pos wr">WR</div>
-              <div class="sweat-name">Michael Wilson</div>
-              <div class="sweat-count against">-4 <span>4 vs</span></div>
-            </div>
-            <div class="sweat-card against">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/bal.png" alt="BAL" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:#3f6b4a">DH</div>
-              <div class="sweat-pos rb">RB</div>
-              <div class="sweat-name">Derrick Henry</div>
-              <div class="sweat-count against">-3 <span>4 vs &middot; 1 for</span></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
   </div>
 
   <div data-view="leagues">
@@ -4214,6 +4137,11 @@
             <div class="sb-stat-value" id="sbStatWinsValue">14 of 18</div>
             <div class="sb-stat-label" id="sbStatWinsLabel">PROJECTED TO WIN</div>
           </div>
+          <div class="sb-stat-divider"></div>
+          <div class="sb-stat" id="sbStatCurrentWins">
+            <div class="sb-stat-value" id="sbStatCurrentWinsValue">0 of 0</div>
+            <div class="sb-stat-label">CURRENTLY WINNING</div>
+          </div>
         </div>
 
         <div class="sort-dropdown" style="display:flex;justify-content:flex-end;margin-bottom:10px">
@@ -4707,7 +4635,7 @@
       <div data-view="rooting">
         <div class="rg-header">
           <div class="rg-header-top">
-            <h2>Week <span class="sb-week-num">1</span> Rooting Guide</h2>
+            <h2>Week <span class="sb-week-num">1</span> Weekly Sweats</h2>
             <span class="week-dropdown" id="rgWeekDropdown">
               <span class="week-select" id="rgWeekSelect">WEEK <span id="rgWeekLabel">1</span> <span>&#9662;</span></span>
               <span class="week-menu" id="rgWeekMenu" hidden></span>
@@ -4722,6 +4650,13 @@
           <div class="rg-sort-toggle" id="rgSortToggle">
             <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="value">Leagues</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="leagues">$</button>
+          </div>
+          <div class="rg-sort-toggle" id="rgPosToggle">
+            <button type="button" class="rg-sort-toggle-btn active" data-rg-pos="ALL">All</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-pos="QB">QB</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-pos="RB">RB</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-pos="WR">WR</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-pos="TE">TE</button>
           </div>
           <div class="rg-leagues-panel" id="rgLeaguesPanel" hidden>
             <p class="rg-leagues-note">Uncheck a league to leave it out of Root For / Root Against for good &mdash; for a team you're tanking or a league you've checked out of. It stays off every week until you check it back on here.</p>
@@ -10718,7 +10653,7 @@
 
     <div class="settings-panel">
       <div class="settings-label">Blacklisted Leagues</div>
-      <div class="settings-sub">Turn a league off entirely and it disappears everywhere in the app -- Leagues, Exposures, Scoreboard, Trades, Waiver Wire, Rooting Guide, Draft Room, Dashboard, the league count up top, all of it -- as if it were never connected. Turn it back on here to bring it back.</div>
+      <div class="settings-sub">Turn a league off entirely and it disappears everywhere in the app -- Leagues, Exposures, Scoreboard, Trades, Waiver Radar, Weekly Sweats, Draft Room, Dashboard, the league count up top, all of it -- as if it were never connected. Turn it back on here to bring it back.</div>
       <div class="rg-leagues-chips" id="blacklistChips" style="margin-top:12px"></div>
     </div>
 
@@ -11432,7 +11367,7 @@
       expand.innerHTML =
         `<p class="schedule-expand-count">${matches.length} player${matches.length > 1 ? 's' : ''} affect your exposure in this game</p>` +
         `<div class="schedule-expand-chips">${chips}</div>` +
-        `<a class="schedule-expand-guide">Full Rooting Guide &rarr;</a>`;
+        `<a class="schedule-expand-guide">Full Weekly Sweats &rarr;</a>`;
     }
     const guideLink = expand.querySelector('.schedule-expand-guide');
     if (guideLink) guideLink.addEventListener('click', () => goToRootingGuide());
@@ -12490,11 +12425,34 @@
   // week's projections, e.g. when the Scoreboard week selector picks a week
   // other than the live one; omitted, it falls back to the current week's
   // cached projections.
-  function sbEffectivePoints(id, pointsMap, projMap, league) {
+  // espnGameData + week are optional: when available (the current live
+  // week, with real ESPN game state to read), a started-but-not-finished
+  // player's effective points is a genuine live projection estimate --
+  // his real points so far plus his pregame projection's remaining share
+  // -- not just his partial actual score standing in alone, which used to
+  // make a team's live total silently undercount real Sleeper's own total
+  // by however many points its still-playing starters have left to score.
+  // Without that context (a past/future week, or before it's fetched)
+  // this falls back to the old recorded-else-projection behavior.
+  function sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week) {
     const recorded = pointsMap ? pointsMap[id] : null;
-    const proj = sbProjectionFor(id, projMap, league);
-    if (recorded != null && (Number(recorded) !== 0 || proj == null)) return Number(recorded);
-    return proj != null ? proj : 0;
+    const rawProj = sbProjectionFor(id, projMap, league);
+    if (espnGameData && week != null && league) {
+      const dict = window.__sleeperPlayerDict;
+      const p = dict && dict[id];
+      const team = p ? p.team : null;
+      if (team) {
+        const gameStarted = sbGameStartedForTeam(team, espnGameData);
+        const gameFinished = sbGameFinishedForTeam(team, espnGameData);
+        const origProj = origProjFor(league.season, week, 'players', id, rawProj, gameStarted);
+        const elapsedFraction = sbGameElapsedFraction(team, espnGameData);
+        const baseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawProj);
+        const live = sbEstimateLiveProjection(recorded != null ? Number(recorded) : null, baseline, elapsedFraction, gameStarted, gameFinished);
+        if (live != null) return live;
+      }
+    }
+    if (recorded != null && (Number(recorded) !== 0 || rawProj == null)) return Number(recorded);
+    return rawProj != null ? rawProj : 0;
   }
 
   const SB_SLOT_ELIGIBLE = {
@@ -12657,17 +12615,43 @@
       if (!entry || !cell) return;
       const result = sbContendingRank(entry);
       if (!result) return;
-      cell.textContent = `${sbOrdinal(result.rank)} of ${result.of}`;
+      cell.textContent = sbOrdinal(result.rank);
       row.dataset.contending = String(result.rank);
     });
   }
   window.renderContendingRanks = renderContendingRanks;
 
-  function sbMatchupProjectedTotal(matchup, projMap, league) {
+  // Roster Value column: same real dynasty asset value (Pure Potential's
+  // list) rank per league the Dashboard's Roster Value track already
+  // computes, just shown bare (no "of N") to match Contending Rank's cell
+  // right next to it.
+  function renderRosterValueRanks() {
+    document.querySelectorAll('.league-row[data-sleeper-league-id]').forEach(row => {
+      const entry = window.sleeperLeagueData && window.sleeperLeagueData[row.dataset.sleeperLeagueId];
+      const cell = row.querySelector('[data-roster-value-cell]');
+      if (!entry || !cell) return;
+      const dict = window.__sleeperPlayerDict;
+      const allRosters = entry.allRosters || [];
+      if (getSiteMode() !== 'dynasty' || !dict || allRosters.length < 2) { cell.textContent = '—'; return; }
+      const isDynastyLeague = sbLeagueIsDynasty(entry.league);
+      const values = allRosters.map(r => ({
+        rosterId: r.roster_id,
+        value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(entry, r.roster_id).reduce((s, p) => s + ppPickValue(p.round), 0) : 0),
+      }));
+      const myValue = values.find(v => v.rosterId === entry.roster.roster_id);
+      if (!myValue) { cell.textContent = '—'; return; }
+      const sortedDesc = [...values].sort((a, b) => b.value - a.value);
+      const rank = sortedDesc.findIndex(v => v.rosterId === entry.roster.roster_id) + 1;
+      cell.textContent = sbOrdinal(rank);
+    });
+  }
+  window.renderRosterValueRanks = renderRosterValueRanks;
+
+  function sbMatchupProjectedTotal(matchup, projMap, league, espnGameData, week) {
     if (!matchup) return 0;
     const starters = sbEffectiveStarters(matchup, league, projMap);
     const pointsMap = matchup.players_points || {};
-    return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league), 0);
+    return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week), 0);
   }
 
   // True only if at least one starter in the matchup has either a recorded
@@ -12730,6 +12714,24 @@
     if (winPct > 60) return '';
     if (winPct < 40) return ' underdog';
     return ' close';
+  }
+
+  // A continuous green/red background tint for a Scoreboard card, scaled
+  // by how far the real win probability sits from a 50/50 coin flip --
+  // a near-toss-up still reads as a faint tint (never plain white) but a
+  // near-lock reads as a much deeper one, instead of the badge's flat
+  // three/two-way color read.
+  function sbWinTintStyle(winPct) {
+    if (winPct == null || winPct < 0) return '';
+    const linear = Math.min(1, Math.abs(winPct - 50) / 50);
+    // Curved rather than linear -- a coin-flip game stays a bare hint of
+    // color, but the curve accelerates hard toward the extremes so a
+    // near-lock reads as dramatically more saturated than a merely
+    // favored game, not just a bit more.
+    const intensity = Math.pow(linear, 1.8);
+    const alpha = (0.04 + intensity * 0.4).toFixed(3);
+    const rgb = winPct >= 50 ? '47,138,78' : '200,16,46';
+    return ` style="background: rgba(${rgb}, ${alpha});"`;
   }
 
   // Sleeper's own projection numbers keep updating during live games (as
@@ -12796,6 +12798,81 @@
     const info = espnGameData[team];
     return !!info && info.state === 'post';
   }
+
+  // Sleeper's own /projections number doesn't move during a live game --
+  // it just echoes back something close to the pregame value the whole
+  // way through (see origProjFor above) -- so there's no live projection
+  // to read off Sleeper's API once a game kicks off. This estimates one
+  // instead: real points scored so far, plus the player's pregame
+  // projection scaled down by how much of the game clock is actually
+  // left. NFL regulation is 4 x 15-minute quarters; overtime is treated
+  // as "essentially done" (2% of the game left) rather than modeled
+  // exactly, since fantasy-relevant scoring swings from it are rare and
+  // ESPN's clock format there isn't worth special-casing.
+  function sbElapsedFractionFromPeriodClock(period, clock, state) {
+    if (state === 'post') return 1;
+    if (state !== 'in' || !period) return 0;
+    if (period > 4) return 0.98;
+    const parts = String(clock || '15:00').split(':').map(Number);
+    const remainingSec = (parts.length === 2 && !parts.some(isNaN))
+      ? parts[0] * 60 + parts[1] : 900;
+    const QUARTER_SEC = 900;
+    const elapsedSec = (period - 1) * QUARTER_SEC + (QUARTER_SEC - Math.max(0, Math.min(QUARTER_SEC, remainingSec)));
+    return Math.max(0, Math.min(1, elapsedSec / (4 * QUARTER_SEC)));
+  }
+  function sbGameElapsedFraction(team, espnGameData) {
+    if (!team || !espnGameData) return 0;
+    const info = espnGameData[team];
+    if (!info) return 0;
+    return sbElapsedFractionFromPeriodClock(info.period, info.clock, info.state);
+  }
+  // origProj is the frozen pregame number (origProjFor); actualPts is
+  // real points scored so far this week. Before kickoff there's nothing
+  // to blend yet, so this is just the pregame number; once the game ends
+  // there's no time left for him to add to it, so it's just his real
+  // final score (matches the "finished game" fallback already used for
+  // the Proj column everywhere).
+  // A player ruled Out (or on IR) isn't playing this week regardless of
+  // what his projection looked like when it was snapshotted pregame --
+  // without this, a live estimate built from that frozen number just
+  // decays slowly toward 0 for the rest of the game instead of reading
+  // as the real 0 it should be the moment his status is known.
+  function sbPlayerIsInactive(p) {
+    return !!p && (p.injury_status === 'Out' || p.injury_status === 'IR' || p.status === 'Inactive');
+  }
+  // Calibrated against real live/orig Sleeper readings mid-game (see the
+  // 2026 W1 CMC/Puka/Kyren samples): a flat "actual + pregame's remaining
+  // share" always assumes a player keeps producing at his ORIGINAL
+  // expected rate for the rest of the game, which overshoots badly for
+  // anyone who's actually running cold (Puka: 21 pregame, only 6.5 through
+  // 55% of the game -- his real live number tracked his own quiet pace,
+  // not his pregame one) and also overshoots a hot start off one big play
+  // (Kyren: nearly his whole 14.6 pregame number by halftime -- Sleeper's
+  // real number barely moved past that, it didn't extrapolate his hot
+  // pace forward). The fix: use whichever full-game rate is LOWER, his
+  // own pace so far or his pregame rate -- a cold pace is trusted outright
+  // (he's actually been this quiet), a hot one caps back toward pregame
+  // (one big early play doesn't get assumed to repeat).
+  const SB_LIVE_PROJ_PACE_TRUST_FLOOR = 0.2;
+  function sbEstimateLiveProjection(actualPts, origProj, elapsedFraction, gameStarted, gameFinished) {
+    if (origProj == null) return actualPts != null ? actualPts : null;
+    if (!gameStarted) return origProj;
+    if (gameFinished) return actualPts != null ? actualPts : origProj;
+    if (actualPts == null) return origProj;
+    const frac = elapsedFraction == null ? 0 : Math.max(0, Math.min(1, elapsedFraction));
+    if (frac <= 0) return origProj;
+    if (frac >= 1) return actualPts;
+    // Below this floor his own pace is too small a sample to trust (0
+    // points 5 minutes in just means he hasn't touched the ball yet, not
+    // that he's been shut out all game) -- lean on the pregame rate alone
+    // until there's enough game behind him for his own rate to mean
+    // anything.
+    if (frac < SB_LIVE_PROJ_PACE_TRUST_FLOOR) return actualPts + origProj * (1 - frac);
+    const paceRate = actualPts / frac;
+    const remainingRate = Math.min(paceRate, origProj);
+    return actualPts + remainingRate * (1 - frac);
+  }
+
   // True once ANY starter on one side has a real team whose game has
   // kicked off -- used for the team-level (matchup total) "started at",
   // since a fantasy matchup doesn't have one single kickoff time.
@@ -12835,8 +12912,25 @@
       const gameFinished = sbGameFinishedForTeam(team, espnGameData);
       const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, rawProj, gameStarted) : null;
       const origText = origProj != null ? origProj.toFixed(1) : '&mdash;';
-      const proj = (gameFinished && livePtsNum != null) ? livePtsNum : rawProj;
-      const projText = proj != null ? proj.toFixed(1) : '&mdash;';
+      const elapsedFraction = sbGameElapsedFraction(team, espnGameData);
+      const projBaseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawProj);
+      const proj = sbEstimateLiveProjection(livePtsNum, projBaseline, elapsedFraction, gameStarted, gameFinished);
+      // Once the game's over, the live estimate just equals his real final
+      // score (sbEstimateLiveProjection's own finished-game fallback) --
+      // showing that same number twice reads as a second, redundant
+      // "projection" when it's really just his actual restated, so it's
+      // blank instead of repeating pts here.
+      const projText = gameFinished ? '' : (proj != null ? proj.toFixed(1) : '&mdash;');
+      // Points color reads performance against his own original pregame
+      // number, not his position: green once he's tracking ahead of it
+      // (post-game, his real score beat it; live, his current estimate is
+      // above it), red once he's tracking behind -- neutral before his
+      // game starts, when there's nothing yet to compare against.
+      let ptsPerfClass = '';
+      if (origProj != null) {
+        const compareVal = gameFinished ? livePtsNum : (gameStarted ? proj : null);
+        if (compareVal != null) ptsPerfClass = compareVal > origProj ? ' sb-pts-over' : (compareVal < origProj ? ' sb-pts-under' : '');
+      }
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
       return `<tr class="sb-lineup-row" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}">` +
@@ -12845,7 +12939,7 @@
           `<span class="sb-exp-avatar"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>` +
           `<span class="sb-exp-info"><span class="sb-exp-pname">${name}</span><span class="sb-exp-psub">${pos} &middot; ${team}${predicted ? ' &middot; predicted' : ''}</span></span>` +
         '</td>' +
-        `<td class="sb-exp-pts sb-pos-${posClass}">${pts}</td>` +
+        `<td class="sb-exp-pts${ptsPerfClass}">${pts}</td>` +
         `<td class="sb-exp-proj">${projText}</td>` +
         `<td class="sb-exp-orig">${origText}</td>` +
       '</tr>';
@@ -13105,8 +13199,8 @@
 
     let winPct = null, myProj = null, oppProj = null, myPts = 0, oppPts = 0, myOrig = null, oppOrig = null;
     if (hasData) {
-      myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league);
-      oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
+      myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league, espnGameData, week);
+      oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, espnGameData, week);
       myPts = myMatchup ? (myMatchup.points || 0) : 0;
       oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
       const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(myMatchup, entry.league, projMap), dict, espnGameData);
@@ -13627,6 +13721,24 @@
       });
     }
 
+    // Position filter -- 'ALL' by default, otherwise only players at that
+    // exact position stay in Root For/Root Against/Even. Not persisted
+    // across page loads (unlike the league blacklist): unlike excluding a
+    // tanking team for good, this is a one-session "just show me RBs"
+    // view, so it resets to All on a fresh load.
+    let rgPosFilter = 'ALL';
+    const rgPosToggle = document.getElementById('rgPosToggle');
+    if (rgPosToggle) {
+      rgPosToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          rgPosFilter = btn.dataset.rgPos;
+          rgPosToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          recomputeRootingGuide();
+        });
+      });
+    }
+
     const RG_BLACKLIST_KEY = 'dynastyToolRootingBlacklist';
     function loadRgBlacklist() {
       try { return new Set(JSON.parse(localStorage.getItem(RG_BLACKLIST_KEY) || '[]')); }
@@ -13721,6 +13833,10 @@
       window.__rgMoneyMode = rgSortCriterion === 'leagues';
       const buckets = { for: [], against: [], even: [] };
       rgRows.forEach(r => {
+        if (rgPosFilter !== 'ALL' && r.el.dataset.pos !== rgPosFilter) {
+          if (r.el.parentNode) r.el.parentNode.removeChild(r.el);
+          return;
+        }
         const f = r.forAll.filter(l => !rgBlacklist.has(l));
         const a = r.againstAll.filter(l => !rgBlacklist.has(l));
         if (f.length === 0 && a.length === 0) {
@@ -13894,19 +14010,20 @@
         const rgGameStarted = sbGameStartedForTeam(p.team, rgEspnGameData);
         const rgGameFinished = sbGameFinishedForTeam(p.team, rgEspnGameData);
         const origProj = rawLiveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, rawLiveProj, rgGameStarted) : null;
-        // Once his real game is over there's no more time left to score --
-        // Sleeper's own live projection number doesn't reflect that (it
-        // just keeps echoing something close to the pregame number), so a
-        // finished game's live projection is just his real final score.
-        const liveProj = (rgGameFinished && pprPoints != null) ? pprPoints : rawLiveProj;
-        // Real points scored so far vs. his real pregame projection --
-        // NOT liveProj vs. origProj: Sleeper's own weekly projection is a
-        // fixed pregame number that never moves during the game itself, so
-        // that comparison was silently always +0.0 once frozen. Only
-        // meaningful once his game has actually started (pprPoints is a
-        // real 0 before that, which would otherwise misread as "way under
-        // expectation" for someone who simply hasn't played yet).
-        const poe = (rgGameStarted && pprPoints != null && origProj != null) ? (pprPoints - origProj) : null;
+        // Sleeper's own /projections number doesn't move during the game
+        // (it just echoes back the pregame value), so it can't be used as
+        // a live number on its own -- sbEstimateLiveProjection blends his
+        // real points-so-far with his pregame projection's remaining share
+        // (via the live game clock) into a genuine live estimate, and
+        // "Projection Over Expected" is how far that's moved from his
+        // frozen pregame number -- e.g. a player pacing well under his
+        // projection shows a negative POE well before his game is over,
+        // instead of POE reading (mostly) 0 all game and only swinging
+        // once the final score lands.
+        const rgElapsedFraction = sbGameElapsedFraction(p.team, rgEspnGameData);
+        const rgProjBaseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawLiveProj);
+        const liveProj = sbEstimateLiveProjection(pprPoints, rgProjBaseline, rgElapsedFraction, rgGameStarted, rgGameFinished);
+        const poe = (rgGameStarted && liveProj != null && origProj != null) ? (liveProj - origProj) : null;
         return {
           id,
           name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
@@ -13990,11 +14107,7 @@
         if (newRow) openRgExpand(newRow);
       }
 
-      // Weekly Sweats on the Dashboard is just the top 3 for/against from
-      // this same computation -- shared via window so the two never drift
-      // out of sync the way the old mock values did.
       window.__sleeperRootingRows = rowsData;
-      if (window.renderWeeklySweats) window.renderWeeklySweats();
       if (window.renderRootingSlates) window.renderRootingSlates(overrideWeek);
     }
     window.renderRealRootingGuide = renderRealRootingGuide;
@@ -14626,7 +14739,7 @@
         `<div class="matchup-col">${matchupHtml}</div>` +
         rosterTypeCellHtml +
         `<div class="col-center">${wins}-${losses}</div>` +
-        '<div class="col-center">&mdash;</div>' +
+        '<div class="col-center" data-roster-value-cell>&mdash;</div>' +
         `<div class="col-center">${weeklyProjText}</div>` +
         '<div class="col-center" data-contending-cell>&mdash;</div>' +
         '<div class="col-center">&mdash;</div>' +
@@ -14969,6 +15082,7 @@
         if (window.renderRecordBookMoneySettings) window.renderRecordBookMoneySettings();
         renderLeagueBlacklistSettings();
         if (window.renderContendingRanks) window.renderContendingRanks();
+        if (window.renderRosterValueRanks) window.renderRosterValueRanks();
         if (window.updateModeToggleBtn) window.updateModeToggleBtn();
         if (leagueCountChip) {
           const mode = getSiteMode();
@@ -14987,6 +15101,7 @@
             if (window.renderRealGameCast) window.renderRealGameCast();
             if (window.renderRealDashboard) window.renderRealDashboard();
             if (window.renderContendingRanks) window.renderContendingRanks();
+            if (window.renderRosterValueRanks) window.renderRosterValueRanks();
           }).catch(() => {});
         }
       } catch (err) {
@@ -15470,11 +15585,20 @@
     }
 
     window.__sleeperSeasonMatchupsCache = window.__sleeperSeasonMatchupsCache || {};
+    // Past weeks are genuinely final and safe to cache forever, but caching
+    // with no expiry at all also froze the CURRENT week's scores at
+    // whatever they were on first load -- a real problem for the Results
+    // page's live win-probability gating below, which needs this week's
+    // real current score every render. A short TTL (matching the rest of
+    // the app's ~60s poll cadence) keeps past weeks cheap across a session
+    // while keeping the live week honest.
+    const SEASON_MATCHUPS_TTL = 60 * 1000;
     async function loadSeasonAllWeekMatchups(leagueId) {
-      if (window.__sleeperSeasonMatchupsCache[leagueId]) return window.__sleeperSeasonMatchupsCache[leagueId];
+      const cached = window.__sleeperSeasonMatchupsCache[leagueId];
+      if (cached && (Date.now() - cached.at < SEASON_MATCHUPS_TTL)) return cached.byWeek;
       const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
       const byWeek = await Promise.all(weeks.map(w => sleeperFetch(`/league/${leagueId}/matchups/${w}`).catch(() => [])));
-      window.__sleeperSeasonMatchupsCache[leagueId] = byWeek;
+      window.__sleeperSeasonMatchupsCache[leagueId] = { byWeek, at: Date.now() };
       return byWeek;
     }
 
@@ -15736,12 +15860,37 @@
       // hasMedian just controls whether the weekly cell also shows that
       // second real result alongside the head-to-head one.
       const hasMedian = !!(league.settings && league.settings.league_average_match);
+      // The live, in-progress week's raw score comparison flips back and
+      // forth all game day (whoever happens to be ahead this exact minute)
+      // -- showing that as a real W/L the instant one side is up even 0.1
+      // is a false result more often than a real one. Hold off on this
+      // week's cell until either side's real win probability clears 90%
+      // (a real result, not a coin flip) or the whole week's real games
+      // are actually final (Monday Night included) -- and since this is
+      // recomputed fresh every sync rather than cached, a result that
+      // crossed 90% and drifted back below it is simply gone again next
+      // render, exactly like it never crossed.
+      const currentWeek = entry.week;
+      const currentWeekEspnGameData = (currentWeek != null && currentWeek <= regularWeeks && window.sleeperGetEspnGameData)
+        ? await window.sleeperGetEspnGameData(currentWeek, league.season).catch(() => null)
+        : null;
+      const currentWeekComplete = !!(currentWeekEspnGameData && Object.values(currentWeekEspnGameData).length > 0
+        && Object.values(currentWeekEspnGameData).every(info => info.state === 'post'));
       const weekResults = [];
       const weekMedianResults = hasMedian ? [] : null;
       for (let week = 1; week <= regularWeeks; week++) {
         const weekMatchups = byWeek[week - 1];
         const row = ldrecWeekRow(weekMatchups, myRoster.roster_id);
         const notPlayed = !row || (row.myScore === 0 && row.oppScore === 0);
+        if (!notPlayed && week === currentWeek && !currentWeekComplete) {
+          const mine = weekMatchups.find(m => m.roster_id === myRoster.roster_id);
+          const opp = weekMatchups.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== myRoster.roster_id);
+          const myLiveProj = sbMatchupProjectedTotal(mine, null, league, currentWeekEspnGameData, week);
+          const oppLiveProj = opp ? sbMatchupProjectedTotal(opp, null, league, currentWeekEspnGameData, week) : null;
+          const winPct = oppLiveProj != null ? sbWinProbability(myLiveProj, oppLiveProj) : null;
+          weekResults.push(winPct == null ? null : (winPct >= 90 ? 'W' : (winPct <= 10 ? 'L' : null)));
+          continue;
+        }
         weekResults.push(notPlayed ? null : (row.win ? 'W' : 'L'));
         if (hasMedian) {
           if (notPlayed || !weekMatchups || !weekMatchups.length) {
@@ -18084,7 +18233,7 @@
         (ties ? `<span class="sep">-</span><span>${ties}</span>` : '');
     }
     if (recordValues[1]) {
-      recordValues[1].innerHTML = `<span class="win">${projWinSum.toFixed(1)}</span><span class="sep">-</span><span class="loss">${projLossSum.toFixed(1)}</span>`;
+      recordValues[1].innerHTML = `<span class="win">${projWinSum.toFixed(2)}</span><span class="sep">-</span><span class="loss">${projLossSum.toFixed(2)}</span>`;
     }
 
     // Roster Value: real dynasty asset value (Pure Potential's list) rank
@@ -18586,6 +18735,12 @@
             detail: statusType ? statusType.shortDetail : null,
             hasBall: !!(possessionTeamId && c.team && String(c.team.id) === String(possessionTeamId)),
             eventId: ev.id,
+            // Real live quarter + clock (only present while a game is
+            // 'in'), so a live projection estimate can be blended in as
+            // the game actually progresses instead of jumping straight
+            // from pregame to final -- see sbEstimateLiveProjection.
+            period: comp.status ? comp.status.period : null,
+            clock: comp.status ? comp.status.displayClock : null,
           };
         });
       });
@@ -18844,7 +18999,21 @@
   window.__gcOpenEventIds = window.__gcOpenEventIds || [];
   window.__gcPaneDetailTab = window.__gcPaneDetailTab || {};
   window.__gcPaneData = window.__gcPaneData || {};
-  let gcRefreshTimer = null;
+  // A single persistent interval, started once and never cleared, instead
+  // of one that's only ever (re-)armed by a click on the GameCast tab and
+  // clears itself the moment it notices the view isn't active. That old
+  // design meant a click listener getting orphaned (e.g. the tab bar
+  // re-rendering) -- or simply nobody clicking the tab again after
+  // navigating away -- silently killed live updates for the rest of the
+  // session with no way to recover short of a page reload. This just
+  // no-ops on every tick the view isn't visible instead of dying.
+  if (!window.__gcRefreshTimerStarted) {
+    window.__gcRefreshTimerStarted = true;
+    setInterval(() => {
+      const view = document.querySelector('[data-view="gamecast"]');
+      if (view && view.classList.contains('is-active')) renderRealGameCast();
+    }, 20000);
+  }
 
   window.__gcGamesCache = window.__gcGamesCache || {};
   const GC_GAMES_TTL = 15 * 1000;
@@ -19112,19 +19281,26 @@
     </td>`;
   }
 
-  function gcTailCellsHtml(id, statsMap, projMap, gameStarted, gameFinished, season, week) {
+  function gcTailCellsHtml(id, statsMap, projMap, gameStarted, gameFinished, elapsedFraction, season, week) {
     const stats = statsMap[id];
     const livePts = stats ? (stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std) : null;
     const rawProjPts = projMap[id];
     const origPts = (rawProjPts != null && season != null && week != null)
       ? origProjFor(season, week, 'gc_players', id, rawProjPts, !!gameStarted)
       : null;
-    // Once the game is over there's no more time left for him to score --
-    // Sleeper's own live projection number doesn't reflect that (it just
-    // keeps echoing something close to the original pregame number), so a
-    // finished game's live projection is just his real final score.
-    const projPts = (gameFinished && livePts != null) ? livePts : rawProjPts;
-    const expDiff = (livePts != null && origPts != null) ? livePts - origPts : null;
+    // Sleeper's /projections number doesn't move during the game (it just
+    // echoes back the pregame value), so it's not itself a live number --
+    // blend his real points-so-far with his pregame projection's
+    // remaining share (via the live game clock) into a genuine live
+    // estimate. "+/- Exp" is then how far that live estimate has moved
+    // from his frozen pregame number, not his partial actual score against
+    // a full-game projection (which reads as deeply negative for anyone
+    // who hasn't finished playing yet, regardless of pace).
+    const gcDict = window.__sleeperPlayerDict;
+    const gcP = gcDict && gcDict[id];
+    const gcProjBaseline = sbPlayerIsInactive(gcP) ? 0 : (origPts != null ? origPts : rawProjPts);
+    const projPts = sbEstimateLiveProjection(livePts, gcProjBaseline, elapsedFraction, gameStarted, gameFinished);
+    const expDiff = (projPts != null && origPts != null) ? projPts - origPts : null;
     const expCls = expDiff == null ? '' : (expDiff > 0 ? 'ldrec-pos' : (expDiff < 0 ? 'ldrec-neg' : ''));
     return `
       <td>${livePts != null ? livePts.toFixed(1) : '&mdash;'}</td>
@@ -19151,7 +19327,7 @@
   // no defense, and no QB rating: just completions/attempts/yards/TDs,
   // carries/yards/TDs, catches/yards/TDs, the way ESPN's own box score
   // groups them.
-  function gcTeamTablesHtml(abbr, dict, statsMap, projMap, gameStarted, gameFinished, season, week) {
+  function gcTeamTablesHtml(abbr, dict, statsMap, projMap, gameStarted, gameFinished, elapsedFraction, season, week) {
     const ids = Object.keys(dict).filter(id => dict[id] && dict[id].team === abbr && GC_FANTASY_POS.includes(dict[id].position));
     const passing = [], rushing = [], receiving = [];
     ids.forEach(id => {
@@ -19164,7 +19340,7 @@
     const byBest = (a, b) => b.sort - a.sort;
     passing.sort(byBest); rushing.sort(byBest); receiving.sort(byBest);
 
-    const row = (id, p, cells) => `<tr data-player-id="${sbFieldEsc(id)}">${gcPlayerMetaHtml(id, p)}${cells}${gcTailCellsHtml(id, statsMap, projMap, gameStarted, gameFinished, season, week)}</tr>`;
+    const row = (id, p, cells) => `<tr data-player-id="${sbFieldEsc(id)}">${gcPlayerMetaHtml(id, p)}${cells}${gcTailCellsHtml(id, statsMap, projMap, gameStarted, gameFinished, elapsedFraction, season, week)}</tr>`;
     const passRows = passing.map(({ id, p }) => {
       const s = statsMap[id] || {};
       return row(id, p, `<td>${s.pass_cmp || 0}/${s.pass_att || 0}</td><td>${Math.round(s.pass_yd || 0)}</td><td>${s.pass_td || 0}</td>`);
@@ -19235,10 +19411,11 @@
     const tab = window.__gcPaneDetailTab[eventId];
     const gameStarted = game.state === 'in' || game.state === 'post';
     const gameFinished = game.state === 'post';
+    const elapsedFraction = sbElapsedFractionFromPeriodClock(game.period, game.clock, game.state);
     if (tab === 'away') {
-      el.innerHTML = gcTeamTablesHtml(game.away.abbr, dict, statsMap, projMap, gameStarted, gameFinished, season, week);
+      el.innerHTML = gcTeamTablesHtml(game.away.abbr, dict, statsMap, projMap, gameStarted, gameFinished, elapsedFraction, season, week);
     } else if (tab === 'home') {
-      el.innerHTML = gcTeamTablesHtml(game.home.abbr, dict, statsMap, projMap, gameStarted, gameFinished, season, week);
+      el.innerHTML = gcTeamTablesHtml(game.home.abbr, dict, statsMap, projMap, gameStarted, gameFinished, elapsedFraction, season, week);
     } else {
       el.innerHTML = `<div class="gc-feed" id="gcFeedList-${eventId}"><div class="ld-loading">Loading play-by-play&hellip;</div></div>`;
       try {
@@ -19370,21 +19547,12 @@
     });
   })();
 
+  // The persistent interval declared above already keeps GameCast fresh
+  // on its own; this just triggers an immediate render on click instead
+  // of waiting up to 20s for the next tick.
   document.querySelectorAll('.section-tab').forEach(tab => {
     if (tab.dataset.section !== 'gamecast') return;
-    tab.addEventListener('click', () => {
-      renderRealGameCast();
-      if (gcRefreshTimer) clearInterval(gcRefreshTimer);
-      gcRefreshTimer = setInterval(() => {
-        const view = document.querySelector('[data-view="gamecast"]');
-        if (view && view.classList.contains('is-active')) {
-          renderRealGameCast();
-        } else {
-          clearInterval(gcRefreshTimer);
-          gcRefreshTimer = null;
-        }
-      }, 20000);
-    });
+    tab.addEventListener('click', () => { renderRealGameCast(); });
   });
 
   window.__sleeperScheduleCache = window.__sleeperScheduleCache || {};
@@ -19512,71 +19680,6 @@
   }
   window.renderRealSchedule = renderRealSchedule;
 
-  function sweatCardHtml(row, isFor) {
-    const deltaText = (row.delta > 0 ? '+' : '') + row.delta;
-    const noteParts = [];
-    if (row.for.length) noteParts.push(`${row.for.length} for`);
-    if (row.against.length) noteParts.push(`${row.against.length} vs`);
-    const posClass = row.pos.toLowerCase();
-    const teamAbbr = (row.team || '').toLowerCase();
-    const badge = teamAbbr && teamAbbr !== 'fa'
-      ? `<img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/${teamAbbr}.png" alt="${row.team}" onerror="this.style.display='none'">`
-      : '';
-    const leagues = [...row.for, ...row.against];
-    return '<div class="sweat-card ' + (isFor ? 'for' : 'against') + '"' +
-      ` data-player-id="${row.id}" data-name="${sbFieldEsc(row.name)}" data-team="${sbFieldEsc(row.team || 'FA')}"` +
-      ` data-pos="${row.pos}" data-leagues="${leagues.map(sbFieldEsc).join('|')}">` + badge +
-      `<div class="sweat-avatar"><img src="${sbHeadshotUrl(row.id)}" alt="" loading="lazy" onerror="this.remove()"></div>` +
-      `<div class="sweat-pos ${posClass}">${row.pos}</div>` +
-      `<div class="sweat-name">${row.name}</div>` +
-      `<div class="sweat-count ${isFor ? 'for' : 'against'}">${deltaText} <span>${noteParts.join(' &middot; ')}</span></div>` +
-    '</div>';
-  }
-
-  function initSweatCardClicks(container) {
-    if (!container) return;
-    container.querySelectorAll('.sweat-card').forEach(card => {
-      card.addEventListener('click', () => {
-        if (!window.openPlayerModalData) return;
-        window.openPlayerModalData({
-          playerId: card.dataset.playerId, name: card.dataset.name, team: card.dataset.team,
-          pos: card.dataset.pos, leagues: card.dataset.leagues ? card.dataset.leagues.split('|') : [],
-          defaultTab: 'overview',
-        });
-      });
-    });
-  }
-
-  // Same source data as the Rooting Guide (window.__sleeperRootingRows, set
-  // by renderRealRootingGuide) so this top-3 summary can never drift from
-  // the full guide the way the old independent mock values did.
-  function renderWeeklySweats() {
-    const forCards = document.getElementById('sweatsForCards');
-    const againstCards = document.getElementById('sweatsAgainstCards');
-    if (!forCards || !againstCards) return;
-    const rows = window.__sleeperRootingRows || [];
-    if (!rows.length) return;
-
-    // Tiebreaker for equal for/against counts: higher point projection wins
-    // for now, until league buy-in amounts exist to break ties by stakes.
-    const projections = window.__sleeperProjections || {};
-    const withDelta = rows.map(r => Object.assign({}, r, {
-      delta: r.for.length - r.against.length,
-      proj: projections[r.id] != null ? Number(projections[r.id]) : 0,
-    }));
-    const forTop = withDelta.filter(r => r.delta > 0).sort((a, b) => b.delta - a.delta || b.proj - a.proj).slice(0, 3);
-    const againstTop = withDelta.filter(r => r.delta < 0).sort((a, b) => a.delta - b.delta || b.proj - a.proj).slice(0, 3);
-
-    forCards.innerHTML = forTop.length
-      ? forTop.map(r => sweatCardHtml(r, true)).join('')
-      : '<div class="placeholder"><p>No standout players to root for this week.</p></div>';
-    againstCards.innerHTML = againstTop.length
-      ? againstTop.map(r => sweatCardHtml(r, false)).join('')
-      : '<div class="placeholder"><p>No standout players to root against this week.</p></div>';
-    initSweatCardClicks(forCards);
-    initSweatCardClicks(againstCards);
-  }
-  window.renderWeeklySweats = renderWeeklySweats;
 
   const SB_ROSTER_COLORS = ['var(--navy)', 'var(--red)', '#3f6b4a', '#1d3557', '#8a5a2b', '#5b6f5b', '#b23a5a', '#1c7a8c', '#4a3f36', '#3b4f8a', '#8a7a2f', '#6b3fa0', '#2d2d33', '#a3441f', '#2f4f7a', '#7a3f2f', '#3f3f8a', '#6b6b74'];
 
@@ -19754,13 +19857,21 @@
     document.addEventListener('click', () => { sbTankPanelEl.hidden = true; });
   }
 
-  function renderRealScoreboard() {
+  // Guards the async gap below (the ESPN game-state fetch) against a
+  // stale, slower-to-resolve call overwriting a newer one's more complete
+  // render -- e.g. an early call that started before every league had
+  // finished loading finishing AFTER a later call that had the full set,
+  // silently dropping leagues back out of the grid. Only the most
+  // recently started call is allowed to write the DOM.
+  let sbRenderGen = 0;
+  async function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
     if (!sbGrid) return;
     renderSbTankChips();
     const tankList = sbGetTankList();
     const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && !tankList.has(e.league.name));
     if (!entries.length) return;
+    const myGen = ++sbRenderGen;
 
     // The 60s poll rebuilds this whole grid from scratch, which used to
     // silently collapse whatever matchup a person had open (it felt like
@@ -19771,7 +19882,23 @@
 
     const override = window.__sleeperScoreboardOverride || null;
 
-    let totalPts = 0, oppTotalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0;
+    // Real ESPN game state for the current week -- lets each card's
+    // headline total use a genuine live projection estimate (see
+    // sbEffectivePoints) instead of just summing raw partial actual
+    // scores, which used to undercount a team's real live total by
+    // however many points its still-playing starters have left on the
+    // clock. Leagues can occasionally sit on different weeks (bye/
+    // playoff variance), so this is a best-effort single fetch keyed off
+    // the first entry's week -- any league on a different week just falls
+    // back to the old recorded-else-projection behavior for that card.
+    const sbWeek = entries[0].week;
+    const sbSeason = entries[0].league.season;
+    const sbEspnGameData = (sbWeek != null && window.sleeperGetEspnGameData)
+      ? await window.sleeperGetEspnGameData(sbWeek, sbSeason).catch(() => null)
+      : null;
+    if (myGen !== sbRenderGen) return;
+
+    let totalPts = 0, oppTotalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0, currentlyWinningCount = 0;
     sbGrid.innerHTML = entries.map((entry, i) => {
       const ov = override ? override.byLeague[entry.league.league_id] : null;
       const myMatchup = ov ? ov.myMatchup : entry.myMatchup;
@@ -19799,8 +19926,20 @@
         hasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
         if (hasData) {
           withMatchup++;
-          const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league);
-          const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
+          // Current point total, not projected -- whoever's actually ahead
+          // on the scoreboard right now, separate from "Projected to Win"
+          // and "Favored to Win" above which are both projection-based.
+          if (myPts > oppPts) currentlyWinningCount++;
+          // Only blend in real live-game state for the actual current
+          // week's own cards -- viewing a past/future week via the week
+          // selector (override) swaps in that week's matchups/projections
+          // but entry.week still reports the real live week, so without
+          // this guard a future week's totals got computed as if its
+          // (nonexistent) games were the live ones already in progress.
+          const cardEspnGameData = (!override && entry.week === sbWeek) ? sbEspnGameData : null;
+          const cardWeek = override ? override.week : entry.week;
+          const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league, cardEspnGameData, cardWeek);
+          const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, cardEspnGameData, cardWeek);
           headlineMine = myProj;
           headlineTheirs = oppProj;
           const winPct = sbWinProbability(myProj, oppProj);
@@ -19811,9 +19950,10 @@
           if (winPct > 50) favoredCount++;
           projWinSum += winPct / 100;
           projLossSum += 1 - winPct / 100;
-          if (winPct > 60) badgeClass = 'sb-badge-good';
-          else if (winPct < 40) badgeClass = 'sb-badge-bad';
-          else { badgeClass = 'sb-badge-close'; }
+          // Strict coin-flip split for the badge's color -- >=50% green,
+          // <50% red -- rather than a three-way good/close/bad read, since
+          // a 51% win probability is still more likely than not to win.
+          badgeClass = winPct >= 50 ? 'sb-badge-good' : 'sb-badge-bad';
           badgeText = `${winPct}% Win Prob`;
         } else {
           badgeText = 'No Projections Available';
@@ -19826,7 +19966,7 @@
         ? `<div class="sb-live-score">${myPts.toFixed(1)} vs ${oppPts.toFixed(1)} live</div>`
         : '';
 
-      return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}" data-order="${i}" data-name="${entry.league.name}" data-winpct="${winPctForSort}" data-score="${hasData ? headlineMine : -1}">
+      return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}" data-order="${i}" data-name="${entry.league.name}" data-winpct="${winPctForSort}" data-score="${hasData ? headlineMine : -1}"${sbWinTintStyle(winPctForSort)}>
           <div class="sb-card-logo" style="background:${color}">${sbLeagueLogoImgHtml(entry.league)}</div>
           <div class="sb-card-main">
             <div class="sb-card-name">${entry.league.name}${recordText ? `<span class="sb-card-record">${recordText}</span>` : ''}</div>
@@ -19858,9 +19998,14 @@
     // can never disagree -- the Dashboard reads this instead of running its
     // own version of the same sum against a different (co-managed-only)
     // league filter than the Scoreboard's own tanking-teams exclusions.
-    window.__sbProjectedRecord = { winSum: projWinSum, lossSum: projLossSum };
+    // Only written for a real, non-override render: previewing a past/
+    // future week here (via the week selector) must never leak into what
+    // the Dashboard shows as "this week's" projected record.
+    if (!override) window.__sbProjectedRecord = { winSum: projWinSum, lossSum: projLossSum };
     if (winsValue) winsValue.textContent = `${favoredCount} of ${withMatchup}`;
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
+    const currentWinsValue = document.getElementById('sbStatCurrentWinsValue');
+    if (currentWinsValue) currentWinsValue.textContent = `${currentlyWinningCount} of ${withMatchup}`;
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
     const sbWeekLabel = document.getElementById('sbWeekLabel');
     if (sbWeekLabel) sbWeekLabel.textContent = week;
