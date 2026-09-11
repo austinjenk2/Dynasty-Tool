@@ -710,8 +710,19 @@
     margin-bottom: 14px;
   }
   .gc-hero-down { color: var(--ink); font-size: 13px; letter-spacing: 0.8px; }
-  .gc-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: center; }
-  @media (max-width: 900px) { .gc-hero-grid { grid-template-columns: 1fr; } }
+  /* Three across: the injury report sits where the score used to, the
+     score moves to the middle where the eye lands first, and the field
+     stays right. */
+  .gc-hero-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px; align-items: center; }
+  @media (max-width: 1080px) { .gc-hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .gc-hero-field { grid-column: 1 / -1; } }
+  @media (max-width: 760px) { .gc-hero-grid { grid-template-columns: 1fr; } .gc-hero-field { grid-column: auto; } }
+  .gc-hero-center { align-self: center; }
+
+  /* Kept deliberately short so the whole hero still fits one screen --
+     it scrolls internally rather than stretching the row. */
+  .gc-hero-injury { align-self: stretch; border-right: 1px solid var(--border-soft); padding-right: 16px; }
+  @media (max-width: 1080px) { .gc-hero-injury { border-right: none; padding-right: 0; } }
+  .gc-hero-injury-scroll { max-height: 190px; overflow-y: auto; margin-top: 8px; }
 
   .gc-hero-score { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .gc-hero-team { display: flex; align-items: center; gap: 9px; }
@@ -765,8 +776,8 @@
 
   /* ---- Three-column body ---- */
   .gc-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.85fr); gap: 14px; align-items: start; }
-  @media (max-width: 1180px) { .gc-columns { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .gc-col-injury { grid-column: 1 / -1; } }
-  @media (max-width: 780px) { .gc-columns { grid-template-columns: 1fr; } .gc-col-injury { grid-column: auto; } }
+  @media (max-width: 1180px) { .gc-columns { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .gc-col-leagues { grid-column: 1 / -1; } }
+  @media (max-width: 780px) { .gc-columns { grid-template-columns: 1fr; } .gc-col-leagues { grid-column: auto; } }
 
   .gc-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 13px 14px; }
   .gc-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
@@ -795,8 +806,24 @@
   .gc-stat-pos { font-size: 9.5px; font-weight: 800; color: var(--faint); margin-left: 4px; }
   .gc-stat-line { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .gc-stat-root { font-size: 10.5px; font-weight: 700; margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
-  .gc-stat-pts { font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 700; color: var(--ink); flex-shrink: 0; }
-  .gc-stat-proj { font-size: 9.5px; font-weight: 700; color: var(--faint); text-align: right; }
+  .gc-stat-nums { flex-shrink: 0; text-align: right; min-width: 62px; }
+  .gc-stat-pts { font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 700; color: var(--ink); line-height: 1.1; }
+  .gc-stat-proj { font-size: 9.5px; font-weight: 700; color: var(--faint); }
+  /* Points over expected -- live total minus his own projection, both
+     scored on the same house line so the gap is real. */
+  .gc-stat-poe { font-size: 10px; font-weight: 800; color: var(--faint); }
+
+  /* Running team total for everyone listed, updating as the game goes. */
+  .gc-stat-total {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    padding: 8px 6px 9px; margin-bottom: 4px;
+    border-bottom: 2px solid var(--border);
+  }
+  .gc-stat-total-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--faint); }
+  .gc-stat-total-nums { display: flex; align-items: baseline; gap: 8px; }
+  .gc-stat-total-pts { font-family: 'Source Serif 4', serif; font-size: 19px; font-weight: 700; color: var(--ink); }
+  .gc-stat-total-proj { font-size: 10px; font-weight: 700; color: var(--faint); }
+  .gc-stat-total-poe { font-size: 11px; font-weight: 800; }
 
   .gc-expand { padding: 10px 6px 12px; background: var(--bg); border-bottom: 1px solid var(--border-soft); }
   .gc-expand-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 6px; }
@@ -809,6 +836,23 @@
   .gc-play-team { color: var(--navy); }
   .gc-play-text { font-size: 12.5px; color: var(--ink); line-height: 1.45; }
   .gc-play-fp { font-size: 11px; font-weight: 800; color: var(--green); margin-top: 4px; }
+
+  /* League breakdown -- one card per league with a starter in this game,
+     your side against your opponent's. */
+  .gc-lg-card { border: 1px solid var(--border-soft); border-radius: 7px; padding: 8px 9px; margin-bottom: 7px; background: var(--bg); }
+  .gc-lg-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .gc-lg-name { font-size: 11.5px; font-weight: 800; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gc-lg-net { font-size: 12px; font-weight: 800; flex-shrink: 0; }
+  .gc-lg-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .gc-lg-col { min-width: 0; }
+  .gc-lg-col-label { font-size: 8.5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gc-lg-you { color: var(--green); }
+  .gc-lg-them { color: var(--red); }
+  .gc-lg-player { display: flex; align-items: baseline; gap: 4px; font-size: 10.5px; padding: 1px 0; }
+  .gc-lg-pname { color: var(--ink); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .gc-lg-ppos { color: var(--faint); font-size: 8.5px; font-weight: 700; flex-shrink: 0; }
+  .gc-lg-ppts { color: var(--muted); font-weight: 800; flex-shrink: 0; }
+  .gc-lg-none { font-size: 10.5px; color: var(--faint); }
 
   .gc-inj-row { display: flex; align-items: center; gap: 9px; padding: 6px 2px; border-bottom: 1px solid var(--border-soft); }
   .gc-inj-row:last-child { border-bottom: none; }
@@ -19109,16 +19153,76 @@
   // three-column body: your fantasy stats, live play-by-play, and the
   // injury report. ----
 
-  // Real games have no single league's scoring_settings to score against,
-  // so this view uses a standard full-PPR line -- the same fallback
-  // convention sbProjectionFor already uses with no league context.
+  // A real NFL game isn't played in any one of your leagues, so there's no
+  // single scoring_settings to score it against -- this view uses one
+  // house line for everything it shows: 5-point passing TDs, -2 for an
+  // interception, full PPR, and TE premium at +0.5 per catch (so a tight
+  // end's reception is worth 1.5). Per-league scoring still applies
+  // wherever a real matchup is at stake: the Matchup Impact expander
+  // scores each player in his own league via sbProjectionFor.
   const GC_DEFAULT_SCORING = {
-    pass_yd: 0.04, pass_td: 4, pass_int: -2, pass_2pt: 2,
+    pass_yd: 0.04, pass_td: 5, pass_int: -2, pass_2pt: 2,
     rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
     rec: 1, rec_yd: 0.1, rec_td: 6, rec_2pt: 2,
+    bonus_rec_te: 0.5,
     fum_lost: -2,
   };
+  // Human-readable version of the line above, shown under the panel title
+  // so the numbers are never mystery points.
+  const GC_SCORING_LABEL = '5pt pass TD · -2 INT · full PPR · 1.5 TE rec';
   const GC_FANTASY_POS = ['QB', 'RB', 'WR', 'TE'];
+
+  // Sleeper expresses a position premium as its own stat key
+  // (bonus_rec_te) rather than a different `rec` weight, but the raw
+  // stat/projection payloads don't carry that key pre-computed. Without
+  // backfilling it from the plain reception count, sbCustomScoreFor
+  // silently skips the term and every tight end scores as plain PPR.
+  function gcScoreStats(playerId, stats, dict) {
+    if (!stats) return null;
+    const p = dict && dict[playerId];
+    const pos = p && p.position ? p.position.toLowerCase() : null;
+    const bonusKey = pos ? `bonus_rec_${pos}` : null;
+    const effective = (bonusKey && GC_DEFAULT_SCORING[bonusKey] != null &&
+      stats[bonusKey] == null && stats.rec != null)
+      ? Object.assign({}, stats, { [bonusKey]: stats.rec })
+      : stats;
+    return sbCustomScoreFor(effective, GC_DEFAULT_SCORING);
+  }
+
+  // The same house line applied to Sleeper's projected stat line, so the
+  // projection and the live total are directly comparable -- otherwise
+  // "points over expected" would be measuring a full-PPR projection
+  // against a TE-premium actual and read high for every tight end.
+  //
+  // Sleeper's projection payload doesn't always carry a full scoreable
+  // stat line (some players come back with nothing but a pts_ppr total).
+  // Rather than drop the projection -- and with it every points-over-
+  // expected number on the page -- fall back to that total and correct it
+  // for the two places this house line differs from the standard full-PPR
+  // one it assumes: 5-point passing TDs instead of 4, and the TE premium.
+  // Each correction is applied only when the projection actually carries
+  // the stat it needs, so the worst case is a plain PPR projection rather
+  // than a wrong one.
+  function gcProjectedPoints(playerId, dict) {
+    const projStats = (window.__sleeperProjectionStats || {})[playerId];
+    if (!projStats) return null;
+    const scored = gcScoreStats(playerId, projStats, dict);
+    if (scored != null) return scored;
+
+    const base = projStats.pts_ppr ?? projStats.pts_half_ppr ?? projStats.pts_std;
+    if (base == null) return null;
+    let val = Number(base);
+    const p = dict && dict[playerId];
+    const pos = p && p.position ? p.position.toLowerCase() : null;
+    if (projStats.pass_td != null) {
+      val += Number(projStats.pass_td) * (GC_DEFAULT_SCORING.pass_td - 4);
+    }
+    const bonusKey = pos ? `bonus_rec_${pos}` : null;
+    if (bonusKey && GC_DEFAULT_SCORING[bonusKey] != null && projStats.rec != null) {
+      val += Number(projStats.rec) * GC_DEFAULT_SCORING[bonusKey];
+    }
+    return val;
+  }
 
   window.__gcSelectedEventId = window.__gcSelectedEventId || null;
   window.__gcStatsTeam = window.__gcStatsTeam || null;   // 'away' | 'home'
@@ -19421,7 +19525,7 @@
     </table>`;
   }
 
-  function gcHeroHtml(g) {
+  function gcHeroHtml(g, dict) {
     const stateCls = g.state === 'in' ? '' : (g.state === 'post' ? ' gc-state-post' : ' gc-state-pre');
     const venueBits = [g.broadcast, g.venue, g.weather].filter(Boolean).join(' · ');
     const side = (team, which) => `
@@ -19440,7 +19544,14 @@
           <span>${g.state === 'in' && g.isRedZone ? 'RED ZONE' : ''}</span>
         </div>
         <div class="gc-hero-grid">
-          <div>
+          <div class="gc-hero-injury">
+            <div class="gc-panel-head">
+              <span class="gc-panel-title">Injury Report</span>
+              ${gcTeamSwitchHtml(g, window.__gcInjuryTeam || 'away', 'gc-inj-team')}
+            </div>
+            <div class="gc-hero-injury-scroll" id="gcInjBody">${gcInjuryHtml(g, window.__gcInjuryTeam || 'away', dict || {})}</div>
+          </div>
+          <div class="gc-hero-center">
             <div class="gc-hero-score">
               ${side(g.away, 'away')}
               <span class="gc-hero-at">@</span>
@@ -19452,7 +19563,7 @@
               ${gcLinescoreHtml(g)}
             </div>
           </div>
-          <div>${gcFieldHtml(g)}</div>
+          <div class="gc-hero-field">${gcFieldHtml(g)}</div>
         </div>
         ${g.lastPlay ? `<div class="gc-lastplay">
           <div class="gc-lastplay-label">LAST PLAY</div>
@@ -19537,18 +19648,34 @@
       .filter(id => dict[id] && dict[id].team === abbr && GC_FANTASY_POS.includes(dict[id].position))
       .map(id => {
         const s = statsMap[id] || null;
-        const live = s ? (s.pts_ppr ?? s.pts_half_ppr ?? s.pts_std ?? null) : null;
-        return { id, p: dict[id], s, live, proj: projMap[id] != null ? projMap[id] : null };
+        // Scored on this view's own house line rather than Sleeper's
+        // pts_ppr, so a TE's premium is actually reflected. Falls back to
+        // Sleeper's own PPR number only if the raw stat line is missing.
+        const live = gcScoreStats(id, s, dict);
+        const livePts = live != null ? live : (s ? (s.pts_ppr ?? s.pts_half_ppr ?? s.pts_std ?? null) : null);
+        const proj = gcProjectedPoints(id, dict);
+        return { id, p: dict[id], s, live: livePts, proj };
       })
       // Anyone who has actually done something, plus anyone you have a
       // stake in (so a player yet to touch the ball still shows up if he
       // is in your lineup somewhere).
-      .filter(r => (r.live != null && r.live !== 0) || (r.s && gcStatLine(r.s)) || gcRootingDelta(r.id).forLeagues.length || gcRootingDelta(r.id).againstLeagues.length)
+      .filter(r => {
+        if (r.live != null && r.live !== 0) return true;
+        if (r.s && gcStatLine(r.s)) return true;
+        const d = gcRootingDelta(r.id);
+        return !!(d.forLeagues.length || d.againstLeagues.length);
+      })
       .sort((a, b) => (b.live || 0) - (a.live || 0));
 
     if (!rows.length) return '<div class="gc-empty">No fantasy stats yet for this team.</div>';
 
-    return rows.map(r => {
+    // Running team total for whatever is listed -- what this team's game
+    // has been worth so far on the house line.
+    const teamTotal = rows.reduce((sum, r) => sum + (r.live || 0), 0);
+    const teamProj = rows.reduce((sum, r) => sum + (r.proj || 0), 0);
+    const teamPoe = teamProj ? teamTotal - teamProj : null;
+
+    const body = rows.map(r => {
       const name = r.p.full_name || [r.p.first_name, r.p.last_name].filter(Boolean).join(' ');
       const { forLeagues, againstLeagues } = gcRootingDelta(r.id);
       const rootBits = [];
@@ -19556,6 +19683,11 @@
       if (againstLeagues.length) rootBits.push(`<span class="ldrec-neg">&#9660; rooting against ${againstLeagues.length}</span>`);
       const line = gcStatLine(r.s);
       const expanded = window.__gcExpandedPlayer === r.id;
+      // Points over expected: how far above or below his own projection
+      // he is right now. Both sides are scored on the same house line, so
+      // the difference is real and not a scoring-format artifact.
+      const poe = (r.live != null && r.proj != null) ? r.live - r.proj : null;
+      const poeCls = poe == null ? '' : (poe > 0 ? 'ldrec-pos' : (poe < 0 ? 'ldrec-neg' : ''));
       return `
         <div class="gc-stat-row" data-gc-player="${sbFieldEsc(r.id)}">
           <img class="gc-stat-av" src="${sbHeadshotUrl(r.id)}" alt="" loading="lazy" onerror="this.remove()">
@@ -19564,16 +19696,26 @@
             ${line ? `<div class="gc-stat-line">${sbFieldEsc(line)}</div>` : ''}
             ${rootBits.length ? `<div class="gc-stat-root">${rootBits.join('')}</div>` : ''}
           </div>
-          <div>
-            <div class="gc-stat-pts">${r.live != null ? r.live.toFixed(1) : '—'}</div>
-            ${r.proj != null ? `<div class="gc-stat-proj">proj ${r.proj.toFixed(1)}</div>` : ''}
+          <div class="gc-stat-nums">
+            <div class="gc-stat-pts">${r.live != null ? r.live.toFixed(1) : '&mdash;'}</div>
+            <div class="gc-stat-proj">${r.proj != null ? `proj ${r.proj.toFixed(1)}` : '&nbsp;'}</div>
+            <div class="gc-stat-poe ${poeCls}">${poe != null ? `${poe > 0 ? '+' : ''}${poe.toFixed(1)} OE` : '&nbsp;'}</div>
           </div>
         </div>
         ${expanded ? `<div class="gc-expand">
-          <div class="gc-expand-label">MATCHUP IMPACT</div>
+          <div class="gc-expand-label">MATCHUP IMPACT &middot; SCORED IN EACH LEAGUE'S OWN SETTINGS</div>
           ${gcImpactListHtml(r.id)}
         </div>` : ''}`;
     }).join('');
+
+    return `<div class="gc-stat-total">
+        <span class="gc-stat-total-label">${sbFieldEsc(abbr)} total so far</span>
+        <span class="gc-stat-total-nums">
+          <span class="gc-stat-total-pts">${teamTotal.toFixed(1)}</span>
+          ${teamProj ? `<span class="gc-stat-total-proj">proj ${teamProj.toFixed(1)}</span>` : ''}
+          ${teamPoe != null ? `<span class="gc-stat-total-poe ${teamPoe > 0 ? 'ldrec-pos' : (teamPoe < 0 ? 'ldrec-neg' : '')}">${teamPoe > 0 ? '+' : ''}${teamPoe.toFixed(1)} OE</span>` : ''}
+        </span>
+      </div>${body}`;
   }
 
   function gcImpactListHtml(playerId) {
@@ -19652,6 +19794,72 @@
     }).join('');
   }
 
+  // ---- League breakdown column ----------------------------------------
+  // Every one of your leagues with a starter in THIS game and nobody
+  // else's -- your side against your opponent's -- so you can see exactly
+  // which of your matchups this one broadcast is deciding. Leagues with
+  // no stake in the game are left out entirely.
+  function gcLeagueBreakdown(game, dict, statsMap) {
+    const teams = new Set([game.away.abbr, game.home.abbr]);
+    const inGame = (pid) => {
+      const p = dict && dict[pid];
+      return !!(p && p.team && teams.has(p.team));
+    };
+    const entryFor = (pid) => {
+      const p = dict[pid] || {};
+      const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || pid;
+      const scored = gcScoreStats(pid, statsMap[pid], dict);
+      return { id: pid, name, pos: p.position || '', team: p.team || '', pts: scored };
+    };
+    const out = [];
+    Object.values(window.sleeperLeagueData || {}).forEach(e => {
+      if (!e || !e.myMatchup || !e.oppMatchup || !e.league) return;
+      const mine = (e.myMatchup.starters || []).filter(Boolean).filter(inGame).map(entryFor);
+      const opp = (e.oppMatchup.starters || []).filter(Boolean).filter(inGame).map(entryFor);
+      if (!mine.length && !opp.length) return;
+      const oppName = (e.oppUser && (e.oppUser.display_name || e.oppUser.username)) || 'Opponent';
+      const sumPts = (list) => list.reduce((t, x) => t + (x.pts || 0), 0);
+      out.push({
+        league: e.league.name, mine, opp, oppName,
+        net: sumPts(mine) - sumPts(opp),
+        stake: mine.length + opp.length,
+      });
+    });
+    // Busiest leagues first -- the ones this game swings hardest.
+    return out.sort((a, b) => b.stake - a.stake || Math.abs(b.net) - Math.abs(a.net));
+  }
+
+  function gcLeagueBreakdownHtml(game, dict, statsMap) {
+    const rows = gcLeagueBreakdown(game, dict, statsMap);
+    if (!rows.length) return '<div class="gc-empty">None of your leagues have a starter in this game.</div>';
+    const sideHtml = (list, cls) => list.length
+      ? list.map(x => `<div class="gc-lg-player ${cls}">
+          <span class="gc-lg-pname">${sbFieldEsc(x.name)}</span>
+          <span class="gc-lg-ppos">${sbFieldEsc(x.pos)}&middot;${sbFieldEsc(x.team)}</span>
+          <span class="gc-lg-ppts">${x.pts != null ? x.pts.toFixed(1) : '&mdash;'}</span>
+        </div>`).join('')
+      : '<div class="gc-lg-none">&mdash;</div>';
+    return rows.map(r => {
+      const netCls = r.net > 0 ? 'ldrec-pos' : (r.net < 0 ? 'ldrec-neg' : '');
+      return `<div class="gc-lg-card">
+        <div class="gc-lg-head">
+          <span class="gc-lg-name">${sbFieldEsc(r.league)}</span>
+          <span class="gc-lg-net ${netCls}">${r.net > 0 ? '+' : ''}${r.net.toFixed(1)}</span>
+        </div>
+        <div class="gc-lg-cols">
+          <div class="gc-lg-col">
+            <div class="gc-lg-col-label gc-lg-you">YOU</div>
+            ${sideHtml(r.mine, 'gc-lg-mine')}
+          </div>
+          <div class="gc-lg-col">
+            <div class="gc-lg-col-label gc-lg-them">${sbFieldEsc(r.oppName)}</div>
+            ${sideHtml(r.opp, 'gc-lg-opp')}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
   function gcTeamSwitchHtml(game, active, attr) {
     return `<span class="gc-team-switch">
       <button type="button" class="${active === 'away' ? 'active' : ''}" data-${attr}="away">${sbFieldEsc(game.away.abbr)}</button>
@@ -19694,7 +19902,7 @@
       if (cols) cols.innerHTML = '<div class="ld-loading">Pick a game above.</div>';
       return;
     }
-    if (hero) hero.innerHTML = gcHeroHtml(game);
+    if (hero) hero.innerHTML = gcHeroHtml(game, dict);
 
     const [statsMap, projMap] = await Promise.all([
       window.sleeperGetWeekStats ? window.sleeperGetWeekStats(season, week) : {},
@@ -19713,7 +19921,7 @@
               <span class="gc-panel-title">Fantasy Stats</span>
               ${gcTeamSwitchHtml(game, window.__gcStatsTeam, 'gc-stats-team')}
             </div>
-            <div class="gc-panel-sub">Full PPR &middot; tap a player for matchup impact</div>
+            <div class="gc-panel-sub">${GC_SCORING_LABEL} &middot; tap a player for matchup impact</div>
             <div class="gc-panel-scroll" id="gcStatsBody">${gcStatsHtml(game, window.__gcStatsTeam, dict, statsMap, projMap)}</div>
           </div>
           <div class="gc-panel">
@@ -19721,13 +19929,10 @@
             <div class="gc-panel-sub">Newest first</div>
             <div class="gc-panel-scroll" id="gcPbpBody"><div class="ld-loading">Loading plays&hellip;</div></div>
           </div>
-          <div class="gc-panel gc-col-injury">
-            <div class="gc-panel-head">
-              <span class="gc-panel-title">Injury Report</span>
-              ${gcTeamSwitchHtml(game, window.__gcInjuryTeam, 'gc-inj-team')}
-            </div>
-            <div class="gc-panel-sub">&nbsp;</div>
-            <div class="gc-panel-scroll" id="gcInjBody">${gcInjuryHtml(game, window.__gcInjuryTeam, dict)}</div>
+          <div class="gc-panel gc-col-leagues">
+            <div class="gc-panel-head"><span class="gc-panel-title">Your Leagues In This Game</span></div>
+            <div class="gc-panel-sub">Only leagues with a starter here</div>
+            <div class="gc-panel-scroll" id="gcLeaguesBody">${gcLeagueBreakdownHtml(game, dict, statsMap)}</div>
           </div>
         </div>`;
 
@@ -19779,7 +19984,9 @@
     if (rightBtn) rightBtn.addEventListener('click', () => scrollRail(1));
     window.addEventListener('resize', gcUpdateRailArrows);
 
-    if (cols) cols.addEventListener('click', (e) => {
+    // The injury panel now lives in the hero and the stats/leagues panels
+    // in the body, so one delegated handler is bound to both containers.
+    const onPanelClick = (e) => {
       const statsBtn = e.target.closest('[data-gc-stats-team]');
       if (statsBtn) {
         window.__gcStatsTeam = statsBtn.dataset.gcStatsTeam;
@@ -19802,7 +20009,10 @@
         window.__gcExpandedPlayer = window.__gcExpandedPlayer === row.dataset.gcPlayer ? null : row.dataset.gcPlayer;
         gcRefreshStatsBody();
       }
-    });
+    };
+    if (cols) cols.addEventListener('click', onPanelClick);
+    const heroEl = document.getElementById('gcHero');
+    if (heroEl) heroEl.addEventListener('click', onPanelClick);
   })();
 
   // The persistent interval declared above already keeps GameCast fresh
