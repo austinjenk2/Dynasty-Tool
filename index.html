@@ -433,16 +433,10 @@
   .ph-dc-season::after { content: ' \203A'; font-weight: 500; color: var(--faint); }
   .ph-dc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .ph-dc-round { width: 26px; flex-shrink: 0; font-size: 12px; font-weight: 800; }
-  .ph-dc-round.ph-dc-round-1 { color: var(--blue); }
-  .ph-dc-round.ph-dc-round-2 { color: var(--green); }
-  .ph-dc-round.ph-dc-round-3 { color: var(--gold); }
-  .ph-dc-round.ph-dc-round-4 { color: #7c5cbf; }
+  .ph-dc-round.ph-dc-round-1, .ph-dc-round.ph-dc-round-2, .ph-dc-round.ph-dc-round-3, .ph-dc-round.ph-dc-round-4 { color: var(--blue); }
   .ph-dc-bar-bg { flex: 1; height: 8px; border-radius: 4px; background: var(--border-soft); position: relative; overflow: hidden; }
   .ph-dc-bar-fill { position: absolute; inset: 0; width: 0; border-radius: 4px; }
-  .ph-dc-bar-fill.ph-dc-round-1 { background: var(--blue); }
-  .ph-dc-bar-fill.ph-dc-round-2 { background: var(--green); }
-  .ph-dc-bar-fill.ph-dc-round-3 { background: var(--gold); }
-  .ph-dc-bar-fill.ph-dc-round-4 { background: #7c5cbf; }
+  .ph-dc-bar-fill.ph-dc-round-1, .ph-dc-bar-fill.ph-dc-round-2, .ph-dc-bar-fill.ph-dc-round-3, .ph-dc-bar-fill.ph-dc-round-4 { background: var(--blue); }
   .ph-dc-value { width: 40px; flex-shrink: 0; text-align: right; font-weight: 700; font-size: 14px; color: var(--ink); }
 
   .dash-exp { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-soft); }
@@ -3083,8 +3077,8 @@
     <a class="section-tab" data-section="leagues">Leagues</a>
     <a class="section-tab" data-section="lineups">Matchup Hub</a>
     <a class="section-tab" data-section="gamecast">GameCast</a>
-    <a class="section-tab" data-section="rooting">Rooting Guide</a>
-    <a class="section-tab" data-section="waiver">Waiver Wire</a>
+    <a class="section-tab" data-section="rooting">Weekly Sweats</a>
+    <a class="section-tab" data-section="waiver">Waiver Radar</a>
     <a class="section-tab" data-section="draft">Draft Room</a>
     <a class="section-tab" data-section="exposures">Exposures</a>
     <a class="section-tab" data-section="trades">Trade History</a>
@@ -3334,74 +3328,6 @@
 
     </div>
 
-    <div class="sweats-panel">
-      <h2>Weekly Sweats</h2>
-      <p class="sweats-sub">The players deciding your fantasy week.</p>
-
-      <div class="sweats-columns">
-
-        <div class="sweats-col">
-          <div class="sweats-col-head">
-            <span class="sweats-label root-for">ROOT FOR</span>
-            <span class="sweats-guide">Full Guide &rarr;</span>
-          </div>
-          <div class="sweats-cards" id="sweatsForCards">
-            <div class="sweat-card for">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/bal.png" alt="BAL" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:var(--navy)">ZF</div>
-              <div class="sweat-pos wr">WR</div>
-              <div class="sweat-name">Zay Flowers</div>
-              <div class="sweat-count for">+7 <span>7 for</span></div>
-            </div>
-            <div class="sweat-card for">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/ari.png" alt="ARI" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:#3f6b4a">JL</div>
-              <div class="sweat-pos rb">RB</div>
-              <div class="sweat-name">Jeremiyah Love</div>
-              <div class="sweat-count for">+6 <span>6 for</span></div>
-            </div>
-            <div class="sweat-card for">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/lv.png" alt="LV" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:#3f6b4a">AJ</div>
-              <div class="sweat-pos rb">RB</div>
-              <div class="sweat-name">Ashton Jeanty</div>
-              <div class="sweat-count for">+5 <span>5 for</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="sweats-col">
-          <div class="sweats-col-head">
-            <span class="sweats-label root-against">ROOT AGAINST</span>
-            <span class="sweats-guide">Full Guide &rarr;</span>
-          </div>
-          <div class="sweats-cards" id="sweatsAgainstCards">
-            <div class="sweat-card against">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/was.png" alt="WSH" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:var(--navy)">TM</div>
-              <div class="sweat-pos wr">WR</div>
-              <div class="sweat-name">Terry McLaurin</div>
-              <div class="sweat-count against">-4 <span>5 vs &middot; 1 for</span></div>
-            </div>
-            <div class="sweat-card against">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/ari.png" alt="ARI" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:var(--navy)">MW</div>
-              <div class="sweat-pos wr">WR</div>
-              <div class="sweat-name">Michael Wilson</div>
-              <div class="sweat-count against">-4 <span>4 vs</span></div>
-            </div>
-            <div class="sweat-card against">
-              <img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/bal.png" alt="BAL" onerror="this.style.display='none'">
-              <div class="sweat-avatar" style="background:#3f6b4a">DH</div>
-              <div class="sweat-pos rb">RB</div>
-              <div class="sweat-name">Derrick Henry</div>
-              <div class="sweat-count against">-3 <span>4 vs &middot; 1 for</span></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
   </div>
 
   <div data-view="leagues">
@@ -4214,6 +4140,11 @@
             <div class="sb-stat-value" id="sbStatWinsValue">14 of 18</div>
             <div class="sb-stat-label" id="sbStatWinsLabel">PROJECTED TO WIN</div>
           </div>
+          <div class="sb-stat-divider"></div>
+          <div class="sb-stat" id="sbStatCurrentWins">
+            <div class="sb-stat-value" id="sbStatCurrentWinsValue">0 of 0</div>
+            <div class="sb-stat-label">CURRENTLY WINNING</div>
+          </div>
         </div>
 
         <div class="sort-dropdown" style="display:flex;justify-content:flex-end;margin-bottom:10px">
@@ -4707,7 +4638,7 @@
       <div data-view="rooting">
         <div class="rg-header">
           <div class="rg-header-top">
-            <h2>Week <span class="sb-week-num">1</span> Rooting Guide</h2>
+            <h2>Week <span class="sb-week-num">1</span> Weekly Sweats</h2>
             <span class="week-dropdown" id="rgWeekDropdown">
               <span class="week-select" id="rgWeekSelect">WEEK <span id="rgWeekLabel">1</span> <span>&#9662;</span></span>
               <span class="week-menu" id="rgWeekMenu" hidden></span>
@@ -4722,6 +4653,13 @@
           <div class="rg-sort-toggle" id="rgSortToggle">
             <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="value">Leagues</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="leagues">$</button>
+          </div>
+          <div class="rg-sort-toggle" id="rgPosToggle">
+            <button type="button" class="rg-sort-toggle-btn active" data-rg-pos="ALL">All</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-pos="QB">QB</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-pos="RB">RB</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-pos="WR">WR</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-pos="TE">TE</button>
           </div>
           <div class="rg-leagues-panel" id="rgLeaguesPanel" hidden>
             <p class="rg-leagues-note">Uncheck a league to leave it out of Root For / Root Against for good &mdash; for a team you're tanking or a league you've checked out of. It stays off every week until you check it back on here.</p>
@@ -10718,7 +10656,7 @@
 
     <div class="settings-panel">
       <div class="settings-label">Blacklisted Leagues</div>
-      <div class="settings-sub">Turn a league off entirely and it disappears everywhere in the app -- Leagues, Exposures, Scoreboard, Trades, Waiver Wire, Rooting Guide, Draft Room, Dashboard, the league count up top, all of it -- as if it were never connected. Turn it back on here to bring it back.</div>
+      <div class="settings-sub">Turn a league off entirely and it disappears everywhere in the app -- Leagues, Exposures, Scoreboard, Trades, Waiver Radar, Weekly Sweats, Draft Room, Dashboard, the league count up top, all of it -- as if it were never connected. Turn it back on here to bring it back.</div>
       <div class="rg-leagues-chips" id="blacklistChips" style="margin-top:12px"></div>
     </div>
 
@@ -11432,7 +11370,7 @@
       expand.innerHTML =
         `<p class="schedule-expand-count">${matches.length} player${matches.length > 1 ? 's' : ''} affect your exposure in this game</p>` +
         `<div class="schedule-expand-chips">${chips}</div>` +
-        `<a class="schedule-expand-guide">Full Rooting Guide &rarr;</a>`;
+        `<a class="schedule-expand-guide">Full Weekly Sweats &rarr;</a>`;
     }
     const guideLink = expand.querySelector('.schedule-expand-guide');
     if (guideLink) guideLink.addEventListener('click', () => goToRootingGuide());
@@ -12680,11 +12618,37 @@
       if (!entry || !cell) return;
       const result = sbContendingRank(entry);
       if (!result) return;
-      cell.textContent = `${sbOrdinal(result.rank)} of ${result.of}`;
+      cell.textContent = sbOrdinal(result.rank);
       row.dataset.contending = String(result.rank);
     });
   }
   window.renderContendingRanks = renderContendingRanks;
+
+  // Roster Value column: same real dynasty asset value (Pure Potential's
+  // list) rank per league the Dashboard's Roster Value track already
+  // computes, just shown bare (no "of N") to match Contending Rank's cell
+  // right next to it.
+  function renderRosterValueRanks() {
+    document.querySelectorAll('.league-row[data-sleeper-league-id]').forEach(row => {
+      const entry = window.sleeperLeagueData && window.sleeperLeagueData[row.dataset.sleeperLeagueId];
+      const cell = row.querySelector('[data-roster-value-cell]');
+      if (!entry || !cell) return;
+      const dict = window.__sleeperPlayerDict;
+      const allRosters = entry.allRosters || [];
+      if (getSiteMode() !== 'dynasty' || !dict || allRosters.length < 2) { cell.textContent = '—'; return; }
+      const isDynastyLeague = sbLeagueIsDynasty(entry.league);
+      const values = allRosters.map(r => ({
+        rosterId: r.roster_id,
+        value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(entry, r.roster_id).reduce((s, p) => s + ppPickValue(p.round), 0) : 0),
+      }));
+      const myValue = values.find(v => v.rosterId === entry.roster.roster_id);
+      if (!myValue) { cell.textContent = '—'; return; }
+      const sortedDesc = [...values].sort((a, b) => b.value - a.value);
+      const rank = sortedDesc.findIndex(v => v.rosterId === entry.roster.roster_id) + 1;
+      cell.textContent = sbOrdinal(rank);
+    });
+  }
+  window.renderRosterValueRanks = renderRosterValueRanks;
 
   function sbMatchupProjectedTotal(matchup, projMap, league, espnGameData, week) {
     if (!matchup) return 0;
@@ -13727,6 +13691,24 @@
       });
     }
 
+    // Position filter -- 'ALL' by default, otherwise only players at that
+    // exact position stay in Root For/Root Against/Even. Not persisted
+    // across page loads (unlike the league blacklist): unlike excluding a
+    // tanking team for good, this is a one-session "just show me RBs"
+    // view, so it resets to All on a fresh load.
+    let rgPosFilter = 'ALL';
+    const rgPosToggle = document.getElementById('rgPosToggle');
+    if (rgPosToggle) {
+      rgPosToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          rgPosFilter = btn.dataset.rgPos;
+          rgPosToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          recomputeRootingGuide();
+        });
+      });
+    }
+
     const RG_BLACKLIST_KEY = 'dynastyToolRootingBlacklist';
     function loadRgBlacklist() {
       try { return new Set(JSON.parse(localStorage.getItem(RG_BLACKLIST_KEY) || '[]')); }
@@ -13821,6 +13803,10 @@
       window.__rgMoneyMode = rgSortCriterion === 'leagues';
       const buckets = { for: [], against: [], even: [] };
       rgRows.forEach(r => {
+        if (rgPosFilter !== 'ALL' && r.el.dataset.pos !== rgPosFilter) {
+          if (r.el.parentNode) r.el.parentNode.removeChild(r.el);
+          return;
+        }
         const f = r.forAll.filter(l => !rgBlacklist.has(l));
         const a = r.againstAll.filter(l => !rgBlacklist.has(l));
         if (f.length === 0 && a.length === 0) {
@@ -14091,11 +14077,7 @@
         if (newRow) openRgExpand(newRow);
       }
 
-      // Weekly Sweats on the Dashboard is just the top 3 for/against from
-      // this same computation -- shared via window so the two never drift
-      // out of sync the way the old mock values did.
       window.__sleeperRootingRows = rowsData;
-      if (window.renderWeeklySweats) window.renderWeeklySweats();
       if (window.renderRootingSlates) window.renderRootingSlates(overrideWeek);
     }
     window.renderRealRootingGuide = renderRealRootingGuide;
@@ -14727,7 +14709,7 @@
         `<div class="matchup-col">${matchupHtml}</div>` +
         rosterTypeCellHtml +
         `<div class="col-center">${wins}-${losses}</div>` +
-        '<div class="col-center">&mdash;</div>' +
+        '<div class="col-center" data-roster-value-cell>&mdash;</div>' +
         `<div class="col-center">${weeklyProjText}</div>` +
         '<div class="col-center" data-contending-cell>&mdash;</div>' +
         '<div class="col-center">&mdash;</div>' +
@@ -15070,6 +15052,7 @@
         if (window.renderRecordBookMoneySettings) window.renderRecordBookMoneySettings();
         renderLeagueBlacklistSettings();
         if (window.renderContendingRanks) window.renderContendingRanks();
+        if (window.renderRosterValueRanks) window.renderRosterValueRanks();
         if (window.updateModeToggleBtn) window.updateModeToggleBtn();
         if (leagueCountChip) {
           const mode = getSiteMode();
@@ -15088,6 +15071,7 @@
             if (window.renderRealGameCast) window.renderRealGameCast();
             if (window.renderRealDashboard) window.renderRealDashboard();
             if (window.renderContendingRanks) window.renderContendingRanks();
+            if (window.renderRosterValueRanks) window.renderRosterValueRanks();
           }).catch(() => {});
         }
       } catch (err) {
@@ -15571,11 +15555,20 @@
     }
 
     window.__sleeperSeasonMatchupsCache = window.__sleeperSeasonMatchupsCache || {};
+    // Past weeks are genuinely final and safe to cache forever, but caching
+    // with no expiry at all also froze the CURRENT week's scores at
+    // whatever they were on first load -- a real problem for the Results
+    // page's live win-probability gating below, which needs this week's
+    // real current score every render. A short TTL (matching the rest of
+    // the app's ~60s poll cadence) keeps past weeks cheap across a session
+    // while keeping the live week honest.
+    const SEASON_MATCHUPS_TTL = 60 * 1000;
     async function loadSeasonAllWeekMatchups(leagueId) {
-      if (window.__sleeperSeasonMatchupsCache[leagueId]) return window.__sleeperSeasonMatchupsCache[leagueId];
+      const cached = window.__sleeperSeasonMatchupsCache[leagueId];
+      if (cached && (Date.now() - cached.at < SEASON_MATCHUPS_TTL)) return cached.byWeek;
       const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
       const byWeek = await Promise.all(weeks.map(w => sleeperFetch(`/league/${leagueId}/matchups/${w}`).catch(() => [])));
-      window.__sleeperSeasonMatchupsCache[leagueId] = byWeek;
+      window.__sleeperSeasonMatchupsCache[leagueId] = { byWeek, at: Date.now() };
       return byWeek;
     }
 
@@ -15837,12 +15830,37 @@
       // hasMedian just controls whether the weekly cell also shows that
       // second real result alongside the head-to-head one.
       const hasMedian = !!(league.settings && league.settings.league_average_match);
+      // The live, in-progress week's raw score comparison flips back and
+      // forth all game day (whoever happens to be ahead this exact minute)
+      // -- showing that as a real W/L the instant one side is up even 0.1
+      // is a false result more often than a real one. Hold off on this
+      // week's cell until either side's real win probability clears 90%
+      // (a real result, not a coin flip) or the whole week's real games
+      // are actually final (Monday Night included) -- and since this is
+      // recomputed fresh every sync rather than cached, a result that
+      // crossed 90% and drifted back below it is simply gone again next
+      // render, exactly like it never crossed.
+      const currentWeek = entry.week;
+      const currentWeekEspnGameData = (currentWeek != null && currentWeek <= regularWeeks && window.sleeperGetEspnGameData)
+        ? await window.sleeperGetEspnGameData(currentWeek, league.season).catch(() => null)
+        : null;
+      const currentWeekComplete = !!(currentWeekEspnGameData && Object.values(currentWeekEspnGameData).length > 0
+        && Object.values(currentWeekEspnGameData).every(info => info.state === 'post'));
       const weekResults = [];
       const weekMedianResults = hasMedian ? [] : null;
       for (let week = 1; week <= regularWeeks; week++) {
         const weekMatchups = byWeek[week - 1];
         const row = ldrecWeekRow(weekMatchups, myRoster.roster_id);
         const notPlayed = !row || (row.myScore === 0 && row.oppScore === 0);
+        if (!notPlayed && week === currentWeek && !currentWeekComplete) {
+          const mine = weekMatchups.find(m => m.roster_id === myRoster.roster_id);
+          const opp = weekMatchups.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== myRoster.roster_id);
+          const myLiveProj = sbMatchupProjectedTotal(mine, null, league, currentWeekEspnGameData, week);
+          const oppLiveProj = opp ? sbMatchupProjectedTotal(opp, null, league, currentWeekEspnGameData, week) : null;
+          const winPct = oppLiveProj != null ? sbWinProbability(myLiveProj, oppLiveProj) : null;
+          weekResults.push(winPct == null ? null : (winPct >= 90 ? 'W' : (winPct <= 10 ? 'L' : null)));
+          continue;
+        }
         weekResults.push(notPlayed ? null : (row.win ? 'W' : 'L'));
         if (hasMedian) {
           if (notPlayed || !weekMatchups || !weekMatchups.length) {
@@ -18185,7 +18203,7 @@
         (ties ? `<span class="sep">-</span><span>${ties}</span>` : '');
     }
     if (recordValues[1]) {
-      recordValues[1].innerHTML = `<span class="win">${projWinSum.toFixed(1)}</span><span class="sep">-</span><span class="loss">${projLossSum.toFixed(1)}</span>`;
+      recordValues[1].innerHTML = `<span class="win">${projWinSum.toFixed(2)}</span><span class="sep">-</span><span class="loss">${projLossSum.toFixed(2)}</span>`;
     }
 
     // Roster Value: real dynasty asset value (Pure Potential's list) rank
@@ -19632,71 +19650,6 @@
   }
   window.renderRealSchedule = renderRealSchedule;
 
-  function sweatCardHtml(row, isFor) {
-    const deltaText = (row.delta > 0 ? '+' : '') + row.delta;
-    const noteParts = [];
-    if (row.for.length) noteParts.push(`${row.for.length} for`);
-    if (row.against.length) noteParts.push(`${row.against.length} vs`);
-    const posClass = row.pos.toLowerCase();
-    const teamAbbr = (row.team || '').toLowerCase();
-    const badge = teamAbbr && teamAbbr !== 'fa'
-      ? `<img class="sweat-badge team" src="https://sleepercdn.com/images/team_logos/nfl/${teamAbbr}.png" alt="${row.team}" onerror="this.style.display='none'">`
-      : '';
-    const leagues = [...row.for, ...row.against];
-    return '<div class="sweat-card ' + (isFor ? 'for' : 'against') + '"' +
-      ` data-player-id="${row.id}" data-name="${sbFieldEsc(row.name)}" data-team="${sbFieldEsc(row.team || 'FA')}"` +
-      ` data-pos="${row.pos}" data-leagues="${leagues.map(sbFieldEsc).join('|')}">` + badge +
-      `<div class="sweat-avatar"><img src="${sbHeadshotUrl(row.id)}" alt="" loading="lazy" onerror="this.remove()"></div>` +
-      `<div class="sweat-pos ${posClass}">${row.pos}</div>` +
-      `<div class="sweat-name">${row.name}</div>` +
-      `<div class="sweat-count ${isFor ? 'for' : 'against'}">${deltaText} <span>${noteParts.join(' &middot; ')}</span></div>` +
-    '</div>';
-  }
-
-  function initSweatCardClicks(container) {
-    if (!container) return;
-    container.querySelectorAll('.sweat-card').forEach(card => {
-      card.addEventListener('click', () => {
-        if (!window.openPlayerModalData) return;
-        window.openPlayerModalData({
-          playerId: card.dataset.playerId, name: card.dataset.name, team: card.dataset.team,
-          pos: card.dataset.pos, leagues: card.dataset.leagues ? card.dataset.leagues.split('|') : [],
-          defaultTab: 'overview',
-        });
-      });
-    });
-  }
-
-  // Same source data as the Rooting Guide (window.__sleeperRootingRows, set
-  // by renderRealRootingGuide) so this top-3 summary can never drift from
-  // the full guide the way the old independent mock values did.
-  function renderWeeklySweats() {
-    const forCards = document.getElementById('sweatsForCards');
-    const againstCards = document.getElementById('sweatsAgainstCards');
-    if (!forCards || !againstCards) return;
-    const rows = window.__sleeperRootingRows || [];
-    if (!rows.length) return;
-
-    // Tiebreaker for equal for/against counts: higher point projection wins
-    // for now, until league buy-in amounts exist to break ties by stakes.
-    const projections = window.__sleeperProjections || {};
-    const withDelta = rows.map(r => Object.assign({}, r, {
-      delta: r.for.length - r.against.length,
-      proj: projections[r.id] != null ? Number(projections[r.id]) : 0,
-    }));
-    const forTop = withDelta.filter(r => r.delta > 0).sort((a, b) => b.delta - a.delta || b.proj - a.proj).slice(0, 3);
-    const againstTop = withDelta.filter(r => r.delta < 0).sort((a, b) => a.delta - b.delta || b.proj - a.proj).slice(0, 3);
-
-    forCards.innerHTML = forTop.length
-      ? forTop.map(r => sweatCardHtml(r, true)).join('')
-      : '<div class="placeholder"><p>No standout players to root for this week.</p></div>';
-    againstCards.innerHTML = againstTop.length
-      ? againstTop.map(r => sweatCardHtml(r, false)).join('')
-      : '<div class="placeholder"><p>No standout players to root against this week.</p></div>';
-    initSweatCardClicks(forCards);
-    initSweatCardClicks(againstCards);
-  }
-  window.renderWeeklySweats = renderWeeklySweats;
 
   const SB_ROSTER_COLORS = ['var(--navy)', 'var(--red)', '#3f6b4a', '#1d3557', '#8a5a2b', '#5b6f5b', '#b23a5a', '#1c7a8c', '#4a3f36', '#3b4f8a', '#8a7a2f', '#6b3fa0', '#2d2d33', '#a3441f', '#2f4f7a', '#7a3f2f', '#3f3f8a', '#6b6b74'];
 
@@ -19906,7 +19859,7 @@
       ? await window.sleeperGetEspnGameData(sbWeek, sbSeason).catch(() => null)
       : null;
 
-    let totalPts = 0, oppTotalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0;
+    let totalPts = 0, oppTotalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0, currentlyWinningCount = 0;
     sbGrid.innerHTML = entries.map((entry, i) => {
       const ov = override ? override.byLeague[entry.league.league_id] : null;
       const myMatchup = ov ? ov.myMatchup : entry.myMatchup;
@@ -19934,6 +19887,10 @@
         hasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
         if (hasData) {
           withMatchup++;
+          // Current point total, not projected -- whoever's actually ahead
+          // on the scoreboard right now, separate from "Projected to Win"
+          // and "Favored to Win" above which are both projection-based.
+          if (myPts > oppPts) currentlyWinningCount++;
           const cardEspnGameData = entry.week === sbWeek ? sbEspnGameData : null;
           const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league, cardEspnGameData, entry.week);
           const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, cardEspnGameData, entry.week);
@@ -19997,6 +19954,8 @@
     window.__sbProjectedRecord = { winSum: projWinSum, lossSum: projLossSum };
     if (winsValue) winsValue.textContent = `${favoredCount} of ${withMatchup}`;
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
+    const currentWinsValue = document.getElementById('sbStatCurrentWinsValue');
+    if (currentWinsValue) currentWinsValue.textContent = `${currentlyWinningCount} of ${withMatchup}`;
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
     const sbWeekLabel = document.getElementById('sbWeekLabel');
     if (sbWeekLabel) sbWeekLabel.textContent = week;
