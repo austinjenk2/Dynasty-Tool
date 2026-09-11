@@ -19827,6 +19827,13 @@
     document.addEventListener('click', () => { sbTankPanelEl.hidden = true; });
   }
 
+  // Guards the async gap below (the ESPN game-state fetch) against a
+  // stale, slower-to-resolve call overwriting a newer one's more complete
+  // render -- e.g. an early call that started before every league had
+  // finished loading finishing AFTER a later call that had the full set,
+  // silently dropping leagues back out of the grid. Only the most
+  // recently started call is allowed to write the DOM.
+  let sbRenderGen = 0;
   async function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
     if (!sbGrid) return;
@@ -19834,6 +19841,7 @@
     const tankList = sbGetTankList();
     const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && !tankList.has(e.league.name));
     if (!entries.length) return;
+    const myGen = ++sbRenderGen;
 
     // The 60s poll rebuilds this whole grid from scratch, which used to
     // silently collapse whatever matchup a person had open (it felt like
@@ -19858,6 +19866,7 @@
     const sbEspnGameData = (sbWeek != null && window.sleeperGetEspnGameData)
       ? await window.sleeperGetEspnGameData(sbWeek, sbSeason).catch(() => null)
       : null;
+    if (myGen !== sbRenderGen) return;
 
     let totalPts = 0, oppTotalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0, currentlyWinningCount = 0;
     sbGrid.innerHTML = entries.map((entry, i) => {
@@ -19904,9 +19913,10 @@
           if (winPct > 50) favoredCount++;
           projWinSum += winPct / 100;
           projLossSum += 1 - winPct / 100;
-          if (winPct > 60) badgeClass = 'sb-badge-good';
-          else if (winPct < 40) badgeClass = 'sb-badge-bad';
-          else { badgeClass = 'sb-badge-close'; }
+          // Strict coin-flip split for the badge's color -- >=50% green,
+          // <50% red -- rather than a three-way good/close/bad read, since
+          // a 51% win probability is still more likely than not to win.
+          badgeClass = winPct >= 50 ? 'sb-badge-good' : 'sb-badge-bad';
           badgeText = `${winPct}% Win Prob`;
         } else {
           badgeText = 'No Projections Available';
