@@ -11298,24 +11298,41 @@
     }
     window.scrollTo(0, 0);
   }
-  // Jump from anywhere to one league's matchup in the Matchup Hub, opened.
-  // The Hub may not have rendered its cards yet (first visit, or a sync in
-  // flight), so this polls briefly for the card rather than giving up on
-  // the first miss -- and gives up quietly after a couple of seconds
-  // instead of hanging or throwing.
+  // Jump from anywhere straight into one league's own page, opened on its
+  // League Matchups view -- not the Matchup Hub's grid, which is a list of
+  // every league and leaves you to find this one again.
+  //
+  // Two waits are unavoidable here. renderRealLeagueDetail is async, so the
+  // League Matchups button can't be pressed until the detail has actually
+  // rendered -- it reads the league id off the standings list that render
+  // populates. Both waits poll rather than assuming a fixed delay, and give
+  // up quietly after a couple of seconds instead of hanging: a jump that
+  // lands on the league page without the matchups view open is still a
+  // reasonable place to be.
   function goToLeagueMatchup(leagueId) {
     if (!leagueId) return;
-    goToSection('lineups');
-    if (window.renderRealScoreboard) { try { window.renderRealScoreboard(); } catch (e) {} }
+    goToSection('leagues');
+    const listView = document.getElementById('leaguesListView');
+    const detailView = document.getElementById('leagueDetailView');
+    if (listView) listView.hidden = true;
+    if (detailView) detailView.hidden = false;
+    // Called with the id directly rather than through goToLeagueDetail,
+    // which looks the league up by name in the Leagues table -- those rows
+    // don't exist until that page has been visited at least once.
+    if (window.renderRealLeagueDetail) window.renderRealLeagueDetail(leagueId);
+    window.scrollTo(0, 0);
+
     const started = Date.now();
-    (function findCard() {
-      const card = document.querySelector(`.sb-card[data-sleeper-league-id="${String(leagueId).replace(/"/g, '\\"')}"]`);
-      if (card) {
-        if (!card.classList.contains('is-open')) card.click();
-        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    (function openMatchups() {
+      const standings = document.getElementById('ldStandingsList');
+      if (standings && standings.dataset.leagueId === String(leagueId)) {
+        const btn = document.getElementById('ldNavMatchups');
+        // Clicking the real button rather than calling the opener keeps
+        // this working off the handler the page already binds.
+        if (btn) btn.click();
         return;
       }
-      if (Date.now() - started < 2500) setTimeout(findCard, 120);
+      if (Date.now() - started < 2500) setTimeout(openMatchups, 120);
     })();
   }
   window.goToLeagueMatchup = goToLeagueMatchup;
@@ -20084,7 +20101,7 @@
       const bits = [];
       if (r.mine.length) bits.push(`<span class="gc-lg-for">+ ${sbFieldEsc(r.mine.map(x => shortName(x.name)).join(', '))}</span>`);
       if (r.opp.length) bits.push(`<span class="gc-lg-against">&minus; ${sbFieldEsc(r.opp.map(x => shortName(x.name)).join(', '))}</span>`);
-      return `<div class="gc-lg-row" data-gc-league-id="${sbFieldEsc(r.leagueId || '')}" title="${sbFieldEsc(r.league)} &mdash; open this matchup in the Matchup Hub">
+      return `<div class="gc-lg-row" data-gc-league-id="${sbFieldEsc(r.leagueId || '')}" title="${sbFieldEsc(r.league)} &mdash; open this league&rsquo;s matchups">
         <span class="gc-lg-name">${sbFieldEsc(r.league)}</span>
         <span class="gc-lg-players">${bits.join('<span class="gc-lg-sep"></span>')}</span>
       </div>`;
