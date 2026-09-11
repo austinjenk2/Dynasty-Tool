@@ -19900,9 +19900,16 @@
           // on the scoreboard right now, separate from "Projected to Win"
           // and "Favored to Win" above which are both projection-based.
           if (myPts > oppPts) currentlyWinningCount++;
-          const cardEspnGameData = entry.week === sbWeek ? sbEspnGameData : null;
-          const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league, cardEspnGameData, entry.week);
-          const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, cardEspnGameData, entry.week);
+          // Only blend in real live-game state for the actual current
+          // week's own cards -- viewing a past/future week via the week
+          // selector (override) swaps in that week's matchups/projections
+          // but entry.week still reports the real live week, so without
+          // this guard a future week's totals got computed as if its
+          // (nonexistent) games were the live ones already in progress.
+          const cardEspnGameData = (!override && entry.week === sbWeek) ? sbEspnGameData : null;
+          const cardWeek = override ? override.week : entry.week;
+          const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league, cardEspnGameData, cardWeek);
+          const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, cardEspnGameData, cardWeek);
           headlineMine = myProj;
           headlineTheirs = oppProj;
           const winPct = sbWinProbability(myProj, oppProj);
@@ -19961,7 +19968,10 @@
     // can never disagree -- the Dashboard reads this instead of running its
     // own version of the same sum against a different (co-managed-only)
     // league filter than the Scoreboard's own tanking-teams exclusions.
-    window.__sbProjectedRecord = { winSum: projWinSum, lossSum: projLossSum };
+    // Only written for a real, non-override render: previewing a past/
+    // future week here (via the week selector) must never leak into what
+    // the Dashboard shows as "this week's" projected record.
+    if (!override) window.__sbProjectedRecord = { winSum: projWinSum, lossSum: projLossSum };
     if (winsValue) winsValue.textContent = `${favoredCount} of ${withMatchup}`;
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
     const currentWinsValue = document.getElementById('sbStatCurrentWinsValue');
