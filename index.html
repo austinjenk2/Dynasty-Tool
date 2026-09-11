@@ -709,7 +709,10 @@
     font-size: 11px; font-weight: 800; letter-spacing: 0.6px; color: var(--faint);
     margin-bottom: 14px;
   }
-  .gc-hero-down { color: var(--ink); font-size: 13px; letter-spacing: 0.8px; }
+  .gc-hero-down { color: var(--ink); font-size: 15px; font-weight: 800; letter-spacing: 1px; }
+  .gc-hero-topright { display: flex; align-items: center; gap: 10px; }
+  .gc-ballspot { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 0.3px; }
+  .gc-redzone { color: var(--red); font-size: 10.5px; font-weight: 800; letter-spacing: 0.6px; }
   /* Three across: the injury report sits where the score used to, the
      score moves to the middle where the eye lands first, and the field
      stays right. */
@@ -765,7 +768,21 @@
   .gc-field-yl.gc-field-50 { width: 2px; background: rgba(255,255,255,0.85); }
   .gc-field-num { position: absolute; top: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 800; font-style: italic; }
   .gc-field-los { position: absolute; top: 0; bottom: 0; width: 2.5px; background: #3fc7ff; box-shadow: 0 0 7px rgba(63,199,255,0.9); transition: left 1.2s cubic-bezier(0.22,1,0.36,1); }
-  .gc-field-fd { position: absolute; top: 0; bottom: 0; width: 2.5px; background: #ffe14d; box-shadow: 0 0 7px rgba(255,225,77,0.9); transition: left 1.2s cubic-bezier(0.22,1,0.36,1); }
+  /* First-down marker, dashed the way a broadcast draws it so it reads as
+     a different kind of line from the solid line of scrimmage. */
+  .gc-field-fd {
+    position: absolute; top: 0; bottom: 0; width: 0;
+    border-left: 2.5px dashed #ffb020;
+    filter: drop-shadow(0 0 4px rgba(255,176,32,0.85));
+    transition: left 1.2s cubic-bezier(0.22,1,0.36,1);
+  }
+  /* Last play, drawn as an arc from where the ball was to where it is. */
+  .gc-field-arc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .gc-field-arc path {
+    fill: none; stroke: #3fc7ff; stroke-width: 1.6; stroke-dasharray: 4 3;
+    stroke-linecap: round; vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 0 3px rgba(63,199,255,0.8));
+  }
   .gc-field-spot {
     position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%;
     background: #3fc7ff; border: 2px solid #fff;
@@ -849,6 +866,8 @@
     padding: 6px 2px; border-bottom: 1px solid var(--border-soft);
   }
   .gc-lg-row:last-child { border-bottom: none; }
+  .gc-lg-row[data-gc-league-id]:not([data-gc-league-id=""]) { cursor: pointer; }
+  .gc-lg-row[data-gc-league-id]:not([data-gc-league-id=""]):hover { background: var(--bg); }
   .gc-lg-name {
     font-size: 10.5px; font-weight: 800; color: var(--muted);
     flex: 0 0 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -11279,6 +11298,28 @@
     }
     window.scrollTo(0, 0);
   }
+  // Jump from anywhere to one league's matchup in the Matchup Hub, opened.
+  // The Hub may not have rendered its cards yet (first visit, or a sync in
+  // flight), so this polls briefly for the card rather than giving up on
+  // the first miss -- and gives up quietly after a couple of seconds
+  // instead of hanging or throwing.
+  function goToLeagueMatchup(leagueId) {
+    if (!leagueId) return;
+    goToSection('lineups');
+    if (window.renderRealScoreboard) { try { window.renderRealScoreboard(); } catch (e) {} }
+    const started = Date.now();
+    (function findCard() {
+      const card = document.querySelector(`.sb-card[data-sleeper-league-id="${String(leagueId).replace(/"/g, '\\"')}"]`);
+      if (card) {
+        if (!card.classList.contains('is-open')) card.click();
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      if (Date.now() - started < 2500) setTimeout(findCard, 120);
+    })();
+  }
+  window.goToLeagueMatchup = goToLeagueMatchup;
+
   function goToRootingGuide() {
     goToSection('rooting');
   }
@@ -12865,6 +12906,43 @@
     });
     return { ranks, of: allRosters.length };
   }
+
+  // Which quadrant of the Team Strength graph a league plots into. The
+  // graph's four labels are laid out Fragile / Favorite across the top and
+  // Rebuild / Upside across the bottom, with x = roster value (right is
+  // better) and y measured from the top (up is more contending), so the
+  // midpoints of both axes decide the name.
+  function sbTeamStrengthCategory(leagueName) {
+    const stats = (window.__scatterLeagueStats || {})[leagueName];
+    if (!stats || stats.x == null || stats.y == null) return null;
+    const strongValue = stats.x >= 50;
+    const contending = stats.y < 50;
+    if (contending) return strongValue ? 'Favorite' : 'Fragile';
+    return strongValue ? 'Upside' : 'Rebuild';
+  }
+  window.sbTeamStrengthCategory = sbTeamStrengthCategory;
+
+  // Leagues table: the Roster Type column shows where the team actually
+  // plots on the Team Strength graph rather than a label typed by hand in
+  // Notes. Runs on the same passes as the Contending/Roster Value columns,
+  // since it depends on the same ranks having been computed. A co-managed
+  // team keeps its CO-MANAGED pill, and a league the graph hasn't plotted
+  // yet keeps whatever the row already shows.
+  function renderRosterTypeCategories() {
+    document.querySelectorAll('.league-row[data-sleeper-league-id]').forEach(row => {
+      const cell = row.querySelector('.roster-pill');
+      if (!cell || cell.textContent.trim() === 'CO-MANAGED') return;
+      const category = sbTeamStrengthCategory(row.dataset.name);
+      if (!category) return;
+      cell.textContent = category;
+      // The pill's existing colour classes line up with the graph's own
+      // quadrants exactly: Favorite keeps the default green, and Fragile /
+      // Upside / Rebuild each already have a colour of their own.
+      cell.className = 'roster-pill' + (category === 'Favorite' ? '' : ' ' + category.toLowerCase());
+      row.dataset.roster = category;
+    });
+  }
+  window.renderRosterTypeCategories = renderRosterTypeCategories;
 
   function renderContendingRanks() {
     document.querySelectorAll('.league-row[data-sleeper-league-id]').forEach(row => {
@@ -15336,6 +15414,7 @@
         if (window.renderRecordBookMoneySettings) window.renderRecordBookMoneySettings();
         renderLeagueBlacklistSettings();
         if (window.renderContendingRanks) window.renderContendingRanks();
+        if (window.renderRosterTypeCategories) window.renderRosterTypeCategories();
         if (window.renderRosterValueRanks) window.renderRosterValueRanks();
         if (window.updateModeToggleBtn) window.updateModeToggleBtn();
         if (leagueCountChip) {
@@ -15355,6 +15434,7 @@
             if (window.renderRealGameCast) window.renderRealGameCast();
             if (window.renderRealDashboard) window.renderRealDashboard();
             if (window.renderContendingRanks) window.renderContendingRanks();
+            if (window.renderRosterTypeCategories) window.renderRosterTypeCategories();
             if (window.renderRosterValueRanks) window.renderRosterValueRanks();
           }).catch(() => {});
         }
@@ -18642,12 +18722,15 @@
 
     const points = contendingByLeague.map(item => {
       const v = valueByName[item.league];
+      const x = Math.max(2, Math.min(98, v ? v.pct : 3));
+      const y = Math.max(2, Math.min(98, 100 - item.pct));
+      // x/y are kept alongside the ranks so the Leagues table can name the
+      // quadrant a team plots into without recomputing any of this.
       window.__scatterLeagueStats[item.league] = {
         rank: item.rank, of: item.of,
         value: v ? v.rank : null, valueOf: v ? v.of : null,
+        x, y,
       };
-      const x = Math.max(2, Math.min(98, v ? v.pct : 3));
-      const y = Math.max(2, Math.min(98, 100 - item.pct));
       return { league: item.league, x, y, pct: item.pct };
     });
 
@@ -18660,6 +18743,10 @@
       if (!groups[key]) groups[key] = { x: p.x, y: p.y, pct: p.pct, leagues: [] };
       groups[key].leagues.push(p.league);
     });
+
+    // The Leagues table's Roster Type column reads the positions computed
+    // just above, so refresh it now that they exist.
+    if (window.renderRosterTypeCategories) window.renderRosterTypeCategories();
 
     const tooltip = document.getElementById('scatterTooltip');
     Object.values(groups).forEach(g => {
@@ -19449,6 +19536,19 @@
     return gcKickoffLabel(g) || 'SCHEDULED';
   }
 
+  // ESPN packs down, distance and ball spot into one string
+  // ("1st & 10 at NE 46"). The broadcast layout wants them apart: the down
+  // and distance on the left, the spot on the right.
+  function gcDownText(g) {
+    if (!g.downDistance) return '';
+    return g.downDistance.split(/\s+at\s+/i)[0].toUpperCase();
+  }
+  function gcBallSpotText(g) {
+    if (!g.downDistance) return '';
+    const parts = g.downDistance.split(/\s+at\s+/i);
+    return parts.length > 1 ? parts[1] : '';
+  }
+
   function gcBallIconHtml(g, side) {
     if (g.state !== 'in' || !g.possession) return '';
     const team = side === 'away' ? g.away : g.home;
@@ -19525,6 +19625,41 @@
     return null;
   }
 
+  // Where the ball was before the last play, as a 0-100 field percentage.
+  // Taken from the yardage in ESPN's own last-play text when it states one
+  // ("...for 16 yards"), which works on the very first render; otherwise
+  // from the spot this game was last drawn at, which covers plays whose
+  // text has no yardage (penalties, sacks worded differently, kicks).
+  window.__gcPrevSpot = window.__gcPrevSpot || {};
+  function gcPreviousSpot(g, spot, awayHasBall) {
+    const remembered = window.__gcPrevSpot[g.eventId];
+    window.__gcPrevSpot[g.eventId] = spot;
+
+    if (g.lastPlay) {
+      const m = /\bfor (-?\d+) yard/i.exec(g.lastPlay);
+      if (m) {
+        const gained = Number(m[1]);
+        // A drive moves toward the opponent's end zone, so undoing the play
+        // means stepping back the other way.
+        const from = awayHasBall ? spot - gained : spot + gained;
+        if (from >= 0 && from <= 100 && Math.abs(gained) > 0) return from;
+      }
+      if (/\bno gain\b/i.test(g.lastPlay)) return null;
+    }
+    if (remembered != null && Math.abs(remembered - spot) > 0.5) return remembered;
+    return null;
+  }
+
+  // A shallow arc from the previous spot to the current one. Drawn as an
+  // SVG overlay rather than a border-radius box so it reads as a single
+  // curved path at any width, and stays out of the way of the yard lines.
+  function gcLastPlayArcHtml(fromPct, toPct) {
+    const lift = Math.min(34, Math.max(12, Math.abs(toPct - fromPct) * 1.6));
+    return `<svg class="gc-field-arc" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M ${fromPct} 62 Q ${(fromPct + toPct) / 2} ${62 - lift} ${toPct} 62" />
+    </svg>`;
+  }
+
   function gcFieldHtml(g) {
     const spot = gcBallPercent(g);
     // Yard numbers every 10 yards between the two end zones. The drawn
@@ -19545,7 +19680,11 @@
       const fd = g.distance != null
         ? Math.max(0, Math.min(100, awayHasBall ? spot + g.distance : spot - g.distance))
         : null;
+      // Where the ball came from on the last play, drawn as an arc from
+      // there to the current spot.
+      const from = gcPreviousSpot(g, spot, awayHasBall);
       live = `
+        ${from != null ? gcLastPlayArcHtml(toPct(from), toPct(spot)) : ''}
         <div class="gc-field-los" style="left:${toPct(spot)}%"></div>
         ${fd != null ? `<div class="gc-field-fd" style="left:${toPct(fd)}%"></div>` : ''}
         <div class="gc-field-spot" style="left:${toPct(spot)}%"></div>`;
@@ -19597,8 +19736,11 @@
     return `
       <div class="gc-hero">
         <div class="gc-hero-topline">
-          <span class="gc-hero-down">${g.state === 'in' && g.downDistance ? sbFieldEsc(g.downDistance) : ''}</span>
-          <span>${g.state === 'in' && g.isRedZone ? 'RED ZONE' : ''}</span>
+          <span class="gc-hero-down">${g.state === 'in' ? sbFieldEsc(gcDownText(g)) : ''}</span>
+          <span class="gc-hero-topright">
+            ${g.state === 'in' && g.isRedZone ? '<span class="gc-redzone">RED ZONE</span>' : ''}
+            ${g.state === 'in' && gcBallSpotText(g) ? `<span class="gc-ballspot">Ball on ${sbFieldEsc(gcBallSpotText(g))}</span>` : ''}
+          </span>
         </div>
         <div class="gc-hero-grid">
           <div class="gc-hero-injury">
@@ -19920,7 +20062,7 @@
       const oppName = (e.oppUser && (e.oppUser.display_name || e.oppUser.username)) || 'Opponent';
       const sumPts = (list) => list.reduce((t, x) => t + (x.pts || 0), 0);
       out.push({
-        league: e.league.name, mine, opp, oppName,
+        league: e.league.name, leagueId: e.league.league_id, mine, opp, oppName,
         net: sumPts(mine) - sumPts(opp),
         stake: mine.length + opp.length,
       });
@@ -19942,7 +20084,7 @@
       const bits = [];
       if (r.mine.length) bits.push(`<span class="gc-lg-for">+ ${sbFieldEsc(r.mine.map(x => shortName(x.name)).join(', '))}</span>`);
       if (r.opp.length) bits.push(`<span class="gc-lg-against">&minus; ${sbFieldEsc(r.opp.map(x => shortName(x.name)).join(', '))}</span>`);
-      return `<div class="gc-lg-row" title="${sbFieldEsc(r.league)}">
+      return `<div class="gc-lg-row" data-gc-league-id="${sbFieldEsc(r.leagueId || '')}" title="${sbFieldEsc(r.league)} &mdash; open this matchup in the Matchup Hub">
         <span class="gc-lg-name">${sbFieldEsc(r.league)}</span>
         <span class="gc-lg-players">${bits.join('<span class="gc-lg-sep"></span>')}</span>
       </div>`;
@@ -20098,6 +20240,11 @@
         const cur = window.__gcHeroData;
         const body = document.getElementById('gcInjBody');
         if (cur && body) body.innerHTML = gcInjuryHtml(cur.game, window.__gcInjuryTeam, cur.dict);
+        return;
+      }
+      const lgRow = e.target.closest('.gc-lg-row');
+      if (lgRow && lgRow.dataset.gcLeagueId) {
+        goToLeagueMatchup(lgRow.dataset.gcLeagueId);
         return;
       }
       const row = e.target.closest('.gc-stat-row');
