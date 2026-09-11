@@ -1178,11 +1178,8 @@
   .sb-exp-q { color: var(--gold); font-weight: 800; margin-left: 4px; }
   .sb-exp-psub { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
   .sb-exp-pts { text-align: right; color: var(--faint); font-weight: 600; }
-  .sb-exp-pts.sb-pos-qb { color: var(--red); }
-  .sb-exp-pts.sb-pos-rb { color: var(--green); }
-  .sb-exp-pts.sb-pos-wr { color: var(--blue); }
-  .sb-exp-pts.sb-pos-te { color: var(--gold); }
-  .sb-exp-pts.sb-pos-sfl { color: #7c5cbf; }
+  .sb-exp-pts.sb-pts-over { color: var(--green); }
+  .sb-exp-pts.sb-pts-under { color: var(--red); }
   .sb-exp-proj { text-align: right; color: var(--gold); font-weight: 700; }
   .sb-exp-orig { text-align: right; color: var(--faint); font-weight: 600; font-size: 11px; }
   .sb-exp-footer { margin-top: 14px; }
@@ -12719,6 +12716,19 @@
     return ' close';
   }
 
+  // A continuous green/red background tint for a Scoreboard card, scaled
+  // by how far the real win probability sits from a 50/50 coin flip --
+  // a near-toss-up still reads as a faint tint (never plain white) but a
+  // near-lock reads as a much deeper one, instead of the badge's flat
+  // three/two-way color read.
+  function sbWinTintStyle(winPct) {
+    if (winPct == null || winPct < 0) return '';
+    const intensity = Math.min(1, Math.abs(winPct - 50) / 50);
+    const alpha = (0.05 + intensity * 0.22).toFixed(3);
+    const rgb = winPct >= 50 ? '47,138,78' : '200,16,46';
+    return ` style="background: rgba(${rgb}, ${alpha});"`;
+  }
+
   // Sleeper's own projection numbers keep updating during live games (as
   // actual output comes in), which is exactly the "live projection" the
   // League Detail page shows -- but there's no way to ask Sleeper for what
@@ -12900,7 +12910,22 @@
       const elapsedFraction = sbGameElapsedFraction(team, espnGameData);
       const projBaseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawProj);
       const proj = sbEstimateLiveProjection(livePtsNum, projBaseline, elapsedFraction, gameStarted, gameFinished);
-      const projText = proj != null ? proj.toFixed(1) : '&mdash;';
+      // Once the game's over, the live estimate just equals his real final
+      // score (sbEstimateLiveProjection's own finished-game fallback) --
+      // showing that same number twice reads as a second, redundant
+      // "projection" when it's really just his actual restated, so it's
+      // blank instead of repeating pts here.
+      const projText = gameFinished ? '' : (proj != null ? proj.toFixed(1) : '&mdash;');
+      // Points color reads performance against his own original pregame
+      // number, not his position: green once he's tracking ahead of it
+      // (post-game, his real score beat it; live, his current estimate is
+      // above it), red once he's tracking behind -- neutral before his
+      // game starts, when there's nothing yet to compare against.
+      let ptsPerfClass = '';
+      if (origProj != null) {
+        const compareVal = gameFinished ? livePtsNum : (gameStarted ? proj : null);
+        if (compareVal != null) ptsPerfClass = compareVal > origProj ? ' sb-pts-over' : (compareVal < origProj ? ' sb-pts-under' : '');
+      }
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
       return `<tr class="sb-lineup-row" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}">` +
@@ -12909,7 +12934,7 @@
           `<span class="sb-exp-avatar"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>` +
           `<span class="sb-exp-info"><span class="sb-exp-pname">${name}</span><span class="sb-exp-psub">${pos} &middot; ${team}${predicted ? ' &middot; predicted' : ''}</span></span>` +
         '</td>' +
-        `<td class="sb-exp-pts sb-pos-${posClass}">${pts}</td>` +
+        `<td class="sb-exp-pts${ptsPerfClass}">${pts}</td>` +
         `<td class="sb-exp-proj">${projText}</td>` +
         `<td class="sb-exp-orig">${origText}</td>` +
       '</tr>';
@@ -19936,7 +19961,7 @@
         ? `<div class="sb-live-score">${myPts.toFixed(1)} vs ${oppPts.toFixed(1)} live</div>`
         : '';
 
-      return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}" data-order="${i}" data-name="${entry.league.name}" data-winpct="${winPctForSort}" data-score="${hasData ? headlineMine : -1}">
+      return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}" data-order="${i}" data-name="${entry.league.name}" data-winpct="${winPctForSort}" data-score="${hasData ? headlineMine : -1}"${sbWinTintStyle(winPctForSort)}>
           <div class="sb-card-logo" style="background:${color}">${sbLeagueLogoImgHtml(entry.league)}</div>
           <div class="sb-card-main">
             <div class="sb-card-name">${entry.league.name}${recordText ? `<span class="sb-card-record">${recordText}</span>` : ''}</div>
