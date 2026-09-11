@@ -12490,11 +12490,34 @@
   // week's projections, e.g. when the Scoreboard week selector picks a week
   // other than the live one; omitted, it falls back to the current week's
   // cached projections.
-  function sbEffectivePoints(id, pointsMap, projMap, league) {
+  // espnGameData + week are optional: when available (the current live
+  // week, with real ESPN game state to read), a started-but-not-finished
+  // player's effective points is a genuine live projection estimate --
+  // his real points so far plus his pregame projection's remaining share
+  // -- not just his partial actual score standing in alone, which used to
+  // make a team's live total silently undercount real Sleeper's own total
+  // by however many points its still-playing starters have left to score.
+  // Without that context (a past/future week, or before it's fetched)
+  // this falls back to the old recorded-else-projection behavior.
+  function sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week) {
     const recorded = pointsMap ? pointsMap[id] : null;
-    const proj = sbProjectionFor(id, projMap, league);
-    if (recorded != null && (Number(recorded) !== 0 || proj == null)) return Number(recorded);
-    return proj != null ? proj : 0;
+    const rawProj = sbProjectionFor(id, projMap, league);
+    if (espnGameData && week != null && league) {
+      const dict = window.__sleeperPlayerDict;
+      const p = dict && dict[id];
+      const team = p ? p.team : null;
+      if (team) {
+        const gameStarted = sbGameStartedForTeam(team, espnGameData);
+        const gameFinished = sbGameFinishedForTeam(team, espnGameData);
+        const origProj = origProjFor(league.season, week, 'players', id, rawProj, gameStarted);
+        const elapsedFraction = sbGameElapsedFraction(team, espnGameData);
+        const baseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawProj);
+        const live = sbEstimateLiveProjection(recorded != null ? Number(recorded) : null, baseline, elapsedFraction, gameStarted, gameFinished);
+        if (live != null) return live;
+      }
+    }
+    if (recorded != null && (Number(recorded) !== 0 || rawProj == null)) return Number(recorded);
+    return rawProj != null ? rawProj : 0;
   }
 
   const SB_SLOT_ELIGIBLE = {
@@ -12663,11 +12686,11 @@
   }
   window.renderContendingRanks = renderContendingRanks;
 
-  function sbMatchupProjectedTotal(matchup, projMap, league) {
+  function sbMatchupProjectedTotal(matchup, projMap, league, espnGameData, week) {
     if (!matchup) return 0;
     const starters = sbEffectiveStarters(matchup, league, projMap);
     const pointsMap = matchup.players_points || {};
-    return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league), 0);
+    return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week), 0);
   }
 
   // True only if at least one starter in the matchup has either a recorded
@@ -12830,6 +12853,14 @@
   // there's no time left for him to add to it, so it's just his real
   // final score (matches the "finished game" fallback already used for
   // the Proj column everywhere).
+  // A player ruled Out (or on IR) isn't playing this week regardless of
+  // what his projection looked like when it was snapshotted pregame --
+  // without this, a live estimate built from that frozen number just
+  // decays slowly toward 0 for the rest of the game instead of reading
+  // as the real 0 it should be the moment his status is known.
+  function sbPlayerIsInactive(p) {
+    return !!p && (p.injury_status === 'Out' || p.injury_status === 'IR' || p.status === 'Inactive');
+  }
   function sbEstimateLiveProjection(actualPts, origProj, elapsedFraction, gameStarted, gameFinished) {
     if (origProj == null) return actualPts != null ? actualPts : null;
     if (!gameStarted) return origProj;
@@ -12879,7 +12910,8 @@
       const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, rawProj, gameStarted) : null;
       const origText = origProj != null ? origProj.toFixed(1) : '&mdash;';
       const elapsedFraction = sbGameElapsedFraction(team, espnGameData);
-      const proj = sbEstimateLiveProjection(livePtsNum, origProj != null ? origProj : rawProj, elapsedFraction, gameStarted, gameFinished);
+      const projBaseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawProj);
+      const proj = sbEstimateLiveProjection(livePtsNum, projBaseline, elapsedFraction, gameStarted, gameFinished);
       const projText = proj != null ? proj.toFixed(1) : '&mdash;';
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
@@ -13149,8 +13181,8 @@
 
     let winPct = null, myProj = null, oppProj = null, myPts = 0, oppPts = 0, myOrig = null, oppOrig = null;
     if (hasData) {
-      myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league);
-      oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
+      myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league, espnGameData, week);
+      oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, espnGameData, week);
       myPts = myMatchup ? (myMatchup.points || 0) : 0;
       oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
       const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(myMatchup, entry.league, projMap), dict, espnGameData);
@@ -13949,7 +13981,8 @@
         // instead of POE reading (mostly) 0 all game and only swinging
         // once the final score lands.
         const rgElapsedFraction = sbGameElapsedFraction(p.team, rgEspnGameData);
-        const liveProj = sbEstimateLiveProjection(pprPoints, origProj != null ? origProj : rawLiveProj, rgElapsedFraction, rgGameStarted, rgGameFinished);
+        const rgProjBaseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawLiveProj);
+        const liveProj = sbEstimateLiveProjection(pprPoints, rgProjBaseline, rgElapsedFraction, rgGameStarted, rgGameFinished);
         const poe = (rgGameStarted && liveProj != null && origProj != null) ? (liveProj - origProj) : null;
         return {
           id,
@@ -19177,7 +19210,10 @@
     // from his frozen pregame number, not his partial actual score against
     // a full-game projection (which reads as deeply negative for anyone
     // who hasn't finished playing yet, regardless of pace).
-    const projPts = sbEstimateLiveProjection(livePts, origPts != null ? origPts : rawProjPts, elapsedFraction, gameStarted, gameFinished);
+    const gcDict = window.__sleeperPlayerDict;
+    const gcP = gcDict && gcDict[id];
+    const gcProjBaseline = sbPlayerIsInactive(gcP) ? 0 : (origPts != null ? origPts : rawProjPts);
+    const projPts = sbEstimateLiveProjection(livePts, gcProjBaseline, elapsedFraction, gameStarted, gameFinished);
     const expDiff = (projPts != null && origPts != null) ? projPts - origPts : null;
     const expCls = expDiff == null ? '' : (expDiff > 0 ? 'ldrec-pos' : (expDiff < 0 ? 'ldrec-neg' : ''));
     return `
@@ -19809,7 +19845,7 @@
     document.addEventListener('click', () => { sbTankPanelEl.hidden = true; });
   }
 
-  function renderRealScoreboard() {
+  async function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
     if (!sbGrid) return;
     renderSbTankChips();
@@ -19825,6 +19861,21 @@
     const openLeagueId = openCardEl ? openCardEl.dataset.sleeperLeagueId : null;
 
     const override = window.__sleeperScoreboardOverride || null;
+
+    // Real ESPN game state for the current week -- lets each card's
+    // headline total use a genuine live projection estimate (see
+    // sbEffectivePoints) instead of just summing raw partial actual
+    // scores, which used to undercount a team's real live total by
+    // however many points its still-playing starters have left on the
+    // clock. Leagues can occasionally sit on different weeks (bye/
+    // playoff variance), so this is a best-effort single fetch keyed off
+    // the first entry's week -- any league on a different week just falls
+    // back to the old recorded-else-projection behavior for that card.
+    const sbWeek = entries[0].week;
+    const sbSeason = entries[0].league.season;
+    const sbEspnGameData = (sbWeek != null && window.sleeperGetEspnGameData)
+      ? await window.sleeperGetEspnGameData(sbWeek, sbSeason).catch(() => null)
+      : null;
 
     let totalPts = 0, oppTotalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0;
     sbGrid.innerHTML = entries.map((entry, i) => {
@@ -19854,8 +19905,9 @@
         hasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
         if (hasData) {
           withMatchup++;
-          const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league);
-          const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league);
+          const cardEspnGameData = entry.week === sbWeek ? sbEspnGameData : null;
+          const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league, cardEspnGameData, entry.week);
+          const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, cardEspnGameData, entry.week);
           headlineMine = myProj;
           headlineTheirs = oppProj;
           const winPct = sbWinProbability(myProj, oppProj);
