@@ -713,7 +713,7 @@
   /* Three across: the injury report sits where the score used to, the
      score moves to the middle where the eye lands first, and the field
      stays right. */
-  .gc-hero-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px; align-items: center; }
+  .gc-hero-grid { display: grid; grid-template-columns: minmax(0, 0.62fr) minmax(0, 1.55fr) minmax(0, 1fr); gap: 20px; align-items: center; }
   @media (max-width: 1080px) { .gc-hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .gc-hero-field { grid-column: 1 / -1; } }
   @media (max-width: 760px) { .gc-hero-grid { grid-template-columns: 1fr; } .gc-hero-field { grid-column: auto; } }
   .gc-hero-center { align-self: center; }
@@ -724,13 +724,13 @@
   @media (max-width: 1080px) { .gc-hero-injury { border-right: none; padding-right: 0; } }
   .gc-hero-injury-scroll { max-height: 190px; overflow-y: auto; margin-top: 8px; }
 
-  .gc-hero-score { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .gc-hero-score { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
   .gc-hero-team { display: flex; align-items: center; gap: 9px; }
-  .gc-hero-team img { width: 42px; height: 42px; object-fit: contain; }
-  .gc-hero-abbr { font-size: 15px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink); }
-  .gc-hero-rec { font-size: 10.5px; color: var(--faint); }
-  .gc-hero-pts { font-family: 'Source Serif 4', serif; font-size: 34px; font-weight: 700; line-height: 1; color: var(--ink); }
-  .gc-hero-at { font-size: 13px; color: var(--faint); }
+  .gc-hero-team img { width: 54px; height: 54px; object-fit: contain; }
+  .gc-hero-abbr { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink); }
+  .gc-hero-rec { font-size: 11.5px; color: var(--faint); }
+  .gc-hero-pts { font-family: 'Source Serif 4', serif; font-size: 48px; font-weight: 700; line-height: 1; color: var(--ink); }
+  .gc-hero-at { font-size: 15px; color: var(--faint); }
 
   .gc-hero-meta { margin-top: 14px; }
   .gc-hero-state { font-size: 12px; font-weight: 800; letter-spacing: 0.5px; color: var(--red); }
@@ -757,6 +757,9 @@
   .gc-field-ez-left { left: 0; }
   .gc-field-ez-right { right: 0; }
   .gc-field-ez span { color: rgba(255,255,255,0.92); font-size: 12px; font-weight: 800; letter-spacing: 1px; }
+  /* Logo sits in the end zone like a painted field mark; the abbreviation
+     underneath it is the fallback when the logo image fails to load. */
+  .gc-field-ez img { width: 34px; height: 34px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.55)); }
   .gc-field-yl { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.5); }
   .gc-field-yl.gc-field-50 { width: 2px; background: rgba(255,255,255,0.85); }
   .gc-field-num { position: absolute; top: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 800; font-style: italic; }
@@ -837,22 +840,22 @@
   .gc-play-text { font-size: 12.5px; color: var(--ink); line-height: 1.45; }
   .gc-play-fp { font-size: 11px; font-weight: 800; color: var(--green); margin-top: 4px; }
 
-  /* League breakdown -- one card per league with a starter in this game,
-     your side against your opponent's. */
-  .gc-lg-card { border: 1px solid var(--border-soft); border-radius: 7px; padding: 8px 9px; margin-bottom: 7px; background: var(--bg); }
-  .gc-lg-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-  .gc-lg-name { font-size: 11.5px; font-weight: 800; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .gc-lg-net { font-size: 12px; font-weight: 800; flex-shrink: 0; }
-  .gc-lg-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .gc-lg-col { min-width: 0; }
-  .gc-lg-col-label { font-size: 8.5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .gc-lg-you { color: var(--green); }
-  .gc-lg-them { color: var(--red); }
-  .gc-lg-player { display: flex; align-items: baseline; gap: 4px; font-size: 10.5px; padding: 1px 0; }
-  .gc-lg-pname { color: var(--ink); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
-  .gc-lg-ppos { color: var(--faint); font-size: 8.5px; font-weight: 700; flex-shrink: 0; }
-  .gc-lg-ppts { color: var(--muted); font-weight: 800; flex-shrink: 0; }
-  .gc-lg-none { font-size: 10.5px; color: var(--faint); }
+  /* League breakdown -- one line per league so as many as possible fit
+     without scrolling: the league name, then who you start in this game
+     (green, prefixed +) and who is starting against you (red, prefixed -). */
+  .gc-lg-row {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 6px 2px; border-bottom: 1px solid var(--border-soft);
+  }
+  .gc-lg-row:last-child { border-bottom: none; }
+  .gc-lg-name {
+    font-size: 10.5px; font-weight: 800; color: var(--muted);
+    flex: 0 0 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .gc-lg-players { flex: 1; min-width: 0; font-size: 11.5px; line-height: 1.35; }
+  .gc-lg-for { color: var(--green); font-weight: 700; }
+  .gc-lg-against { color: var(--red); font-weight: 700; }
+  .gc-lg-sep { display: inline-block; width: 6px; }
 
   .gc-inj-row { display: flex; align-items: center; gap: 9px; padding: 6px 2px; border-bottom: 1px solid var(--border-soft); }
   .gc-inj-row:last-child { border-bottom: none; }
@@ -1230,9 +1233,12 @@
     border-radius: 4px;
     white-space: nowrap;
   }
-  .sb-badge.sb-badge-good { color: var(--green); background: var(--green-bg); }
-  .sb-badge.sb-badge-close { color: var(--gold); background: #f6efe0; }
-  .sb-badge.sb-badge-bad { color: var(--red); background: var(--red-bg); }
+  /* The card behind these is already tinted by win probability, so a
+     tinted badge on top of it muddied both. Plain surface-white box, with
+     the win/loss read carried by the text color and a hairline border. */
+  .sb-badge.sb-badge-good { color: var(--green); background: var(--surface); border: 1px solid var(--border); }
+  .sb-badge.sb-badge-close { color: var(--gold); background: var(--surface); border: 1px solid var(--border); }
+  .sb-badge.sb-badge-bad { color: var(--red); background: var(--surface); border: 1px solid var(--border); }
   .sb-chevron { flex-shrink: 0; color: var(--faint); transition: transform 0.15s; }
   .sb-card { cursor: pointer; }
   .sb-card.is-open .sb-chevron { transform: rotate(180deg); }
@@ -12539,6 +12545,87 @@
     return matched ? total : null;
   }
 
+  // ---- The house scoring line ------------------------------------------
+  // Views that show a player across MANY leagues at once -- GameCast and
+  // the Rooting Guide -- can't use any single league's real scoring
+  // settings, because the same player is started in leagues that don't
+  // score alike. Both use this one house line instead, so their numbers
+  // are directly comparable with each other: 5-point passing TDs, -2 per
+  // interception, full PPR, and TE premium at +0.5 (a tight end's catch
+  // is worth 1.5). Anywhere a single real matchup is at stake, that
+  // league's own scoring_settings still governs (see sbProjectionFor).
+  const SB_HOUSE_SCORING = {
+    pass_yd: 0.04, pass_td: 5, pass_int: -2, pass_2pt: 2,
+    rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
+    rec: 1, rec_yd: 0.1, rec_td: 6, rec_2pt: 2,
+    bonus_rec_te: 0.5,
+    fum_lost: -2,
+  };
+  const SB_HOUSE_SCORING_LABEL = '5pt pass TD · -2 INT · full PPR · 1.5 TE rec';
+
+  // What Sleeper's own pre-computed pts_ppr total already bakes in. Only
+  // needed for the fallback below, where a full stat line isn't available
+  // to score from scratch -- the gap between this and the house line above
+  // is what has to be corrected for by hand.
+  const SB_PPR_BASELINE = { pass_td: 4, pass_int: -1 };
+
+  function sbHouseScore(playerId, stats, dict) {
+    if (!stats) return null;
+    const lookup = dict || window.__sleeperPlayerDict || {};
+    const p = lookup[playerId];
+    const pos = p && p.position ? p.position.toLowerCase() : null;
+
+    // Sleeper expresses a position premium as its own stat key
+    // (bonus_rec_te) rather than a different `rec` weight, and the raw
+    // stat/projection payloads don't carry it pre-computed. Without
+    // backfilling it from the plain reception count, sbCustomScoreFor
+    // silently skips the term and every tight end scores as plain PPR.
+    const bonusKey = pos ? `bonus_rec_${pos}` : null;
+    const effective = (bonusKey && SB_HOUSE_SCORING[bonusKey] != null &&
+      stats[bonusKey] == null && stats.rec != null)
+      ? Object.assign({}, stats, { [bonusKey]: stats.rec })
+      : stats;
+    const scored = sbCustomScoreFor(effective, SB_HOUSE_SCORING);
+
+    // Second opinion, whenever Sleeper also sent its own pre-computed
+    // total: that total, corrected only where this house line differs from
+    // the standard PPR one it assumes (and only for the stats the payload
+    // actually carries, so the worst case is a plain PPR number rather
+    // than a wrong one).
+    const base = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
+    let corrected = null;
+    if (base != null) {
+      corrected = Number(base);
+      if (stats.pass_td != null) corrected += Number(stats.pass_td) * (SB_HOUSE_SCORING.pass_td - SB_PPR_BASELINE.pass_td);
+      if (stats.pass_int != null) corrected += Number(stats.pass_int) * (SB_HOUSE_SCORING.pass_int - SB_PPR_BASELINE.pass_int);
+      if (bonusKey && SB_HOUSE_SCORING[bonusKey] != null && stats.rec != null) {
+        corrected += Number(stats.rec) * SB_HOUSE_SCORING[bonusKey];
+      }
+    }
+
+    if (scored == null) return corrected;
+    if (corrected == null) return scored;
+
+    // Scoring from scratch is preferred and stays authoritative for any
+    // real stat line: it makes no assumption about what Sleeper's own
+    // total bakes in, and it is exactly the line the user asked for.
+    //
+    // The one case it gets wrong is a SPARSE line. sbCustomScoreFor
+    // returns a number as soon as one category matches, so a payload
+    // carrying a reception count but no receiving yards would score as a
+    // confident, badly undercounted total. That's detected structurally --
+    // a volume stat present with its matching yardage absent -- rather
+    // than by comparing the two numbers, because a threshold on their
+    // difference also fires whenever Sleeper's total legitimately includes
+    // something this line doesn't score, and silently overrides the house
+    // line with a number it never asked for.
+    const sparse =
+      (stats.rec != null && stats.rec_yd == null) ||
+      (stats.pass_att != null && stats.pass_yd == null) ||
+      (stats.rush_att != null && stats.rush_yd == null);
+    return sparse ? corrected : scored;
+  }
+
   function sbProjectionFor(id, projMap, league) {
     {
       // A week-specific override (picked from a week dropdown) carries its
@@ -14121,13 +14208,13 @@
       }));
       if (!entries.length) return;
 
-      // PPR Points / Projection Over Expected use one fixed scoring basis
-      // (full PPR, 0.5 TE premium) instead of each league's own real
-      // scoring settings -- a player shows up "for" or "against" leagues
-      // that don't all score the same way, so there's no single real
-      // per-league number that would make sense here. Sleeper's own
-      // pts_ppr stat already bakes in the reception itself; only the extra
-      // 0.5-per-catch TE premium has to be added on top by hand.
+      // Points / Projection Over Expected use the shared house scoring
+      // line (SB_HOUSE_SCORING -- 5pt pass TD, -2 INT, full PPR, 1.5 TE
+      // rec) instead of each league's own real scoring settings: a player
+      // shows up "for" or "against" leagues that don't all score the same
+      // way, so there's no single real per-league number that would make
+      // sense here. It's the same line GameCast scores on, so the two
+      // pages' numbers for a given player now agree.
       const rgSeason = entries[0].league.season;
       let rgProjStatsMap = window.__sleeperProjectionStats || {};
       if (!isCurrentWeek && window.sleeperGetWeekProjections) {
@@ -14143,13 +14230,9 @@
       const rgEspnGameData = window.sleeperGetEspnGameData
         ? await window.sleeperGetEspnGameData(week, rgSeason).catch(() => null)
         : null;
-      function rgBasePprPoints(stats, pos) {
-        if (!stats) return null;
-        const base = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
-        if (base == null) return null;
-        const bonus = pos === 'TE' ? 0.5 * Number(stats.rec || 0) : 0;
-        return Number(base) + bonus;
-      }
+      // Thin wrapper so the call sites below read the same as before; all
+      // the scoring (and the no-stat-line fallback) lives in sbHouseScore.
+      const rgHousePoints = (id, stats) => sbHouseScore(id, stats, dict);
 
       const byPlayer = {};
       entries.forEach(entry => {
@@ -14175,8 +14258,8 @@
         const p = dict[id];
         const pos = p ? p.position : null;
         if (!p || !['QB', 'RB', 'WR', 'TE'].includes(pos)) return null;
-        const pprPoints = rgBasePprPoints(rgActualStatsMap[id], pos);
-        const rawLiveProj = rgBasePprPoints(rgProjStatsMap[id], pos);
+        const pprPoints = rgHousePoints(id, rgActualStatsMap[id]);
+        const rawLiveProj = rgHousePoints(id, rgProjStatsMap[id]);
         const rgGameStarted = sbGameStartedForTeam(p.team, rgEspnGameData);
         const rgGameFinished = sbGameFinishedForTeam(p.team, rgEspnGameData);
         const origProj = rawLiveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, rawLiveProj, rgGameStarted) : null;
@@ -19153,75 +19236,22 @@
   // three-column body: your fantasy stats, live play-by-play, and the
   // injury report. ----
 
-  // A real NFL game isn't played in any one of your leagues, so there's no
-  // single scoring_settings to score it against -- this view uses one
-  // house line for everything it shows: 5-point passing TDs, -2 for an
-  // interception, full PPR, and TE premium at +0.5 per catch (so a tight
-  // end's reception is worth 1.5). Per-league scoring still applies
-  // wherever a real matchup is at stake: the Matchup Impact expander
-  // scores each player in his own league via sbProjectionFor.
-  const GC_DEFAULT_SCORING = {
-    pass_yd: 0.04, pass_td: 5, pass_int: -2, pass_2pt: 2,
-    rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
-    rec: 1, rec_yd: 0.1, rec_td: 6, rec_2pt: 2,
-    bonus_rec_te: 0.5,
-    fum_lost: -2,
-  };
-  // Human-readable version of the line above, shown under the panel title
-  // so the numbers are never mystery points.
-  const GC_SCORING_LABEL = '5pt pass TD · -2 INT · full PPR · 1.5 TE rec';
+  // GameCast scores every player on the shared house line (defined once as
+  // SB_HOUSE_SCORING, and used by the Rooting Guide too, so the two pages
+  // never disagree about what a player is worth). Per-league scoring still
+  // governs anything with a real matchup at stake -- the Matchup Impact
+  // expander scores each player in his own league.
+  const GC_DEFAULT_SCORING = SB_HOUSE_SCORING;
+  const GC_SCORING_LABEL = SB_HOUSE_SCORING_LABEL;
   const GC_FANTASY_POS = ['QB', 'RB', 'WR', 'TE'];
+  const gcScoreStats = (playerId, stats, dict) => sbHouseScore(playerId, stats, dict);
 
-  // Sleeper expresses a position premium as its own stat key
-  // (bonus_rec_te) rather than a different `rec` weight, but the raw
-  // stat/projection payloads don't carry that key pre-computed. Without
-  // backfilling it from the plain reception count, sbCustomScoreFor
-  // silently skips the term and every tight end scores as plain PPR.
-  function gcScoreStats(playerId, stats, dict) {
-    if (!stats) return null;
-    const p = dict && dict[playerId];
-    const pos = p && p.position ? p.position.toLowerCase() : null;
-    const bonusKey = pos ? `bonus_rec_${pos}` : null;
-    const effective = (bonusKey && GC_DEFAULT_SCORING[bonusKey] != null &&
-      stats[bonusKey] == null && stats.rec != null)
-      ? Object.assign({}, stats, { [bonusKey]: stats.rec })
-      : stats;
-    return sbCustomScoreFor(effective, GC_DEFAULT_SCORING);
-  }
-
-  // The same house line applied to Sleeper's projected stat line, so the
-  // projection and the live total are directly comparable -- otherwise
-  // "points over expected" would be measuring a full-PPR projection
-  // against a TE-premium actual and read high for every tight end.
-  //
-  // Sleeper's projection payload doesn't always carry a full scoreable
-  // stat line (some players come back with nothing but a pts_ppr total).
-  // Rather than drop the projection -- and with it every points-over-
-  // expected number on the page -- fall back to that total and correct it
-  // for the two places this house line differs from the standard full-PPR
-  // one it assumes: 5-point passing TDs instead of 4, and the TE premium.
-  // Each correction is applied only when the projection actually carries
-  // the stat it needs, so the worst case is a plain PPR projection rather
-  // than a wrong one.
+  // The house line applied to Sleeper's projected stat line, so a player's
+  // projection and his live total are directly comparable -- otherwise
+  // "points over expected" would measure a full-PPR projection against a
+  // TE-premium actual and read high for every tight end.
   function gcProjectedPoints(playerId, dict) {
-    const projStats = (window.__sleeperProjectionStats || {})[playerId];
-    if (!projStats) return null;
-    const scored = gcScoreStats(playerId, projStats, dict);
-    if (scored != null) return scored;
-
-    const base = projStats.pts_ppr ?? projStats.pts_half_ppr ?? projStats.pts_std;
-    if (base == null) return null;
-    let val = Number(base);
-    const p = dict && dict[playerId];
-    const pos = p && p.position ? p.position.toLowerCase() : null;
-    if (projStats.pass_td != null) {
-      val += Number(projStats.pass_td) * (GC_DEFAULT_SCORING.pass_td - 4);
-    }
-    const bonusKey = pos ? `bonus_rec_${pos}` : null;
-    if (bonusKey && GC_DEFAULT_SCORING[bonusKey] != null && projStats.rec != null) {
-      val += Number(projStats.rec) * GC_DEFAULT_SCORING[bonusKey];
-    }
-    return val;
+    return sbHouseScore(playerId, (window.__sleeperProjectionStats || {})[playerId], dict);
   }
 
   window.__gcSelectedEventId = window.__gcSelectedEventId || null;
@@ -19496,8 +19526,8 @@
     return `
       <div class="gc-field-stage">
         <div class="gc-field">
-          <div class="gc-field-ez gc-field-ez-left"><span>${sbFieldEsc(g.away.abbr)}</span></div>
-          <div class="gc-field-ez gc-field-ez-right"><span>${sbFieldEsc(g.home.abbr)}</span></div>
+          <div class="gc-field-ez gc-field-ez-left"><img src="${sbTeamLogoUrl(g.away.abbr)}" alt="${sbFieldEsc(g.away.abbr)}" loading="lazy" onerror="this.outerHTML='<span>${sbFieldEsc(g.away.abbr)}</span>'"></div>
+          <div class="gc-field-ez gc-field-ez-right"><img src="${sbTeamLogoUrl(g.home.abbr)}" alt="${sbFieldEsc(g.home.abbr)}" loading="lazy" onerror="this.outerHTML='<span>${sbFieldEsc(g.home.abbr)}</span>'"></div>
           ${marks}
           ${live}
         </div>
@@ -19588,16 +19618,28 @@
     return { delta: forLeagues.length - againstLeagues.length, forLeagues, againstLeagues };
   }
 
-  // How much a player's real performance so far is swinging each of your
-  // live fantasy matchups he's started in, measured against what he was
-  // EXPECTED to do rather than against zero: his own league scores him
-  // (Sleeper's real players_points), then the app's win-probability model
-  // compares "matchup as it stands" against "matchup if he'd scored his
-  // projection". A player merely meeting his projection is swinging
-  // nothing; the number is the surprise, which is what you actually root
-  // on.
+  // How much a player is actually swinging each of your live matchups.
+  //
+  // Measured as his LIVE PROJECTION against his ORIGINAL (pregame)
+  // projection -- the same "current projection vs original projection"
+  // model the Rooting Guide's Points Over Expected uses -- not as his
+  // points-so-far against his projection. That older comparison charged a
+  // player the full value of his projection the instant the page loaded:
+  // a player whose game hadn't kicked off yet sat at 0.0 points against an
+  // 11.8 projection and showed a phantom 7-8% swing in every league he was
+  // started in, when the honest answer was that nothing had happened yet.
+  // Now a player who hasn't played, or who is exactly on pace, moves the
+  // number by 0, and only a genuine over- or under-performance registers.
   function gcMatchupImpact(playerId) {
     const out = [];
+    const dict = window.__sleeperPlayerDict || {};
+    const espnGameData = window.__gcEspnGameData || null;
+    const p = dict[playerId];
+    const team = p ? p.team : null;
+    const started = sbGameStartedForTeam(team, espnGameData);
+    const finished = sbGameFinishedForTeam(team, espnGameData);
+    const elapsed = sbGameElapsedFraction(team, espnGameData);
+
     Object.values(window.sleeperLeagueData || {}).forEach(e => {
       if (!e || !e.myMatchup || !e.oppMatchup || !e.league) return;
       const mine = (e.myMatchup.starters || []).filter(Boolean);
@@ -19605,15 +19647,29 @@
       const onMySide = mine.includes(playerId);
       const onOppSide = !onMySide && opp.includes(playerId);
       if (!onMySide && !onOppSide) return;
+
       const myPts = e.myMatchup.points || 0;
       const oppPts = e.oppMatchup.points || 0;
+      // Scored in this league's own settings -- a real matchup is at
+      // stake here, so the house line doesn't apply.
       const playerPts = ((onMySide ? e.myMatchup.players_points : e.oppMatchup.players_points) || {})[playerId] || 0;
-      const projPts = sbProjectionFor(playerId, null, e.league) || 0;
+      const origProj = sbProjectionFor(playerId, null, e.league);
+      if (origProj == null) return;
+      const baseline = sbPlayerIsInactive(p) ? 0 : origProj;
+      const liveProj = sbEstimateLiveProjection(playerPts, baseline, elapsed, started, finished);
+      if (liveProj == null) return;
+
+      // How far his projection has moved: positive means he is beating it.
+      const delta = liveProj - origProj;
       const nowProb = sbWinProbability(myPts, oppPts);
-      const expectedProb = onMySide
-        ? sbWinProbability(myPts - playerPts + projPts, oppPts)
-        : sbWinProbability(myPts, oppPts - playerPts + projPts);
-      out.push({ league: e.league.name, impact: nowProb - expectedProb, playerPts, projPts, onMySide });
+      const withoutDelta = onMySide
+        ? sbWinProbability(myPts - delta, oppPts)
+        : sbWinProbability(myPts, oppPts - delta);
+      out.push({
+        league: e.league.name,
+        impact: nowProb - withoutDelta,
+        playerPts, origProj, liveProj, delta, onMySide, started,
+      });
     });
     return out;
   }
@@ -19724,7 +19780,12 @@
     return `<div class="gc-impact-list">${impacts.map(i => {
       const cls = i.impact > 0 ? 'ldrec-pos' : (i.impact < 0 ? 'ldrec-neg' : '');
       const sign = i.impact > 0 ? '+' : '';
-      return `<span class="${cls}">${sbFieldEsc(i.league)}: ${sign}${i.impact}% win prob &middot; ${i.playerPts.toFixed(1)} pts vs ${i.projPts.toFixed(1)} proj ${i.onMySide ? 'for' : 'against'} you</span>`;
+      // Before kickoff there is no live projection to compare against, so
+      // say so plainly rather than printing a 0% that looks like a result.
+      const detail = i.started
+        ? `${i.liveProj.toFixed(1)} live proj vs ${i.origProj.toFixed(1)} pregame ${i.onMySide ? 'for' : 'against'} you`
+        : `${i.origProj.toFixed(1)} projected ${i.onMySide ? 'for' : 'against'} you · not started`;
+      return `<span class="${cls}">${sbFieldEsc(i.league)}: ${sign}${i.impact}% win prob &middot; ${detail}</span>`;
     }).join('')}</div>`;
   }
 
@@ -19832,30 +19893,19 @@
   function gcLeagueBreakdownHtml(game, dict, statsMap) {
     const rows = gcLeagueBreakdown(game, dict, statsMap);
     if (!rows.length) return '<div class="gc-empty">None of your leagues have a starter in this game.</div>';
-    const sideHtml = (list, cls) => list.length
-      ? list.map(x => `<div class="gc-lg-player ${cls}">
-          <span class="gc-lg-pname">${sbFieldEsc(x.name)}</span>
-          <span class="gc-lg-ppos">${sbFieldEsc(x.pos)}&middot;${sbFieldEsc(x.team)}</span>
-          <span class="gc-lg-ppts">${x.pts != null ? x.pts.toFixed(1) : '&mdash;'}</span>
-        </div>`).join('')
-      : '<div class="gc-lg-none">&mdash;</div>';
+    // Last name only -- with two or three names plus a league name on one
+    // line, full names wrap and defeat the point of the compact row.
+    const shortName = (full) => {
+      const parts = String(full).split(' ');
+      return parts.length > 1 ? parts.slice(1).join(' ') : full;
+    };
     return rows.map(r => {
-      const netCls = r.net > 0 ? 'ldrec-pos' : (r.net < 0 ? 'ldrec-neg' : '');
-      return `<div class="gc-lg-card">
-        <div class="gc-lg-head">
-          <span class="gc-lg-name">${sbFieldEsc(r.league)}</span>
-          <span class="gc-lg-net ${netCls}">${r.net > 0 ? '+' : ''}${r.net.toFixed(1)}</span>
-        </div>
-        <div class="gc-lg-cols">
-          <div class="gc-lg-col">
-            <div class="gc-lg-col-label gc-lg-you">YOU</div>
-            ${sideHtml(r.mine, 'gc-lg-mine')}
-          </div>
-          <div class="gc-lg-col">
-            <div class="gc-lg-col-label gc-lg-them">${sbFieldEsc(r.oppName)}</div>
-            ${sideHtml(r.opp, 'gc-lg-opp')}
-          </div>
-        </div>
+      const bits = [];
+      if (r.mine.length) bits.push(`<span class="gc-lg-for">+ ${sbFieldEsc(r.mine.map(x => shortName(x.name)).join(', '))}</span>`);
+      if (r.opp.length) bits.push(`<span class="gc-lg-against">&minus; ${sbFieldEsc(r.opp.map(x => shortName(x.name)).join(', '))}</span>`);
+      return `<div class="gc-lg-row" title="${sbFieldEsc(r.league)}">
+        <span class="gc-lg-name">${sbFieldEsc(r.league)}</span>
+        <span class="gc-lg-players">${bits.join('<span class="gc-lg-sep"></span>')}</span>
       </div>`;
     }).join('');
   }
@@ -19904,10 +19954,17 @@
     }
     if (hero) hero.innerHTML = gcHeroHtml(game, dict);
 
-    const [statsMap, projMap] = await Promise.all([
+    const [statsMap, projMap, espnGameData] = await Promise.all([
       window.sleeperGetWeekStats ? window.sleeperGetWeekStats(season, week) : {},
       window.sleeperGetWeekProjections ? window.sleeperGetWeekProjections(season, week) : {},
+      // Cached for gcMatchupImpact, which runs synchronously during render
+      // and needs real game state (kicked off? how far in? finished?) to
+      // turn a player's points-so-far into a live projection.
+      window.sleeperGetEspnGameData
+        ? window.sleeperGetEspnGameData(week, season).catch(() => null)
+        : Promise.resolve(null),
     ]);
+    window.__gcEspnGameData = espnGameData;
     window.__gcHeroData = { game, dict, statsMap, projMap };
 
     if (!window.__gcStatsTeam) window.__gcStatsTeam = 'away';
