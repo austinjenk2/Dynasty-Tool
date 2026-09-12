@@ -11298,41 +11298,24 @@
     }
     window.scrollTo(0, 0);
   }
-  // Jump from anywhere straight into one league's own page, opened on its
-  // League Matchups view -- not the Matchup Hub's grid, which is a list of
-  // every league and leaves you to find this one again.
+  // Jump from anywhere to one league's own matchup in the Matchup Hub --
+  // the expanded card with both lineups and the win-probability field, not
+  // the grid of every league.
   //
-  // Two waits are unavoidable here. renderRealLeagueDetail is async, so the
-  // League Matchups button can't be pressed until the detail has actually
-  // rendered -- it reads the league id off the standings list that render
-  // populates. Both waits poll rather than assuming a fixed delay, and give
-  // up quietly after a couple of seconds instead of hanging: a jump that
-  // lands on the league page without the matchups view open is still a
-  // reasonable place to be.
+  // The request is handed to renderRealScoreboard rather than clicking the
+  // card here, so a rebuild already in flight can't throw the expand away.
+  // It stays pending until a render finds the card, which covers arriving
+  // before the leagues have finished syncing; a few seconds of retries
+  // cover the render not having been kicked off at all yet.
   function goToLeagueMatchup(leagueId) {
     if (!leagueId) return;
-    goToSection('leagues');
-    const listView = document.getElementById('leaguesListView');
-    const detailView = document.getElementById('leagueDetailView');
-    if (listView) listView.hidden = true;
-    if (detailView) detailView.hidden = false;
-    // Called with the id directly rather than through goToLeagueDetail,
-    // which looks the league up by name in the Leagues table -- those rows
-    // don't exist until that page has been visited at least once.
-    if (window.renderRealLeagueDetail) window.renderRealLeagueDetail(leagueId);
-    window.scrollTo(0, 0);
-
+    goToSection('lineups');
+    window.__sbPendingOpenLeagueId = String(leagueId);
     const started = Date.now();
-    (function openMatchups() {
-      const standings = document.getElementById('ldStandingsList');
-      if (standings && standings.dataset.leagueId === String(leagueId)) {
-        const btn = document.getElementById('ldNavMatchups');
-        // Clicking the real button rather than calling the opener keeps
-        // this working off the handler the page already binds.
-        if (btn) btn.click();
-        return;
-      }
-      if (Date.now() - started < 2500) setTimeout(openMatchups, 120);
+    (function pump() {
+      if (!window.__sbPendingOpenLeagueId) return;
+      if (window.renderRealScoreboard) { try { window.renderRealScoreboard(); } catch (e) {} }
+      if (Date.now() - started < 4000) setTimeout(pump, 400);
     })();
   }
   window.goToLeagueMatchup = goToLeagueMatchup;
@@ -20101,7 +20084,7 @@
       const bits = [];
       if (r.mine.length) bits.push(`<span class="gc-lg-for">+ ${sbFieldEsc(r.mine.map(x => shortName(x.name)).join(', '))}</span>`);
       if (r.opp.length) bits.push(`<span class="gc-lg-against">&minus; ${sbFieldEsc(r.opp.map(x => shortName(x.name)).join(', '))}</span>`);
-      return `<div class="gc-lg-row" data-gc-league-id="${sbFieldEsc(r.leagueId || '')}" title="${sbFieldEsc(r.league)} &mdash; open this league&rsquo;s matchups">
+      return `<div class="gc-lg-row" data-gc-league-id="${sbFieldEsc(r.leagueId || '')}" title="${sbFieldEsc(r.league)} &mdash; open this matchup in the Matchup Hub">
         <span class="gc-lg-name">${sbFieldEsc(r.league)}</span>
         <span class="gc-lg-players">${bits.join('<span class="gc-lg-sep"></span>')}</span>
       </div>`;
@@ -20605,8 +20588,15 @@
     // silently collapse whatever matchup a person had open (it felt like
     // the page randomly "kicked you back out"). Remember what was open and
     // re-open the same one on the same league's new card after rebuilding.
+    // A jump from another page (GameCast's league list) asks for a specific
+    // matchup to be open. Clicking the card from outside raced this render:
+    // the rebuild captured "nothing open" before the click landed and then
+    // replaced the grid, silently throwing the expand away. Routing the
+    // request through the same reopen path the 60s poll already uses means
+    // it survives any rebuild instead of fighting it.
     const openCardEl = sbGrid.querySelector('.sb-card.is-open');
-    const openLeagueId = openCardEl ? openCardEl.dataset.sleeperLeagueId : null;
+    const requestedOpenId = window.__sbPendingOpenLeagueId || null;
+    const openLeagueId = requestedOpenId || (openCardEl ? openCardEl.dataset.sleeperLeagueId : null);
 
     const override = window.__sleeperScoreboardOverride || null;
 
@@ -20744,9 +20734,16 @@
       const newCard = sbGrid.querySelector(`.sb-card[data-sleeper-league-id="${openLeagueId}"]`);
       const reopenEntry = window.sleeperLeagueData && window.sleeperLeagueData[openLeagueId];
       if (newCard && reopenEntry) {
+        // Only cleared once the card it names actually exists -- an early
+        // return above (leagues not synced yet) leaves the request standing
+        // so the next render picks it up.
+        if (requestedOpenId) window.__sbPendingOpenLeagueId = null;
         newCard.classList.add('is-open');
         const reopenOverride = override ? override.byLeague[openLeagueId] : null;
         openRealSbExpand(newCard, reopenEntry, reopenOverride);
+        // Only scroll for a jump from elsewhere; the 60s poll reopening the
+        // card someone already had open must not yank the page around.
+        if (requestedOpenId) newCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
 
