@@ -13265,8 +13265,14 @@
   // BELOW the elapsed-time figure, which is what keeps a player's remaining
   // projection alive through the drill.
   function sbScoringElapsedShare(elapsedFraction) {
-    if (elapsedFraction == null) return 0;
-    const frac = Math.max(0, Math.min(1, elapsedFraction));
+    // A malformed clock from ESPN (or any arithmetic on one) can arrive as
+    // NaN, and NaN would flow straight through the projection into team
+    // totals and win probability, surfacing as "NaN" across the app on a
+    // live Sunday. Treat anything non-finite as "nothing elapsed" -- the
+    // projection falls back to the pregame number instead of breaking.
+    const n = Number(elapsedFraction);
+    if (!Number.isFinite(n)) return 0;
+    const frac = Math.max(0, Math.min(1, n));
     if (frac <= 0) return 0;
     if (frac >= 1) return 1;
     const second = frac * 3600;
@@ -13283,7 +13289,7 @@
     if (!position || !team || !espnGameData) return 1;
     const info = espnGameData[team];
     if (!info || info.score == null || info.oppScore == null) return 1;
-    const frac = elapsedFraction == null ? 0 : elapsedFraction;
+    const frac = Number.isFinite(Number(elapsedFraction)) ? Number(elapsedFraction) : 0;
     // Second half only: nothing before halftime, whatever the scoreline.
     if (frac < 0.5) return 1;
     const margin = info.score - info.oppScore;
@@ -13328,26 +13334,53 @@
   // curve and regression still apply; only the game-script term needs to
   // know who is playing whom.
   function sbLiveProjParts(actualPts, origProj, elapsedFraction, gameStarted, gameFinished, ctx) {
-    const scored = actualPts != null ? actualPts : 0;
-    if (origProj == null) return { final: actualPts != null ? actualPts : null, state: 'no-projection' };
-    if (!gameStarted) return { final: origProj, scored: 0, state: 'pregame', pregame: origProj };
-    if (gameFinished) return { final: actualPts != null ? actualPts : origProj, scored, state: 'final', pregame: origProj };
+    // Everything arriving here comes from a live feed, so nothing is
+    // trusted to be a usable number. A NaN anywhere would flow through the
+    // projection into team totals and win probability and surface as "NaN"
+    // across the app mid-game, so each input is either a real number or
+    // treated as absent.
+    // Number(null) is 0, not NaN, so a missing value has to be rejected
+    // before the finite check or "no score reported" silently becomes a
+    // real zero -- which is exactly the case the guard below exists for.
+    const num = (v) => (v == null || !Number.isFinite(Number(v))) ? null : Number(v);
+    const pts = num(actualPts);
+    const pre = num(origProj);
+    const scored = pts != null ? pts : 0;
 
-    const scoringElapsed = sbScoringElapsedShare(elapsedFraction);
+    if (pre == null) return { final: pts, scored, state: 'no-projection' };
+    if (!gameStarted) return { final: pre, scored: 0, state: 'pregame', pregame: pre };
+    if (gameFinished) return { final: pts != null ? pts : pre, scored, state: 'final', pregame: pre };
+    // No score reported yet is not the same as a score of zero -- Sleeper
+    // drops players_points entries briefly, and reading that as "scored
+    // nothing" would halve every projection on the page for as long as the
+    // hiccup lasted. Without a real number there is nothing to blend, so
+    // the pregame projection stands.
+    if (pts == null) return { final: pre, scored: 0, state: 'no-score-yet', pregame: pre };
+    // An unusable clock means there is no way to know how much football is
+    // left, so the blend can't run. Fall back to the pregame number, or to
+    // what he has already scored if that is somehow higher -- never to
+    // "scored plus a whole projection", which is what treating a broken
+    // clock as kickoff would produce.
+    const rawFrac = Number(elapsedFraction);
+    if (!Number.isFinite(rawFrac)) {
+      return { final: Math.max(scored, pre), scored, state: 'no-clock', pregame: pre };
+    }
+
+    const scoringElapsed = sbScoringElapsedShare(rawFrac);
     const remainingShare = 1 - scoringElapsed;
     const c = ctx || {};
-    const scriptMult = sbScriptMultiplier(c.position, c.team, c.espnGameData, elapsedFraction);
-    const regressionMult = sbRegressionMultiplier(actualPts, origProj, scoringElapsed);
-    const baseRemaining = origProj * remainingShare;
+    const scriptMult = sbScriptMultiplier(c.position, c.team, c.espnGameData, rawFrac);
+    const regressionMult = sbRegressionMultiplier(pts, pre, scoringElapsed);
+    const baseRemaining = pre * remainingShare;
     const remaining = baseRemaining * scriptMult * regressionMult;
     // Points already on the board can't be taken away, so the floor is
     // whatever he has actually scored.
     const final = Math.max(scored, scored + remaining);
     return {
-      final, scored, pregame: origProj, state: 'live',
+      final, scored, pregame: pre, state: 'live',
       scoringElapsed, remainingShare, baseRemaining, remaining,
       scriptMult, regressionMult,
-      elapsedFraction: elapsedFraction == null ? 0 : elapsedFraction,
+      elapsedFraction: rawFrac,
     };
   }
 
@@ -13361,6 +13394,8 @@
     if (!parts || parts.state === 'no-projection') return '';
     if (parts.state === 'pregame') return `Pregame projection ${parts.pregame.toFixed(1)} — game hasn't started`;
     if (parts.state === 'final') return `Final: ${Number(parts.final).toFixed(1)} — game over`;
+    if (parts.state === 'no-score-yet') return `Pregame projection ${parts.pregame.toFixed(1)} — no score reported yet`;
+    if (parts.state === 'no-clock') return `Pregame projection ${parts.pregame.toFixed(1)} — live clock unavailable`;
     const pct = (x) => `${Math.round(x * 100)}%`;
     const lines = [
       `Live projection ${parts.final.toFixed(1)}`,
