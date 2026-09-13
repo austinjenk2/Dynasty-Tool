@@ -13355,6 +13355,13 @@
     // Regression for a player already beating his pregame pace.
     REG_MAX: 0.15,         // most it can ever take off remaining
     REG_K: 0.25,           // how fast overperformance converts to shade
+    // Roughly one ordinary catch, in points. Added to the denominator when
+    // measuring overperformance so that a first-quarter pace -- where the
+    // expected-so-far figure is a fraction of a point -- can't manufacture
+    // a huge ratio out of a single routine play. See sbRegressionMultiplier.
+    REG_PRIOR: 2.0,
+    REG_FULL_SAMPLE: 0.5,  // pace counts as full evidence by halftime
+    REG_MIN_WEIGHT: 0.35,  // ...but never ignore a truly explosive start
   };
 
   // Relative fantasy-scoring density across the 3600 seconds of regulation.
@@ -13443,19 +13450,36 @@
 
   // Regression to the mean for a player running hot. A receiver on 2x his
   // expected pace is far more likely to have caught his touchdown already
-  // than to catch another, so his REMAINING points get shaded -- hardest
-  // early, when a single play can distort a pace, and fading out as the
-  // sample grows. A player running cold is left alone: he keeps his full
-  // pregame rate on the time that is left (a quiet first half shouldn't
-  // zero out a player who could still score twice).
+  // than to catch another, so his REMAINING points get shaded. A player
+  // running cold is left alone: he keeps his full pregame rate on the time
+  // that is left (a quiet first half shouldn't zero out a player who could
+  // still score twice).
+  //
+  // Two things decide how hard this bites, and both exist because an early
+  // pace is mostly noise:
+  //
+  //   - The comparison is against expected-so-far PLUS a cushion of about
+  //     one catch. Nine minutes into a game a 12-point receiver is expected
+  //     to have ~1.0 points, so a bare ratio reads a single ordinary catch
+  //     as "2.5x his pace" and pins the shade at its cap. Anyone who caught
+  //     a pass in the first quarter was having his rest-of-game projection
+  //     cut by the maximum 15%, which is how a good start could LOWER a
+  //     projection below its pregame number.
+  //   - The weight grows with how much football has been played, rather
+  //     than shrinking. A pace set over three quarters is evidence; the
+  //     same pace set on one play is not. The old weight had this
+  //     backwards, biting hardest exactly where the sample was thinnest.
+  //     It keeps a floor, so a genuinely explosive start is still shaded.
   function sbRegressionMultiplier(actualPts, origProj, scoringElapsed) {
     if (!(origProj > 0) || actualPts == null) return 1;
     const expectedSoFar = origProj * scoringElapsed;
     if (!(expectedSoFar > 0)) return 1;
-    const over = Math.max(0, (actualPts / expectedSoFar) - 1);
+    const L = SB_LP;
+    const over = Math.max(0, (actualPts / (expectedSoFar + L.REG_PRIOR)) - 1);
     if (over <= 0) return 1;
-    const earlyWeight = 1 - scoringElapsed;
-    return 1 - Math.min(SB_LP.REG_MAX, SB_LP.REG_K * over * earlyWeight);
+    const sampleWeight = Math.max(L.REG_MIN_WEIGHT,
+      Math.min(1, scoringElapsed / L.REG_FULL_SAMPLE));
+    return 1 - Math.min(L.REG_MAX, L.REG_K * over * sampleWeight);
   }
 
   // Every term of the live projection, for the tooltip that explains it.
