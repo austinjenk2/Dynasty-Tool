@@ -13141,42 +13141,117 @@
     });
   }
 
-  // Logistic curve over the live-adjusted point differential. Sleeper
-  // doesn't expose its own win-probability formula via the API, so this is
-  // still our own estimate -- but the steepness (0.027) was fit against ~18
-  // real matchups pulled straight from Sleeper's own displayed percentages
-  // (previously 0.11, which ran dramatically hotter than Sleeper's real
-  // numbers -- e.g. a 22pt edge read 93% here vs Sleeper's actual 63%).
-  // Fantasy scoring carries a lot of week-to-week variance, which is why
-  // Sleeper's real curve is this much flatter than a naive point-diff model
-  // would suggest.
-  function sbWinProbability(myTotal, oppTotal) {
-    // Sleeper doesn't expose its real win% formula. Fit against ~37 real
-    // Sleeper-displayed win% + point-total pairs (an original ~18-pair
-    // sample plus 19 more pulled straight from Sleeper's own live
-    // scoreboard) showed a flat logistic slope (k) underfits: implied k
-    // trends from ~0.021 at small point diffs up to ~0.038 at diffs of
-    // 130+. Ramp k with |diff| instead of using one constant to track
-    // that curve more closely across the range. A couple of real-world
-    // pairs at very lopsided diffs (-68 pts -> 5% shown, right next to
-    // -90 pts -> also 5%) don't fit any smooth monotonic curve -- Sleeper
-    // likely factors in something beyond raw point differential there
-    // (e.g. remaining-player variance) -- so this is tuned for lowest
-    // average error across the real sample, not a perfect fit to every
-    // single pair.
-    const diff = myTotal - oppTotal;
-    const absDiff = Math.abs(diff);
-    const k = 0.0214 + Math.min(1, absDiff / 135) * (0.0384 - 0.0214);
-    const pct = 1 / (1 + Math.exp(-k * diff));
-    return Math.round(Math.min(99, Math.max(1, pct * 100)));
+  // ---- Spread of the remaining football --------------------------------
+  // How lumpy a player's REMAINING points are, as a multiple of what he is
+  // still projected to add. Fitted against real Sleeper win% readings in
+  // calibration/winprob-samples.json.
+  //
+  // A quarterback accumulates yardage steadily and lands near his number;
+  // a back or receiver lives on touchdowns, so his remaining points are
+  // close to a coin flip on whether he finds the end zone. That shows up
+  // clearly in the samples: every skill-heavy matchup implies a factor of
+  // 1.06-1.18, while the one matchup whose remaining points are mostly a
+  // quarterback implies 0.77. One flat factor cannot fit both.
+  const SB_SIGMA_K = { QB: 0.7, RB: 1.0, WR: 1.0, TE: 1.0, K: 0.8, DEF: 0.8, DST: 0.8, DEFAULT: 1.0 };
+
+  // With every starter done there is no football left to change the result,
+  // so the spread collapses to zero and the projection IS the outcome. A
+  // small floor keeps that from dividing by zero, and leaves room for the
+  // stat corrections that still move a final score after the whistle.
+  const SB_SIGMA_FLOOR = 1.5;
+
+  // Used only when the remaining players can't be worked out (a caller with
+  // no matchup in scope). Nine starters a side, none of them played, is
+  // about 30 points of spread -- the most football can produce, so the
+  // fallback is the least decisive answer rather than a confident wrong one.
+  const SB_SIGMA_FALLBACK = 30;
+
+  function sbNormalCdf(z) {
+    // Abramowitz & Stegun 26.2.17, good to ~7.5e-8 -- far beyond what a
+    // percentage rounded to a whole number needs.
+    if (!Number.isFinite(z)) return 0.5;
+    const t = 1 / (1 + 0.2316419 * Math.abs(z));
+    const d = 0.3989422804014327 * Math.exp(-z * z / 2);
+    const p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+    return z > 0 ? 1 - p : p;
+  }
+
+  // Variance still to come from one side's starters. A player who has
+  // finished contributes nothing: his points are on the board and can no
+  // longer swing anything.
+  function sbStartersRemainingVar(matchup, projMap, league, espnGameData, week) {
+    if (!matchup) return 0;
+    const starters = sbEffectiveStarters(matchup, league, projMap);
+    const pointsMap = matchup.players_points || {};
+    const dict = window.__sleeperPlayerDict;
+    return starters.reduce((sum, id) => {
+      const live = sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week);
+      const rec = pointsMap ? pointsMap[id] : null;
+      const scored = (rec != null && Number.isFinite(Number(rec))) ? Number(rec) : 0;
+      const remaining = Math.max(0, (Number.isFinite(live) ? live : 0) - scored);
+      const pos = (dict && dict[id] && dict[id].position) || '';
+      const k = SB_SIGMA_K[pos] != null ? SB_SIGMA_K[pos] : SB_SIGMA_K.DEFAULT;
+      const sd = k * remaining;
+      return sum + sd * sd;
+    }, 0);
+  }
+
+  // Spread of the final margin: both sides' remaining players added in
+  // quadrature, since their games are essentially independent of each other.
+  function sbMatchupSigma(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
+    // Without game state there is no way to tell a player who has finished
+    // from one who hasn't kicked off: sbEffectivePoints just hands back the
+    // recorded score, every remaining figure computes as zero, and the
+    // spread would collapse to the floor. That reads as 99% on a game still
+    // being played. Returning null hands the caller the full-slate fallback
+    // instead, which is the honest answer to "we can't see the clock".
+    if (!espnGameData || week == null) return null;
+    const v = sbStartersRemainingVar(myMatchup, projMap, league, espnGameData, week)
+            + sbStartersRemainingVar(oppMatchup, projMap, league, espnGameData, week);
+    if (!Number.isFinite(v)) return null;
+    if (v <= 0) return SB_SIGMA_FLOOR;
+    return Math.max(SB_SIGMA_FLOOR, Math.sqrt(v));
+  }
+
+  // Win probability from the projected margin and the spread of the
+  // football still to be played.
+  //
+  // This replaced a logistic fitted to the point differential alone, which
+  // was refit twice against real Sleeper pairs and both times came back
+  // wrong in a way that looked like slope error. The reason it could never
+  // be fixed by refitting: its small-margin slope of 0.0214 behaves like a
+  // normal with a standard deviation of about 85 points. Nine starters a
+  // side who have not played can only generate around 30, and one player
+  // left generates about 10. The curve assumed roughly three times more
+  // uncertainty than football can produce, so every matchup was dragged
+  // back toward a coin flip -- 47% on a game Sleeper had at 29%, 35% on one
+  // Sleeper had at 8%, 36% on one Sleeper had at 6%. It was never a slope
+  // that needed tuning; the spread was simply missing.
+  //
+  // The right spread is not one number. It depends on who is left to play,
+  // which is why the same margin prices differently on Thursday and at
+  // Sunday midnight, and why a single fitted slope is wrong in every state
+  // but the one it was fitted in.
+  //
+  // sigma comes from sbMatchupSigma. Callers with no matchup in scope may
+  // omit it and get the full-slate fallback.
+  function sbWinProbability(myTotal, oppTotal, sigma) {
+    const diff = Number(myTotal) - Number(oppTotal);
+    if (!Number.isFinite(diff)) return 50;
+    const sd = (sigma != null && Number.isFinite(sigma) && sigma > 0) ? sigma : SB_SIGMA_FALLBACK;
+    const pct = sbNormalCdf(diff / sd) * 100;
+    // Held to 1-99: a game is never quite over while stat corrections can
+    // still land, and a displayed 100% that turns into a loss is worse than
+    // a displayed 99%.
+    return Math.round(Math.min(99, Math.max(1, pct)));
   }
 
   // >60% win prob reads as a real favorite (green), <40% a real underdog
   // (red), and everything in between is a true toss-up (yellow) -- used
   // everywhere a "Favored by/Underdog by" tag is shown so close games
   // don't get colored as confidently as blowouts.
-  function sbFavoredTagClass(myTotal, oppTotal) {
-    const winPct = sbWinProbability(myTotal, oppTotal);
+  function sbFavoredTagClass(myTotal, oppTotal, sigma) {
+    const winPct = sbWinProbability(myTotal, oppTotal, sigma);
     if (winPct > 60) return '';
     if (winPct < 40) return ' underdog';
     return ' close';
@@ -13898,7 +13973,8 @@
       const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(oppMatchup, entry.league, projMap), dict, espnGameData);
       myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj, myStarted);
       oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj, oppStarted);
-      winPct = sbWinProbability(myProj, oppProj);
+      winPct = sbWinProbability(myProj, oppProj,
+        sbMatchupSigma(myMatchup, oppMatchup, projMap, entry.league, espnGameData, week));
     }
 
     const fieldKey = entry.league.league_id;
@@ -16577,7 +16653,8 @@
           const opp = weekMatchups.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== myRoster.roster_id);
           const myLiveProj = sbMatchupProjectedTotal(mine, null, league, currentWeekEspnGameData, week);
           const oppLiveProj = opp ? sbMatchupProjectedTotal(opp, null, league, currentWeekEspnGameData, week) : null;
-          const winPct = oppLiveProj != null ? sbWinProbability(myLiveProj, oppLiveProj) : null;
+          const winPct = oppLiveProj != null ? sbWinProbability(myLiveProj, oppLiveProj,
+            sbMatchupSigma(mine, opp, null, league, currentWeekEspnGameData, week)) : null;
           weekResults.push(winPct == null ? null : (winPct >= 90 ? 'W' : (winPct <= 10 ? 'L' : null)));
           continue;
         }
@@ -21026,7 +21103,8 @@
           const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, cardEspnGameData, cardWeek);
           headlineMine = myProj;
           headlineTheirs = oppProj;
-          const winPct = sbWinProbability(myProj, oppProj);
+          const winPct = sbWinProbability(myProj, oppProj,
+            sbMatchupSigma(myMatchup, oppMatchup, projMap, entry.league, cardEspnGameData, cardWeek));
           winPctForSort = winPct;
           // Same favorite/underdog split used everywhere else (Dashboard's
           // Projected Weekly Record included) -- no separate "close game"

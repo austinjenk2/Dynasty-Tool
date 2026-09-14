@@ -165,6 +165,85 @@
       "ours_pct": 52,
       "state": "roughly halftime of the late slate",
       "notes": "players-remaining not yet captured; that is the variable needed to fit sigma"
+    },
+    {
+      "league": "Pure Potential Invitational",
+      "week": 2,
+      "season": 2026,
+      "my_score": 141.6,
+      "opp_score": 138.16,
+      "my_proj": 141.6,
+      "opp_proj": null,
+      "margin_inferred": -25.2,
+      "margin_source": "our projection for his side inverted from our 35%; the two SCORES are exact",
+      "my_left": 0,
+      "opp_left": 3,
+      "opp_left_detail": [
+        {
+          "player": "Cam Skattebo",
+          "pos": "RB",
+          "status": "playing"
+        },
+        {
+          "player": "Isaiah Likely",
+          "pos": "TE",
+          "status": "playing"
+        },
+        {
+          "player": "RJ Harvey",
+          "pos": "RB",
+          "status": "tomorrow"
+        }
+      ],
+      "sleeper_pct": 8,
+      "ours_pct": 35,
+      "notes": "Your side locked: you win iff his three COMBINE for under 3.44. Implied sigma 17.9 on ~29 pts of remaining projection."
+    },
+    {
+      "league": "Flames and Football",
+      "week": 2,
+      "season": 2026,
+      "my_score": 136.3,
+      "opp_score": 166.7,
+      "my_proj": 153.0,
+      "opp_proj": 176.0,
+      "my_left": 1,
+      "opp_left": 1,
+      "my_left_detail": [
+        {
+          "player": "Patrick Mahomes",
+          "pos": "QB",
+          "remaining": 16.7,
+          "status": "tomorrow"
+        }
+      ],
+      "opp_left_detail": [
+        {
+          "player": "George Pickens",
+          "pos": "WR",
+          "remaining": 9.3,
+          "status": "playing"
+        }
+      ],
+      "sleeper_pct": 6,
+      "ours_pct": 36,
+      "notes": "Best sample so far -- every figure read off the screen, nothing inverted, and one player a side so each remaining projection is known exactly. Implied sigma 14.79. A flat factor needs k=0.77 here against 1.06-1.18 elsewhere, and this is the only anchor whose remaining points are mostly a QB."
+    },
+    {
+      "league": "1776 / Purple People / Dynasty is Life / Ottoman / Fantasy Football Anonymous / Doctors",
+      "week": 2,
+      "season": 2026,
+      "group": true,
+      "sleeper_pct": 99,
+      "ours_pct": [
+        96,
+        92,
+        92,
+        86,
+        81,
+        65
+      ],
+      "notes": "Six near-decided matchups. Sleeper had every one at 99 (Doctors effectively 100, everyone had played) while we spread them 96 down to 65. Same root cause as the other direction: assuming an ~85 pt spread with almost no football left drags a locked game back toward a coin flip. Owner's read was that 99 is right, and it is -- with nobody left to play the projection IS the outcome."
     }
   ],
   "findings": [
@@ -173,5 +252,21 @@
     "Implied sigma across the 7 ranges 8.9 to 36.5. A single spread cannot produce that, so sigma has to be per-matchup.",
     "The shipped logistic (k=0.0214 at small margins) behaves like a normal with sigma ~85 points. A full slate of 9 starters a side can only generate ~30, and one player left ~10. The curve is not merely miscalibrated, it is outside what football can produce -- which is the direct cause of everything hugging 50/50.",
     "Best single-slope refit gets RMS error from 18.3 to 6.7 pts, but its residuals are structured: the worst (+14) is Studs and Duds, the matchup with the least football left. That is the remaining-variance signal appearing exactly where predicted."
-  ]
+  ],
+  "model": {
+    "form": "sigma = sqrt( sum over every remaining player, both sides, of (k_pos * remaining_projection)^2 )",
+    "k_qb": 0.7,
+    "k_skill": 1.0,
+    "basis": "Four anchors. Two have a side fully locked, so the whole distribution belongs to a known set of players. Flames is exact end to end. A single flat k fits the three skill-heavy anchors at 1.06-1.18 but needs 0.77 for the QB-heavy one; splitting QB out at 0.7 reconciles all four.",
+    "caveat": "k_skill is not yet separated by position -- RB, WR and TE are lumped. More samples where the remaining points sit in one position would split them."
+  },
+  "result": {
+    "before": "RMS 25.3 pts against the three anchors with known remaining players",
+    "after": "RMS 1.8 pts",
+    "per_anchor": {
+      "Studs and Duds": "26% vs Sleeper 29%",
+      "Pure Potential": "7% vs 8%",
+      "Flames and Football": "6% vs 6%"
+    }
+  }
 }
