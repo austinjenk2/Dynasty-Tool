@@ -12875,7 +12875,13 @@
         const origProj = origProjFor(league.season, week, 'players', id, rawProj, gameStarted);
         const elapsedFraction = sbGameElapsedFraction(team, espnGameData);
         const baseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawProj);
-        const live = sbEstimateLiveProjection(recorded != null ? Number(recorded) : null, baseline, elapsedFraction, gameStarted, gameFinished,
+        // Without this an inactive player kept his whole pregame projection
+        // in the team total for good, quietly inflating every figure built
+        // on it -- the matchup projection, the margin, and the win
+        // probability that divides by it.
+        const feedLoaded = !!(pointsMap && Object.keys(pointsMap).length);
+        const scored = sbScoreAfterFinal(recorded != null ? Number(recorded) : null, gameFinished, feedLoaded);
+        const live = sbEstimateLiveProjection(scored, baseline, elapsedFraction, gameStarted, gameFinished,
           { position: p && p.position, team, espnGameData });
         if (live != null) return live;
       }
@@ -13555,6 +13561,21 @@
     const sampleWeight = Math.max(L.REG_MIN_WEIGHT,
       Math.min(1, scoringElapsed / L.REG_FULL_SAMPLE));
     return 1 - Math.min(L.REG_MAX, L.REG_K * over * sampleWeight);
+  }
+
+  // Once a player's game is over, a missing score is not missing data: he
+  // had his sixty minutes and recorded nothing, which is a real zero. While
+  // his game is still on the same absence genuinely is unknown -- he may not
+  // have touched the ball yet, and Sleeper drops entries briefly mid-game --
+  // so the pregame projection rightly stands there.
+  //
+  // feedLoaded is the guard that makes this safe. One player with no entry
+  // and a fetch that failed outright are indistinguishable from that player
+  // alone, and reading a failed fetch as "everyone scored nothing" would
+  // zero every player on the page. Callers pass whether the feed returned
+  // anything at all.
+  function sbScoreAfterFinal(scored, gameFinished, feedLoaded) {
+    return (scored == null && gameFinished && feedLoaded) ? 0 : scored;
   }
 
   // Every term of the live projection, for the tooltip that explains it.
@@ -14799,7 +14820,7 @@
         // pregame projection as his live number forever, so a player who
         // was inactive or never saw a snap showed "Score 0.0, Proj 16.3"
         // and a Points Over Expected of +0.0 instead of the full -16.3.
-        const rgScored = (pprPoints == null && rgGameFinished && rgStatsFeedLoaded) ? 0 : pprPoints;
+        const rgScored = sbScoreAfterFinal(pprPoints, rgGameFinished, rgStatsFeedLoaded);
         const liveProj = sbEstimateLiveProjection(rgScored, rgProjBaseline, rgElapsedFraction, rgGameStarted, rgGameFinished,
           { position: pos, team: p.team, espnGameData: rgEspnGameData });
         const poe = (rgGameStarted && liveProj != null && origProj != null) ? (liveProj - origProj) : null;
@@ -20324,6 +20345,9 @@
   function gcStatsHtml(game, whichTeam, dict, statsMap, projMap) {
     const abbr = whichTeam === 'home' ? game.home.abbr : game.away.abbr;
     const espnGameData = window.__gcEspnGameData || null;
+    // Whether the stats feed returned anything at all -- see
+    // sbScoreAfterFinal. Checked once here rather than per player.
+    const gcStatsFeedLoaded = !!(statsMap && Object.keys(statsMap).length);
     // Real game state for this team, so a projection can be turned into a
     // live one and "over expected" can stay blank until there's actually
     // something to measure.
@@ -20338,7 +20362,7 @@
         // Live score, pregame projection and live projection are all on the
         // house line, so they are directly comparable with each other and
         // with the Rooting Guide's numbers for the same player.
-        const live = sbHouseScore(id, raw, dict);
+        const live = sbScoreAfterFinal(sbHouseScore(id, raw, dict), finished, gcStatsFeedLoaded);
         const origProj = gcProjectedPoints(id, dict);
         const baseline = sbPlayerIsInactive(dict[id]) ? 0 : origProj;
         const projParts = sbLiveProjParts(live, baseline, elapsed, started, finished,
