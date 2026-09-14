@@ -870,9 +870,16 @@
   .gc-lg-row[data-gc-league-id]:not([data-gc-league-id=""]):hover { background: var(--bg); }
   .gc-lg-name {
     font-size: 10.5px; font-weight: 800; color: var(--muted);
-    flex: 0 0 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 0 0 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .gc-lg-players { flex: 1; min-width: 0; font-size: 11.5px; line-height: 1.35; }
+  /* The whole point of this row is that it is one line -- that is why the
+     names are stripped to surnames in the first place. Clipping rather than
+     wrapping keeps that true no matter how many starters a league has, and
+     the row's title attribute still carries the full detail.  */
+  .gc-lg-players {
+    flex: 1; min-width: 0; font-size: 11.5px; line-height: 1.35;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .gc-lg-for { color: var(--green); font-weight: 700; }
   .gc-lg-against { color: var(--red); font-weight: 700; }
   .gc-lg-sep { display: inline-block; width: 6px; }
@@ -3254,6 +3261,21 @@
   .tc-verdict-fill-a { height: 100%; background: var(--blue); }
   .tc-verdict-fill-b { height: 100%; background: var(--red); }
   @media (max-width: 760px) { .tc-gap-panel { flex-basis: 100%; } }
+  /* The win% each row is ordered by. Without it on screen the ordering
+     just looks arbitrary. */
+  .gc-lg-pct {
+    flex-shrink: 0;
+    min-width: 30px;
+    font-size: 11px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--faint);
+  }
+  .gc-lg-pct-close { color: var(--gold); }
+  .gc-lg-pct-safe { color: var(--green); }
+  .gc-lg-pct-long { color: var(--red); }
+
   /* ---- Results: the tanking block sits below the real record ---- */
   .rb-tank-section { margin-top: 34px; }
   .rb-tank-head { margin-bottom: 12px; }
@@ -20587,7 +20609,9 @@
   // else's -- your side against your opponent's -- so you can see exactly
   // which of your matchups this one broadcast is deciding. Leagues with
   // no stake in the game are left out entirely.
-  function gcLeagueBreakdown(game, dict, statsMap) {
+  function gcLeagueBreakdown(game, dict, statsMap, projMap) {
+    const espnGameData = window.__gcEspnGameData || null;
+    const week = window.__gcWeek != null ? window.__gcWeek : null;
     const teams = new Set([game.away.abbr, game.home.abbr]);
     const inGame = (pid) => {
       const p = dict && dict[pid];
@@ -20606,18 +20630,39 @@
       if (!mine.length && !opp.length) return;
       const oppName = (e.oppUser && (e.oppUser.display_name || e.oppUser.username)) || 'Opponent';
       const sumPts = (list) => list.reduce((t, x) => t + (x.pts || 0), 0);
+      // How close the whole matchup is, not just this game's slice of it.
+      // sbProjectionFor wants the { __statsMap } wrapper, not a bare map.
+      const projWrap = projMap ? { __statsMap: projMap } : null;
+      let winPct = null;
+      try {
+        const myProj = sbMatchupProjectedTotal(e.myMatchup, projWrap, e.league, espnGameData, week);
+        const oppProj = sbMatchupProjectedTotal(e.oppMatchup, projWrap, e.league, espnGameData, week);
+        if (Number.isFinite(myProj) && Number.isFinite(oppProj)) {
+          winPct = sbWinProbability(myProj, oppProj,
+            sbMatchupSigma(e.myMatchup, e.oppMatchup, projWrap, e.league, espnGameData, week));
+        }
+      } catch (err) { /* a league we can't price still belongs in the list */ }
       out.push({
         league: e.league.name, leagueId: e.league.league_id, mine, opp, oppName,
         net: sumPts(mine) - sumPts(opp),
         stake: mine.length + opp.length,
+        winPct,
       });
     });
-    // Busiest leagues first -- the ones this game swings hardest.
-    return out.sort((a, b) => b.stake - a.stake || Math.abs(b.net) - Math.abs(a.net));
+    // Closest matchup first. A game you are 99% to win is already decided --
+    // what happens in it barely matters -- so it drops to the bottom, and
+    // the coin flips you should actually be sweating rise to the top.
+    // Leagues we couldn't price sort last but keep their busiest-first order
+    // among themselves, which is what the list used before.
+    const distance = (r) => r.winPct == null ? Infinity : Math.abs(r.winPct - 50);
+    return out.sort((a, b) =>
+      distance(a) - distance(b) ||
+      b.stake - a.stake ||
+      Math.abs(b.net) - Math.abs(a.net));
   }
 
-  function gcLeagueBreakdownHtml(game, dict, statsMap) {
-    const rows = gcLeagueBreakdown(game, dict, statsMap);
+  function gcLeagueBreakdownHtml(game, dict, statsMap, projMap) {
+    const rows = gcLeagueBreakdown(game, dict, statsMap, projMap);
     if (!rows.length) return '<div class="gc-empty">None of your leagues have a starter in this game.</div>';
     // Last name only -- with two or three names plus a league name on one
     // line, full names wrap and defeat the point of the compact row.
@@ -20629,7 +20674,11 @@
       const bits = [];
       if (r.mine.length) bits.push(`<span class="gc-lg-for">+ ${sbFieldEsc(r.mine.map(x => shortName(x.name)).join(', '))}</span>`);
       if (r.opp.length) bits.push(`<span class="gc-lg-against">&minus; ${sbFieldEsc(r.opp.map(x => shortName(x.name)).join(', '))}</span>`);
+      const pctCls = r.winPct == null ? '' : (r.winPct >= 60 ? ' gc-lg-pct-safe' : (r.winPct <= 40 ? ' gc-lg-pct-long' : ' gc-lg-pct-close'));
+      const pctHtml = r.winPct == null ? ''
+        : `<span class="gc-lg-pct${pctCls}" title="Your win probability in this league's matchup">${r.winPct}%</span>`;
       return `<div class="gc-lg-row" data-gc-league-id="${sbFieldEsc(r.leagueId || '')}" title="${sbFieldEsc(r.league)} &mdash; open this matchup in the Matchup Hub">
+        ${pctHtml}
         <span class="gc-lg-name">${sbFieldEsc(r.league)}</span>
         <span class="gc-lg-players">${bits.join('<span class="gc-lg-sep"></span>')}</span>
       </div>`;
@@ -20691,6 +20740,7 @@
         : Promise.resolve(null),
     ]);
     window.__gcEspnGameData = espnGameData;
+    window.__gcWeek = week;
     window.__gcHeroData = { game, dict, statsMap, projMap };
 
     if (!window.__gcStatsTeam) window.__gcStatsTeam = 'away';
@@ -20714,8 +20764,8 @@
           </div>
           <div class="gc-panel gc-col-leagues">
             <div class="gc-panel-head"><span class="gc-panel-title">Your Leagues In This Game</span></div>
-            <div class="gc-panel-sub">Only leagues with a starter here</div>
-            <div class="gc-panel-scroll" id="gcLeaguesBody">${gcLeagueBreakdownHtml(game, dict, statsMap)}</div>
+            <div class="gc-panel-sub">Only leagues with a starter here &middot; closest matchup first</div>
+            <div class="gc-panel-scroll" id="gcLeaguesBody">${gcLeagueBreakdownHtml(game, dict, statsMap, projMap)}</div>
           </div>
         </div>`;
 
