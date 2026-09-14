@@ -3261,6 +3261,17 @@
   .tc-verdict-fill-a { height: 100%; background: var(--blue); }
   .tc-verdict-fill-b { height: 100%; background: var(--red); }
   @media (max-width: 760px) { .tc-gap-panel { flex-basis: 100%; } }
+  /* Best ball bench: still live, so still able to take a slot. Dimmer than
+     the lineup so the eye reads the lineup first. */
+  .sb-bench-head td {
+    padding: 10px 0 5px !important;
+    font-size: 9.5px; font-weight: 800; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--faint);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .sb-lineup-bench { opacity: 0.62; }
+  .sb-lineup-bench:hover { opacity: 1; }
+
   /* The win% each row is ordered by. Without it on screen the ordering
      just looks arbitrary. */
   .gc-lg-pct {
@@ -13177,7 +13188,30 @@
     if (!matchup) return 0;
     const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
     const pointsMap = matchup.players_points || {};
-    return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week), 0);
+    const lineup = starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week), 0);
+    // In best ball the players still to play off the lineup are worth
+    // something too -- not their score, but the amount they'd beat whoever
+    // they push out by. Leaving it out understates a team holding live
+    // bench pieces.
+    const upside = sbBestBallBenchUpside(matchup, league, projMap, espnGameData, week)
+      .reduce((sum, b) => sum + b.gain, 0);
+    return lineup + upside;
+  }
+
+  // Points actually on the board for the lineup we are SHOWING. Sleeper's
+  // own matchup.points is the obvious source and is right for a normal
+  // league, but in best ball it answers a different question and can sit
+  // wildly apart from the lineup on screen -- an opponent adding up to 154
+  // was being reported as 63.8. Summing the effective starters keeps the
+  // headline score and the table underneath it telling the same story.
+  function sbMatchupLivePoints(matchup, league, projMap, espnGameData, week) {
+    if (!matchup) return 0;
+    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
+    const pointsMap = matchup.players_points || {};
+    return starters.reduce((sum, id) => {
+      const v = Number(pointsMap[id]);
+      return sum + (Number.isFinite(v) ? v : 0);
+    }, 0);
   }
 
   // True only if at least one starter in the matchup has either a recorded
@@ -13243,6 +13277,70 @@
     return z > 0 ? 1 - p : p;
   }
 
+  // ---- Best ball: what a player still to play is actually worth ---------
+  // In best ball a bench player does not add his score, he adds only the
+  // amount by which he BEATS whoever he would push out of the lineup.
+  //
+  // The real case this exists for: both lineups are done bar two players.
+  // The opponent has a quarterback yet to play, but his superflex already
+  // holds a 20-point score -- so that quarterback is worth nothing at all
+  // unless he clears 20, and only the excess counts. Treating him as a full
+  // projection wildly overstates him; treating him as zero because he is not
+  // in the lineup says the matchup is already won when it is not.
+  //
+  // So each unfinished player off the lineup is scored as max(0, his finish
+  // minus the weakest starter he could displace). Normal-ish around his
+  // projection, that has a closed form for the mean, and the chance he gets
+  // in at all scales how much spread he really contributes.
+  function sbBestBallBenchUpside(matchup, league, projMap, espnGameData, week) {
+    if (!matchup || !league || !league.settings || !league.settings.best_ball) return [];
+    const dict = window.__sleeperPlayerDict;
+    if (!dict || !league.roster_positions) return [];
+    const startSlots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
+    if (!starters.length) return [];
+    const pointsMap = matchup.players_points || {};
+    const valueOf = (id) => {
+      const v = sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week);
+      return Number.isFinite(v) ? v : 0;
+    };
+    const chosen = new Set(starters);
+    const out = [];
+    (matchup.players || []).forEach(id => {
+      if (!id || id === '0' || chosen.has(id)) return;
+      const p = dict[id];
+      if (!p || !p.position) return;
+      // His game is over and he still didn't make it: no path in, worth nothing.
+      if (sbGameFinishedForTeam(p.team, espnGameData)) return;
+      // The weakest starter sitting in a slot he is eligible for.
+      let weakestVal = Infinity;
+      starters.forEach((sid, i) => {
+        const elig = SB_SLOT_ELIGIBLE[startSlots[i]];
+        if (!elig || !elig.includes(p.position)) return;
+        const v = valueOf(sid);
+        if (v < weakestVal) weakestVal = v;
+      });
+      if (!Number.isFinite(weakestVal)) return;
+      const mu = valueOf(id);
+      const rec = Number(pointsMap[id]);
+      const scored = Number.isFinite(rec) ? rec : 0;
+      const k = SB_SIGMA_K[p.position] != null ? SB_SIGMA_K[p.position] : SB_SIGMA_K.DEFAULT;
+      const sd = k * Math.max(0, mu - scored);
+      if (!(sd > 0)) return;
+      const d = (mu - weakestVal) / sd;
+      const pIn = sbNormalCdf(d);
+      const phi = Math.exp(-d * d / 2) / Math.sqrt(2 * Math.PI);
+      out.push({
+        id,
+        // E[max(0, X - W)] for X normal about mu.
+        gain: Math.max(0, (mu - weakestVal) * pIn + sd * phi),
+        // Only the part of his spread that can actually reach the lineup.
+        sd: sd * pIn,
+      });
+    });
+    return out;
+  }
+
   // Variance still to come from one side's starters. A player who has
   // finished contributes nothing: his points are on the board and can no
   // longer swing anything.
@@ -13258,7 +13356,7 @@
     // exactly right for a future week and errs toward too WIDE -- and so
     // too cautious -- in the rarer case that a game really is under way.
     const blind = !espnGameData || week == null;
-    return starters.reduce((sum, id) => {
+    const starterVar = starters.reduce((sum, id) => {
       let remaining;
       if (blind) {
         const raw = Number(sbProjectionFor(id, projMap, league));
@@ -13274,6 +13372,13 @@
       const sd = k * remaining;
       return sum + sd * sd;
     }, 0);
+    // Best ball: a live bench player is real uncertainty even though he is
+    // not in the lineup. Without him a matchup where both lineups are done
+    // but someone still holds a quarterback yet to play reads as settled.
+    const benchVar = blind ? 0
+      : sbBestBallBenchUpside(matchup, league, projMap, espnGameData, week)
+          .reduce((sum, b) => sum + b.sd * b.sd, 0);
+    return starterVar + benchVar;
   }
 
   // Spread of the final margin: both sides' remaining players added in
@@ -13749,12 +13854,33 @@
     // matches what was actually added into the score instead of silently
     // dropping the empty slot's row.
     const rawStarters = new Set((matchup.starters || []).filter(id => id && id !== '0'));
-    const starters = sbEffectiveStarters(matchup, league, projMap);
+    // Game state matters here: without it a best ball lineup gets ranked on
+    // points-so-far and this table ends up showing a different lineup than
+    // the totals above it were computed from.
+    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
     const pointsMap = matchup.players_points || {};
     if (!starters.length) {
       return '<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:16px 0">No starters set yet</td></tr>';
     }
-    return starters.map(id => {
+    // In best ball nobody sets a lineup, so the bench is not a choice you
+    // made -- it is everyone still in the running. A player whose game is
+    // yet to start or still going can climb into the lineup on his next
+    // catch, so he is worth seeing. One whose game is OVER and who still
+    // didn't make it has no path in: his score is final and it lost. He
+    // comes off the list entirely.
+    const isBestBall = !!(league && league.settings && league.settings.best_ball);
+    const chosen = new Set(starters);
+    const bench = !isBestBall ? [] : (matchup.players || [])
+      .filter(id => id && id !== '0' && !chosen.has(id))
+      .filter(id => {
+        const p = dict[id];
+        if (!p) return false;
+        return !sbGameFinishedForTeam(p.team, espnGameData);
+      })
+      .sort((a, b) => sbEffectivePoints(b, pointsMap, projMap, league, espnGameData, week)
+                    - sbEffectivePoints(a, pointsMap, projMap, league, espnGameData, week));
+
+    const rowHtml = (id, onBench) => {
       const p = dict[id];
       const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id) : id;
       const pos = p ? (p.position || '') : '';
@@ -13791,17 +13917,23 @@
       }
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
-      return `<tr class="sb-lineup-row" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}">` +
+      return `<tr class="sb-lineup-row${onBench ? ' sb-lineup-bench' : ''}" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}">` +
         '<td class="sb-exp-player">' +
           `<span class="sb-exp-pos sb-pos-${posClass}">${pos}</span>` +
           `<span class="sb-exp-avatar"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>` +
-          `<span class="sb-exp-info"><span class="sb-exp-pname">${name}</span><span class="sb-exp-psub">${pos} &middot; ${team}${predicted ? ' &middot; predicted' : ''}</span></span>` +
+          `<span class="sb-exp-info"><span class="sb-exp-pname">${name}</span><span class="sb-exp-psub">${pos} &middot; ${team}${onBench ? ' &middot; bench' : (predicted ? ' &middot; predicted' : '')}</span></span>` +
         '</td>' +
         `<td class="sb-exp-pts${ptsPerfClass}">${pts}</td>` +
         `<td class="sb-exp-proj" title="${sbFieldEsc(sbLiveProjTooltip(projParts))}">${projText}</td>` +
         `<td class="sb-exp-orig">${origText}</td>` +
       '</tr>';
-    }).join('');
+    };
+
+    const startersHtml = starters.map(id => rowHtml(id, false)).join('');
+    if (!bench.length) return startersHtml;
+    return startersHtml +
+      '<tr class="sb-bench-head"><td colspan="4">Still in the running &middot; can still take a slot</td></tr>' +
+      bench.map(id => rowHtml(id, true)).join('');
   }
 
   // Remembers each league's last-seen win% so the field can animate from
@@ -14059,8 +14191,8 @@
     if (hasData) {
       myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league, espnGameData, week);
       oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, espnGameData, week);
-      myPts = myMatchup ? (myMatchup.points || 0) : 0;
-      oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
+      myPts = sbMatchupLivePoints(myMatchup, entry.league, projMap, espnGameData, week);
+      oppPts = sbMatchupLivePoints(oppMatchup, entry.league, projMap, espnGameData, week);
       const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(myMatchup, entry.league, projMap, espnGameData, week), dict, espnGameData);
       const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(oppMatchup, entry.league, projMap, espnGameData, week), dict, espnGameData);
       myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj, myStarted);
