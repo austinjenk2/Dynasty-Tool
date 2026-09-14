@@ -12956,7 +12956,7 @@
   // "starter" in projection (or scores more once live) moves onto the
   // lineup automatically instead of the app just echoing Sleeper's
   // meaningless pre-resolution starters array.
-  function sbBestBallEffectiveStarters(matchup, league, projMap, playerDict) {
+  function sbBestBallEffectiveStarters(matchup, league, projMap, playerDict, espnGameData, week) {
     const startSlots = (league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
     const pool = (matchup.players || []).filter(id => id && id !== '0');
     if (!pool.length) return null;
@@ -12971,7 +12971,18 @@
         if (chosen.has(pid)) return;
         const p = playerDict[pid];
         if (!p || !eligible.includes(p.position)) return;
-        const val = sbEffectivePoints(pid, pointsMap, projMap, league);
+        // Rank on the CURRENT projection -- what each player will finish
+        // with, points already banked plus whatever his remaining game is
+        // worth. Without the game state passed through, sbEffectivePoints
+        // hands back live points for anyone who has played and a full
+        // pregame projection for anyone who hasn't, and the slot then
+        // compares two different things: a back on 3.2 at half looked worse
+        // than a bench player projected 16 who had already been ruled out,
+        // and a receiver on 20 in the fourth lost his slot to a 22 projection
+        // that was never going to arrive. Same number for everyone, so the
+        // lineup is genuinely the best one available right now and re-sorts
+        // itself as the projections move.
+        const val = sbEffectivePoints(pid, pointsMap, projMap, league, espnGameData, week);
         if (val > bestVal) { bestVal = val; best = pid; }
       });
       if (best) { chosen.add(best); assigned.push(best); }
@@ -12979,10 +12990,14 @@
     return assigned;
   }
 
-  function sbEffectiveStarters(matchup, league, projMap) {
+  // espnGameData/week are optional but matter for a best ball league: they
+  // turn "who is scoring best so far" into "who will finish best", which is
+  // the lineup best ball actually pays out on. Callers without them still
+  // get a sensible lineup, just one ranked on pregame projections.
+  function sbEffectiveStarters(matchup, league, projMap, espnGameData, week) {
     const playerDict = window.__sleeperPlayerDict;
     if (matchup && league && league.settings && league.settings.best_ball && league.roster_positions && playerDict && matchup.players) {
-      const bb = sbBestBallEffectiveStarters(matchup, league, projMap, playerDict);
+      const bb = sbBestBallEffectiveStarters(matchup, league, projMap, playerDict, espnGameData, week);
       if (bb && bb.length) return bb;
     }
     const raw = (matchup && matchup.starters) || [];
@@ -13160,7 +13175,7 @@
 
   function sbMatchupProjectedTotal(matchup, projMap, league, espnGameData, week) {
     if (!matchup) return 0;
-    const starters = sbEffectiveStarters(matchup, league, projMap);
+    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
     const pointsMap = matchup.players_points || {};
     return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week), 0);
   }
@@ -13233,7 +13248,7 @@
   // longer swing anything.
   function sbStartersRemainingVar(matchup, projMap, league, espnGameData, week) {
     if (!matchup) return 0;
-    const starters = sbEffectiveStarters(matchup, league, projMap);
+    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
     const pointsMap = matchup.players_points || {};
     const dict = window.__sleeperPlayerDict;
     // With no game state we cannot tell who has finished from who has not
@@ -14046,8 +14061,8 @@
       oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, espnGameData, week);
       myPts = myMatchup ? (myMatchup.points || 0) : 0;
       oppPts = oppMatchup ? (oppMatchup.points || 0) : 0;
-      const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(myMatchup, entry.league, projMap), dict, espnGameData);
-      const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(oppMatchup, entry.league, projMap), dict, espnGameData);
+      const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(myMatchup, entry.league, projMap, espnGameData, week), dict, espnGameData);
+      const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(oppMatchup, entry.league, projMap, espnGameData, week), dict, espnGameData);
       myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj, myStarted);
       oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj, oppStarted);
       winPct = sbWinProbability(myProj, oppProj,
@@ -14064,8 +14079,8 @@
       oppName: sbFieldEsc((fieldOppUser && (fieldOppUser.display_name || fieldOppUser.username)) || 'Opponent'),
       oppAvatarId: fieldOppUser ? fieldOppUser.avatar : null,
     };
-    const fieldMyIds = sbEffectiveStarters(myMatchup, entry.league, projMap);
-    const fieldOppIds = sbEffectiveStarters(oppMatchup, entry.league, projMap);
+    const fieldMyIds = sbEffectiveStarters(myMatchup, entry.league, projMap, espnGameData, week);
+    const fieldOppIds = sbEffectiveStarters(oppMatchup, entry.league, projMap, espnGameData, week);
     const fieldRosters = {
       myIds: fieldMyIds,
       oppIds: fieldOppIds,
@@ -14835,8 +14850,8 @@
         // expects a projMap wrapper shaped { __statsMap }, not the bare
         // stats map rgProjStatsMap already is.
         const rgProjMapForStarters = { __statsMap: rgProjStatsMap };
-        const myStarters = sbEffectiveStarters(entry.myMatchup, entry.league, rgProjMapForStarters);
-        const oppStarters = sbEffectiveStarters(entry.oppMatchup, entry.league, rgProjMapForStarters);
+        const myStarters = sbEffectiveStarters(entry.myMatchup, entry.league, rgProjMapForStarters, rgEspnGameData, week);
+        const oppStarters = sbEffectiveStarters(entry.oppMatchup, entry.league, rgProjMapForStarters, rgEspnGameData, week);
         myStarters.forEach(id => {
           byPlayer[id] = byPlayer[id] || { for: [], against: [] };
           byPlayer[id].for.push(entry.league.name);
