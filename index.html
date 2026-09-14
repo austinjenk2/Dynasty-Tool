@@ -12981,7 +12981,7 @@
   //
   // Before anyone has played, every score is 0 and the projection tiebreak
   // does the ordering, so a pregame card still shows the sensible lineup.
-  function sbBestBallEffectiveStarters(matchup, league, projMap, playerDict, espnGameData, week) {
+  function sbBestBallEffectiveStarters(matchup, league, projMap, playerDict, espnGameData, week, rankBy) {
     const startSlots = (league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
     const pool = (matchup.players || []).filter(id => id && id !== '0');
     if (!pool.length) return null;
@@ -12994,6 +12994,7 @@
     // mean anything. Until then there is nothing to rank on and holding a
     // player out of the lineup for not having kicked off would empty it.
     const weekUnderWay = pool.some(startedOf);
+    const byProjection = rankBy === 'proj';
     const scoreOf = (pid) => {
       const v = Number(pointsMap[pid]);
       return Number.isFinite(v) ? v : 0;
@@ -13008,6 +13009,13 @@
         if (chosen.has(pid)) return;
         const p = playerDict[pid];
         if (!p || !eligible.includes(p.position)) return;
+        const proj = sbEffectivePoints(pid, pointsMap, projMap, league, espnGameData, week);
+        if (byProjection) {
+          // "Who will finish in the lineup" -- everyone is in the running,
+          // ranked on where he is projected to end up.
+          if (proj > bestScore) { bestScore = proj; best = pid; }
+          return;
+        }
         // A player who hasn't kicked off cannot have overtaken anyone yet.
         // He waits in "still in the running" rather than occupying a slot
         // on the strength of a projection.
@@ -13015,9 +13023,8 @@
         const score = scoreOf(pid);
         // Ties (everyone on 0 pregame, or two players who have both scored
         // nothing) fall back to who is expected to finish higher.
-        const tie = sbEffectivePoints(pid, pointsMap, projMap, league, espnGameData, week);
-        if (score > bestScore || (score === bestScore && tie > bestTie)) {
-          bestScore = score; bestTie = tie; best = pid;
+        if (score > bestScore || (score === bestScore && proj > bestTie)) {
+          bestScore = score; bestTie = proj; best = pid;
         }
       });
       if (best) { chosen.add(best); assigned.push(best); }
@@ -13029,10 +13036,10 @@
   // turn "who is scoring best so far" into "who will finish best", which is
   // the lineup best ball actually pays out on. Callers without them still
   // get a sensible lineup, just one ranked on pregame projections.
-  function sbEffectiveStarters(matchup, league, projMap, espnGameData, week) {
+  function sbEffectiveStarters(matchup, league, projMap, espnGameData, week, rankBy) {
     const playerDict = window.__sleeperPlayerDict;
     if (matchup && league && league.settings && league.settings.best_ball && league.roster_positions && playerDict && matchup.players) {
-      const bb = sbBestBallEffectiveStarters(matchup, league, projMap, playerDict, espnGameData, week);
+      const bb = sbBestBallEffectiveStarters(matchup, league, projMap, playerDict, espnGameData, week, rankBy);
       if (bb && bb.length) return bb;
     }
     const raw = (matchup && matchup.starters) || [];
@@ -13210,16 +13217,23 @@
 
   function sbMatchupProjectedTotal(matchup, projMap, league, espnGameData, week) {
     if (!matchup) return 0;
-    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
+    // The projection asks a different question than the card's lineup does.
+    // The lineup shows who is scoring RIGHT NOW; this asks who will finish
+    // in it, so it is built on projections and every player is a candidate.
+    //
+    // It is a point estimate, deliberately. A quarterback projected 19.9
+    // sitting behind a 20.0 does not crack the lineup, so he adds nothing
+    // and the team projection stays exactly where the score is -- the odds
+    // he instead goes for 30 are real, but they belong in the win
+    // probability, not here. Let his live projection climb past 20.0 and he
+    // takes the slot and the projection moves with him.
+    //
+    // Building the lineup rather than summing per-player upsides also keeps
+    // a slot from being sold twice: two backs each projected 10 behind the
+    // same 8.0 starter are worth 2.1 between them, not 2.1 each.
+    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week, 'proj');
     const pointsMap = matchup.players_points || {};
-    const lineup = starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week), 0);
-    // In best ball the players still to play off the lineup are worth
-    // something too -- not their score, but the amount they'd beat whoever
-    // they push out by. Leaving it out understates a team holding live
-    // bench pieces.
-    const upside = sbBestBallBenchUpside(matchup, league, projMap, espnGameData, week)
-      .reduce((sum, b) => sum + b.gain, 0);
-    return lineup + upside;
+    return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week), 0);
   }
 
   // Points actually on the board for the lineup we are SHOWING. Sleeper's
@@ -13354,7 +13368,7 @@
     const dict = window.__sleeperPlayerDict;
     if (!dict || !league.roster_positions) return [];
     const startSlots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
-    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
+    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week, 'proj');
     if (!starters.length) return [];
     const pointsMap = matchup.players_points || {};
     const valueOf = (id) => {
@@ -13386,12 +13400,15 @@
       if (!(sd > 0)) return;
       const d = (mu - weakestVal) / sd;
       const pIn = sbNormalCdf(d);
-      const phi = Math.exp(-d * d / 2) / Math.sqrt(2 * Math.PI);
       out.push({
         id,
-        // E[max(0, X - W)] for X normal about mu.
-        gain: Math.max(0, (mu - weakestVal) * pIn + sd * phi),
-        // Only the part of his spread that can actually reach the lineup.
+        // What he adds to the PROJECTION: nothing unless his own projection
+        // actually clears the man he would displace. A point estimate, with
+        // no credit for outcomes he is not projected to reach.
+        gain: Math.max(0, mu - weakestVal),
+        // What he adds to the SPREAD: the part of his range that can still
+        // reach the lineup. This is where "he might go for 30" belongs, and
+        // it is why a matchup like that is 84% rather than settled.
         sd: sd * pIn,
       });
     });
@@ -13403,7 +13420,9 @@
   // longer swing anything.
   function sbStartersRemainingVar(matchup, projMap, league, espnGameData, week) {
     if (!matchup) return 0;
-    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
+    // Matched to the projection above: the spread is the uncertainty around
+    // the lineup that projection describes.
+    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week, 'proj');
     const pointsMap = matchup.players_points || {};
     const dict = window.__sleeperPlayerDict;
     // With no game state we cannot tell who has finished from who has not
