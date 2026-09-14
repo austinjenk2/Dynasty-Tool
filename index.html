@@ -12967,34 +12967,58 @@
   // "starter" in projection (or scores more once live) moves onto the
   // lineup automatically instead of the app just echoing Sleeper's
   // meaningless pre-resolution starters array.
+  // Best ball has no lineup to set: your score is simply your best players'
+  // scores, so the lineup shown is whoever is actually scoring for you right
+  // now. Ranked on POINTS ON THE BOARD, and a bench player moves in the
+  // moment his real score overtakes someone.
+  //
+  // Ranking on the current projection instead (which this did briefly) puts
+  // players in the lineup on the strength of a game that hasn't kicked off:
+  // late on a Sunday a back projected 10 for Monday night outranked nobody
+  // and contributed nothing, but sat in a starting slot showing 0.0 as
+  // though he were part of the score. He belongs in "still in the running"
+  // until he has actually overtaken someone.
+  //
+  // Before anyone has played, every score is 0 and the projection tiebreak
+  // does the ordering, so a pregame card still shows the sensible lineup.
   function sbBestBallEffectiveStarters(matchup, league, projMap, playerDict, espnGameData, week) {
     const startSlots = (league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
     const pool = (matchup.players || []).filter(id => id && id !== '0');
     if (!pool.length) return null;
     const pointsMap = matchup.players_points || {};
+    const startedOf = (pid) => {
+      const p = playerDict[pid];
+      return !!(p && sbGameStartedForTeam(p.team, espnGameData));
+    };
+    // Only once the week is genuinely under way does "points on the board"
+    // mean anything. Until then there is nothing to rank on and holding a
+    // player out of the lineup for not having kicked off would empty it.
+    const weekUnderWay = pool.some(startedOf);
+    const scoreOf = (pid) => {
+      const v = Number(pointsMap[pid]);
+      return Number.isFinite(v) ? v : 0;
+    };
     const chosen = new Set();
     const assigned = [];
     startSlots.forEach(slot => {
       const eligible = SB_SLOT_ELIGIBLE[slot];
       if (!eligible) return;
-      let best = null, bestVal = -Infinity;
+      let best = null, bestScore = -Infinity, bestTie = -Infinity;
       pool.forEach(pid => {
         if (chosen.has(pid)) return;
         const p = playerDict[pid];
         if (!p || !eligible.includes(p.position)) return;
-        // Rank on the CURRENT projection -- what each player will finish
-        // with, points already banked plus whatever his remaining game is
-        // worth. Without the game state passed through, sbEffectivePoints
-        // hands back live points for anyone who has played and a full
-        // pregame projection for anyone who hasn't, and the slot then
-        // compares two different things: a back on 3.2 at half looked worse
-        // than a bench player projected 16 who had already been ruled out,
-        // and a receiver on 20 in the fourth lost his slot to a 22 projection
-        // that was never going to arrive. Same number for everyone, so the
-        // lineup is genuinely the best one available right now and re-sorts
-        // itself as the projections move.
-        const val = sbEffectivePoints(pid, pointsMap, projMap, league, espnGameData, week);
-        if (val > bestVal) { bestVal = val; best = pid; }
+        // A player who hasn't kicked off cannot have overtaken anyone yet.
+        // He waits in "still in the running" rather than occupying a slot
+        // on the strength of a projection.
+        if (weekUnderWay && !startedOf(pid)) return;
+        const score = scoreOf(pid);
+        // Ties (everyone on 0 pregame, or two players who have both scored
+        // nothing) fall back to who is expected to finish higher.
+        const tie = sbEffectivePoints(pid, pointsMap, projMap, league, espnGameData, week);
+        if (score > bestScore || (score === bestScore && tie > bestTie)) {
+          bestScore = score; bestTie = tie; best = pid;
+        }
       });
       if (best) { chosen.add(best); assigned.push(best); }
     });
@@ -13275,6 +13299,39 @@
     const d = 0.3989422804014327 * Math.exp(-z * z / 2);
     const p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
     return z > 0 ? 1 - p : p;
+  }
+
+  // Best ball: everyone off the lineup who can still get into it. A player
+  // whose game is yet to start or still going can overtake a starter on his
+  // next touch; one whose game is OVER and who didn't make it has no path in
+  // and is done for the week.
+  //
+  // These are real contributors, not spectators, which is why they count in
+  // Weekly Sweats and GameCast the same as the lineup does: you are still
+  // rooting for a back who has to outscore your worst starter to matter.
+  function sbStillInRunning(matchup, league, projMap, espnGameData, week) {
+    if (!matchup || !league || !league.settings || !league.settings.best_ball) return [];
+    const dict = window.__sleeperPlayerDict;
+    if (!dict) return [];
+    const chosen = new Set(sbEffectiveStarters(matchup, league, projMap, espnGameData, week));
+    const pointsMap = matchup.players_points || {};
+    return (matchup.players || [])
+      .filter(id => id && id !== '0' && !chosen.has(id))
+      .filter(id => {
+        const p = dict[id];
+        return !!p && !sbGameFinishedForTeam(p.team, espnGameData);
+      })
+      .sort((a, b) => sbEffectivePoints(b, pointsMap, projMap, league, espnGameData, week)
+                    - sbEffectivePoints(a, pointsMap, projMap, league, espnGameData, week));
+  }
+
+  // The lineup plus everyone who can still force their way into it. Use this
+  // wherever the question is "who can still affect my week", rather than
+  // "who is scoring for me right now".
+  function sbContributorIds(matchup, league, projMap, espnGameData, week) {
+    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
+    const live = sbStillInRunning(matchup, league, projMap, espnGameData, week);
+    return live.length ? starters.concat(live) : starters;
   }
 
   // ---- Best ball: what a player still to play is actually worth ---------
@@ -13868,17 +13925,7 @@
     // catch, so he is worth seeing. One whose game is OVER and who still
     // didn't make it has no path in: his score is final and it lost. He
     // comes off the list entirely.
-    const isBestBall = !!(league && league.settings && league.settings.best_ball);
-    const chosen = new Set(starters);
-    const bench = !isBestBall ? [] : (matchup.players || [])
-      .filter(id => id && id !== '0' && !chosen.has(id))
-      .filter(id => {
-        const p = dict[id];
-        if (!p) return false;
-        return !sbGameFinishedForTeam(p.team, espnGameData);
-      })
-      .sort((a, b) => sbEffectivePoints(b, pointsMap, projMap, league, espnGameData, week)
-                    - sbEffectivePoints(a, pointsMap, projMap, league, espnGameData, week));
+    const bench = sbStillInRunning(matchup, league, projMap, espnGameData, week);
 
     const rowHtml = (id, onBench) => {
       const p = dict[id];
@@ -14982,8 +15029,10 @@
         // expects a projMap wrapper shaped { __statsMap }, not the bare
         // stats map rgProjStatsMap already is.
         const rgProjMapForStarters = { __statsMap: rgProjStatsMap };
-        const myStarters = sbEffectiveStarters(entry.myMatchup, entry.league, rgProjMapForStarters, rgEspnGameData, week);
-        const oppStarters = sbEffectiveStarters(entry.oppMatchup, entry.league, rgProjMapForStarters, rgEspnGameData, week);
+        // Contributors, not just the lineup: in best ball you are still
+        // sweating a player who has to outscore your worst starter to count.
+        const myStarters = sbContributorIds(entry.myMatchup, entry.league, rgProjMapForStarters, rgEspnGameData, week);
+        const oppStarters = sbContributorIds(entry.oppMatchup, entry.league, rgProjMapForStarters, rgEspnGameData, week);
         myStarters.forEach(id => {
           byPlayer[id] = byPlayer[id] || { for: [], against: [] };
           byPlayer[id].for.push(entry.league.name);
@@ -20176,6 +20225,20 @@
       e && e.myMatchup && e.oppMatchup && e.league && !tankList.has(e.league.name));
   }
 
+  // Who counts for you in a league, from GameCast's point of view. Reading
+  // matchup.starters straight off the entry is wrong for best ball, where
+  // nobody sets a lineup and that array is empty -- those leagues were
+  // contributing nothing at all to the exposure badge, the rooting counts
+  // and the league breakdown. sbContributorIds gives the real lineup plus
+  // everyone who can still force their way into it.
+  function gcSideIds(matchup, league) {
+    if (!matchup) return [];
+    const espn = window.__gcEspnGameData || null;
+    const wk = window.__gcWeek != null ? window.__gcWeek : null;
+    const ids = sbContributorIds(matchup, league, null, espn, wk);
+    return (ids && ids.length) ? ids.filter(Boolean) : (matchup.starters || []).filter(Boolean);
+  }
+
   // ---- Your stake in a game ------------------------------------------
   // Counts STARTER SLOTS, not distinct players: a player you start in 4
   // leagues counts 4, because that is how much of your week he actually
@@ -20195,10 +20258,10 @@
       return p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || pid;
     };
     gcVisibleLeagueEntries().forEach(e => {
-      (e.myMatchup.starters || []).filter(Boolean).forEach(pid => {
+      gcSideIds(e.myMatchup, e.league).forEach(pid => {
         if (inGame(pid)) { forCount++; forNames.push(`${nameOf(pid)} — ${e.league.name}`); }
       });
-      (e.oppMatchup.starters || []).filter(Boolean).forEach(pid => {
+      gcSideIds(e.oppMatchup, e.league).forEach(pid => {
         if (inGame(pid)) { againstCount++; againstNames.push(`${nameOf(pid)} — ${e.league.name}`); }
       });
     });
@@ -20486,8 +20549,8 @@
   function gcRootingDelta(playerId) {
     const forLeagues = [], againstLeagues = [];
     gcVisibleLeagueEntries().forEach(e => {
-      const mine = (e.myMatchup.starters || []).filter(Boolean);
-      const opp = (e.oppMatchup.starters || []).filter(Boolean);
+      const mine = gcSideIds(e.myMatchup, e.league);
+      const opp = gcSideIds(e.oppMatchup, e.league);
       if (mine.includes(playerId)) forLeagues.push(e.league.name);
       else if (opp.includes(playerId)) againstLeagues.push(e.league.name);
     });
@@ -20517,8 +20580,8 @@
     const elapsed = sbGameElapsedFraction(team, espnGameData);
 
     gcVisibleLeagueEntries().forEach(e => {
-      const mine = (e.myMatchup.starters || []).filter(Boolean);
-      const opp = (e.oppMatchup.starters || []).filter(Boolean);
+      const mine = gcSideIds(e.myMatchup, e.league);
+      const opp = gcSideIds(e.oppMatchup, e.league);
       const onMySide = mine.includes(playerId);
       const onOppSide = !onMySide && opp.includes(playerId);
       if (!onMySide && !onOppSide) return;
@@ -20772,8 +20835,8 @@
     };
     const out = [];
     gcVisibleLeagueEntries().forEach(e => {
-      const mine = (e.myMatchup.starters || []).filter(Boolean).filter(inGame).map(entryFor);
-      const opp = (e.oppMatchup.starters || []).filter(Boolean).filter(inGame).map(entryFor);
+      const mine = gcSideIds(e.myMatchup, e.league).filter(inGame).map(entryFor);
+      const opp = gcSideIds(e.oppMatchup, e.league).filter(inGame).map(entryFor);
       if (!mine.length && !opp.length) return;
       const oppName = (e.oppUser && (e.oppUser.display_name || e.oppUser.username)) || 'Opponent';
       const sumPts = (list) => list.reduce((t, x) => t + (x.pts || 0), 0);
