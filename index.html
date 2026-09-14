@@ -3254,6 +3254,19 @@
   .tc-verdict-fill-a { height: 100%; background: var(--blue); }
   .tc-verdict-fill-b { height: 100%; background: var(--red); }
   @media (max-width: 760px) { .tc-gap-panel { flex-basis: 100%; } }
+  /* ---- Results: the tanking block sits below the real record ---- */
+  .rb-tank-section { margin-top: 34px; }
+  .rb-tank-head { margin-bottom: 12px; }
+  .rb-tank-title {
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px; font-weight: 700; margin: 0 0 3px;
+  }
+  .rb-tank-sub { margin: 0; font-size: 12.5px; color: var(--muted); max-width: 720px; }
+  /* Muted against the real record above, so the eye lands on the table that
+     actually counts. Full strength on hover for when you do want to read it. */
+  .rb-tank-section .rb-table-wrap { opacity: 0.78; transition: opacity 0.15s; }
+  .rb-tank-section .rb-table-wrap:hover { opacity: 1; }
+
   /* ==================== Narrow screens (phone / tablet) ====================
      Everything below is additive: it is either inside a media query or sets
      min-width, so the desktop layout above is untouched. */
@@ -3341,6 +3354,10 @@
        a panel on a phone, and grid items won't shrink below their content. */
     .schedule-groups { grid-template-columns: repeat(2, 1fr); }
     .schedule-chip { min-width: 0; }
+
+    /* ---- Results ---- */
+    .rb-tank-section { margin-top: 26px; }
+    .rb-tank-sub { font-size: 12px; }
   }
 
   /* Phones proper: one column everywhere that is still two at tablet. */
@@ -13166,11 +13183,18 @@
   // stat corrections that still move a final score after the whistle.
   const SB_SIGMA_FLOOR = 1.5;
 
-  // Used only when the remaining players can't be worked out (a caller with
-  // no matchup in scope). Nine starters a side, none of them played, is
-  // about 30 points of spread -- the most football can produce, so the
-  // fallback is the least decisive answer rather than a confident wrong one.
-  const SB_SIGMA_FALLBACK = 30;
+  // Used only when there is no matchup in scope at all. Nine starters a side
+  // at around 15 points each, none of them played, is what the factors above
+  // make of a full slate: sqrt(2 * 9 * 15^2), about 64 points.
+  //
+  // This was 30 for one release, taken from a per-player spread of ~7 that
+  // the fitted factors flatly contradict, and the two numbers shipped
+  // together. Anything without live game state -- next week's matchups above
+  // all -- landed on the 30 and came out wildly overconfident: 91% on a
+  // 40-point projected margin where the old curve said 74%. Pregame was
+  // never the broken part, and this constant has to stay consistent with
+  // SB_SIGMA_K or it quietly breaks it again.
+  const SB_SIGMA_FALLBACK = 64;
 
   function sbNormalCdf(z) {
     // Abramowitz & Stegun 26.2.17, good to ~7.5e-8 -- far beyond what a
@@ -13190,11 +13214,24 @@
     const starters = sbEffectiveStarters(matchup, league, projMap);
     const pointsMap = matchup.players_points || {};
     const dict = window.__sleeperPlayerDict;
+    // With no game state we cannot tell who has finished from who has not
+    // kicked off, and sbEffectivePoints just hands back the recorded score,
+    // which would compute every remaining figure as zero and claim total
+    // certainty. Assume instead that nothing has been played, which is
+    // exactly right for a future week and errs toward too WIDE -- and so
+    // too cautious -- in the rarer case that a game really is under way.
+    const blind = !espnGameData || week == null;
     return starters.reduce((sum, id) => {
-      const live = sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week);
-      const rec = pointsMap ? pointsMap[id] : null;
-      const scored = (rec != null && Number.isFinite(Number(rec))) ? Number(rec) : 0;
-      const remaining = Math.max(0, (Number.isFinite(live) ? live : 0) - scored);
+      let remaining;
+      if (blind) {
+        const raw = Number(sbProjectionFor(id, projMap, league));
+        remaining = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+      } else {
+        const live = sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week);
+        const rec = pointsMap ? pointsMap[id] : null;
+        const scored = (rec != null && Number.isFinite(Number(rec))) ? Number(rec) : 0;
+        remaining = Math.max(0, (Number.isFinite(live) ? live : 0) - scored);
+      }
       const pos = (dict && dict[id] && dict[id].position) || '';
       const k = SB_SIGMA_K[pos] != null ? SB_SIGMA_K[pos] : SB_SIGMA_K.DEFAULT;
       const sd = k * remaining;
@@ -13205,13 +13242,10 @@
   // Spread of the final margin: both sides' remaining players added in
   // quadrature, since their games are essentially independent of each other.
   function sbMatchupSigma(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
-    // Without game state there is no way to tell a player who has finished
-    // from one who hasn't kicked off: sbEffectivePoints just hands back the
-    // recorded score, every remaining figure computes as zero, and the
-    // spread would collapse to the floor. That reads as 99% on a game still
-    // being played. Returning null hands the caller the full-slate fallback
-    // instead, which is the honest answer to "we can't see the clock".
-    if (!espnGameData || week == null) return null;
+    // No early return for missing game state: sbStartersRemainingVar handles
+    // that by assuming nothing has been played, which keeps a real spread
+    // (and so an honest, un-confident number) instead of collapsing to the
+    // floor and reading 99% on a game that is still being played.
     const v = sbStartersRemainingVar(myMatchup, projMap, league, espnGameData, week)
             + sbStartersRemainingVar(oppMatchup, projMap, league, espnGameData, week);
     if (!Number.isFinite(v)) return null;
@@ -16763,7 +16797,7 @@
       </tr>`;
     }
 
-    function rbTotalRowHtml(rows, maxRegWeeks) {
+    function rbTotalRowHtml(rows, maxRegWeeks, label) {
       const totalWins = rows.reduce((s, r) => s + r.wins, 0);
       const totalLosses = rows.reduce((s, r) => s + r.losses, 0);
       const totalTies = rows.reduce((s, r) => s + r.ties, 0);
@@ -16804,7 +16838,7 @@
       const roundRecordOf = (key) => weeklyRecordOf(rows.map(r => r[key]).filter(Boolean));
 
       return `<tr class="rb-total-row">
-        <td class="rb-league-cell"><span class="rb-league-name">Overall Record</span></td>
+        <td class="rb-league-cell"><span class="rb-league-name">${label || 'Overall Record'}</span></td>
         <td>${totalRecord}</td>
         <td>${avgFinish}</td>
         <td>${avgPfRank}</td>
@@ -16846,14 +16880,16 @@
     let rbSelectedYear = null;
     let rbYearChains = null;
 
-    function rbRenderTable() {
-      const body = document.getElementById('rbBody');
-      if (!body) return;
-      const rows = [...rbRows];
+    // The teams you're tanking are kept out of the headline record and
+    // totalled separately below it. A 6-6 that quietly folds in three teams
+    // you are deliberately losing with isn't your record -- you weren't
+    // trying to win those. Same grid, same sorting, its own totals.
+    function rbSortRows(rows) {
+      const out = [...rows];
       if (rbSortKey === 'rec') {
         // Record ties broken by PF rank (1 = best, so ascending), then by
         // real total points (descending) if PF rank is somehow also tied.
-        rows.sort((a, b) => {
+        out.sort((a, b) => {
           const diff = RB_SORT_KEYS.rec(b) - RB_SORT_KEYS.rec(a);
           const primary = rbSortDir === 'desc' ? diff : -diff;
           if (primary !== 0) return primary;
@@ -16863,7 +16899,7 @@
         });
       } else if (rbSortKey) {
         const valueOf = RB_SORT_KEYS[rbSortKey];
-        rows.sort((a, b) => {
+        out.sort((a, b) => {
           const va = valueOf(a), vb = valueOf(b);
           if (typeof va === 'string') {
             const diff = va.localeCompare(vb);
@@ -16873,12 +16909,15 @@
           return rbSortDir === 'desc' ? diff : -diff;
         });
       }
+      return out;
+    }
+
+    function rbTableHtml(rows, totalLabel) {
       let weekHeadHtml = '';
       for (let i = 1; i <= rbMaxRegWeeks; i++) weekHeadHtml += `<th>W${i}</th>`;
       const sortArrow = (key) => key === rbSortKey ? (rbSortDir === 'desc' ? ' &#9660;' : ' &#9650;') : '';
       const th = (key, label) => `<th class="rb-sort-th${key === rbSortKey ? ' active' : ''}${key === 'league' ? ' rb-th-league' : ''}" data-rb-sort="${key}">${label}${sortArrow(key)}</th>`;
-
-      body.innerHTML = `<div class="rb-table-wrap"><table class="rb-table">
+      return `<div class="rb-table-wrap"><table class="rb-table">
         <thead><tr>
           ${th('league', 'League')}
           ${th('rec', 'Rec')}${th('finish', 'Finish')}${th('pf', 'PF Rank')}${th('pts', 'Pts From 1.01')}${th('po', 'PO')}${th('net', 'Net')}
@@ -16886,8 +16925,32 @@
           <th class="rb-po-col">WC</th><th>SF</th><th>Chip</th>
         </tr></thead>
         <tbody>${rows.map(r => rbRowHtml(r, rbMaxRegWeeks)).join('')}</tbody>
-        <tfoot>${rbTotalRowHtml(rows, rbMaxRegWeeks)}</tfoot>
+        <tfoot>${rbTotalRowHtml(rows, rbMaxRegWeeks, totalLabel)}</tfoot>
       </table></div>`;
+    }
+
+    function rbRenderTable() {
+      const body = document.getElementById('rbBody');
+      if (!body) return;
+      // Same list the Matchup Hub's "Tanking Teams / Irrelevant Leagues"
+      // toggle writes, so a league unchecked there drops out of the record
+      // here without having to be marked twice.
+      const tankList = (typeof sbGetTankList === 'function') ? sbGetTankList() : new Set();
+      const isTanking = (r) => r && r.league && tankList.has(r.league.name);
+      const active = rbSortRows(rbRows.filter(r => !isTanking(r)));
+      const tanking = rbSortRows(rbRows.filter(isTanking));
+
+      let html = rbTableHtml(active, 'Overall Record');
+      if (tanking.length) {
+        html += `<div class="rb-tank-section">
+          <div class="rb-tank-head">
+            <h2 class="rb-tank-title">Tanking &amp; Irrelevant</h2>
+            <p class="rb-tank-sub">${tanking.length} ${tanking.length === 1 ? 'league' : 'leagues'} you're tanking or have checked out of, kept out of the record above and totalled on their own. Change which leagues these are from the Matchup Hub's Tanking Teams list.</p>
+          </div>
+          ${rbTableHtml(tanking, 'Tanking Total')}
+        </div>`;
+      }
+      body.innerHTML = html;
 
       body.querySelectorAll('.rb-sort-th').forEach(el => {
         el.addEventListener('click', () => {
