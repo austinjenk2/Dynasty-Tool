@@ -13236,6 +13236,23 @@
     return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week), 0);
   }
 
+  // The one place a matchup's win probability is worked out. Everywhere that
+  // shows a percentage for a league goes through this, because the answer
+  // depends on which projection store you feed it and two callers reaching
+  // for different ones is how the Matchup Hub and GameCast ended up
+  // disagreeing about the same matchup on the same screen.
+  //
+  // projMap null means "use the app's current-week projections", which is
+  // what every live view wants; only a week-override passes its own.
+  function sbMatchupWinPct(myMatchup, oppMatchup, league, projMap, espnGameData, week) {
+    if (!myMatchup || !oppMatchup || !league) return null;
+    const myProj = sbMatchupProjectedTotal(myMatchup, projMap, league, espnGameData, week);
+    const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, league, espnGameData, week);
+    if (!Number.isFinite(myProj) || !Number.isFinite(oppProj)) return null;
+    return sbWinProbability(myProj, oppProj,
+      sbMatchupSigma(myMatchup, oppMatchup, projMap, league, espnGameData, week));
+  }
+
   // Points actually on the board for the lineup we are SHOWING. Sleeper's
   // own matchup.points is the obvious source and is right for a normal
   // league, but in best ball it answers a different question and can sit
@@ -14263,8 +14280,7 @@
       const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(oppMatchup, entry.league, projMap, espnGameData, week), dict, espnGameData);
       myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj, myStarted);
       oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj, oppStarted);
-      winPct = sbWinProbability(myProj, oppProj,
-        sbMatchupSigma(myMatchup, oppMatchup, projMap, entry.league, espnGameData, week));
+      winPct = sbMatchupWinPct(myMatchup, oppMatchup, entry.league, projMap, espnGameData, week);
     }
 
     const fieldKey = entry.league.league_id;
@@ -20860,16 +20876,13 @@
       const oppName = (e.oppUser && (e.oppUser.display_name || e.oppUser.username)) || 'Opponent';
       const sumPts = (list) => list.reduce((t, x) => t + (x.pts || 0), 0);
       // How close the whole matchup is, not just this game's slice of it.
-      // sbProjectionFor wants the { __statsMap } wrapper, not a bare map.
-      const projWrap = projMap ? { __statsMap: projMap } : null;
+      // Null projMap on purpose: that is what the Matchup Hub passes, so the
+      // two read the same projections and show the same number. Wrapping
+      // GameCast's own separately-fetched map here instead is what had this
+      // panel quoting percentages the Matchup Hub disagreed with.
       let winPct = null;
       try {
-        const myProj = sbMatchupProjectedTotal(e.myMatchup, projWrap, e.league, espnGameData, week);
-        const oppProj = sbMatchupProjectedTotal(e.oppMatchup, projWrap, e.league, espnGameData, week);
-        if (Number.isFinite(myProj) && Number.isFinite(oppProj)) {
-          winPct = sbWinProbability(myProj, oppProj,
-            sbMatchupSigma(e.myMatchup, e.oppMatchup, projWrap, e.league, espnGameData, week));
-        }
+        winPct = sbMatchupWinPct(e.myMatchup, e.oppMatchup, e.league, null, espnGameData, week);
       } catch (err) { /* a league we can't price still belongs in the list */ }
       out.push({
         league: e.league.name, leagueId: e.league.league_id, mine, opp, oppName,
