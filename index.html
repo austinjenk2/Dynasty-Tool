@@ -14743,6 +14743,12 @@
       // Thin wrapper so the call sites below read the same as before; all
       // the scoring (and the no-stat-line fallback) lives in sbHouseScore.
       const rgHousePoints = (id, stats) => sbHouseScore(id, stats, dict);
+      // The stats endpoint only carries players who actually recorded
+      // something, so "no entry" and "the feed never loaded" look identical
+      // from a single player. Checking once whether ANY player came back
+      // tells them apart, so a failed fetch can't be read as every player
+      // in the league scoring nothing.
+      const rgStatsFeedLoaded = Object.keys(rgActualStatsMap || {}).length > 0;
 
       const byPlayer = {};
       entries.forEach(entry => {
@@ -14785,7 +14791,16 @@
         // once the final score lands.
         const rgElapsedFraction = sbGameElapsedFraction(p.team, rgEspnGameData);
         const rgProjBaseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawLiveProj);
-        const liveProj = sbEstimateLiveProjection(pprPoints, rgProjBaseline, rgElapsedFraction, rgGameStarted, rgGameFinished,
+        // A missing stat line is genuinely unknown while his game is on --
+        // he may simply not have touched the ball yet -- so the projection
+        // rightly holds its pregame number there. Once the game is FINISHED
+        // the ambiguity is gone: he had his sixty minutes and recorded
+        // nothing, which is a real zero. Without this he kept his full
+        // pregame projection as his live number forever, so a player who
+        // was inactive or never saw a snap showed "Score 0.0, Proj 16.3"
+        // and a Points Over Expected of +0.0 instead of the full -16.3.
+        const rgScored = (pprPoints == null && rgGameFinished && rgStatsFeedLoaded) ? 0 : pprPoints;
+        const liveProj = sbEstimateLiveProjection(rgScored, rgProjBaseline, rgElapsedFraction, rgGameStarted, rgGameFinished,
           { position: pos, team: p.team, espnGameData: rgEspnGameData });
         const poe = (rgGameStarted && liveProj != null && origProj != null) ? (liveProj - origProj) : null;
         return {
@@ -14795,7 +14810,7 @@
           pos,
           for: byPlayer[id].for,
           against: byPlayer[id].against,
-          pprPoints: pprPoints != null ? pprPoints : 0,
+          pprPoints: rgScored != null ? rgScored : 0,
           poe,
           liveProj: liveProj != null ? liveProj : 0,
           origProj: origProj != null ? origProj : null,
