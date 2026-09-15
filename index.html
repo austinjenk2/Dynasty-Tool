@@ -693,7 +693,7 @@
   .gc-card-team { display: flex; align-items: center; gap: 7px; min-width: 0; }
   .gc-card-team img { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
   .gc-card-abbr { font-size: 12.5px; font-weight: 800; color: var(--ink); }
-  .gc-card-rec { font-size: 10px; color: var(--faint); margin-left: 2px; }
+  .gc-card-rec { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 3px; }
   .gc-card-score { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--ink); }
   .gc-card-row.gc-loser .gc-card-abbr, .gc-card-row.gc-loser .gc-card-score { color: var(--faint); }
   .gc-card-kick { font-size: 10px; color: var(--faint); text-align: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-soft); }
@@ -731,7 +731,7 @@
   .gc-hero-team { display: flex; align-items: center; gap: 9px; }
   .gc-hero-team img { width: 54px; height: 54px; object-fit: contain; }
   .gc-hero-abbr { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink); }
-  .gc-hero-rec { font-size: 11.5px; color: var(--faint); }
+  .gc-hero-rec { font-size: 14px; font-weight: 700; color: var(--muted); }
   .gc-hero-pts { font-family: 'Source Serif 4', serif; font-size: 48px; font-weight: 700; line-height: 1; color: var(--ink); }
   .gc-hero-at { font-size: 15px; color: var(--faint); }
 
@@ -1244,7 +1244,7 @@
   .sb-card-logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .sb-card-main { flex: 1; min-width: 0; }
   .sb-card-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sb-card-record { font-weight: 600; font-size: 11.5px; color: var(--faint); margin-left: 6px; }
+  .sb-card-record { font-weight: 700; font-size: 13.5px; color: var(--muted); margin-left: 7px; }
   .sb-card-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .sb-card-meta .sb-delta { color: var(--green); }
   .sb-card-score { text-align: right; flex-shrink: 0; }
@@ -2452,7 +2452,7 @@
   .ld-ptag { font-size: 8px; font-weight: 700; color: var(--faint); border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; }
   .ld-pname { flex: 1; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ld-via { font-weight: 500; font-style: normal; color: var(--faint); font-size: 9.5px; }
-  .ld-pick-owner { font-weight: 700; color: var(--muted); font-size: 13px; }
+  .ld-pick-owner { font-weight: 700; color: var(--ink); font-size: 13px; }
   .ld-pteam { font-size: 9.5px; color: var(--faint); font-weight: 600; display: inline-flex; align-items: center; }
   .ld-team-logo { width: 22px; height: 22px; object-fit: contain; }
   .ld-pnum, .ld-pick-val { font-size: 10.5px; font-weight: 700; color: var(--ink); text-align: right; line-height: 1.2; }
@@ -16305,6 +16305,11 @@
         if (!getShowAllLeagues()) leagues = leagues.filter(lg => sbLeagueMatchesMode(lg, getSiteMode()));
 
         const { week, season } = await getNflState();
+        // Point every week control at the live week. Held on window too, so a
+        // dropdown built after this still picks it up instead of showing
+        // Week 1 until the next sync a minute later.
+        window.__sleeperLiveWeek = week;
+        if (window.syncWeekDropdownsToLiveWeek) window.syncWeekDropdownsToLiveWeek(week);
         // A completed week's transactions never change, so they're cached
         // permanently (not reset each sync, unlike window.sleeperLeagueData)
         // and only the current week is ever re-fetched. Without this, the
@@ -18784,6 +18789,27 @@
     }
   })();
 
+  // Every week dropdown ships with Week 1 written into the markup and
+  // nothing ever moved it, so on a Tuesday in week 2 the Weekly Sweats
+  // header read "Week 2 Weekly Sweats" while its own control still said
+  // WEEK 1 -- and picking a week meant picking the one already being shown.
+  // Registered here so the sync can point them all at the live week once it
+  // knows what that is, without disturbing one somebody has already set.
+  const __weekDropdowns = [];
+  window.syncWeekDropdownsToLiveWeek = function (week) {
+    const w = Number(week);
+    if (!Number.isFinite(w) || w < 1) return;
+    __weekDropdowns.forEach(d => {
+      if (d.select && d.select.dataset.userPicked === '1') return;
+      if (d.label) d.label.textContent = String(w);
+      if (d.menu) {
+        d.menu.querySelectorAll('.week-option').forEach(o => {
+          o.classList.toggle('active', Number(o.dataset.week) === w);
+        });
+      }
+    });
+  };
+
   function setupWeekDropdown(selectId, menuId, labelId, onChange) {
     const select = document.getElementById(selectId);
     const menu = document.getElementById(menuId);
@@ -18805,11 +18831,18 @@
         menu.querySelectorAll('.week-option').forEach(o => o.classList.remove('active'));
         option.classList.add('active');
         label.textContent = option.dataset.week;
+        // Deliberately chosen -- the live-week sync leaves this one alone
+        // from here on rather than yanking it back on the next poll.
+        if (select) select.dataset.userPicked = '1';
         menu.hidden = true;
         if (onChange) onChange(option.dataset.week);
       });
     });
     document.addEventListener('click', () => { menu.hidden = true; });
+    __weekDropdowns.push({ select, menu, label });
+    // If the live week is already known by the time this runs, adopt it now
+    // instead of sitting on Week 1 until the next sync.
+    if (window.__sleeperLiveWeek) window.syncWeekDropdownsToLiveWeek(window.__sleeperLiveWeek);
   }
 
   window.__sleeperWeekMatchupsCache = window.__sleeperWeekMatchupsCache || {};
