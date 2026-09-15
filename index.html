@@ -12801,6 +12801,18 @@
   // is what has to be corrected for by hand.
   const SB_PPR_BASELINE = { pass_td: 4, pass_int: -1 };
 
+  // The full scoring line Sleeper's own pts_ppr / pts_half_ppr / pts_std
+  // totals are computed with (rec varies by format and is filled in per
+  // lookup). Used to measure how far a league's own scoring sits from the
+  // format Sleeper already priced, so only that difference has to be
+  // applied by hand -- see sbProjectionFor.
+  const SB_SLEEPER_PRESET_SCORING = {
+    pass_yd: 0.04, pass_td: 4, pass_int: -1, pass_2pt: 2,
+    rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
+    rec_yd: 0.1, rec_td: 6, rec_2pt: 2,
+    fum_lost: -2,
+  };
+
   function sbHouseScore(playerId, stats, dict) {
     if (!stats) return null;
     const lookup = dict || window.__sleeperPlayerDict || {};
@@ -12885,15 +12897,45 @@
           league && league.scoring_settings && league.scoring_settings[bonusKey] != null)
           ? Object.assign({}, stats, { [bonusKey]: stats.rec })
           : stats;
+        // Start from Sleeper's OWN number and adjust only where this league
+        // differs from the format that number was priced in.
+        //
+        // Scoring the projected stat line from scratch is what made every
+        // player disagree with Sleeper. The two never reconcile: Sleeper's
+        // published total is not the sum of the stat keys it ships beside
+        // it, so re-deriving it discards whatever else went into it and
+        // lands somewhere near but never equal. A line that adds up to 14.5
+        // by our arithmetic is a 12.6 in Sleeper's own number, and that gap
+        // turned up on essentially every player.
+        //
+        // Anchoring inherits everything Sleeper counted, including anything
+        // absent from the payload. A league that IS full PPR gets exactly
+        // Sleeper's full-PPR number, because the difference measures zero. A
+        // league with a tight end premium gets that number plus the premium,
+        // and nothing else moves.
+        const recW = league && league.scoring_settings ? league.scoring_settings.rec : undefined;
+        const fmt = recW === 0 ? { key: 'pts_std', rec: 0 }
+                  : recW === 0.5 ? { key: 'pts_half_ppr', rec: 0.5 }
+                  : { key: 'pts_ppr', rec: 1 };
+        const anchor = stats[fmt.key];
+        if (anchor != null && league && league.scoring_settings) {
+          const presetScore = sbCustomScoreFor(effectiveStats,
+            Object.assign({}, SB_SLEEPER_PRESET_SCORING, { rec: fmt.rec }));
+          const leagueScore = sbCustomScoreFor(effectiveStats, league.scoring_settings);
+          if (presetScore != null && leagueScore != null) {
+            const delta = leagueScore - presetScore;
+            // Floating point leaves a crumb behind when the two agree, and
+            // 12.599999999999998 is not "exactly Sleeper's number" even if it
+            // prints as one. A league that matches the format returns the
+            // published figure untouched.
+            return Math.abs(delta) < 1e-9 ? Number(anchor) : Number(anchor) + delta;
+          }
+          return Number(anchor);
+        }
+        // No published total to anchor on -- score the line from scratch.
         const custom = league ? sbCustomScoreFor(effectiveStats, league.scoring_settings) : null;
         if (custom != null) return custom;
-        // Fallback when the league's scoring_settings didn't line up with
-        // any category in the projection (e.g. league context missing) --
-        // pick the preset matching the league's PPR value, defaulting to
-        // full PPR.
-        const rec = league && league.scoring_settings ? league.scoring_settings.rec : undefined;
-        let val = rec === 0 ? stats.pts_std : rec === 0.5 ? stats.pts_half_ppr : rec === 1 ? stats.pts_ppr : null;
-        if (val == null) val = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
+        const val = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
         if (val != null) return Number(val);
       }
     }
