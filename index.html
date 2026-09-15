@@ -12948,7 +12948,7 @@
       if (team) {
         const gameStarted = sbGameStartedForTeam(team, espnGameData);
         const gameFinished = sbGameFinishedForTeam(team, espnGameData);
-        const origProj = origProjFor(league.season, week, 'players', id, rawProj, gameStarted);
+        const origProj = origProjFor(league.season, week, 'players', id, rawProj, gameStarted, !!espnGameData);
         const elapsedFraction = sbGameElapsedFraction(team, espnGameData);
         const baseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawProj);
         // Without this an inactive player kept his whole pregame projection
@@ -13595,6 +13595,28 @@
   // comparison built from two real reads of the same real field, not a
   // fabricated number.
   const ORIG_PROJ_KEY = 'dynastyToolOrigProjections';
+  const ORIG_PROJ_VERSION_KEY = 'dynastyToolOrigProjVersion';
+  const ORIG_PROJ_VERSION = 2;
+
+  // Everything written before version 2 is suspect. Reopening a week that
+  // had already finished overwrote that week's stored pregame numbers with
+  // whatever the projections endpoint returned for a week already played --
+  // so any week ever revisited is carrying junk, and there is no way to tell
+  // a corrupted entry from a good one by looking at it. The real pregame
+  // values are unrecoverable either way, so the store is cleared once and
+  // left to rebuild from Sleeper.
+  //
+  // The cost is that a week already in progress re-baselines its "started
+  // at" to the next read rather than its true pregame number. That is a
+  // one-off on a single week, against every past week currently showing
+  // numbers that were never real.
+  (function migrateOrigProjStore() {
+    try {
+      if (Number(localStorage.getItem(ORIG_PROJ_VERSION_KEY)) >= ORIG_PROJ_VERSION) return;
+      localStorage.removeItem(ORIG_PROJ_KEY);
+      localStorage.setItem(ORIG_PROJ_VERSION_KEY, String(ORIG_PROJ_VERSION));
+    } catch (err) { /* private mode / blocked storage -- nothing to migrate */ }
+  })();
 
   function origProjStore() {
     try { return JSON.parse(localStorage.getItem(ORIG_PROJ_KEY) || '{}'); } catch (err) { return {}; }
@@ -13608,12 +13630,29 @@
   // whatever the very first read happened to be, sometimes days before
   // kickoff. It only actually freezes once his game has begun -- that's
   // the real "started at" moment.
-  function origProjFor(season, week, kind, key, liveValue, gameStarted) {
+  // canSeeGameState says whether the caller actually had game state to read.
+  // Without it, gameStarted comes back false for a game that kicked off days
+  // ago, and this used to take that for "not started yet" and overwrite the
+  // stored value. Opening a finished week is exactly that case -- ESPN data
+  // for a past week is not loaded -- so every visit to week 2 replaced its
+  // real pregame number with whatever the projections endpoint happened to
+  // return for a week already played, often a fraction of the original or a
+  // flat 0. It was not intermittent; it happened every single time the week
+  // was reopened, and the original was gone for good.
+  //
+  // So: only write when we can positively confirm the game has not started.
+  // Blind, the stored value stands if there is one, and otherwise the caller
+  // gets Sleeper's own number for that week straight through, unstored.
+  function origProjFor(season, week, kind, key, liveValue, gameStarted, canSeeGameState) {
     if (liveValue == null) return null;
     const store = origProjStore();
     const wk = `${season}_${week}`;
     store[wk] = store[wk] || { players: {}, teams: {} };
     const bucket = store[wk][kind] || (store[wk][kind] = {});
+
+    if (!canSeeGameState) {
+      return bucket[key] != null ? bucket[key] : liveValue;
+    }
     if (gameStarted) {
       // If nothing was ever captured before kickoff (e.g. this is the
       // first time this player's data has loaded and the game's already
@@ -14035,7 +14074,7 @@
       const rawProj = sbProjectionFor(id, projMap, league);
       const gameStarted = sbGameStartedForTeam(team, espnGameData);
       const gameFinished = sbGameFinishedForTeam(team, espnGameData);
-      const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, rawProj, gameStarted) : null;
+      const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, rawProj, gameStarted, !!espnGameData) : null;
       const origText = origProj != null ? origProj.toFixed(1) : '&mdash;';
       const elapsedFraction = sbGameElapsedFraction(team, espnGameData);
       const projBaseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawProj);
@@ -14338,8 +14377,8 @@
       oppPts = sbMatchupLivePoints(oppMatchup, entry.league, projMap, espnGameData, week);
       const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(myMatchup, entry.league, projMap, espnGameData, week), dict, espnGameData);
       const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(oppMatchup, entry.league, projMap, espnGameData, week), dict, espnGameData);
-      myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj, myStarted);
-      oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj, oppStarted);
+      myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj, myStarted, !!espnGameData);
+      oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj, oppStarted, !!espnGameData);
       winPct = sbMatchupWinPct(myMatchup, oppMatchup, entry.league, projMap, espnGameData, week);
     }
 
@@ -15146,7 +15185,7 @@
         const rawLiveProj = rgHousePoints(id, rgProjStatsMap[id]);
         const rgGameStarted = sbGameStartedForTeam(p.team, rgEspnGameData);
         const rgGameFinished = sbGameFinishedForTeam(p.team, rgEspnGameData);
-        const origProj = rawLiveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, rawLiveProj, rgGameStarted) : null;
+        const origProj = rawLiveProj != null ? origProjFor(rgSeason, week, 'players_ppr_tep', id, rawLiveProj, rgGameStarted, !!rgEspnGameData) : null;
         // Sleeper's own /projections number doesn't move during the game
         // (it just echoes back the pregame value), so it can't be used as
         // a live number on its own -- sbEstimateLiveProjection blends his
@@ -16575,8 +16614,8 @@
             : null;
           const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(rosterMatchup, entry.league, null), ldOrigDict, ldOrigEspnGameData);
           const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(rosterOppMatchup, entry.league, null), ldOrigDict, ldOrigEspnGameData);
-          const myOrig = origProjFor(entry.league.season, entry.week, 'teams', mineKey, myTotal, myStarted);
-          const oppOrig = origProjFor(entry.league.season, entry.week, 'teams', oppKey, oppTotal, oppStarted);
+          const myOrig = origProjFor(entry.league.season, entry.week, 'teams', mineKey, myTotal, myStarted, !!ldOrigEspnGameData);
+          const oppOrig = origProjFor(entry.league.season, entry.week, 'teams', oppKey, oppTotal, oppStarted, !!ldOrigEspnGameData);
           ldOrigScoreEl.textContent = `Started at ${myOrig.toFixed(1)} vs ${oppOrig.toFixed(1)}`;
         }
       } else if (rosterMatchup && rosterOppMatchup) {
