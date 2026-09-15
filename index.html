@@ -12950,7 +12950,7 @@
         const gameFinished = sbGameFinishedForTeam(team, espnGameData);
         const origProj = origProjFor(league.season, week, 'players', id, rawProj, gameStarted, !!espnGameData);
         const elapsedFraction = sbGameElapsedFraction(team, espnGameData);
-        const baseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawProj);
+        const baseline = sbCountAsInactive(p, espnGameData) ? 0 : (origProj != null ? origProj : rawProj);
         // Without this an inactive player kept his whole pregame projection
         // in the team total for good, quietly inflating every figure built
         // on it -- the matchup projection, the margin, and the win
@@ -13062,13 +13062,32 @@
   // turn "who is scoring best so far" into "who will finish best", which is
   // the lineup best ball actually pays out on. Callers without them still
   // get a sensible lineup, just one ranked on pregame projections.
+  // The lineup the manager has actually set. For a live week that is on the
+  // matchup; for a FUTURE week Sleeper's matchups endpoint often returns no
+  // starters at all even though the manager has a full lineup in the app,
+  // and the roster object is where that lineup lives. Reading it there means
+  // a real lineup is used as-is instead of one being predicted around it --
+  // prediction is for genuinely empty slots, not for a side that is already
+  // set.
+  function sbDeclaredStarters(matchup, league) {
+    const onMatchup = ((matchup && matchup.starters) || []).filter(id => id && id !== '0');
+    if (onMatchup.length) return (matchup.starters || []);
+    if (!matchup || !league) return [];
+    const entry = Object.values(window.sleeperLeagueData || {})
+      .find(e => e && e.league && e.league.league_id === league.league_id);
+    if (!entry) return [];
+    const roster = (entry.allRosters || []).find(r => r && r.roster_id === matchup.roster_id);
+    const fromRoster = (roster && Array.isArray(roster.starters)) ? roster.starters : [];
+    return fromRoster.filter(id => id && id !== '0').length ? fromRoster : [];
+  }
+
   function sbEffectiveStarters(matchup, league, projMap, espnGameData, week, rankBy) {
     const playerDict = window.__sleeperPlayerDict;
     if (matchup && league && league.settings && league.settings.best_ball && league.roster_positions && playerDict && matchup.players) {
       const bb = sbBestBallEffectiveStarters(matchup, league, projMap, playerDict, espnGameData, week, rankBy);
       if (bb && bb.length) return bb;
     }
-    const raw = (matchup && matchup.starters) || [];
+    const raw = sbDeclaredStarters(matchup, league);
     const filled = raw.filter(id => id && id !== '0');
     // Nothing to reconstruct from.
     if (!league || !league.roster_positions || !playerDict || !matchup || !matchup.players) return filled;
@@ -13771,6 +13790,19 @@
   function sbPlayerIsInactive(p) {
     return !!p && (p.injury_status === 'Out' || p.injury_status === 'IR' || p.status === 'Inactive');
   }
+  // Zeroing a player out because he is currently designated Out only makes
+  // sense for the week being played. An injury tag is a statement about
+  // RIGHT NOW: carried into next week's card it wiped out players who are
+  // fully expected to play then, and Sleeper still projects. Bowers and Zay
+  // Flowers were reading 0.0 across half a dozen leagues for next week,
+  // dragging a 162-point side down to 130.
+  //
+  // Live game state is the tell. Views showing the week in progress pass it;
+  // a future week has none to pass, and there the player keeps whatever
+  // Sleeper projects for him.
+  function sbCountAsInactive(p, espnGameData) {
+    return !!espnGameData && sbPlayerIsInactive(p);
+  }
   // Calibration notes kept from the previous model, which tracked a
   // player's own pace whenever it was slower than his pregame rate. They
   // were taken off real Sleeper live/orig readings mid-game (2026 W1) and
@@ -14085,7 +14117,7 @@
     // matchup total uses (sbEffectiveStarters), so this table's player count
     // matches what was actually added into the score instead of silently
     // dropping the empty slot's row.
-    const rawStarters = new Set((matchup.starters || []).filter(id => id && id !== '0'));
+    const rawStarters = new Set(sbDeclaredStarters(matchup, league).filter(id => id && id !== '0'));
     // Game state matters here: without it a best ball lineup gets ranked on
     // points-so-far and this table ends up showing a different lineup than
     // the totals above it were computed from.
@@ -14117,7 +14149,7 @@
       const origProj = league && week != null ? origProjFor(league.season, week, 'players', id, rawProj, gameStarted, !!espnGameData) : null;
       const origText = origProj != null ? origProj.toFixed(1) : '&mdash;';
       const elapsedFraction = sbGameElapsedFraction(team, espnGameData);
-      const projBaseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawProj);
+      const projBaseline = sbCountAsInactive(p, espnGameData) ? 0 : (origProj != null ? origProj : rawProj);
       const projParts = sbLiveProjParts(livePtsNum, projBaseline, elapsedFraction, gameStarted, gameFinished,
         { position: pos, team, espnGameData });
       const proj = projParts.final;
@@ -15237,7 +15269,7 @@
         // instead of POE reading (mostly) 0 all game and only swinging
         // once the final score lands.
         const rgElapsedFraction = sbGameElapsedFraction(p.team, rgEspnGameData);
-        const rgProjBaseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawLiveProj);
+        const rgProjBaseline = sbCountAsInactive(p, rgEspnGameData) ? 0 : (origProj != null ? origProj : rawLiveProj);
         // In this feed a player with no production has no row at all, so
         // once his game has KICKED OFF a missing stat line is a real zero,
         // not missing data (see sbScoreAfterKickoff). Holding the pregame
@@ -20900,7 +20932,7 @@
       const playerPts = ((onMySide ? e.myMatchup.players_points : e.oppMatchup.players_points) || {})[playerId] || 0;
       const origProj = sbProjectionFor(playerId, null, e.league);
       if (origProj == null) return;
-      const baseline = sbPlayerIsInactive(p) ? 0 : origProj;
+      const baseline = sbCountAsInactive(p, espnGameData) ? 0 : origProj;
       const liveProj = sbEstimateLiveProjection(playerPts, baseline, elapsed, started, finished,
         { position: p && p.position, team, espnGameData });
       if (liveProj == null) return;
@@ -20966,7 +20998,7 @@
         // with the Rooting Guide's numbers for the same player.
         const live = sbScoreAfterKickoff(sbHouseScore(id, raw, dict), started, gcStatsFeedLoaded);
         const origProj = gcProjectedPoints(id, dict);
-        const baseline = sbPlayerIsInactive(dict[id]) ? 0 : origProj;
+        const baseline = sbCountAsInactive(dict[id], espnGameData) ? 0 : origProj;
         const projParts = sbLiveProjParts(live, baseline, elapsed, started, finished,
           { position: dict[id] && dict[id].position, team: abbr, espnGameData });
         const liveProj = projParts.final;
