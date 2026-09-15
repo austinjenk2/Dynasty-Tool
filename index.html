@@ -13070,17 +13070,31 @@
     }
     const raw = (matchup && matchup.starters) || [];
     const filled = raw.filter(id => id && id !== '0');
-    if (filled.length === raw.length) return filled;
-    if (!league || !league.roster_positions || !playerDict || !matchup.players) return filled;
-
+    // Nothing to reconstruct from.
+    if (!league || !league.roster_positions || !playerDict || !matchup || !matchup.players) return filled;
     const startSlots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+
+    // A lineup that is set and covers every slot is taken as it stands.
+    if (filled.length === raw.length && raw.length >= startSlots.length) return filled;
+
+    // Everything else gets rebuilt, and the walk is over the LEAGUE's real
+    // slots rather than over whatever Sleeper happened to return.
+    //
+    // A future week frequently comes back with no starters at all, and the
+    // old check read that as a complete lineup -- an empty array trivially
+    // has no holes in it -- so the side was handed back with nobody in it
+    // and projected zero. That is why an opponent showed 0.0 for next week.
+    // A short array had the matching problem: walking the returned entries
+    // meant a lineup missing its last slots simply stayed short, so a real
+    // 165-point side came out around 131.
     const usedIds = new Set(filled);
     const bench = matchup.players.filter(id => id && !usedIds.has(id));
     const chosen = new Set();
 
-    return raw.map((id, i) => {
+    return startSlots.map((slot, i) => {
+      const id = raw[i];
       if (id && id !== '0') return id;
-      const eligible = SB_SLOT_ELIGIBLE[startSlots[i]] || null;
+      const eligible = SB_SLOT_ELIGIBLE[slot] || null;
       let best = null, bestProj = -Infinity;
       bench.forEach(pid => {
         if (chosen.has(pid)) return;
