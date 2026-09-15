@@ -12904,7 +12904,7 @@
     // no-premium league somehow landing ABOVE a TE-premium one for the same
     // player. Pick the preset the league actually scores when we have it.
     const rec = league && league.scoring_settings ? league.scoring_settings.rec : undefined;
-    const presets = window.__sleeperProjectionPresets || {};
+    const presets = (projMap && projMap.__presets) || window.__sleeperProjectionPresets || {};
     const preset = presets[id];
     if (preset) {
       const byFormat = rec === 0 ? preset.std : rec === 0.5 ? preset.half : rec === 1 ? preset.ppr : null;
@@ -16005,7 +16005,15 @@
       return games;
     }
 
-    async function getWeekProjections(season, week) {
+    // isLiveWeek says this fetch is the app's own current week, and only then
+    // may it touch the shared stores below. Without that, asking for any
+    // other week -- which the week dropdown, the Rooting Guide, League Detail
+    // and the Scoreboard override all do -- overwrote the current week's
+    // projections with that week's. Every view reading the shared store then
+    // scored the live week off another week's numbers, which is why the
+    // projections kept "going wrong again" and why next week's percentages
+    // were nonsense: opening a week was enough to corrupt the others.
+    async function getWeekProjections(season, week, isLiveWeek) {
       try {
         const list = await sleeperFetchRoot(
           `/projections/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
@@ -16043,9 +16051,11 @@
         // defensively -- if the field names differ or are missing, the
         // schedule UI that reads this just falls back to nothing instead of
         // breaking sync.
-        window.__sleeperGameInfo = extractGameInfo(list);
-        window.__sleeperProjectionStats = statsMap;
-        window.__sleeperProjectionPresets = presets;
+        if (isLiveWeek) {
+          window.__sleeperGameInfo = extractGameInfo(list);
+          window.__sleeperProjectionStats = statsMap;
+          window.__sleeperProjectionPresets = presets;
+        }
         // Carried on the map itself (never a real Sleeper player id, so it
         // can't collide with one) so a week picked from a week dropdown --
         // which stores this whole map as its own override.projections,
@@ -16053,7 +16063,12 @@
         // lets sbProjectionFor compute each league's real custom scoring
         // instead of silently falling back to a generic PPR/Half-PPR/Std
         // number that ignores that league's actual scoring settings.
+        // Carried on the returned map so a caller asking for some other week
+        // scores that week off that week's numbers, without reaching for a
+        // shared store that belongs to the live week.
         map.__statsMap = statsMap;
+        map.__presets = presets;
+        map.__week = week;
         return map;
       } catch (e) {
         // Unofficial/undocumented endpoint -- if it's unavailable or its shape
@@ -16183,7 +16198,7 @@
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => null))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/matchups/${week}`).catch(() => []))),
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
-          getWeekProjections(season, week),
+          getWeekProjections(season, week, true),
           Promise.all(leagues.map(lg =>
             Promise.all(tradeWeeks.map(async (w) => {
               const cacheKey = `${lg.league_id}_${w}`;
@@ -21216,7 +21231,10 @@
 
     const [statsMap, projMap, espnGameData] = await Promise.all([
       window.sleeperGetWeekStats ? window.sleeperGetWeekStats(season, week) : {},
-      window.sleeperGetWeekProjections ? window.sleeperGetWeekProjections(season, week) : {},
+      // GameCast's week comes from getNflState, so this IS the live week and
+      // is allowed to populate the shared projection stores. Every other
+      // caller asks for some specific other week and must not.
+      window.sleeperGetWeekProjections ? window.sleeperGetWeekProjections(season, week, true) : {},
       // Cached for gcMatchupImpact, which runs synchronously during render
       // and needs real game state (kicked off? how far in? finished?) to
       // turn a player's points-so-far into a live projection.
