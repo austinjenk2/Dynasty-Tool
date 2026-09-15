@@ -14497,7 +14497,18 @@
     // is always the real live week even when an override is set, so an
     // override pointing AT the live week keeps its live data and one
     // pointing anywhere else gets none.
-    const liveGameData = (week === entry.week) ? espnGameData : null;
+    // Game state has to belong to the week being built, and an override is
+    // required to bring its own. Trusting the caller to have fetched the
+    // right week instead is how this went wrong before: the live week's
+    // kickoffs, clocks and injury designations got applied to a week they
+    // had nothing to do with. An override that carries no state gets none,
+    // unless it happens to point at the live week, and without an override
+    // the live state applies only when this IS the live week.
+    const liveGameData = override
+      ? (override.espnGameData !== undefined
+          ? (override.espnGameData || null)
+          : (week === entry.week ? (espnGameData || null) : null))
+      : ((week === entry.week) ? espnGameData : null);
     const hasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
 
     let winPct = null, myProj = null, oppProj = null, myPts = 0, oppPts = 0, myOrig = null, oppOrig = null;
@@ -16425,6 +16436,11 @@
         setSyncState('ok', 'Synced just now');
         if (window.renderRealExposures) window.renderRealExposures();
         if (window.renderRealScoreboard) window.renderRealScoreboard();
+        // A week picked from the dropdown was fetched once and then left to
+        // go stale while the live week kept refreshing. Re-pull it on every
+        // sync so a past week picks up stat corrections and a future week
+        // picks up lineup changes, exactly as the live week does.
+        if (window.refreshScoreboardWeekOverride) window.refreshScoreboardWeekOverride();
         if (window.renderRealGameCast) window.renderRealGameCast();
         if (window.renderRealTrades) window.renderRealTrades();
         if (window.renderRealWaiverWire) window.renderRealWaiverWire();
@@ -18162,7 +18178,7 @@
         // sbBuildFieldContext's real projMap override shape is
         // { week, projections } -- reuse it directly so live/proj/win%
         // read exactly like every other page that shows them.
-        const ctx = sbBuildFieldContext(syntheticEntry, { week, projections: projMap, oppUser: u2, myMatchup: m1, oppMatchup: m2 }, ldmuDict, espnGameData);
+        const ctx = sbBuildFieldContext(syntheticEntry, { week, projections: projMap, oppUser: u2, myMatchup: m1, oppMatchup: m2, espnGameData }, ldmuDict, espnGameData);
         return { ctx, u1, u2, league: entry.league, espnGameData };
       });
 
@@ -18905,16 +18921,43 @@
       }
     }));
 
+    const season = entries[0].league.season;
     let projections = {};
     if (window.sleeperGetWeekProjections) {
-      try { projections = await window.sleeperGetWeekProjections(entries[0].league.season, w); } catch (err) {}
+      try { projections = await window.sleeperGetWeekProjections(season, w); } catch (err) {}
+    }
+    // That week's OWN game state. The card used to be given none at all,
+    // which is why a week already played could not tell that its games were
+    // over: every score stayed a projection and nothing ever settled. A week
+    // yet to be played gets state too -- it just contains no started games,
+    // which is the correct answer for it.
+    let espnGameData = null;
+    if (window.sleeperGetEspnGameData) {
+      try { espnGameData = await window.sleeperGetEspnGameData(w, season); } catch (err) {}
     }
 
+    // Each league's entry carries the week, that week's projections and that
+    // week's game state, not just its matchups. The expand handler and the
+    // field view are both handed one of these on its own, and without the
+    // week on it they read override.week as undefined and fell back to the
+    // LIVE week's projections -- so opening a card on any other week priced
+    // it off the wrong week entirely.
     const byLeague = {};
-    byLeagueList.forEach(r => { byLeague[r.leagueId] = r; });
-    window.__sleeperScoreboardOverride = { week: w, projections, byLeague };
+    byLeagueList.forEach(r => {
+      byLeague[r.leagueId] = Object.assign(r, { week: w, projections, espnGameData });
+    });
+    window.__sleeperScoreboardOverride = { week: w, projections, byLeague, espnGameData };
     if (window.renderRealScoreboard) window.renderRealScoreboard();
   }
+  // The 60s sync refreshes the live week. A week picked from the dropdown was
+  // fetched once and then left to go stale -- a past week never picked up a
+  // stat correction, and a future week never saw a lineup change or an
+  // injury. Exposed so the sync can refresh whatever week is on screen, so
+  // every week updates the way the live one does.
+  window.refreshScoreboardWeekOverride = function () {
+    const ov = window.__sleeperScoreboardOverride;
+    if (ov && ov.week != null) return loadScoreboardWeek(ov.week);
+  };
 
   setupWeekDropdown('sbWeekSelect', 'sbWeekMenu', 'sbWeekLabel', (week) => {
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
@@ -21870,7 +21913,14 @@
           // but entry.week still reports the real live week, so without
           // this guard a future week's totals got computed as if its
           // (nonexistent) games were the live ones already in progress.
-          const cardEspnGameData = (!override && entry.week === sbWeek) ? sbEspnGameData : null;
+          // The live week's state for the live week; otherwise the state
+          // fetched for the week being shown. Never the live week's applied
+          // to some other week, which is what this guard originally existed
+          // to prevent -- but "no state at all" left a played week unable to
+          // know it was finished.
+          const cardEspnGameData = override
+            ? (override.espnGameData || null)
+            : (entry.week === sbWeek ? sbEspnGameData : null);
           const cardWeek = override ? override.week : entry.week;
           const myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league, cardEspnGameData, cardWeek);
           const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, cardEspnGameData, cardWeek);
