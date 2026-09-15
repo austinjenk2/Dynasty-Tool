@@ -14439,19 +14439,29 @@
     const oppMatchup = override ? override.oppMatchup : entry.oppMatchup;
     const projMap = override ? override.projections : null;
     const week = override ? override.week : entry.week;
+    // Live game state describes ONE week -- the live one -- and callers hand
+    // it in whether or not the card being built is for that week. Carried
+    // onto another week's card it makes this week's kickoffs, clocks and
+    // injury designations apply to a week they have nothing to do with:
+    // next week's card was zeroing players designated Out right now, who
+    // are expected to play then and whom Sleeper still projects. entry.week
+    // is always the real live week even when an override is set, so an
+    // override pointing AT the live week keeps its live data and one
+    // pointing anywhere else gets none.
+    const liveGameData = (week === entry.week) ? espnGameData : null;
     const hasData = sbMatchupHasData(myMatchup, projMap, entry.league) || sbMatchupHasData(oppMatchup, projMap, entry.league);
 
     let winPct = null, myProj = null, oppProj = null, myPts = 0, oppPts = 0, myOrig = null, oppOrig = null;
     if (hasData) {
-      myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league, espnGameData, week);
-      oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, espnGameData, week);
-      myPts = sbMatchupLivePoints(myMatchup, entry.league, projMap, espnGameData, week);
-      oppPts = sbMatchupLivePoints(oppMatchup, entry.league, projMap, espnGameData, week);
-      const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(myMatchup, entry.league, projMap, espnGameData, week), dict, espnGameData);
-      const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(oppMatchup, entry.league, projMap, espnGameData, week), dict, espnGameData);
-      myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj, myStarted, !!espnGameData);
-      oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj, oppStarted, !!espnGameData);
-      winPct = sbMatchupWinPct(myMatchup, oppMatchup, entry.league, projMap, espnGameData, week);
+      myProj = sbMatchupProjectedTotal(myMatchup, projMap, entry.league, liveGameData, week);
+      oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, liveGameData, week);
+      myPts = sbMatchupLivePoints(myMatchup, entry.league, projMap, liveGameData, week);
+      oppPts = sbMatchupLivePoints(oppMatchup, entry.league, projMap, liveGameData, week);
+      const myStarted = sbAnyStarterGameStarted(sbEffectiveStarters(myMatchup, entry.league, projMap, liveGameData, week), dict, liveGameData);
+      const oppStarted = sbAnyStarterGameStarted(sbEffectiveStarters(oppMatchup, entry.league, projMap, liveGameData, week), dict, liveGameData);
+      myOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_mine', myProj, myStarted, !!liveGameData);
+      oppOrig = origProjFor(entry.league.season, week, 'teams', entry.league.league_id + '_opp', oppProj, oppStarted, !!liveGameData);
+      winPct = sbMatchupWinPct(myMatchup, oppMatchup, entry.league, projMap, liveGameData, week);
     }
 
     const fieldKey = entry.league.league_id;
@@ -14464,8 +14474,8 @@
       oppName: sbFieldEsc((fieldOppUser && (fieldOppUser.display_name || fieldOppUser.username)) || 'Opponent'),
       oppAvatarId: fieldOppUser ? fieldOppUser.avatar : null,
     };
-    const fieldMyIds = sbEffectiveStarters(myMatchup, entry.league, projMap, espnGameData, week);
-    const fieldOppIds = sbEffectiveStarters(oppMatchup, entry.league, projMap, espnGameData, week);
+    const fieldMyIds = sbEffectiveStarters(myMatchup, entry.league, projMap, liveGameData, week);
+    const fieldOppIds = sbEffectiveStarters(oppMatchup, entry.league, projMap, liveGameData, week);
     const fieldRosters = {
       myIds: fieldMyIds,
       oppIds: fieldOppIds,
@@ -14477,7 +14487,7 @@
       league: entry.league,
       week,
       dict,
-      espnGameData,
+      espnGameData: liveGameData,
     };
     return { myMatchup, oppMatchup, projMap, week, hasData, winPct, myProj, oppProj, myPts, oppPts, myOrig, oppOrig, teams, fieldRosters, fieldKey, startPct };
   }
@@ -16023,7 +16033,17 @@
         // regular season hasn't even started, showing numbers for the wrong
         // week entirely. Default to Week 1 until Sleeper actually flips
         // season_type to "regular".
-        const week = state.season_type === 'regular' ? (state.week || 1) : 1;
+        // Sleeper publishes two week numbers and we were reading the wrong
+        // one. `week` is the week being scored, which stays on the week just
+        // played until Sleeper closes it out; `display_week` is the week
+        // Sleeper itself shows, and it rolls over on Tuesday. Reading `week`
+        // left the whole app sitting on a finished week for days after it
+        // was over, with the upcoming week reachable only through the
+        // dropdown. Defer to display_week, which is Sleeper's own answer to
+        // "which week should someone be looking at", and fall back to week
+        // where it is missing.
+        const displayWeek = Number(state.display_week) || Number(state.week) || 1;
+        const week = state.season_type === 'regular' ? displayWeek : 1;
         cachedNflState = { week, season: state.season || String(new Date().getFullYear()) };
         cachedNflStateAt = Date.now();
       } catch (e) {
