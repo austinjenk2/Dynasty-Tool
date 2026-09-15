@@ -13790,18 +13790,25 @@
   function sbPlayerIsInactive(p) {
     return !!p && (p.injury_status === 'Out' || p.injury_status === 'IR' || p.status === 'Inactive');
   }
-  // Zeroing a player out because he is currently designated Out only makes
-  // sense for the week being played. An injury tag is a statement about
-  // RIGHT NOW: carried into next week's card it wiped out players who are
-  // fully expected to play then, and Sleeper still projects. Bowers and Zay
-  // Flowers were reading 0.0 across half a dozen leagues for next week,
-  // dragging a 162-point side down to 130.
+  // A player's projection is Sleeper's number, exactly, for the whole week.
+  // The single exception is a player who is ruled out once his game is
+  // ACTUALLY UNDER WAY -- then he cannot score and the projection is zero.
   //
-  // Live game state is the tell. Views showing the week in progress pass it;
-  // a future week has none to pass, and there the player keeps whatever
-  // Sleeper projects for him.
+  // This used to ask only whether live game state existed, which is not the
+  // same question and got it wrong twice over. Game state exists all week,
+  // so a player designated Out on Wednesday was zeroed days before kickoff
+  // even though Sleeper still projected him and he was expected to play.
+  // And callers hand the live week's state to cards built for other weeks,
+  // so next week's card zeroed players over an injury tag belonging to this
+  // week -- Bowers and Zay Flowers reading 0.0 across half a dozen leagues.
+  //
+  // Asking whether HIS game has kicked off settles both, and does not
+  // depend on a caller passing the right thing: a week that has not started
+  // has no started games in it, whichever week's state gets handed in.
   function sbCountAsInactive(p, espnGameData) {
-    return !!espnGameData && sbPlayerIsInactive(p);
+    if (!p || !espnGameData) return false;
+    if (!sbPlayerIsInactive(p)) return false;
+    return sbGameStartedForTeam(p.team, espnGameData);
   }
   // Calibration notes kept from the previous model, which tracked a
   // player's own pace whenever it was slower than his pregame rate. They
