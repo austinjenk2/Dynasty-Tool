@@ -16082,17 +16082,20 @@
         // regular season hasn't even started, showing numbers for the wrong
         // week entirely. Default to Week 1 until Sleeper actually flips
         // season_type to "regular".
-        // Sleeper publishes two week numbers and we were reading the wrong
-        // one. `week` is the week being scored, which stays on the week just
-        // played until Sleeper closes it out; `display_week` is the week
-        // Sleeper itself shows, and it rolls over on Tuesday. Reading `week`
-        // left the whole app sitting on a finished week for days after it
-        // was over, with the upcoming week reachable only through the
-        // dropdown. Defer to display_week, which is Sleeper's own answer to
-        // "which week should someone be looking at", and fall back to week
-        // where it is missing.
-        const displayWeek = Number(state.display_week) || Number(state.week) || 1;
-        const week = state.season_type === 'regular' ? displayWeek : 1;
+        // Sleeper publishes two week numbers, `week` and `display_week`, and
+        // which one advances first around the Tuesday rollover is not
+        // something to bet on. Reading only `week` left the app parked on a
+        // finished week for days. Reading only `display_week` is worse when
+        // that field is the one lagging: the app falls BACK a week and loads
+        // the wrong week's projections entirely.
+        //
+        // Take whichever is further along. It rolls over as soon as either
+        // field does, which is what Tuesday needs, and it can never regress
+        // to a week already played.
+        const wkA = Number(state.week) || 0;
+        const wkB = Number(state.display_week) || 0;
+        const resolved = Math.max(wkA, wkB) || 1;
+        const week = state.season_type === 'regular' ? resolved : 1;
         cachedNflState = { week, season: state.season || String(new Date().getFullYear()) };
         cachedNflStateAt = Date.now();
       } catch (e) {
