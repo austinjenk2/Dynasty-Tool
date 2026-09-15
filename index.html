@@ -3287,6 +3287,11 @@
   .gc-lg-pct-safe { color: var(--green); }
   .gc-lg-pct-long { color: var(--red); }
 
+  /* vs Median. Where the league really plays it the number is part of the
+     standings; elsewhere it is context, so it reads quieter. */
+  .rb-median-cell { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .rb-median-cell.rb-median-live { color: var(--ink); font-weight: 700; }
+
   /* ---- Results: the tanking block sits below the real record ---- */
   .rb-tank-section { margin-top: 34px; }
   .rb-tank-head { margin-bottom: 12px; }
@@ -13499,7 +13504,11 @@
     const v = sbStartersRemainingVar(myMatchup, projMap, league, espnGameData, week)
             + sbStartersRemainingVar(oppMatchup, projMap, league, espnGameData, week);
     if (!Number.isFinite(v)) return null;
-    if (v <= 0) return SB_SIGMA_FLOOR;
+    // Nothing left to play on either side: the result is settled, and zero
+    // is how that is signalled to sbWinProbability. The floor below only
+    // applies while SOMETHING is still outstanding, where a sliver of spread
+    // keeps a stat correction from being ruled out.
+    if (v <= 0) return 0;
     return Math.max(SB_SIGMA_FLOOR, Math.sqrt(v));
   }
 
@@ -13528,11 +13537,17 @@
   function sbWinProbability(myTotal, oppTotal, sigma) {
     const diff = Number(myTotal) - Number(oppTotal);
     if (!Number.isFinite(diff)) return 50;
+    // A spread of exactly zero is sbMatchupSigma saying every player on both
+    // sides has finished. Nothing is left that could change the result, so
+    // it is not a 99% -- it is over, and the card should say so. Only a real
+    // computation can produce this; the no-game-state path returns a
+    // full-slate spread and a caller with no matchup gets the fallback, so a
+    // zero here cannot be missing data dressed up as certainty.
+    if (sigma === 0) return diff > 0 ? 100 : (diff < 0 ? 0 : 50);
     const sd = (sigma != null && Number.isFinite(sigma) && sigma > 0) ? sigma : SB_SIGMA_FALLBACK;
     const pct = sbNormalCdf(diff / sd) * 100;
-    // Held to 1-99: a game is never quite over while stat corrections can
-    // still land, and a displayed 100% that turns into a loss is worse than
-    // a displayed 99%.
+    // Otherwise held to 1-99: while anyone is still playing, a displayed
+    // 100% that turns into a loss is worse than a displayed 99%.
     return Math.round(Math.min(99, Math.max(1, pct)));
   }
 
@@ -17016,7 +17031,13 @@
       const currentWeekComplete = !!(currentWeekEspnGameData && Object.values(currentWeekEspnGameData).length > 0
         && Object.values(currentWeekEspnGameData).every(info => info.state === 'post'));
       const weekResults = [];
-      const weekMedianResults = hasMedian ? [] : null;
+      // Worked out for every league, not only the ones that play it. Where
+      // the league does play a median, this is a real second result already
+      // folded into the record; everywhere else it still answers "how did I
+      // do against the field that week", which is the useful part -- a 6-6
+      // built on beating the median ten times is a different season from one
+      // that scraped six wins while scoring below it.
+      const weekMedianResults = [];
       for (let week = 1; week <= regularWeeks; week++) {
         const weekMatchups = byWeek[week - 1];
         const row = ldrecWeekRow(weekMatchups, myRoster.roster_id);
@@ -17032,15 +17053,13 @@
           continue;
         }
         weekResults.push(notPlayed ? null : (row.win ? 'W' : 'L'));
-        if (hasMedian) {
-          if (notPlayed || !weekMatchups || !weekMatchups.length) {
-            weekMedianResults.push(null);
-          } else {
-            const scores = weekMatchups.map(m => m.points || 0).sort((a, b) => a - b);
-            const mid = scores.length / 2;
-            const median = scores.length % 2 === 0 ? (scores[mid - 1] + scores[mid]) / 2 : scores[Math.floor(mid)];
-            weekMedianResults.push(row.myScore === median ? 'T' : (row.myScore > median ? 'W' : 'L'));
-          }
+        if (notPlayed || !weekMatchups || !weekMatchups.length) {
+          weekMedianResults.push(null);
+        } else {
+          const scores = weekMatchups.map(m => m.points || 0).sort((a, b) => a - b);
+          const mid = scores.length / 2;
+          const median = scores.length % 2 === 0 ? (scores[mid - 1] + scores[mid]) / 2 : scores[Math.floor(mid)];
+          weekMedianResults.push(row.myScore === median ? 'T' : (row.myScore > median ? 'W' : 'L'));
         }
       }
 
@@ -17052,12 +17071,26 @@
         pfRank, finishRank, seasonDecided, madePlayoffs, ptsFromMin,
         totalPf: pfOf(myRoster),
         regularWeeks, weekResults, weekMedianResults, hasMedian,
+        medianRecord: (() => {
+          let w = 0, l = 0, t = 0;
+          weekMedianResults.forEach(r => { if (r === 'W') w++; else if (r === 'L') l++; else if (r === 'T') t++; });
+          return { w, l, t, played: w + l + t };
+        })(),
         wc: bracketResults.WC || null, sf: bracketResults.SF || null, chip: bracketResults.CHIP || null,
         // No games played yet this season -- whatever's entered in
         // Settings is a target/plan, not a real result, so show $0
         // instead of implying money has already been won or lost.
         net: (wins + losses + ties) === 0 ? 0 : rbGetNet(league.league_id, league.season),
       };
+    }
+
+    // A league that actually plays a median has these results counted in its
+    // record already; everywhere else the same number is context rather than
+    // standings, so the two are styled apart rather than reading as one.
+    function rbMedianText(row) {
+      const m = row.medianRecord;
+      if (!m || !m.played) return '&mdash;';
+      return `${m.w}-${m.l}${m.t ? '-' + m.t : ''}`;
     }
 
     function rbRowHtml(row, maxRegWeeks) {
@@ -17088,6 +17121,9 @@
       return `<tr data-league-id="${sbFieldEsc(row.league.league_id)}" data-league-name="${sbFieldEsc(row.league.name)}">
         <td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(row.league.name)}</span>${coBadge}</td>
         <td>${row.record}</td>
+        <td class="rb-median-cell${row.hasMedian ? ' rb-median-live' : ''}" title="${row.hasMedian
+          ? 'This league plays a median, so these results are already counted in the record'
+          : 'How you would have done against the league median each week -- not counted in this league'}">${rbMedianText(row)}</td>
         <td>${finishHtml}</td>
         <td>${ldOrdinal(row.pfRank)}</td>
         <td>${row.ptsFromMin > 0 ? '+' + Math.round(row.ptsFromMin) : '+0'}</td>
@@ -17140,9 +17176,18 @@
       }
       const roundRecordOf = (key) => weeklyRecordOf(rows.map(r => r[key]).filter(Boolean));
 
+      const medTotals = rows.reduce((a, r) => {
+        const m = r.medianRecord;
+        if (m) { a.w += m.w; a.l += m.l; a.t += m.t; }
+        return a;
+      }, { w: 0, l: 0, t: 0 });
+      const medianTotal = (medTotals.w + medTotals.l + medTotals.t)
+        ? `${medTotals.w}-${medTotals.l}${medTotals.t ? '-' + medTotals.t : ''}` : '&mdash;';
+
       return `<tr class="rb-total-row">
         <td class="rb-league-cell"><span class="rb-league-name">${label || 'Overall Record'}</span></td>
         <td>${totalRecord}</td>
+        <td class="rb-median-cell">${medianTotal}</td>
         <td>${avgFinish}</td>
         <td>${avgPfRank}</td>
         <td>${avgPtsFromMin > 0 ? '+' + avgPtsFromMin : '+0'}</td>
@@ -17163,6 +17208,7 @@
     const RB_SORT_KEYS = {
       league: r => r.league.name.toLowerCase(),
       rec: r => (r.wins + r.losses + r.ties) ? r.wins / (r.wins + r.losses + r.ties) : 0,
+      median: r => (r.medianRecord && r.medianRecord.played) ? r.medianRecord.w / r.medianRecord.played : -1,
       finish: r => r.finishRank == null ? Infinity : r.finishRank,
       pf: r => r.pfRank,
       pts: r => r.ptsFromMin,
@@ -17223,7 +17269,7 @@
       return `<div class="rb-table-wrap"><table class="rb-table">
         <thead><tr>
           ${th('league', 'League')}
-          ${th('rec', 'Rec')}${th('finish', 'Finish')}${th('pf', 'PF Rank')}${th('pts', 'Pts From 1.01')}${th('po', 'PO')}${th('net', 'Net')}
+          ${th('rec', 'Rec')}${th('median', 'vs Median')}${th('finish', 'Finish')}${th('pf', 'PF Rank')}${th('pts', 'Pts From 1.01')}${th('po', 'PO')}${th('net', 'Net')}
           ${weekHeadHtml}
           <th class="rb-po-col">WC</th><th>SF</th><th>Chip</th>
         </tr></thead>
