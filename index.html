@@ -12886,6 +12886,21 @@
         if (val != null) return Number(val);
       }
     }
+    // Last resort: no granular stat line to score from. The flat map holds
+    // ONE number per player, full PPR by preference, so returning it raw
+    // hands a half-PPR or standard league a full-PPR projection -- Kelce
+    // reading 12.6 in a half-PPR league that Sleeper had at 9.7, and a
+    // no-premium league somehow landing ABOVE a TE-premium one for the same
+    // player. Pick the preset the league actually scores when we have it.
+    const rec = league && league.scoring_settings ? league.scoring_settings.rec : undefined;
+    const presets = window.__sleeperProjectionPresets || {};
+    const preset = presets[id];
+    if (preset) {
+      const byFormat = rec === 0 ? preset.std : rec === 0.5 ? preset.half : rec === 1 ? preset.ppr : null;
+      if (byFormat != null) return Number(byFormat);
+      const any = preset.ppr ?? preset.half ?? preset.std;
+      if (any != null) return Number(any);
+    }
     const proj = projMap || window.__sleeperProjections || {};
     return proj[id] != null ? Number(proj[id]) : null;
   }
@@ -13845,6 +13860,30 @@
   // anything at all.
   function sbScoreAfterFinal(scored, gameFinished, feedLoaded) {
     return (scored == null && gameFinished && feedLoaded) ? 0 : scored;
+  }
+
+  // The same question for a box-score STAT feed rather than Sleeper's
+  // players_points, where the answer changes at kickoff instead of at the
+  // final whistle.
+  //
+  // players_points pre-fills a real 0 for every starter and only drops an
+  // entry as a transient hiccup, so there a mid-game absence is genuinely
+  // unknown and sbScoreAfterFinal rightly holds the pregame number. A stat
+  // feed is the other shape: a player who has not recorded anything simply
+  // has no row, which is how "no stats yet" is spelled, not a gap in the
+  // data. Reading that as unknown froze a live projection on its pregame
+  // number for as long as a player went without a touch -- a receiver deep
+  // into the first quarter with no catches still showed his full pregame
+  // number while the same player in the Matchup Hub (reading
+  // players_points, and so seeing a real 0) had already decayed with the
+  // clock. Two feeds, one player, two different answers on the same screen.
+  //
+  // feedLoaded carries the same guard as sbScoreAfterFinal: one player with
+  // no row and a fetch that failed outright are indistinguishable from that
+  // player alone, and reading a failed fetch as "everyone scored nothing"
+  // would zero every player on the page.
+  function sbScoreAfterKickoff(scored, gameStarted, feedLoaded) {
+    return (scored == null && gameStarted && feedLoaded) ? 0 : scored;
   }
 
   // Every term of the live projection, for the tooltip that explains it.
@@ -15099,15 +15138,14 @@
         // once the final score lands.
         const rgElapsedFraction = sbGameElapsedFraction(p.team, rgEspnGameData);
         const rgProjBaseline = sbPlayerIsInactive(p) ? 0 : (origProj != null ? origProj : rawLiveProj);
-        // A missing stat line is genuinely unknown while his game is on --
-        // he may simply not have touched the ball yet -- so the projection
-        // rightly holds its pregame number there. Once the game is FINISHED
-        // the ambiguity is gone: he had his sixty minutes and recorded
-        // nothing, which is a real zero. Without this he kept his full
-        // pregame projection as his live number forever, so a player who
-        // was inactive or never saw a snap showed "Score 0.0, Proj 16.3"
-        // and a Points Over Expected of +0.0 instead of the full -16.3.
-        const rgScored = sbScoreAfterFinal(pprPoints, rgGameFinished, rgStatsFeedLoaded);
+        // In this feed a player with no production has no row at all, so
+        // once his game has KICKED OFF a missing stat line is a real zero,
+        // not missing data (see sbScoreAfterKickoff). Holding the pregame
+        // number until the final whistle instead meant a player who had
+        // not touched the ball yet kept his full pregame projection as his
+        // live number -- showing "Score 0.0, Proj 16.3" and a Points Over
+        // Expected of +0.0 while the clock ran down on him.
+        const rgScored = sbScoreAfterKickoff(pprPoints, rgGameStarted, rgStatsFeedLoaded);
         const liveProj = sbEstimateLiveProjection(rgScored, rgProjBaseline, rgElapsedFraction, rgGameStarted, rgGameFinished,
           { position: pos, team: p.team, espnGameData: rgEspnGameData });
         const poe = (rgGameStarted && liveProj != null && origProj != null) ? (liveProj - origProj) : null;
@@ -15888,6 +15926,7 @@
         );
         const map = {};
         const statsMap = {};
+        const presets = {};
         (list || []).forEach(p => {
           if (!p || !p.player_id || !p.stats) return;
           // Deliberately not falling back to a bare "pts" key -- a generic
@@ -15897,6 +15936,16 @@
           // "0.0 projection" instead of an honest "no data").
           const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std ?? p.pts_ppr ?? p.pts_half_ppr ?? p.pts_std;
           if (pts != null) map[p.player_id] = Number(pts);
+          // The flat map above keeps ONE number, full PPR by preference,
+          // and that is all sbProjectionFor had left to fall back on. A
+          // half-PPR league asking for a player whose granular stat line
+          // is missing got the full-PPR figure -- Kelce reading 12.6 in a
+          // half-PPR league where Sleeper said 9.7. Keeping all three
+          // presets lets the fallback pick the one the league actually
+          // scores instead of always handing back full PPR.
+          const presetOf = (k) => (p.stats && p.stats[k] != null) ? Number(p.stats[k])
+            : (p[k] != null ? Number(p[k]) : null);
+          presets[p.player_id] = { ppr: presetOf('pts_ppr'), half: presetOf('pts_half_ppr'), std: presetOf('pts_std') };
           // Full per-player stat line, kept so callers can pick the number
           // matching a specific league's actual scoring format (PPR/Half-
           // PPR/Standard) instead of always using full PPR -- see
@@ -15910,6 +15959,7 @@
         // breaking sync.
         window.__sleeperGameInfo = extractGameInfo(list);
         window.__sleeperProjectionStats = statsMap;
+        window.__sleeperProjectionPresets = presets;
         // Carried on the map itself (never a real Sleeper player id, so it
         // can't collide with one) so a week picked from a week dropdown --
         // which stores this whole map as its own override.projections,
@@ -20676,7 +20726,7 @@
     const abbr = whichTeam === 'home' ? game.home.abbr : game.away.abbr;
     const espnGameData = window.__gcEspnGameData || null;
     // Whether the stats feed returned anything at all -- see
-    // sbScoreAfterFinal. Checked once here rather than per player.
+    // sbScoreAfterKickoff. Checked once here rather than per player.
     const gcStatsFeedLoaded = !!(statsMap && Object.keys(statsMap).length);
     // Real game state for this team, so a projection can be turned into a
     // live one and "over expected" can stay blank until there's actually
@@ -20692,7 +20742,7 @@
         // Live score, pregame projection and live projection are all on the
         // house line, so they are directly comparable with each other and
         // with the Rooting Guide's numbers for the same player.
-        const live = sbScoreAfterFinal(sbHouseScore(id, raw, dict), finished, gcStatsFeedLoaded);
+        const live = sbScoreAfterKickoff(sbHouseScore(id, raw, dict), started, gcStatsFeedLoaded);
         const origProj = gcProjectedPoints(id, dict);
         const baseline = sbPlayerIsInactive(dict[id]) ? 0 : origProj;
         const projParts = sbLiveProjParts(live, baseline, elapsed, started, finished,
