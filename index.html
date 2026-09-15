@@ -3287,6 +3287,12 @@
   .gc-lg-pct-safe { color: var(--green); }
   .gc-lg-pct-long { color: var(--red); }
 
+  /* Numeric columns line up digit over digit so a column can be scanned. */
+  .rb-num { font-variant-numeric: tabular-nums; text-align: right; }
+  .rb-num-quiet { color: var(--muted); }      /* points against -- context */
+  .rb-num-high { color: var(--green); font-weight: 700; }
+  .rb-num-low { color: var(--red); }
+
   /* vs Median. Where the league really plays it the number is part of the
      standings; elsewhere it is context, so it reads quieter. */
   .rb-median-cell { font-variant-numeric: tabular-nums; color: var(--muted); }
@@ -17038,6 +17044,11 @@
       // built on beating the median ten times is a different season from one
       // that scraped six wins while scoring below it.
       const weekMedianResults = [];
+      // Points for and against, week high and week low. Every one of these
+      // is already sitting in the same weekly rows the record is built from
+      // -- the page was computing a PF RANK while never showing the points
+      // it ranked on.
+      let pfSum = 0, paSum = 0, weeksPlayed = 0, weekHigh = null, weekLow = null;
       for (let week = 1; week <= regularWeeks; week++) {
         const weekMatchups = byWeek[week - 1];
         const row = ldrecWeekRow(weekMatchups, myRoster.roster_id);
@@ -17053,6 +17064,14 @@
           continue;
         }
         weekResults.push(notPlayed ? null : (row.win ? 'W' : 'L'));
+        if (!notPlayed && row) {
+          const mine = Number(row.myScore) || 0;
+          pfSum += mine;
+          paSum += Number(row.oppScore) || 0;
+          weeksPlayed++;
+          if (weekHigh == null || mine > weekHigh) weekHigh = mine;
+          if (weekLow == null || mine < weekLow) weekLow = mine;
+        }
         if (notPlayed || !weekMatchups || !weekMatchups.length) {
           weekMedianResults.push(null);
         } else {
@@ -17070,6 +17089,9 @@
         wins, losses, ties, record,
         pfRank, finishRank, seasonDecided, madePlayoffs, ptsFromMin,
         totalPf: pfOf(myRoster),
+        pf: pfSum, pa: paSum, weeksPlayed,
+        avgPf: weeksPlayed ? pfSum / weeksPlayed : null,
+        weekHigh, weekLow,
         regularWeeks, weekResults, weekMedianResults, hasMedian,
         medianRecord: (() => {
           let w = 0, l = 0, t = 0;
@@ -17087,6 +17109,12 @@
     // A league that actually plays a median has these results counted in its
     // record already; everywhere else the same number is context rather than
     // standings, so the two are styled apart rather than reading as one.
+    // Whole points: a results grid is read by eye, and a column of numbers
+    // carrying a tenth each is harder to scan than it is precise.
+    function rbPts(v) {
+      return (v == null || !Number.isFinite(Number(v))) ? '&mdash;' : Math.round(Number(v)).toLocaleString();
+    }
+
     function rbMedianText(row) {
       const m = row.medianRecord;
       if (!m || !m.played) return '&mdash;';
@@ -17126,6 +17154,11 @@
           : 'How you would have done against the league median each week -- not counted in this league'}">${rbMedianText(row)}</td>
         <td>${finishHtml}</td>
         <td>${ldOrdinal(row.pfRank)}</td>
+        <td class="rb-num">${rbPts(row.pf)}</td>
+        <td class="rb-num rb-num-quiet">${rbPts(row.pa)}</td>
+        <td class="rb-num">${row.avgPf != null ? row.avgPf.toFixed(1) : '&mdash;'}</td>
+        <td class="rb-num rb-num-high">${rbPts(row.weekHigh)}</td>
+        <td class="rb-num rb-num-low">${rbPts(row.weekLow)}</td>
         <td>${row.ptsFromMin > 0 ? '+' + Math.round(row.ptsFromMin) : '+0'}</td>
         <td>${playoffHtml}</td>
         <td class="${netCls}">${rbNetDisplay(row.net)}</td>
@@ -17176,6 +17209,18 @@
       }
       const roundRecordOf = (key) => weeklyRecordOf(rows.map(r => r[key]).filter(Boolean));
 
+      // Totals across every league, plus the single best and worst week you
+      // put up anywhere -- an average of averages would be wrong here, so
+      // this divides real points by real weeks.
+      const sumPf = rows.reduce((a, r) => a + (r.pf || 0), 0);
+      const sumPa = rows.reduce((a, r) => a + (r.pa || 0), 0);
+      const totalWeeks = rows.reduce((a, r) => a + (r.weeksPlayed || 0), 0);
+      const overallAvg = totalWeeks ? sumPf / totalWeeks : null;
+      const highs = rows.map(r => r.weekHigh).filter(v => v != null);
+      const lows = rows.map(r => r.weekLow).filter(v => v != null);
+      const bestWeek = highs.length ? Math.max(...highs) : null;
+      const worstWeek = lows.length ? Math.min(...lows) : null;
+
       const medTotals = rows.reduce((a, r) => {
         const m = r.medianRecord;
         if (m) { a.w += m.w; a.l += m.l; a.t += m.t; }
@@ -17190,6 +17235,11 @@
         <td class="rb-median-cell">${medianTotal}</td>
         <td>${avgFinish}</td>
         <td>${avgPfRank}</td>
+        <td class="rb-num">${rbPts(sumPf)}</td>
+        <td class="rb-num rb-num-quiet">${rbPts(sumPa)}</td>
+        <td class="rb-num">${overallAvg == null ? '&mdash;' : overallAvg.toFixed(1)}</td>
+        <td class="rb-num rb-num-high">${rbPts(bestWeek)}</td>
+        <td class="rb-num rb-num-low">${rbPts(worstWeek)}</td>
         <td>${avgPtsFromMin > 0 ? '+' + avgPtsFromMin : '+0'}</td>
         <td>&mdash;</td>
         <td class="${netCls}">${rbNetDisplay(totalNet)}</td>
@@ -17209,6 +17259,11 @@
       league: r => r.league.name.toLowerCase(),
       rec: r => (r.wins + r.losses + r.ties) ? r.wins / (r.wins + r.losses + r.ties) : 0,
       median: r => (r.medianRecord && r.medianRecord.played) ? r.medianRecord.w / r.medianRecord.played : -1,
+      pfpts: r => r.pf == null ? -Infinity : r.pf,
+      papts: r => r.pa == null ? -Infinity : r.pa,
+      avg: r => r.avgPf == null ? -Infinity : r.avgPf,
+      high: r => r.weekHigh == null ? -Infinity : r.weekHigh,
+      low: r => r.weekLow == null ? -Infinity : r.weekLow,
       finish: r => r.finishRank == null ? Infinity : r.finishRank,
       pf: r => r.pfRank,
       pts: r => r.ptsFromMin,
@@ -17269,7 +17324,9 @@
       return `<div class="rb-table-wrap"><table class="rb-table">
         <thead><tr>
           ${th('league', 'League')}
-          ${th('rec', 'Rec')}${th('median', 'vs Median')}${th('finish', 'Finish')}${th('pf', 'PF Rank')}${th('pts', 'Pts From 1.01')}${th('po', 'PO')}${th('net', 'Net')}
+          ${th('rec', 'Rec')}${th('median', 'vs Median')}${th('finish', 'Finish')}${th('pf', 'PF Rank')}
+          ${th('pfpts', 'PF')}${th('papts', 'PA')}${th('avg', 'Avg')}${th('high', 'High')}${th('low', 'Low')}
+          ${th('pts', 'Pts From 1.01')}${th('po', 'PO')}${th('net', 'Net')}
           ${weekHeadHtml}
           <th class="rb-po-col">WC</th><th>SF</th><th>Chip</th>
         </tr></thead>
