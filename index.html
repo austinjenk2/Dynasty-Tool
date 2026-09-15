@@ -13500,6 +13500,27 @@
     return starterVar + benchVar;
   }
 
+  // Every starter on this side has a game that is over. This is asked
+  // directly rather than inferred from "no points remaining", because those
+  // are not the same thing: a week whose projections have not published yet
+  // also computes zero remaining, and treating that as settled declares a
+  // matchup decided before anybody has kicked off.
+  function sbSideAllFinished(matchup, league, projMap, espnGameData, week) {
+    if (!matchup || !espnGameData || week == null) return false;
+    const dict = window.__sleeperPlayerDict;
+    if (!dict) return false;
+    const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
+    if (!starters.length) return false;
+    const allDone = starters.every(id => {
+      const p = dict[id];
+      return !!p && sbGameFinishedForTeam(p.team, espnGameData);
+    });
+    if (!allDone) return false;
+    // Best ball: anyone still able to force their way into the lineup keeps
+    // the matchup alive even when every starter is done.
+    return sbStillInRunning(matchup, league, projMap, espnGameData, week).length === 0;
+  }
+
   // Spread of the final margin: both sides' remaining players added in
   // quadrature, since their games are essentially independent of each other.
   function sbMatchupSigma(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
@@ -13510,11 +13531,16 @@
     const v = sbStartersRemainingVar(myMatchup, projMap, league, espnGameData, week)
             + sbStartersRemainingVar(oppMatchup, projMap, league, espnGameData, week);
     if (!Number.isFinite(v)) return null;
-    // Nothing left to play on either side: the result is settled, and zero
-    // is how that is signalled to sbWinProbability. The floor below only
-    // applies while SOMETHING is still outstanding, where a sliver of spread
-    // keeps a stat correction from being ruled out.
-    if (v <= 0) return 0;
+    // Zero -- meaning settled, which sbWinProbability answers 100/0 for --
+    // is only ever returned when both sides are genuinely played out. A v of
+    // zero on its own does NOT prove that: a week with no projections yet
+    // computes zero remaining for everyone, and reading that as settled put
+    // games that had not kicked off at 100%.
+    if (v <= 0) {
+      const settled = sbSideAllFinished(myMatchup, league, projMap, espnGameData, week)
+                   && sbSideAllFinished(oppMatchup, league, projMap, espnGameData, week);
+      return settled ? 0 : SB_SIGMA_FALLBACK;
+    }
     return Math.max(SB_SIGMA_FLOOR, Math.sqrt(v));
   }
 
@@ -19507,13 +19533,29 @@
       .filter(e => e.roster && (isCoManagedIncluded() || !e.isCoOwned));
     if (!entries.length) return;
 
+    // The teams you're tanking are left out, the same as they are on Results
+    // and the same as the PROJECTED record sitting right beside this one,
+    // which has always come from the Scoreboard's own tanking-filtered list.
+    // Counting them here meant the two numbers on one row disagreed about
+    // which leagues they covered, and the headline record folded in teams
+    // that are losing on purpose.
+    const recordTankList = (typeof sbGetTankList === 'function') ? sbGetTankList() : new Set();
+    const recordEntries = entries.filter(e => e.league && !recordTankList.has(e.league.name));
     let wins = 0, losses = 0, ties = 0;
-    entries.forEach(e => {
+    recordEntries.forEach(e => {
       const s = e.roster.settings || {};
       wins += s.wins || 0;
       losses += s.losses || 0;
       ties += s.ties || 0;
     });
+    let tankWins = 0, tankLosses = 0, tankTies = 0;
+    entries.filter(e => e.league && recordTankList.has(e.league.name)).forEach(e => {
+      const s = e.roster.settings || {};
+      tankWins += s.wins || 0;
+      tankLosses += s.losses || 0;
+      tankTies += s.ties || 0;
+    });
+    const tankLeagueCount = entries.length - recordEntries.length;
 
     // Pulled straight from the Scoreboard's own PROJECTED RECORD number
     // (window.__sbProjectedRecord, set by renderRealScoreboard -- which
@@ -19542,6 +19584,15 @@
     if (recordValues[0]) {
       recordValues[0].innerHTML = `<span class="win">${wins}</span><span class="sep">-</span><span class="loss">${losses}</span>` +
         (ties ? `<span class="sep">-</span><span>${ties}</span>` : '');
+    }
+    // A number that quietly stopped counting some leagues would just look
+    // wrong, so the card says what it left out and what those teams did.
+    const recordSubEl = document.querySelector('.record-row .record-card .record-sub');
+    if (recordSubEl) {
+      recordSubEl.textContent = tankLeagueCount
+        ? `Every league's record added together, excluding ${tankLeagueCount} tanking `
+          + `(${tankWins}-${tankLosses}${tankTies ? '-' + tankTies : ''} there)`
+        : "Every league's record, added together";
     }
     if (recordValues[1]) {
       recordValues[1].innerHTML = `<span class="win">${projWinSum.toFixed(2)}</span><span class="sep">-</span><span class="loss">${projLossSum.toFixed(2)}</span>`;
