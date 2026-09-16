@@ -23918,19 +23918,27 @@
         `<span class="tk-sub">${esc(item.for.length)} for &middot; ${esc(item.against.length)} vs</span></div>`;
     }
 
+    // Ten a side. The whole list belongs on the Weekly Sweats page; a ticker
+    // only wants the names at the top of each end, and the two lists are
+    // sliced separately so a lopsided week can't spend all twenty slots on
+    // one of them.
+    const SWEAT_PER_SIDE = 10;
     function sweatItems(rows) {
       const byId = {};
       rows.forEach(r => { byId[r.id] = r; });
-      const els = Array.from(document.querySelectorAll(
-        '.rg-panel-for .rg-list .rg-row[data-player-id], .rg-panel-against .rg-list .rg-row[data-player-id]'
-      ));
+      const topOf = (sel) => Array.from(
+        document.querySelectorAll(`${sel} .rg-list .rg-row[data-player-id]`)
+      ).slice(0, SWEAT_PER_SIDE);
+      // Each list already arrives in the page's own order -- Root For from
+      // most for you down, Root Against from most against you down.
+      const els = topOf('.rg-panel-for').concat(topOf('.rg-panel-against'));
 
       if (els.length) {
         // In $ mode the page ranks and labels by real money at stake, so the
         // ticker says the same thing rather than quietly reverting to a
         // league count the page isn't sorted by.
         const money = !!window.__rgMoneyMode;
-        return els.slice(0, 40).map(el => {
+        return els.map(el => {
           const d = el.dataset;
           const r = byId[d.playerId] || {};
           const nameEl = el.querySelector('.rg-name');
@@ -23950,14 +23958,19 @@
 
       // Nothing rendered yet (first sync, or the page's rows not built) --
       // reproduce the order it will land on rather than showing an empty
-      // feed: most for you first, down through most against you.
-      return rows
+      // feed, and take the same ten a side.
+      const scored = rows
         .filter(r => (r.for.length + r.against.length) > 0)
         .map(r => ({ r, delta: r.for.length - r.against.length }))
-        .filter(x => x.delta !== 0)
-        .sort((a, b) => b.delta - a.delta || (b.r.liveProj || 0) - (a.r.liveProj || 0))
-        .slice(0, 40)
-        .map(({ r, delta }) => sweatRow(r, delta, false));
+        .filter(x => x.delta !== 0);
+      const tie = (a, b) => (b.r.liveProj || 0) - (a.r.liveProj || 0);
+      // Each side ranked from its own extreme inwards, the way the page's
+      // two lists are: most for you first, then most against you first.
+      const forSide = scored.filter(x => x.delta > 0)
+        .sort((a, b) => b.delta - a.delta || tie(a, b)).slice(0, SWEAT_PER_SIDE);
+      const againstSide = scored.filter(x => x.delta < 0)
+        .sort((a, b) => a.delta - b.delta || tie(a, b)).slice(0, SWEAT_PER_SIDE);
+      return forSide.concat(againstSide).map(({ r, delta }) => sweatRow(r, delta, false));
     }
 
     // The same sweats, but ranked by what they are actually doing today --
