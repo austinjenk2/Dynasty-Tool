@@ -214,12 +214,15 @@
     display: block;
     padding: 0;
     max-width: none;
-    margin: 0;
+    /* The page title below sets its own top padding, but on its own that
+       left the strip sitting right on top of the heading. This is the gap
+       that keeps the ticker reading as its own band. */
+    margin: 0 0 20px;
   }
   .ticker {
     display: flex;
     align-items: stretch;
-    height: 54px;
+    height: 48px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     overflow: hidden;
@@ -359,7 +362,7 @@
   .tk-record.is-loss { color: var(--red); background: var(--red-bg); }
   .tk-record.is-even { color: var(--gold); background: #f6efe0; }
   .tk-odds { font-size: 13px; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
-  .tk-logo { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+  .tk-logo { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
   /* Clickable bits are underlined only on hover -- a strip where every
      player name is permanently underlined reads as noise at this size. */
   .tk-name.is-player, .tk-delta.is-sweat, .tk-item.is-matchup { cursor: pointer; }
@@ -3608,19 +3611,19 @@
       pointer-events: none;
     }
 
-    .utility-bar { padding: 0; }
+    .utility-bar { padding: 0; margin-bottom: 14px; }
     /* The ticker stays on a phone, at close to full size -- it is the one
        thing on the page worth glancing at one-handed. What goes is the
        per-feed label (the mode badge already names the slate) and the pip
        rail, which is a mouse target; swiping the strip replaces it. */
-    .ticker { height: 50px; }
+    .ticker { height: 45px; }
     .ticker-mode { padding: 0 11px; font-size: 11px; letter-spacing: 0.4px; }
     .ticker-seg-label, .ticker-segs { display: none; }
     .tk-item { padding: 0 13px; font-size: 13.5px; gap: 8px; }
     .tk-pts { font-size: 14px; }
     .tk-league { font-size: 13.5px; max-width: 150px; }
     .tk-record { font-size: 13.5px; }
-    .tk-logo { width: 20px; height: 20px; }
+    .tk-logo { width: 18px; height: 18px; }
     .sync-status { margin-left: 0; }
 
     .page-title { padding: 14px 0 4px; }
