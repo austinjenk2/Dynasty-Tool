@@ -219,7 +219,7 @@
   .ticker {
     display: flex;
     align-items: stretch;
-    height: 42px;
+    height: 54px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     overflow: hidden;
@@ -232,13 +232,13 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 0 14px;
+    padding: 0 16px;
     border: none;
     border-right: 1px solid var(--border);
     background: var(--ink);
     color: #fff;
     font-family: inherit;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.7px;
     text-transform: uppercase;
@@ -257,10 +257,10 @@
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
-    padding: 0 14px;
+    padding: 0 16px;
     border-right: 1px solid var(--border);
     background: var(--bg);
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 800;
     letter-spacing: 0.6px;
     text-transform: uppercase;
@@ -271,9 +271,21 @@
   .ticker-viewport {
     flex: 1;
     min-width: 0;
-    overflow: hidden;
     position: relative;
+    /* Scrollable by hand -- a trackpad swipe or a finger drag -- so a
+       matchup can be hunted down without waiting for it to come round.
+       The scrollbar itself is hidden; the strip is obviously draggable. */
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .ticker-viewport::-webkit-scrollbar { display: none; }
+  /* While the marquee runs, the track is being translated under a viewport
+     that must not also scroll -- the two would fight. Native scrolling is
+     switched on only once a drag actually starts (see tk-manual). */
+  .ticker-viewport:not(.tk-manual) { overflow-x: hidden; }
   /* Fades the cut edge so items enter and leave instead of popping. */
   .ticker-viewport::after {
     content: '';
@@ -301,15 +313,15 @@
   .tk-item {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 9px;
     height: 100%;
-    padding: 0 16px;
+    padding: 0 18px;
     white-space: nowrap;
-    font-size: 12.5px;
+    font-size: 14px;
     border-right: 1px solid var(--border-soft);
   }
   .tk-pos {
-    font-size: 9.5px;
+    font-size: 10.5px;
     font-weight: 800;
     letter-spacing: 0.4px;
     padding: 2px 5px;
@@ -323,18 +335,41 @@
   .tk-pos.sb-pos-te { color: var(--gold); background: #f6efe0; }
   .tk-name { font-weight: 700; color: var(--ink); }
   .tk-side { font-weight: 800; color: var(--ink); letter-spacing: 0.2px; }
-  .tk-team { font-size: 11px; color: var(--faint); }
-  .tk-league { font-size: 11px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; color: var(--faint); }
-  .tk-logo { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
+  .tk-team { font-size: 12px; color: var(--faint); }
+  /* The league name is how you tell 18 matchups apart at a glance, so it
+     gets read before anything else in the row rather than sitting in the
+     small print. */
+  .tk-league {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    color: var(--ink);
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tk-record {
+    font-size: 14px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  .tk-record.is-win { color: var(--green); background: var(--green-bg); }
+  .tk-record.is-loss { color: var(--red); background: var(--red-bg); }
+  .tk-record.is-even { color: var(--gold); background: #f6efe0; }
+  .tk-odds { font-size: 13px; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
+  .tk-ml { font-size: 12.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tk-logo { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
   /* Clickable bits are underlined only on hover -- a strip where every
      player name is permanently underlined reads as noise at this size. */
   .tk-name.is-player, .tk-delta.is-sweat, .tk-item.is-matchup { cursor: pointer; }
   .tk-name.is-player:hover { text-decoration: underline; }
   .tk-delta.is-sweat:hover { text-decoration: underline; }
   .tk-item.is-matchup:hover { background: var(--bg); }
-  .tk-pts { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
-  .tk-sub { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .tk-delta { font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tk-pts { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .tk-sub { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tk-delta { font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .tk-delta.is-pos { color: var(--green); }
   .tk-delta.is-neg { color: var(--red); }
   .tk-delta.is-even { color: var(--faint); }
@@ -3575,13 +3610,18 @@
     }
 
     .utility-bar { padding: 0; }
-    .ticker { height: 38px; }
-    .ticker-mode { padding: 0 10px; font-size: 10px; letter-spacing: 0.5px; }
-    /* Two labels plus the pips leave almost nothing for the feed itself on a
-       phone -- the mode badge already names the slate, so the per-feed label
-       and the pip rail drop out and the whole width goes to the items. */
+    /* The ticker stays on a phone, at close to full size -- it is the one
+       thing on the page worth glancing at one-handed. What goes is the
+       per-feed label (the mode badge already names the slate) and the pip
+       rail, which is a mouse target; swiping the strip replaces it. */
+    .ticker { height: 50px; }
+    .ticker-mode { padding: 0 11px; font-size: 11px; letter-spacing: 0.4px; }
     .ticker-seg-label, .ticker-segs { display: none; }
-    .tk-item { padding: 0 12px; font-size: 12px; }
+    .tk-item { padding: 0 13px; font-size: 13.5px; gap: 8px; }
+    .tk-pts { font-size: 14px; }
+    .tk-league { font-size: 13.5px; max-width: 150px; }
+    .tk-record { font-size: 13.5px; }
+    .tk-logo { width: 20px; height: 20px; }
     .sync-status { margin-left: 0; }
 
     .page-title { padding: 14px 0 4px; }
@@ -11750,6 +11790,16 @@
   }
   window.goToLeagueMatchup = goToLeagueMatchup;
 
+  // Open one NFL game on GameCast. The ESPN event id is the only thing
+  // GameCast keys a game on, so callers pass that rather than team codes.
+  function goToGameCast(eventId) {
+    if (!eventId) return;
+    window.__gcSelectedEventId = String(eventId);
+    goToSection('gamecast');
+    if (window.renderRealGameCast) { try { window.renderRealGameCast(); } catch (e) {} }
+  }
+  window.goToGameCast = goToGameCast;
+
   function goToRootingGuide() {
     goToSection('rooting');
   }
@@ -12051,6 +12101,14 @@
     scheduleGroupsEl.addEventListener('click', (e) => {
       const chip = e.target.closest('.schedule-chip');
       if (!chip) return;
+      // GameCast carries everything the old inline preview did -- the
+      // leagues this game swings, each openable straight into the Matchup
+      // Hub -- alongside the live field, the box score and the injuries.
+      // Games from a week ESPN hasn't given us an id for keep the preview.
+      if (chip.dataset.eventId && window.goToGameCast) {
+        window.goToGameCast(chip.dataset.eventId);
+        return;
+      }
       const existing = chip.nextElementSibling;
       const isOpen = existing && existing.classList.contains('schedule-expand');
       document.querySelectorAll('.schedule-expand').forEach(el => el.remove());
@@ -20559,6 +20617,25 @@
         const when = comp.date || ev.date;
         const statusType = comp.status && comp.status.type;
         const possessionTeamId = comp.situation ? comp.situation.possession : null;
+        // Real betting lines ride along in this same payload -- no second
+        // service, no key, nothing to sync. It is whichever book ESPN has
+        // at priority 1 (its own consensus-ish line), and it is simply
+        // absent for some games and most finished ones, so every field
+        // here is optional and read defensively.
+        const oddsRow = (comp.odds || [])[0] || null;
+        const odds = oddsRow ? {
+          book: (oddsRow.provider && oddsRow.provider.name) || null,
+          // "KC -3.5" -- already written from the favourite's point of view.
+          details: oddsRow.details != null ? String(oddsRow.details) : null,
+          overUnder: oddsRow.overUnder != null ? Number(oddsRow.overUnder) : null,
+        } : null;
+        const moneyLineOf = (side) => {
+          const o = oddsRow && oddsRow[side];
+          const ml = o && (o.moneyLine != null ? o.moneyLine : (o.current && o.current.moneyLine && o.current.moneyLine.american));
+          if (ml == null) return null;
+          const n = Number(String(ml).replace('+', ''));
+          return Number.isFinite(n) ? n : null;
+        };
         (comp.competitors || []).forEach(c => {
           const abbr = c.team && c.team.abbreviation;
           if (!abbr) return;
@@ -20587,6 +20664,8 @@
             // from pregame to final -- see sbEstimateLiveProjection.
             period: comp.status ? comp.status.period : null,
             clock: comp.status ? comp.status.displayClock : null,
+            odds,
+            moneyLine: moneyLineOf(c.homeAway === 'home' ? 'homeTeamOdds' : 'awayTeamOdds'),
           };
         });
       });
@@ -21932,6 +22011,7 @@
       }
       g.state = info.state;
       g.detail = info.detail;
+      g.eventId = info.eventId || null;
       const awayInfo = espnGames[g.away];
       const homeInfo = espnGames[g.home];
       if (awayInfo && awayInfo.score != null) g.awayScore = awayInfo.score;
@@ -21965,7 +22045,7 @@
       const homeBallHtml = isLive && g.possession === 'home' ? ballIcon : '';
       const awayScoreHtml = showScore ? `<span class="schedule-score">${g.awayScore}</span>` : '';
       const homeScoreHtml = showScore ? `<span class="schedule-score">${g.homeScore}</span>` : '';
-      return `<div class="schedule-chip" data-away="${g.away}" data-home="${g.home}">` +
+      return `<div class="schedule-chip" data-away="${g.away}" data-home="${g.home}" data-event-id="${g.eventId || ''}">` +
         `<div class="schedule-time${timeClass}">${timeLabel}</div>` +
         '<div class="schedule-row">' +
           `<div class="schedule-team">${awayBallHtml}<img src="https://sleepercdn.com/images/team_logos/nfl/${awayLower}.png" alt="${g.away}" onerror="this.style.display='none'"><span>${g.away}</span>${awayScoreHtml}</div>` +
@@ -23737,9 +23817,10 @@
         const homeRow = espn[sides.home] || {};
         byEvent[key] = {
           eventId: g.eventId,
-          away: sides.away, awayScore: awayRow.score,
-          home: sides.home, homeScore: homeRow.score,
+          away: sides.away, awayScore: awayRow.score, awayMoneyLine: awayRow.moneyLine,
+          home: sides.home, homeScore: homeRow.score, homeMoneyLine: homeRow.moneyLine,
           oriented: sides.oriented,
+          odds: g.odds || homeRow.odds || awayRow.odds || null,
           state: g.state, detail: g.detail || homeRow.detail || awayRow.detail, when: g.when,
         };
       });
@@ -23814,30 +23895,86 @@
       return games
         .slice()
         .sort((a, b) => new Date(a.when || 0) - new Date(b.when || 0))
-        .map(g => `<div class="tk-item">${pairing(g)}` +
-          `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span></div>`);
+        .map(g => {
+          const line = g.odds && g.odds.details ? `<span class="tk-odds">${esc(g.odds.details)}</span>` : '';
+          const total = g.odds && g.odds.overUnder != null
+            ? `<span class="tk-sub">O/U ${esc(Number(g.odds.overUnder).toFixed(1))}</span>` : '';
+          return `<div class="tk-item">${pairing(g)}` +
+            `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span>${line}${total}</div>`;
+        });
     }
 
-    // Biggest swings in the portfolio, taken from BOTH ends: the players
-    // started in the most of my matchups, and the ones started against the
-    // most of them. Ranking on |delta| alone would have let one side crowd
-    // the other out entirely -- on a week where my teams are stacked, every
-    // slot went to players I was rooting for, and the ones capable of
-    // sinking me never appeared.
-    const SWEAT_PER_SIDE = 15;
+    // The Weekly Sweats page's own order, read off the page itself.
+    //
+    // This used to rank players independently, which put every player I was
+    // rooting FOR ahead of every player I was rooting against -- so the
+    // names at the top of the Weekly Sweats page, the ones actually worth
+    // sweating, were buried 15 items into the strip or fell off the end.
+    // The page already sorts Root For by delta and Root Against by how far
+    // negative it goes, and it already honours the league checkboxes, the
+    // position filter and the $ / league-count toggle. Reading its rendered
+    // rows in DOM order inherits all of that for free and guarantees the two
+    // never disagree about who matters most this week.
+    //
+    // recomputeRootingGuide() runs on every sync whether or not that page has
+    // been opened, so the rows are there to read. Only rows carrying a
+    // data-player-id are real: the page ships with mock rows in the static
+    // markup, and those have no dataset to read.
+    function rgLeagueCount(str) {
+      const v = String(str || '').trim();
+      return v ? v.split(' &middot; ').length : 0;
+    }
+
+    function sweatRow(item, net, money) {
+      const cls = net > 0 ? 'is-pos' : (net < 0 ? 'is-neg' : 'is-even');
+      const label = money
+        ? (net > 0 ? `+$${net} for you` : (net < 0 ? `-$${Math.abs(net)} against you` : '$0'))
+        : (net > 0 ? `+${net} for you` : (net < 0 ? `${net} against you` : 'even'));
+      return `<div class="tk-item">${playerCell(item)}` +
+        `<span class="tk-delta is-sweat ${cls}" data-sweat-id="${esc(item.id)}">${esc(label)}</span>` +
+        `<span class="tk-sub">${esc(item.for.length)} for &middot; ${esc(item.against.length)} vs</span></div>`;
+    }
+
     function sweatItems(rows) {
-      const scored = rows
+      const byId = {};
+      rows.forEach(r => { byId[r.id] = r; });
+      const els = Array.from(document.querySelectorAll(
+        '.rg-panel-for .rg-list .rg-row[data-player-id], .rg-panel-against .rg-list .rg-row[data-player-id]'
+      ));
+
+      if (els.length) {
+        // In $ mode the page ranks and labels by real money at stake, so the
+        // ticker says the same thing rather than quietly reverting to a
+        // league count the page isn't sorted by.
+        const money = !!window.__rgMoneyMode;
+        return els.slice(0, 40).map(el => {
+          const d = el.dataset;
+          const r = byId[d.playerId] || {};
+          const nameEl = el.querySelector('.rg-name');
+          const item = {
+            id: d.playerId,
+            name: d.name || r.name || (nameEl ? nameEl.textContent.trim() : ''),
+            team: d.team || r.team || '',
+            pos: d.pos || r.pos || '',
+            // Counts off the row's own dataset, not the raw feed, because the
+            // dataset is what is left after the page's league filters.
+            for: { length: rgLeagueCount(d.for) },
+            against: { length: rgLeagueCount(d.against) },
+          };
+          return sweatRow(item, Number(money ? d.dollar : d.delta) || 0, money);
+        });
+      }
+
+      // Nothing rendered yet (first sync, or the page's rows not built) --
+      // reproduce the order it will land on rather than showing an empty
+      // feed: most for you first, down through most against you.
+      return rows
         .filter(r => (r.for.length + r.against.length) > 0)
-        .map(r => ({ r, delta: r.for.length - r.against.length }));
-      const positives = scored.filter(x => x.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, SWEAT_PER_SIDE);
-      const negatives = scored.filter(x => x.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, SWEAT_PER_SIDE);
-      // Shown most-for first down through most-against, so the strip reads
-      // as one ranking rather than two lists stuck together.
-      return positives.concat(negatives)
-        .sort((a, b) => b.delta - a.delta)
-        .map(({ r }) => `<div class="tk-item">${playerCell(r)}` +
-          deltaCell(r) +
-          `<span class="tk-sub">${esc(r.for.length)} for &middot; ${esc(r.against.length)} vs</span></div>`);
+        .map(r => ({ r, delta: r.for.length - r.against.length }))
+        .filter(x => x.delta !== 0)
+        .sort((a, b) => b.delta - a.delta || (b.r.liveProj || 0) - (a.r.liveProj || 0))
+        .slice(0, 40)
+        .map(({ r, delta }) => sweatRow(r, delta, false));
     }
 
     // The same sweats, but ranked by what they are actually doing today --
@@ -23858,6 +23995,30 @@
           deltaCell(r) + `</div>`);
     }
 
+    // Real betting lines, straight off the ESPN scoreboard payload the live
+    // scores already come from -- the spread as that book writes it, the
+    // game total, and each side's moneyline. Nothing here is derived or
+    // estimated: a game ESPN has no line for is simply left out rather than
+    // shown with a made-up number.
+    function moneyLine(n) {
+      if (n == null) return '';
+      return `<span class="tk-ml">${n > 0 ? '+' : ''}${esc(n)}</span>`;
+    }
+    function oddsItems(games) {
+      return games
+        .filter(g => g.odds && (g.odds.details || g.odds.overUnder != null))
+        .sort((a, b) => new Date(a.when || 0) - new Date(b.when || 0))
+        .map(g => {
+          const spread = g.odds.details ? `<span class="tk-odds">${esc(g.odds.details)}</span>` : '';
+          const total = g.odds.overUnder != null
+            ? `<span class="tk-sub">O/U ${esc(Number(g.odds.overUnder).toFixed(1))}</span>` : '';
+          const mls = (g.awayMoneyLine != null || g.homeMoneyLine != null)
+            ? `<span class="tk-sub">ML</span>${moneyLine(g.awayMoneyLine)}<span class="tk-sub">/</span>${moneyLine(g.homeMoneyLine)}`
+            : '';
+          return `<div class="tk-item">${pairing(g)}${spread}${total}${mls}</div>`;
+        });
+    }
+
     // Every one of this week's matchups: my record, my opponent's, the two
     // projected totals and my chance of winning. Filtered exactly the way
     // the Dashboard's PROJECTED WEEKLY RECORD is -- teams marked as tanking
@@ -23872,9 +24033,16 @@
     function matchupItems(espn, week) {
       const tanks = (typeof sbGetTankList === 'function') ? sbGetTankList() : new Set();
       const coManaged = (typeof isCoManagedIncluded === 'function') ? isCoManagedIncluded() : true;
+      // A record is coloured by what it is: above .500 green, below it red,
+      // dead even gold. Ties count as half a win, so 1-1-1 reads as even
+      // rather than as a losing record.
       const record = (roster) => {
         const st = (roster && roster.settings) || {};
-        return `${st.wins || 0}-${st.losses || 0}${st.ties ? '-' + st.ties : ''}`;
+        const w = st.wins || 0, l = st.losses || 0, t = st.ties || 0;
+        const text = `${w}-${l}${t ? '-' + t : ''}`;
+        const margin = (w + t / 2) - (l + t / 2);
+        const cls = margin > 0 ? 'is-win' : (margin < 0 ? 'is-loss' : 'is-even');
+        return `<span class="tk-record ${cls}">${esc(text)}</span>`;
       };
       return Object.values(window.sleeperLeagueData || {})
         .filter(e => e.roster && e.league && e.myMatchup && e.oppMatchup)
@@ -23897,13 +24065,13 @@
           const pctHtml = m.pct == null
             ? '<span class="tk-sub">&mdash;</span>'
             : `<span class="tk-delta ${m.pct >= 50 ? 'is-pos' : 'is-neg'}">${Math.round(m.pct)}%</span>`;
-          return `<div class="tk-item is-matchup" data-league-name="${esc(m.e.league.name)}">` +
+          return `<div class="tk-item is-matchup" data-league-id="${esc(m.e.league.league_id || '')}">` +
             `<span class="tk-league">${esc(m.e.league.name)}</span>` +
-            `<span class="tk-name">You</span><span class="tk-sub">${esc(record(m.e.roster))}</span>` +
+            `<span class="tk-name">You</span>${record(m.e.roster)}` +
             `<span class="tk-pts">${num(m.myProj)}</span>` +
             `<span class="tk-sub">&ndash;</span>` +
             `<span class="tk-pts">${num(m.oppProj)}</span>` +
-            `<span class="tk-name">${esc(m.oppName)}</span><span class="tk-sub">${esc(record(m.oppRoster))}</span>` +
+            `<span class="tk-name">${esc(m.oppName)}</span>${record(m.oppRoster)}` +
             pctHtml + `</div>`;
         });
     }
@@ -23967,22 +24135,28 @@
         // just as useful with no games on as it is mid-Sunday.
         const matchups = { key: 'matchups', label: `Week ${week} Matchups`, items: matchupItems(espn, week) };
 
+        const odds = { key: 'odds', label: 'Betting Lines', items: oddsItems(games) };
+
         if (anyLive) {
           nextMode = 'live';
           segs.push({ key: 'liveFantasy', label: 'Live Fantasy', items: liveFantasyItems(rows, espn) });
           segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(todays.length ? todays : games) });
+          segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
           segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
           segs.push(matchups);
+          segs.push(odds);
         } else if (gameDay) {
           nextMode = 'game day';
           segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(todays) });
           segs.push(matchups);
-          segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
           segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
+          segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
+          segs.push(odds);
         } else {
           nextMode = `week ${week}`;
           segs.push(matchups);
           segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
+          segs.push(odds);
           // Every game of this week is already finished, so the schedule
           // worth showing is next week's, not a list of results.
           const upcoming = games.filter(g => g.state !== 'post');
@@ -24061,6 +24235,13 @@
       if (segLabelEl) segLabelEl.textContent = seg && seg.label ? seg.label : '';
       track.classList.remove('is-scrolling');
       track.style.animationDuration = '';
+      track.style.animationDelay = '';
+      track.dataset.doubled = '0';
+      // A new feed starts at its own beginning, so any hand-scrolling of the
+      // previous one is dropped rather than carried across.
+      clearTimeout(manualTimer);
+      viewport.classList.remove('tk-manual');
+      viewport.scrollLeft = 0;
       if (!seg || !seg.items.length) {
         track.innerHTML = `<div class="tk-empty">${esc(emptyMessage)}</div>`;
         return;
@@ -24075,6 +24256,7 @@
         const copyWidth = track.scrollWidth;
         if (copyWidth <= viewport.clientWidth + 8) return;
         track.innerHTML = html + html;
+        track.dataset.doubled = '1';
         track.style.animationDuration = (copyWidth / SCROLL_PX_PER_SEC) + 's';
         track.classList.add('is-scrolling');
       });
@@ -24116,7 +24298,11 @@
         return;
       }
       const matchup = e.target.closest('.tk-item.is-matchup');
-      if (matchup && typeof goToLeagueDetail === 'function') goToLeagueDetail(matchup.dataset.leagueName);
+      if (matchup && matchup.dataset.leagueId && window.goToLeagueMatchup) {
+        // The Matchup Hub's expanded card -- both lineups and the win
+        // probability field -- rather than the league's own page.
+        window.goToLeagueMatchup(matchup.dataset.leagueId);
+      }
     });
     if (pipsEl) {
       pipsEl.addEventListener('click', (e) => {
@@ -24128,6 +24314,75 @@
         restartRotation();
       });
     }
+    // ---- scrolling it by hand -------------------------------------------
+    // A swipe or a two-finger trackpad scroll takes the strip over, so a
+    // particular matchup can be found now instead of on the next lap.
+    //
+    // The marquee and native scrolling cannot both be on: one translates the
+    // track, the other moves the viewport. So a drag hands over -- the
+    // animation's current offset becomes a real scrollLeft, the transform is
+    // dropped, and the viewport starts scrolling. Letting go hands back, and
+    // it picks up from where the strip actually sits rather than snapping to
+    // the start: a negative animation-delay of the equivalent fraction
+    // resumes the same loop mid-stride.
+    const MANUAL_RESUME_MS = 3500;
+    let manualTimer = null;
+
+    function currentOffset() {
+      const t = getComputedStyle(track).transform;
+      if (!t || t === 'none') return 0;
+      const m = new DOMMatrixReadOnly(t);
+      return Math.abs(m.m41);
+    }
+
+    // Returns true only on the transition into manual, which the wheel
+    // handler needs to know: the gesture that switches scrolling ON cannot
+    // also be scrolled by the browser, so that first delta is applied here
+    // or the strip ignores the opening flick.
+    function enterManual() {
+      clearTimeout(manualTimer);
+      let entered = false;
+      if (!viewport.classList.contains('tk-manual')) {
+        const offset = currentOffset();
+        track.classList.remove('is-scrolling');
+        track.style.animationDelay = '';
+        viewport.classList.add('tk-manual');
+        viewport.scrollLeft = offset;
+        entered = true;
+      }
+      manualTimer = setTimeout(exitManual, MANUAL_RESUME_MS);
+      return entered;
+    }
+
+    function exitManual() {
+      if (!viewport.classList.contains('tk-manual')) return;
+      const seg = segments[segIndex];
+      const copyWidth = track.scrollWidth / (track.dataset.doubled === '1' ? 2 : 1);
+      const offset = viewport.scrollLeft;
+      viewport.classList.remove('tk-manual');
+      viewport.scrollLeft = 0;
+      if (!seg || !seg.items.length || !copyWidth || track.dataset.doubled !== '1') return;
+      const duration = parseFloat(track.style.animationDuration) || 0;
+      if (!duration) return;
+      // Resume the loop at the fraction the strip was left sitting at.
+      const fraction = Math.min(0.999, Math.max(0, (offset % copyWidth) / copyWidth));
+      track.style.animationDelay = `-${(fraction * duration).toFixed(2)}s`;
+      track.classList.add('is-scrolling');
+    }
+
+    ['wheel', 'touchstart', 'pointerdown'].forEach(type => {
+      viewport.addEventListener(type, (e) => {
+        // A vertical wheel over the strip is the page being scrolled past
+        // it, not an attempt to drive it.
+        if (type === 'wheel' && Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
+        const entered = enterManual();
+        if (type === 'wheel' && entered) viewport.scrollLeft += e.deltaX;
+      }, { passive: true });
+    });
+    viewport.addEventListener('scroll', () => {
+      if (viewport.classList.contains('tk-manual')) enterManual();
+    }, { passive: true });
+
     // The animation is driven off a measured width, so a resize has to
     // re-measure -- otherwise the loop point drifts off the seam.
     let resizeTimer = null;
