@@ -22,6 +22,7 @@
     --gold: #a3760a;
     --blue: #2f6fa3;
     --red-bg: #f7e7e7;
+    --ticker-h: 48px;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -30,6 +31,9 @@
     color: var(--ink);
     font-family: 'Source Sans 3', sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* Room at the foot of every page for the fixed ticker, so the last row
+       of a table is never sitting underneath it. */
+    padding-bottom: var(--ticker-h);
   }
   a { color: inherit; text-decoration: none; }
   button { font-family: inherit; cursor: pointer; }
@@ -75,15 +79,9 @@
   .section-tab:hover:not(.active) { color: var(--ink); }
   .section-tab.active { color: var(--ink); border-bottom-color: var(--red); }
 
-  /* ---------- Utility bar ---------- */
-  .utility-bar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 24px;
-    max-width: 1400px;
-    margin: 0 auto;
-  }
+  /* ---------- Chips and the Settings account panel ----------
+     What is left of the old utility bar: the bar itself is now the ticker,
+     styled further down, and these pieces moved onto Settings. */
   .chip {
     height: 32px;
     display: flex;
@@ -206,25 +204,30 @@
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #2f9e56; }
 
   /* ---------- Live ticker ----------------------------------------------
-     Takes the strip directly under the site nav (where the search box /
-     user chip / sync label used to live). Those controls moved onto the
-     Dashboard as the "Sleeper Account" card; the ticker is here instead so
-     it shows on every page. */
+     Pinned to the foot of the window, the way a broadcast ticker sits: it
+     stays put through any amount of scrolling and shows on every page. It
+     used to run directly under the site nav, which pushed every page's
+     content down by its own height for something you only glance at.
+     Below the full-screen overlays (the player card at 30, the mode
+     chooser at 50) so those still cover it, above everything on the page
+     itself. */
   .utility-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 25;
     display: block;
-    padding: 0;
-    max-width: none;
-    /* The page title below sets its own top padding, but on its own that
-       left the strip sitting right on top of the heading. This is the gap
-       that keeps the ticker reading as its own band. */
-    margin: 0 0 20px;
   }
   .ticker {
     display: flex;
     align-items: stretch;
-    height: 48px;
+    height: var(--ticker-h);
     background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    /* Lifts the bar off the page it is covering, so content scrolling
+       underneath reads as passing behind it rather than colliding. */
+    box-shadow: 0 -2px 10px -4px rgba(20,20,26,0.18);
     overflow: hidden;
     position: relative;
   }
@@ -238,8 +241,12 @@
     padding: 0 16px;
     border: none;
     border-right: 1px solid var(--border);
-    background: var(--ink);
-    color: #fff;
+    /* Same ground as the feed label beside it -- the badge was a solid
+       block of ink (red while live) that read as a different component
+       bolted onto the end of the bar. Its border-right still marks where
+       it stops. The dot is what carries the live state now. */
+    background: var(--bg);
+    color: var(--ink);
     font-family: inherit;
     font-size: 12px;
     font-weight: 800;
@@ -247,14 +254,13 @@
     text-transform: uppercase;
     white-space: nowrap;
   }
-  .ticker-mode:hover { filter: brightness(1.35); }
-  .ticker.is-live .ticker-mode { background: var(--red); }
+  .ticker-mode:hover { background: var(--border-soft); }
   .ticker-dot {
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--faint);
     flex-shrink: 0;
   }
-  .ticker.is-live .ticker-dot { background: #fff; animation: tk-pulse 1.4s ease-in-out infinite; }
+  .ticker.is-live .ticker-dot { background: var(--red); animation: tk-pulse 1.4s ease-in-out infinite; }
   @keyframes tk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
   .ticker-seg-label {
     flex-shrink: 0;
@@ -363,12 +369,39 @@
   .tk-record.is-even { color: var(--gold); background: #f6efe0; }
   .tk-odds { font-size: 13px; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
   .tk-logo { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
-  /* Clickable bits are underlined only on hover -- a strip where every
-     player name is permanently underlined reads as noise at this size. */
-  .tk-name.is-player, .tk-delta.is-sweat, .tk-item.is-matchup { cursor: pointer; }
-  .tk-name.is-player:hover { text-decoration: underline; }
-  .tk-delta.is-sweat:hover { text-decoration: underline; }
-  .tk-item.is-matchup:hover { background: var(--bg); }
+  /* Everything clickable in the strip reacts the same way, whether it is a
+     whole item (a matchup, a game) or one piece of one (a player's name,
+     his for/against count). The game items had neither a pointer nor a
+     hover state, so nothing said they could be opened at all.
+     Nothing is underlined at rest -- a strip where every player name
+     carries an underline reads as noise at this size. */
+  .tk-name.is-player,
+  .tk-delta.is-sweat,
+  .tk-item.is-matchup,
+  .tk-item.is-game { cursor: pointer; }
+
+  /* Whole-item targets get the tint plus a ring drawn inside the item, so
+     the edge of what you are about to click is obvious in a strip with no
+     gaps between things. */
+  .tk-item.is-matchup:hover,
+  .tk-item.is-game:hover {
+    background: var(--bg);
+    box-shadow: inset 0 0 0 2px var(--border);
+  }
+  /* Inline targets get the same tint as a chip around the words. */
+  .tk-name.is-player,
+  .tk-delta.is-sweat {
+    padding: 3px 6px;
+    margin: 0 -2px;
+    border-radius: 5px;
+    transition: background 0.1s ease;
+  }
+  .tk-name.is-player:hover,
+  .tk-delta.is-sweat:hover {
+    background: var(--bg);
+    box-shadow: inset 0 0 0 1px var(--border);
+    text-decoration: underline;
+  }
   .tk-pts { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
   .tk-sub { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .tk-delta { font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -1647,7 +1680,7 @@
   }
 
   /* Rooting Guide */
-  .rg-header { text-align: center; margin-bottom: 18px; }
+  .rg-header { text-align: center; padding-top: 22px; margin-bottom: 18px; }
   .rg-header-top { display: flex; align-items: center; justify-content: center; gap: 16px; position: relative; }
   .rg-header-top .week-dropdown { position: absolute; right: 0; text-align: left; }
   .rg-header h2 { font-family: 'Source Serif 4', serif; font-size: 22px; margin: 0 0 6px; }
@@ -2789,6 +2822,67 @@
   .rb-empty { text-align: center; color: var(--faint); font-size: 13px; padding: 40px 0; }
   .ldrec-draft-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 
+  /* ---------- Tanking Tracker ---------- */
+  .tt-section { margin-bottom: 28px; }
+  .tt-section:first-of-type { margin-top: 18px; }
+  .tt-head { margin-bottom: 12px; }
+  .tt-head h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 17px;
+    margin: 0 0 4px;
+    color: var(--ink);
+  }
+  .tt-sub { font-size: 12.5px; color: var(--muted); margin: 0; max-width: 860px; line-height: 1.5; }
+  .tt-pos-ex { color: var(--red); }
+  .tt-neg-ex { color: var(--green); }
+  /* A positive gap is ground to make up on the 1.01; a negative one is
+     cushion you already hold. Coloured the way a tanker reads them, which is
+     the opposite of the usual +good/-bad. */
+  .tt-gap { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tt-gap.is-chasing { color: var(--red); }
+  .tt-gap.is-holding { color: var(--green); }
+  .tt-gap.is-level { color: var(--gold); }
+  .tt-slot {
+    display: inline-block;
+    min-width: 34px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    background: var(--bg);
+    color: var(--muted);
+  }
+  /* The picks worth tanking for. 1.01-1.03 read as the prize, the rest of
+     the non-playoff range as still useful, a playoff team's pick as a dud. */
+  .tt-slot.is-top { background: var(--green-bg); color: var(--green); }
+  .tt-slot.is-lottery { background: #f6efe0; color: var(--gold); }
+  .tt-slot.is-late { background: var(--red-bg); color: var(--red); }
+  .rb-table th.tt-th-team, .rb-table td.tt-team-cell { text-align: left; }
+  .tt-team { display: inline-flex; align-items: center; gap: 8px; }
+  .tt-team-av {
+    position: relative;
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    background: var(--border-soft);
+    color: var(--faint);
+    font-size: 9px; font-weight: 800;
+    display: inline-flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .tt-team-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .tt-team-name { font-weight: 700; color: var(--ink); }
+  .tt-pick { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .tt-rank { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .tt-rank-of { font-weight: 600; font-size: 10.5px; color: var(--faint); }
+  .tt-blank { color: var(--faint); }
+  .tt-score { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tt-note {
+    font-size: 11.5px;
+    color: var(--faint);
+    margin-top: 8px;
+  }
+
   /* League Detail -> Waivers modal */
   .ldwv-modal { width: 720px; }
   .ldwv-banner {
@@ -2820,7 +2914,9 @@
     position: fixed;
     inset: 0;
     background: rgba(20,20,26,0.35);
-    z-index: 20;
+    /* Above the fixed ticker (25): this dims the whole page, and a strip
+       glowing through the dimmer would look like a bug. */
+    z-index: 26;
   }
   .notebook-panel {
     position: fixed;
@@ -2830,7 +2926,7 @@
     background: var(--surface);
     border-left: 1px solid var(--border);
     box-shadow: -12px 0 32px -12px rgba(0,0,0,0.25);
-    z-index: 21;
+    z-index: 27;
     display: flex;
     flex-direction: column;
     padding: 20px 20px 0;
@@ -2956,7 +3052,11 @@
   .notebook-roster-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
   .notebook-auto { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-left: auto; }
 
-  .page-title { padding: 20px 0 4px; }
+  /* Enough air to clear the nav's border without the page looking like it
+     starts halfway down. Weekly Sweats has its own header and matches this
+     deliberately (see .rg-header); Matchup Hub and GameCast run their own
+     and are left alone. */
+  .page-title { padding: 22px 0 4px; }
   .page-title.page-title-flex { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
   .mode-toggle-btn {
     flex-shrink: 0;
@@ -3381,7 +3481,8 @@
   .trade-photo-menu-icon { font-size: 13px; }
   .photo-export-toast {
     position: fixed;
-    left: 50%; bottom: 28px;
+    /* Clear of the fixed ticker, not on top of it. */
+    left: 50%; bottom: calc(var(--ticker-h) + 22px);
     transform: translate(-50%, 12px);
     background: var(--ink);
     color: var(--bg);
@@ -3611,12 +3712,13 @@
       pointer-events: none;
     }
 
-    .utility-bar { padding: 0; margin-bottom: 14px; }
     /* The ticker stays on a phone, at close to full size -- it is the one
-       thing on the page worth glancing at one-handed. What goes is the
-       per-feed label (the mode badge already names the slate) and the pip
-       rail, which is a mouse target; swiping the strip replaces it. */
-    .ticker { height: 45px; }
+       thing on the page worth glancing at one-handed, and pinned to the
+       foot of the screen it sits right where a thumb already is. What goes
+       is the per-feed label (the mode badge already names the slate) and
+       the pip rail, which is a mouse target; swiping the strip replaces
+       it. Changing the variable moves the page's bottom padding with it. */
+    :root { --ticker-h: 45px; }
     .ticker-mode { padding: 0 11px; font-size: 11px; letter-spacing: 0.4px; }
     .ticker-seg-label, .ticker-segs { display: none; }
     .tk-item { padding: 0 13px; font-size: 13.5px; gap: 8px; }
@@ -3626,7 +3728,8 @@
     .tk-logo { width: 18px; height: 18px; }
     .sync-status { margin-left: 0; }
 
-    .page-title { padding: 14px 0 4px; }
+    .page-title { padding: 16px 0 4px; }
+    .rg-header { padding-top: 16px; }
     .page-title h1 { font-size: 18px; }
     .page-title p { font-size: 12px; }
     .page-title.page-title-flex { flex-wrap: wrap; gap: 10px; }
@@ -3723,6 +3826,7 @@
     <a class="section-tab" data-section="trades">Trade History</a>
     <a class="section-tab" data-section="records">Results</a>
     <a class="section-tab" data-section="calculator">Trade Calc</a>
+    <a class="section-tab" data-section="tanking">Tanking Tracker</a>
     <a class="section-tab" data-section="settings">Settings</a>
   </div>
 </nav>
@@ -3743,20 +3847,6 @@
         <div class="mode-chooser-sub">Season-only leagues</div>
       </div>
     </div>
-  </div>
-</div>
-
-<div class="utility-bar">
-  <div class="ticker" id="tickerBar">
-    <button class="ticker-mode" id="tickerMode" type="button" title="Click for the next feed">
-      <span class="ticker-dot" id="tickerDot"></span>
-      <span id="tickerModeLabel">NFL</span>
-    </button>
-    <div class="ticker-seg-label" id="tickerSegLabel"></div>
-    <div class="ticker-viewport" id="tickerViewport">
-      <div class="ticker-track" id="tickerTrack"></div>
-    </div>
-    <div class="ticker-segs" id="tickerSegs"></div>
   </div>
 </div>
 
@@ -11264,6 +11354,59 @@
       </div>
     </div>
   </div>
+  <div data-view="tanking">
+    <div class="page-title">
+      <h1>Tanking Tracker</h1>
+      <p>How close each of your teams is to the 1.01, and how the teams whose picks you hold are doing.</p>
+    </div>
+
+    <div class="tt-section">
+      <div class="tt-head">
+        <h2>Race To The 1.01</h2>
+        <p class="tt-sub">Draft order runs off potential points &mdash; max points for, Sleeper's best-possible-lineup total &mdash; lowest first. A <b class="tt-pos-ex">positive</b> number is how much max PF you would have to shed to take the 1.01. A <b class="tt-neg-ex">negative</b> one means you already hold it, and that is your cushion before the next team takes it off you.</p>
+      </div>
+      <div class="rb-table-wrap">
+        <table class="rb-table">
+          <thead>
+            <tr>
+              <th class="rb-th-league">League</th>
+              <th>Record</th>
+              <th>PF</th>
+              <th>Max PF</th>
+              <th>Proj Slot</th>
+              <th class="rb-po-col">Pts From 1.01</th>
+            </tr>
+          </thead>
+          <tbody id="ttRaceBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tt-section">
+      <div class="tt-head">
+        <h2>Future Pick Outlook</h2>
+        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today: teams out of the playoff picture are ordered by max PF (lowest picks first), teams in it by record with points for as the tiebreak. Points for and max points for are shown as their rank in that league, 1 being the most. <span class="tt-blank">Playoff % is not worked out yet &mdash; the column is there for it.</span></p>
+      </div>
+      <div class="rb-table-wrap">
+        <table class="rb-table">
+          <thead>
+            <tr>
+              <th class="rb-th-league">League</th>
+              <th>Pick</th>
+              <th class="tt-th-team">From</th>
+              <th>Record</th>
+              <th>Last Wk</th>
+              <th>PF Rank</th>
+              <th>Max PF Rank</th>
+              <th class="rb-po-col">Proj Slot</th>
+              <th>Playoff %</th>
+            </tr>
+          </thead>
+          <tbody id="ttPicksBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
   <div data-view="settings">
     <div class="page-title">
       <h1>Settings</h1>
@@ -11736,6 +11879,20 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<div class="utility-bar">
+  <div class="ticker" id="tickerBar">
+    <button class="ticker-mode" id="tickerMode" type="button" title="Click for the next feed">
+      <span class="ticker-dot" id="tickerDot"></span>
+      <span id="tickerModeLabel">NFL</span>
+    </button>
+    <div class="ticker-seg-label" id="tickerSegLabel"></div>
+    <div class="ticker-viewport" id="tickerViewport">
+      <div class="ticker-track" id="tickerTrack"></div>
+    </div>
+    <div class="ticker-segs" id="tickerSegs"></div>
   </div>
 </div>
 
@@ -16767,6 +16924,7 @@
         if (window.renderRealNotebook) window.renderRealNotebook();
         if (window.renderRealSchedule) window.renderRealSchedule(window.__scheduleSelectedWeek || undefined);
         if (window.renderRealRecordBook) window.renderRealRecordBook();
+        if (window.renderRealTankingTracker) window.renderRealTankingTracker();
         if (window.renderRecordBookMoneySettings) window.renderRecordBookMoneySettings();
         renderLeagueBlacklistSettings();
         if (window.renderContendingRanks) window.renderContendingRanks();
@@ -23700,6 +23858,254 @@
   tcRender();
 
   refreshExpBoard();
+
+  // ---- Tanking Tracker --------------------------------------------------
+  // Two questions a tanking manager actually asks: how close am I to the
+  // 1.01 in each of my leagues, and how are the teams whose picks I hold
+  // actually doing.
+  //
+  // Everything here is read off rosters Sleeper already gave us -- fpts
+  // (points for) and ppts (potential points, i.e. max points for, the best
+  // lineup that roster could have started) -- plus the league's real
+  // traded_picks records. Nothing is estimated.
+  (function initTankingTracker() {
+    const raceBody = document.getElementById('ttRaceBody');
+    const picksBody = document.getElementById('ttPicksBody');
+    if (!raceBody || !picksBody) return;
+
+    const pfOf = (r) => { const s = (r && r.settings) || {}; return (s.fpts || 0) + (s.fpts_decimal || 0) / 100; };
+    const pptsOf = (r) => { const s = (r && r.settings) || {}; return (s.ppts || 0) + (s.ppts_decimal || 0) / 100; };
+    const winsOf = (r) => ((r && r.settings && r.settings.wins) || 0);
+    const num = (v) => Number(v || 0).toFixed(1);
+
+    // 1 = most in the league, ties sharing a rank, the same way the Leagues
+    // page ranks a roster. Written here rather than reaching for ldRankOf,
+    // which is closed over by another module.
+    function rankOf(rosters, valueFn, rosterId) {
+      const sorted = rosters.slice().sort((a, b) => valueFn(b) - valueFn(a));
+      let rank = 1;
+      for (let i = 0; i < sorted.length; i++) {
+        if (i > 0 && valueFn(sorted[i]) < valueFn(sorted[i - 1])) rank = i + 1;
+        if (sorted[i].roster_id === rosterId) return rank;
+      }
+      return sorted.length;
+    }
+
+    // "11/12" reads at a glance and survives leagues of different sizes,
+    // which a bare "11th" would not.
+    function rankCell(rosters, valueFn, rosterId) {
+      if (!rosters.length) return '<span class="tt-blank">&mdash;</span>';
+      return `<span class="tt-rank">${rankOf(rosters, valueFn, rosterId)}` +
+        `<span class="tt-rank-of">/${rosters.length}</span></span>`;
+    }
+
+    function recordOf(r) {
+      const s = (r && r.settings) || {};
+      const w = s.wins || 0, l = s.losses || 0, t = s.ties || 0;
+      return `${w}-${l}${t ? '-' + t : ''}`;
+    }
+
+    // Where every roster's own pick would land if the season ended now.
+    //
+    // Teams out of the playoff picture draft first, ordered by potential
+    // points from the bottom up -- the same measure the Results page's
+    // "Pts From 1.01" uses, so the two pages can't disagree about who holds
+    // the top pick. Teams in the picture draft after them, worst record
+    // first with points for as the tiebreak.
+    function ttDraftOrder(entry) {
+      const rosters = entry.allRosters || [];
+      if (!rosters.length) return null;
+      const standings = rosters.slice().sort((a, b) => winsOf(b) - winsOf(a) || pfOf(b) - pfOf(a));
+      const playoffTeams = Math.min(rosters.length,
+        (entry.league.settings && entry.league.settings.playoff_teams) || 6);
+      const inPlayoffs = new Set(standings.slice(0, playoffTeams).map(r => r.roster_id));
+      const missed = rosters.filter(r => !inPlayoffs.has(r.roster_id))
+        .sort((a, b) => pptsOf(a) - pptsOf(b) || pfOf(a) - pfOf(b));
+      const made = rosters.filter(r => inPlayoffs.has(r.roster_id))
+        .sort((a, b) => winsOf(a) - winsOf(b) || pfOf(a) - pfOf(b));
+      const slots = {};
+      missed.concat(made).forEach((r, i) => { slots[r.roster_id] = i + 1; });
+      return { slots, inPlayoffs, playoffTeams, total: rosters.length };
+    }
+
+    // The headline number. Positive is ground to make up on whoever holds
+    // the 1.01; negative means this roster IS the 1.01 and that is the
+    // cushion before the next team takes it. The Results column this
+    // replaces bottomed out at +0 for whoever held the pick, which said
+    // nothing about how safe they were.
+    //
+    // Whether you hold it is taken from the projected slot, not from being
+    // the lowest max PF, so this and the Proj Slot column can't contradict
+    // each other when a tie goes against you on the points-for tiebreak.
+    function ttGapTo101(entry, rosterId, order) {
+      const rosters = entry.allRosters || [];
+      const me = rosters.find(r => r.roster_id === rosterId);
+      if (!me || !order) return null;
+      const mine = pptsOf(me);
+      if (order.slots[rosterId] !== 1) {
+        const holder = rosters.find(r => order.slots[r.roster_id] === 1);
+        return { value: holder ? mine - pptsOf(holder) : 0, holds: false };
+      }
+      // The cushion runs to the SECOND-LOWEST total, not to the next
+      // different one: a team level with you on max PF takes the pick the
+      // moment you score a single point more, so being tied is no cushion
+      // at all, however far away the third team is.
+      const sorted = rosters.map(pptsOf).sort((a, b) => a - b);
+      return { value: sorted.length > 1 ? -(sorted[1] - mine) : 0, holds: true };
+    }
+
+    function gapCell(gap) {
+      if (!gap) return '<span class="tt-blank">&mdash;</span>';
+      if (gap.value > 0) return `<span class="tt-gap is-chasing">+${num(gap.value)}</span>`;
+      if (gap.value < 0) return `<span class="tt-gap is-holding">${num(gap.value)}</span>`;
+      return `<span class="tt-gap is-level">0.0</span>`;
+    }
+
+    // A slot is only half a pick's name -- the round is the other half. A
+    // second-rounder projected twelfth is the 2.12, not the 1.12.
+    function slotCell(slot, order, round) {
+      if (slot == null) return '<span class="tt-blank">&mdash;</span>';
+      const nonPlayoffSlots = order ? order.total - order.playoffTeams : 6;
+      const cls = slot <= 3 ? ' is-top' : (slot <= nonPlayoffSlots ? ' is-lottery' : ' is-late');
+      return `<span class="tt-slot${cls}">${round || 1}.${String(slot).padStart(2, '0')}</span>`;
+    }
+
+    function teamCell(entry, roster) {
+      const user = (entry.users || []).find(u => u.user_id === roster.owner_id);
+      const userName = user ? (user.display_name || user.username || 'Unknown') : 'Unknown';
+      const meta = (user && user.metadata) || {};
+      const initials = String(userName).trim().slice(0, 2).toUpperCase();
+      return `<span class="tt-team" title="${sbFieldEsc(meta.team_name || userName)}">` +
+        `<span class="tt-team-av">${sbTeamAvatarHtml(meta.avatar, user ? user.avatar : null, initials)}</span>` +
+        `<span class="tt-team-name">${sbFieldEsc(userName)}</span></span>`;
+    }
+
+    // Last week's real result for one roster. The current week is skipped on
+    // purpose -- a half-played week reads as a loss for whoever hasn't had
+    // their Sunday yet, which is worse than showing nothing.
+    async function ttLastWeek(entry, rosterId) {
+      const week = entry.week;
+      if (!week || week < 2 || typeof sleeperGetWeekMatchups !== 'function') return null;
+      const ms = await sleeperGetWeekMatchups(entry.league.league_id, week - 1).catch(() => null);
+      if (!Array.isArray(ms) || !ms.length) return null;
+      const mine = ms.find(m => m.roster_id === rosterId);
+      if (!mine || mine.matchup_id == null) return null;
+      const opp = ms.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== rosterId);
+      if (!opp) return null;
+      const a = Number(mine.points) || 0, b = Number(opp.points) || 0;
+      return { result: a > b ? 'W' : (a < b ? 'L' : 'T'), for: a, against: b };
+    }
+
+    function lastWeekCell(res) {
+      if (!res) return '<span class="tt-blank">&mdash;</span>';
+      const cls = res.result === 'W' ? 'rb-wl-w' : (res.result === 'L' ? 'rb-wl-l' : 'rb-wl-t');
+      return `<div class="rb-wl-pair-inner"><span class="rb-wl-chip ${cls}">${res.result}</span>` +
+        `<span class="tt-score">${num(res.for)}&ndash;${num(res.against)}</span></div>`;
+    }
+
+    function ttEntries() {
+      return Object.values(window.sleeperLeagueData || {})
+        .filter(e => e.roster && e.league && (isCoManagedIncluded() || !e.isCoOwned));
+    }
+
+    async function renderRealTankingTracker() {
+      const entries = ttEntries();
+      if (!entries.length) {
+        raceBody.innerHTML = '<tr><td colspan="6" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
+        picksBody.innerHTML = '<tr><td colspan="9" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
+        return;
+      }
+
+      // ---- Race to the 1.01, closest first ----
+      const raceRows = entries.map(entry => {
+        const order = ttDraftOrder(entry);
+        const gap = ttGapTo101(entry, entry.roster.roster_id, order);
+        return { entry, order, gap, slot: order ? order.slots[entry.roster.roster_id] : null };
+      }).sort((a, b) => {
+        const av = a.gap ? a.gap.value : Infinity;
+        const bv = b.gap ? b.gap.value : Infinity;
+        return av - bv;
+      });
+
+      raceBody.innerHTML = raceRows.map(({ entry, order, gap, slot }) => {
+        const r = entry.roster;
+        return `<tr data-league-name="${sbFieldEsc(entry.league.name)}">` +
+          `<td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(entry.league.name)}</span>` +
+            `${entry.isCoOwned ? '<span class="rb-co-badge">CO</span>' : ''}</td>` +
+          `<td>${sbFieldEsc(recordOf(r))}</td>` +
+          `<td>${num(pfOf(r))}</td>` +
+          `<td>${num(pptsOf(r))}</td>` +
+          `<td>${slotCell(slot, order)}</td>` +
+          `<td class="rb-po-col">${gapCell(gap)}</td>` +
+        `</tr>`;
+      }).join('');
+
+      // ---- Future pick outlook ----
+      // Only picks that started on somebody else's roster: your own picks
+      // are already covered by the race above.
+      const picks = [];
+      entries.forEach(entry => {
+        if (typeof ppPicksOwnedBy !== 'function') return;
+        const order = ttDraftOrder(entry);
+        ppPicksOwnedBy(entry, entry.roster.roster_id)
+          .filter(p => p.fromRosterId !== entry.roster.roster_id)
+          .forEach(p => {
+            const from = (entry.allRosters || []).find(r => r.roster_id === p.fromRosterId);
+            if (!from) return;
+            picks.push({ entry, order, pick: p, from, slot: order ? order.slots[p.fromRosterId] : null });
+          });
+      });
+
+      if (!picks.length) {
+        picksBody.innerHTML = '<tr><td colspan="9" class="rb-empty">You do not hold anyone else&rsquo;s picks right now.</td></tr>';
+        return;
+      }
+
+      // Draft-class order: every 2027 1st, then every 2027 2nd, and so on
+      // into 2028. Sorting by projected slot first read as one scrambled
+      // list, because a 2028 4th from a tanking team outranked a 2027 1st.
+      // Within a round the best projected pick still comes first.
+      picks.sort((a, b) => Number(a.pick.season) - Number(b.pick.season)
+        || a.pick.round - b.pick.round
+        || (a.slot == null ? 99 : a.slot) - (b.slot == null ? 99 : b.slot)
+        || a.entry.league.name.localeCompare(b.entry.league.name));
+
+      const lastWeeks = await Promise.all(picks.map(p => ttLastWeek(p.entry, p.pick.fromRosterId).catch(() => null)));
+
+      picksBody.innerHTML = picks.map((p, i) => {
+        const roundLabel = `${p.pick.season} ${p.pick.round}${p.pick.round === 1 ? 'st' : p.pick.round === 2 ? 'nd' : p.pick.round === 3 ? 'rd' : 'th'}`;
+        return `<tr data-league-name="${sbFieldEsc(p.entry.league.name)}">` +
+          `<td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(p.entry.league.name)}</span></td>` +
+          `<td><span class="tt-pick">${sbFieldEsc(roundLabel)}</span></td>` +
+          `<td class="tt-team-cell">${teamCell(p.entry, p.from)}</td>` +
+          `<td>${sbFieldEsc(recordOf(p.from))}</td>` +
+          `<td>${lastWeekCell(lastWeeks[i])}</td>` +
+          `<td>${rankCell(p.entry.allRosters || [], pfOf, p.pick.fromRosterId)}</td>` +
+          `<td>${rankCell(p.entry.allRosters || [], pptsOf, p.pick.fromRosterId)}</td>` +
+          `<td class="rb-po-col">${slotCell(p.slot, p.order, p.pick.round)}</td>` +
+          `<td class="tt-blank">&mdash;</td>` +
+        `</tr>`;
+      }).join('');
+    }
+
+    window.renderRealTankingTracker = renderRealTankingTracker;
+
+    // A row opens that league, the same as the Results table's rows do.
+    [raceBody, picksBody].forEach(body => {
+      body.addEventListener('click', (e) => {
+        const row = e.target.closest('tr[data-league-name]');
+        if (row && typeof goToLeagueDetail === 'function') goToLeagueDetail(row.dataset.leagueName);
+      });
+    });
+
+    // Rendered on demand as well as on sync, since the pick rows pull last
+    // week's matchups per league and there is no reason to do that before
+    // anyone has opened the page.
+    document.querySelectorAll('.section-tab').forEach(tab => {
+      if (tab.dataset.section !== 'tanking') return;
+      tab.addEventListener('click', () => { renderRealTankingTracker().catch(() => {}); });
+    });
+  })();
 
   // ---- The ticker ------------------------------------------------------
   // The strip under the site nav, on every page. What it carries depends on
