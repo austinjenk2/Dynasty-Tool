@@ -121,6 +121,55 @@
   .sleeper-connect-panel button:disabled { opacity: 0.6; cursor: default; }
   .sleeper-connect-status { font-size: 11.5px; color: var(--muted); margin-top: 8px; min-height: 14px; }
   .sleeper-connect-status.is-error { color: var(--red); }
+  /* On Settings the connect panel is a plain inline block of the account
+     panel, not the popover it used to be off the old top-bar chip. */
+  #sleeperAccountPanel .sleeper-connect-panel {
+    position: static;
+    width: auto;
+    padding: 0;
+    margin-top: 12px;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .settings-account-row { display: flex; gap: 8px; max-width: 420px; }
+  .settings-account-row input {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    height: 36px;
+    padding: 0 12px;
+    margin-bottom: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13.5px;
+  }
+  .settings-account-row button {
+    flex-shrink: 0;
+    width: auto;
+    height: 36px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 6px;
+    background: var(--ink);
+    color: #fff;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .settings-account-row button:disabled { opacity: 0.6; cursor: default; }
+  .settings-account-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  #sleeperAccountPanel .chip.user { cursor: default; }
+  #sleeperAccountPanel .sync-status { margin-left: 0; }
   .sync-dot.sync-error { background: var(--red); }
   .sync-dot.sync-pending { background: var(--gold); }
   .search-box {
@@ -156,6 +205,204 @@
   }
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #2f9e56; }
 
+  /* ---------- Live ticker ----------------------------------------------
+     Takes the strip directly under the site nav (where the search box /
+     user chip / sync label used to live). Those controls moved onto the
+     Dashboard as the "Sleeper Account" card; the ticker is here instead so
+     it shows on every page. */
+  .utility-bar {
+    display: block;
+    padding: 0;
+    max-width: none;
+    /* The page title below sets its own top padding, but on its own that
+       left the strip sitting right on top of the heading. This is the gap
+       that keeps the ticker reading as its own band. */
+    margin: 0 0 20px;
+  }
+  .ticker {
+    display: flex;
+    align-items: stretch;
+    height: 48px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+  /* The mode badge is also the control: clicking it advances to the next
+     feed in the current slate instead of waiting out the rotation. */
+  .ticker-mode {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 16px;
+    border: none;
+    border-right: 1px solid var(--border);
+    background: var(--ink);
+    color: #fff;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .ticker-mode:hover { filter: brightness(1.35); }
+  .ticker.is-live .ticker-mode { background: var(--red); }
+  .ticker-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--faint);
+    flex-shrink: 0;
+  }
+  .ticker.is-live .ticker-dot { background: #fff; animation: tk-pulse 1.4s ease-in-out infinite; }
+  @keyframes tk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .ticker-seg-label {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 16px;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .ticker-viewport {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    /* Scrollable by hand -- a trackpad swipe or a finger drag -- so a
+       matchup can be hunted down without waiting for it to come round.
+       The scrollbar itself is hidden; the strip is obviously draggable. */
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .ticker-viewport::-webkit-scrollbar { display: none; }
+  /* While the marquee runs, the track is being translated under a viewport
+     that must not also scroll -- the two would fight. Native scrolling is
+     switched on only once a drag actually starts (see tk-manual). */
+  .ticker-viewport:not(.tk-manual) { overflow-x: hidden; }
+  /* Fades the cut edge so items enter and leave instead of popping. */
+  .ticker-viewport::after {
+    content: '';
+    position: absolute; right: 0; top: 0; bottom: 0; width: 34px;
+    background: linear-gradient(to right, transparent, var(--surface));
+    pointer-events: none;
+  }
+  .ticker-track {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    width: max-content;
+    will-change: transform;
+  }
+  /* The track holds the item list TWICE, so translating it exactly one
+     copy's width (-50%) lands on a frame identical to the first -- the
+     loop has no seam and needs no JS per frame. */
+  .ticker-track.is-scrolling { animation: tk-scroll linear infinite; }
+  @keyframes tk-scroll {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(-50%, 0, 0); }
+  }
+  .ticker:hover .ticker-track.is-scrolling { animation-play-state: paused; }
+
+  .tk-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    height: 100%;
+    padding: 0 18px;
+    white-space: nowrap;
+    font-size: 14px;
+    border-right: 1px solid var(--border-soft);
+  }
+  .tk-pos {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: var(--bg);
+    color: var(--muted);
+  }
+  .tk-pos.sb-pos-qb { color: var(--red); background: var(--red-bg); }
+  .tk-pos.sb-pos-rb { color: var(--green); background: var(--green-bg); }
+  .tk-pos.sb-pos-wr { color: var(--blue); background: rgba(47,111,163,0.12); }
+  .tk-pos.sb-pos-te { color: var(--gold); background: #f6efe0; }
+  .tk-name { font-weight: 700; color: var(--ink); }
+  .tk-side { font-weight: 800; color: var(--ink); letter-spacing: 0.2px; }
+  .tk-team { font-size: 12px; color: var(--faint); }
+  /* The league name is how you tell 18 matchups apart at a glance, so it
+     gets read before anything else in the row rather than sitting in the
+     small print. */
+  .tk-league {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    color: var(--ink);
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tk-record {
+    font-size: 14px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  .tk-record.is-win { color: var(--green); background: var(--green-bg); }
+  .tk-record.is-loss { color: var(--red); background: var(--red-bg); }
+  .tk-record.is-even { color: var(--gold); background: #f6efe0; }
+  .tk-odds { font-size: 13px; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
+  .tk-logo { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
+  /* Clickable bits are underlined only on hover -- a strip where every
+     player name is permanently underlined reads as noise at this size. */
+  .tk-name.is-player, .tk-delta.is-sweat, .tk-item.is-matchup { cursor: pointer; }
+  .tk-name.is-player:hover { text-decoration: underline; }
+  .tk-delta.is-sweat:hover { text-decoration: underline; }
+  .tk-item.is-matchup:hover { background: var(--bg); }
+  .tk-pts { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .tk-sub { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tk-delta { font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tk-delta.is-pos { color: var(--green); }
+  .tk-delta.is-neg { color: var(--red); }
+  .tk-delta.is-even { color: var(--faint); }
+  .tk-live { font-size: 10px; font-weight: 800; letter-spacing: 0.4px; color: var(--red); text-transform: uppercase; }
+  .tk-final { font-size: 10px; font-weight: 800; letter-spacing: 0.4px; color: var(--faint); text-transform: uppercase; }
+  .tk-empty { display: inline-flex; align-items: center; height: 100%; padding: 0 16px; font-size: 12.5px; color: var(--muted); }
+
+  /* Which feed of the current slate is showing, and how many there are. */
+  .ticker-segs {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 14px;
+    border-left: 1px solid var(--border);
+  }
+  .ticker-seg-pip {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    padding: 0; border: none;
+  }
+  .ticker-seg-pip.is-active { background: var(--ink); }
+
+  /* Someone who has asked the OS to stop moving things gets a strip they
+     can scroll by hand rather than one that animates under them. */
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-track.is-scrolling { animation: none; }
+    .ticker-viewport { overflow-x: auto; }
+  }
+
   /* ---------- Content shell ---------- */
   .content {
     max-width: 1400px;
@@ -165,11 +412,16 @@
   .panel-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    align-items: stretch;
+    align-items: start;
     gap: 20px;
   }
   #teamStrengthPanel { display: flex; flex-direction: column; }
-  #teamStrengthScatterWrap { flex: 1; min-height: 280px; aspect-ratio: unset; }
+  /* The scatter keeps its own aspect ratio instead of stretching to fill
+     whatever height the left column happens to be. Opening a game's
+     preview in the Weekly Schedule grows that column, and with flex:1
+     here the graph beside it resized every time -- the panel can run
+     short of its neighbour, but the chart no longer moves under you. */
+  #teamStrengthScatterWrap { flex: 0 0 auto; min-height: 280px; }
   @media (max-width: 980px) {
     .panel-grid { grid-template-columns: 1fr; }
   }
@@ -3359,7 +3611,19 @@
       pointer-events: none;
     }
 
-    .utility-bar { flex-wrap: wrap; padding: 10px 14px; gap: 8px; }
+    .utility-bar { padding: 0; margin-bottom: 14px; }
+    /* The ticker stays on a phone, at close to full size -- it is the one
+       thing on the page worth glancing at one-handed. What goes is the
+       per-feed label (the mode badge already names the slate) and the pip
+       rail, which is a mouse target; swiping the strip replaces it. */
+    .ticker { height: 45px; }
+    .ticker-mode { padding: 0 11px; font-size: 11px; letter-spacing: 0.4px; }
+    .ticker-seg-label, .ticker-segs { display: none; }
+    .tk-item { padding: 0 13px; font-size: 13.5px; gap: 8px; }
+    .tk-pts { font-size: 14px; }
+    .tk-league { font-size: 13.5px; max-width: 150px; }
+    .tk-record { font-size: 13.5px; }
+    .tk-logo { width: 18px; height: 18px; }
     .sync-status { margin-left: 0; }
 
     .page-title { padding: 14px 0 4px; }
@@ -3483,20 +3747,17 @@
 </div>
 
 <div class="utility-bar">
-  <div class="sleeper-connect-wrap">
-    <div class="chip user" id="sleeperUserChip" title="Click to connect your Sleeper account">AusJ2</div>
-    <div class="sleeper-connect-panel" id="sleeperConnectPanel" hidden>
-      <label for="sleeperUsernameInput">Sleeper username</label>
-      <input type="text" id="sleeperUsernameInput" placeholder="e.g. AusJ2">
-      <button id="sleeperConnectBtn">Connect</button>
-      <div class="sleeper-connect-status" id="sleeperConnectStatus"></div>
+  <div class="ticker" id="tickerBar">
+    <button class="ticker-mode" id="tickerMode" type="button" title="Click for the next feed">
+      <span class="ticker-dot" id="tickerDot"></span>
+      <span id="tickerModeLabel">NFL</span>
+    </button>
+    <div class="ticker-seg-label" id="tickerSegLabel"></div>
+    <div class="ticker-viewport" id="tickerViewport">
+      <div class="ticker-track" id="tickerTrack"></div>
     </div>
+    <div class="ticker-segs" id="tickerSegs"></div>
   </div>
-  <div class="search-box">
-    <input type="text" placeholder="Search Username / League">
-  </div>
-  <div class="chip" id="leagueCountChip">18 Leagues</div>
-  <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncStatusText">Sample data &mdash; not connected</span></div>
 </div>
 
 <div class="content">
@@ -11009,6 +11270,27 @@
       <p>Preferences for how your Sleeper data is pulled in.</p>
     </div>
 
+    <div class="settings-panel sleeper-connect-wrap" id="sleeperAccountPanel">
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Sleeper Account</div>
+          <div class="settings-sub">The account every league on this site is pulled from. Loading a different username replaces the whole portfolio with theirs.</div>
+        </div>
+        <span class="chip user" id="sleeperUserChip" title="The Sleeper account these leagues are pulled from">AusJ2</span>
+      </div>
+      <div class="sleeper-connect-panel" id="sleeperConnectPanel">
+        <div class="settings-account-row">
+          <input type="text" id="sleeperUsernameInput" placeholder="Sleeper username">
+          <button id="sleeperConnectBtn">Load</button>
+        </div>
+        <div class="sleeper-connect-status" id="sleeperConnectStatus"></div>
+      </div>
+      <div class="settings-account-foot">
+        <span class="chip" id="leagueCountChip">18 Leagues</span>
+        <span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncStatusText">Sample data &mdash; not connected</span></span>
+      </div>
+    </div>
+
     <div class="settings-panel">
       <div class="settings-label">Site Mode</div>
       <div class="settings-sub">Which leagues show by default across the whole app -- classified from each league's own real Sleeper settings (keeper/dynasty leagues vs. season-only redraft leagues). Use the "Show All Leagues" button on the Dashboard any time you want to temporarily see everything regardless of mode.</div>
@@ -11510,6 +11792,16 @@
   }
   window.goToLeagueMatchup = goToLeagueMatchup;
 
+  // Open one NFL game on GameCast. The ESPN event id is the only thing
+  // GameCast keys a game on, so callers pass that rather than team codes.
+  function goToGameCast(eventId) {
+    if (!eventId) return;
+    window.__gcSelectedEventId = String(eventId);
+    goToSection('gamecast');
+    if (window.renderRealGameCast) { try { window.renderRealGameCast(); } catch (e) {} }
+  }
+  window.goToGameCast = goToGameCast;
+
   function goToRootingGuide() {
     goToSection('rooting');
   }
@@ -11702,6 +11994,12 @@
 
     const teams = Object.keys(gameInfo);
     if (!teams.length) { grid.innerHTML = ''; return; }
+
+    // Ahead of the pairing loop, because sbOrientGame reads ESPN's own
+    // home/away to decide which side is which.
+    if (!window.sleeperGetEspnGameData) { grid.innerHTML = ''; return; }
+    const espnGames = await window.sleeperGetEspnGameData(week, season);
+
     const seen = new Set();
     const games = [];
     teams.forEach(team => {
@@ -11710,14 +12008,10 @@
       const key = [team, info.opponent].sort().join('-');
       if (seen.has(key)) return;
       seen.add(key);
-      const away = info.isAway ? team : (gameInfo[info.opponent] && gameInfo[info.opponent].isAway ? info.opponent : team);
-      const home = away === team ? info.opponent : team;
-      games.push({ away, home, date: parseCalendarDate(info.date) });
+      const sides = sbOrientGame(team, info.opponent, gameInfo, espnGames);
+      games.push({ away: sides.away, home: sides.home, oriented: sides.oriented, date: parseCalendarDate(info.date) });
     });
     if (!games.length) { grid.innerHTML = ''; return; }
-
-    if (!window.sleeperGetEspnGameData) { grid.innerHTML = ''; return; }
-    const espnGames = await window.sleeperGetEspnGameData(week, season);
     games.forEach(g => {
       const info = espnGames[g.away] || espnGames[g.home];
       if (info && info.when) {
@@ -14790,8 +15084,8 @@
         gameEl.innerHTML = '<p class="pfm-empty">No schedule data for this week yet.</p>';
       } else {
         const opponent = info.opponent;
-        const away = info.isAway ? team : (gameInfo[opponent] && gameInfo[opponent].isAway ? opponent : team);
-        const home = away === team ? opponent : team;
+        const sides = sbOrientGame(team, opponent, gameInfo, espnGames);
+        const away = sides.away, home = sides.home;
         const awayInfo = espnGames[away] || {};
         const homeInfo = espnGames[home] || {};
         const isLive = awayInfo.state === 'in' || homeInfo.state === 'in';
@@ -14811,7 +15105,7 @@
           `<div class="pfm-game-time${isLive ? ' pfm-game-live' : ''}">${timeLabel}</div>` +
           '<div class="pfm-game-row">' +
             `<div class="pfm-game-team">${awayBall}<img src="https://sleepercdn.com/images/team_logos/nfl/${away.toLowerCase()}.png" alt="${away}" onerror="this.style.display='none'"><span>${away}</span>${showScore ? `<span class="pfm-game-score">${awayInfo.score}</span>` : ''}</div>` +
-            '<span class="pfm-game-at">@</span>' +
+            `<span class="pfm-game-at">${sides.oriented ? '@' : 'vs'}</span>` +
             `<div class="pfm-game-team">${homeBall}<img src="https://sleepercdn.com/images/team_logos/nfl/${home.toLowerCase()}.png" alt="${home}" onerror="this.style.display='none'"><span>${home}</span>${showScore ? `<span class="pfm-game-score">${homeInfo.score}</span>` : ''}</div>` +
           '</div>';
       }
@@ -14951,6 +15245,25 @@
     expand.innerHTML = rgExpandHtml(row);
     row.after(expand);
   }
+
+  // Open the Weekly Sweats page on one specific player, with his
+  // for/against league breakdown already unfolded. Used by the ticker, where
+  // clicking a player's "+3 for you" is a request to see which three.
+  // Scrolling is deferred a frame because goToSection() sends the page to
+  // the top, which would otherwise undo it.
+  window.rgJumpToPlayerId = function rgJumpToPlayerId(playerId) {
+    goToSection('rooting');
+    requestAnimationFrame(() => {
+      const row = document.querySelector(`.rg-row[data-player-id="${playerId}"]`);
+      if (!row) return;
+      document.querySelectorAll('.rg-expand').forEach(el => el.remove());
+      openRgExpand(row);
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.classList.remove('rg-row-flash');
+      void row.offsetWidth;
+      row.classList.add('rg-row-flash');
+    });
+  };
 
   document.addEventListener('click', (e) => {
     const leagueRow = e.target.closest('.rg-expand .pm-league-row[data-league]');
@@ -15947,13 +16260,11 @@
     }
     setInterval(tickSyncedLabel, 5000);
 
-    userChip.addEventListener('click', (e) => {
-      e.stopPropagation();
-      connectPanel.hidden = !connectPanel.hidden;
-      if (!connectPanel.hidden) usernameInput.focus();
-    });
-    connectPanel.addEventListener('click', (e) => e.stopPropagation());
-    document.addEventListener('click', () => { connectPanel.hidden = true; });
+    // The panel used to be a popover hanging off a chip in the old top bar.
+    // It now sits open on the Dashboard as part of the account card, so the
+    // only thing the chip still does is focus the field.
+    connectPanel.hidden = false;
+    userChip.addEventListener('click', () => usernameInput.focus());
 
     connectBtn.addEventListener('click', () => connectSleeperUser(usernameInput.value.trim()));
     usernameInput.addEventListener('keydown', (e) => {
@@ -15970,7 +16281,6 @@
         if (!user || !user.user_id) throw new Error('not found');
         saveUser({ username: user.display_name || user.username || username, userId: user.user_id });
         userChip.textContent = user.display_name || user.username || username;
-        connectPanel.hidden = true;
         connectStatus.textContent = '';
         usernameInput.value = '';
         await loadSleeperData();
@@ -16450,6 +16760,7 @@
         if (window.renderRealTrades) window.renderRealTrades();
         if (window.renderRealWaiverWire) window.renderRealWaiverWire();
         if (window.renderRealRootingGuide) window.renderRealRootingGuide(window.__rgSelectedWeek || undefined);
+        if (window.refreshTicker) window.refreshTicker();
         if (window.renderRealDraftRoom) window.renderRealDraftRoom();
         if (window.renderRealMyAdp) window.renderRealMyAdp();
         if (window.renderRealDashboard) window.renderRealDashboard();
@@ -18776,11 +19087,8 @@
           if (window.sleeperReloadData) window.sleeperReloadData();
           // Picking a mode with no Sleeper account connected yet would
           // otherwise just drop you on an empty Dashboard with no obvious
-          // next step -- open the connect prompt right away instead of
-          // relying on someone noticing the small account chip. Deferred a
-          // tick so it opens *after* this same click finishes bubbling to
-          // document's own listener, which closes the panel on any outside
-          // click -- opening it inline here would have it close itself.
+          // next step -- put the cursor in the username field instead of
+          // relying on someone noticing the account card.
           if (!getSavedUser()) {
             setTimeout(() => { connectPanel.hidden = false; usernameInput.focus(); }, 0);
           }
@@ -20303,6 +20611,18 @@
         const when = comp.date || ev.date;
         const statusType = comp.status && comp.status.type;
         const possessionTeamId = comp.situation ? comp.situation.possession : null;
+        // Real betting lines ride along in this same payload -- no second
+        // service, no key, nothing to sync. It is whichever book ESPN has
+        // at priority 1 (its own consensus-ish line), and it is simply
+        // absent for some games and most finished ones, so every field
+        // here is optional and read defensively.
+        const oddsRow = (comp.odds || [])[0] || null;
+        const odds = oddsRow ? {
+          book: (oddsRow.provider && oddsRow.provider.name) || null,
+          // "KC -3.5" -- already written from the favourite's point of view.
+          details: oddsRow.details != null ? String(oddsRow.details) : null,
+          overUnder: oddsRow.overUnder != null ? Number(oddsRow.overUnder) : null,
+        } : null;
         (comp.competitors || []).forEach(c => {
           const abbr = c.team && c.team.abbreviation;
           if (!abbr) return;
@@ -20313,6 +20633,11 @@
           const otherAbbr = other && other.team ? other.team.abbreviation : null;
           map[ESPN_TEAM_ABBR_FIX[abbr] || abbr] = {
             when,
+            // ESPN says outright which side is home. Sleeper's projections
+            // feed only implies it, via an "@" that isn't always on the
+            // opponent string -- so this is the authority for orientation
+            // wherever a game is drawn (see sbOrientGame).
+            homeAway: c.homeAway || null,
             score: c.score != null ? Number(c.score) : null,
             oppAbbr: otherAbbr ? (ESPN_TEAM_ABBR_FIX[otherAbbr] || otherAbbr) : null,
             oppScore: other && other.score != null ? Number(other.score) : null,
@@ -20326,6 +20651,7 @@
             // from pregame to final -- see sbEstimateLiveProjection.
             period: comp.status ? comp.status.period : null,
             clock: comp.status ? comp.status.displayClock : null,
+            odds,
           };
         });
       });
@@ -20351,6 +20677,41 @@
     return data;
   }
   window.sleeperGetEspnGameData = getEspnGameDataCached;
+
+  // Which of two teams is at home.
+  //
+  // This used to be read only off the "isAway" flag extractGameInfo derives
+  // from Sleeper's projections payload, by checking whether that player's
+  // opponent string starts with an "@". That string doesn't always carry
+  // the "@", so isAway came back false for BOTH sides of a game -- and the
+  // old fallback then picked the team it happened to be looking at as the
+  // away side, which is why the Weekly Schedule had games like Washington
+  // at Dallas printed the wrong way round.
+  //
+  // ESPN states it outright per competitor, so that goes first. Sleeper's
+  // flag is kept as a fallback for a week ESPN has no data for, and when
+  // neither can say, `oriented` comes back false so the caller can print a
+  // neutral "A vs B" instead of an "@" that might be backwards.
+  function sbOrientGame(teamA, teamB, gameInfo, espnGames) {
+    const espn = espnGames || {};
+    const a = espn[teamA], b = espn[teamB];
+    if (a && a.homeAway === 'home') return { home: teamA, away: teamB, oriented: true };
+    if (a && a.homeAway === 'away') return { home: teamB, away: teamA, oriented: true };
+    if (b && b.homeAway === 'home') return { home: teamB, away: teamA, oriented: true };
+    if (b && b.homeAway === 'away') return { home: teamA, away: teamB, oriented: true };
+
+    const info = gameInfo || {};
+    const ia = info[teamA], ib = info[teamB];
+    if (ia && typeof ia.isAway === 'boolean' && ib && typeof ib.isAway === 'boolean' && ia.isAway !== ib.isAway) {
+      // Only trusted when the two sides actually disagree -- both reading
+      // false is the missing-"@" case above, not two home teams.
+      return ia.isAway ? { home: teamB, away: teamA, oriented: true } : { home: teamA, away: teamB, oriented: true };
+    }
+    if (ia && ia.isAway === true) return { home: teamB, away: teamA, oriented: true };
+    if (ib && ib.isAway === true) return { home: teamA, away: teamB, oriented: true };
+    return { home: teamB, away: teamA, oriented: false };
+  }
+  window.sbOrientGame = sbOrientGame;
 
   // ---- Last 5 Plays -- real ESPN play-by-play, filtered down to plays
   // involving one of a fantasy roster's own starters, scored against that
@@ -21605,6 +21966,11 @@
       return;
     }
 
+    // Fetched before the games are assembled, not after: ESPN is what says
+    // which side is at home, and sbOrientGame needs it to get the pairing
+    // the right way round.
+    const espnGames = await getEspnGameData(week, season);
+
     const seen = new Set();
     const games = [];
     teams.forEach(team => {
@@ -21613,16 +21979,14 @@
       const key = [team, info.opponent].sort().join('-');
       if (seen.has(key)) return;
       seen.add(key);
-      const away = info.isAway ? team : (gameInfo[info.opponent] && gameInfo[info.opponent].isAway ? info.opponent : team);
-      const home = away === team ? info.opponent : team;
-      games.push({ away, home, date: parseCalendarDate(info.date) });
+      const sides = sbOrientGame(team, info.opponent, gameInfo, espnGames);
+      games.push({ away: sides.away, home: sides.home, oriented: sides.oriented, date: parseCalendarDate(info.date) });
     });
     if (!games.length) {
       container.innerHTML = '<div class="placeholder"><p>No schedule data available for this week.</p></div>';
       return;
     }
 
-    const espnGames = await getEspnGameData(week, season);
     let anyKickoff = false;
     games.forEach(g => {
       const info = espnGames[g.away] || espnGames[g.home];
@@ -21633,6 +21997,7 @@
       }
       g.state = info.state;
       g.detail = info.detail;
+      g.eventId = info.eventId || null;
       const awayInfo = espnGames[g.away];
       const homeInfo = espnGames[g.home];
       if (awayInfo && awayInfo.score != null) g.awayScore = awayInfo.score;
@@ -21666,11 +22031,11 @@
       const homeBallHtml = isLive && g.possession === 'home' ? ballIcon : '';
       const awayScoreHtml = showScore ? `<span class="schedule-score">${g.awayScore}</span>` : '';
       const homeScoreHtml = showScore ? `<span class="schedule-score">${g.homeScore}</span>` : '';
-      return `<div class="schedule-chip" data-away="${g.away}" data-home="${g.home}">` +
+      return `<div class="schedule-chip" data-away="${g.away}" data-home="${g.home}" data-event-id="${g.eventId || ''}">` +
         `<div class="schedule-time${timeClass}">${timeLabel}</div>` +
         '<div class="schedule-row">' +
           `<div class="schedule-team">${awayBallHtml}<img src="https://sleepercdn.com/images/team_logos/nfl/${awayLower}.png" alt="${g.away}" onerror="this.style.display='none'"><span>${g.away}</span>${awayScoreHtml}</div>` +
-          '<span class="schedule-at">@</span>' +
+          `<span class="schedule-at">${g.oriented ? '@' : 'vs'}</span>` +
           `<div class="schedule-team">${homeBallHtml}<img src="https://sleepercdn.com/images/team_logos/nfl/${homeLower}.png" alt="${g.home}" onerror="this.style.display='none'"><span>${g.home}</span>${homeScoreHtml}</div>` +
         '</div>' +
       '</div>';
@@ -22291,7 +22656,12 @@
       }
       window.__sleeperMatchupCache[cacheKey] = matchups;
     }
-    return (matchups || []).find(m => m.roster_id === rosterId) || null;
+    // Array-checked, not just null-checked: anything other than a real list
+    // here (an error object from Sleeper, a cached bad response) used to
+    // throw straight out of the player card's Game Log. The ticker opens
+    // that card on any player name in the strip, so this path is reached a
+    // great deal more often than it used to be.
+    return (Array.isArray(matchups) ? matchups : []).find(m => m.roster_id === rosterId) || null;
   }
 
   // Shared by the Game Log and Overview tabs -- both want the same
@@ -23330,6 +23700,747 @@
   tcRender();
 
   refreshExpBoard();
+
+  // ---- The ticker ------------------------------------------------------
+  // The strip under the site nav, on every page. What it carries depends on
+  // what the NFL is doing right now: live fantasy lines while games are
+  // being played, the day's scoreboard and leaders on a game day, and the
+  // week's sweats plus the upcoming schedule when nothing is on.
+  //
+  // Almost none of this is new data. The Weekly Sweats page already builds
+  // one row per player who is started (by me or against me) anywhere in the
+  // portfolio, carrying his live points, his live projection and his Points
+  // Over Expected off the shared house scoring line -- window.__sleeperRootingRows.
+  // Reading that means the ticker quotes the same numbers as the page it
+  // came from instead of computing a second, slightly different set.
+  (function initTicker() {
+    const bar = document.getElementById('tickerBar');
+    const track = document.getElementById('tickerTrack');
+    const viewport = document.getElementById('tickerViewport');
+    const modeBtn = document.getElementById('tickerMode');
+    const modeLabel = document.getElementById('tickerModeLabel');
+    const segLabelEl = document.getElementById('tickerSegLabel');
+    const pipsEl = document.getElementById('tickerSegs');
+    if (!bar || !track || !viewport) return;
+
+    // Now that a feed holds the strip for a whole lap, this sets how long a
+    // turn takes: at 62 a 20-player sweats feed ran for nearly two minutes
+    // before anything else got a look in. 95px/s still reads easily -- a
+    // broadcast ticker runs faster than this -- and brings a full cycle of
+    // every feed back under three minutes.
+    const SCROLL_PX_PER_SEC = 95;
+    // A feed holds the strip for exactly one lap -- long enough for every
+    // item in it to pass through view once -- and then hands over. A fixed
+    // rotation was cutting long feeds off partway: 20 sweats or 18 matchups
+    // cannot scroll past in any one number of seconds, so whoever was at the
+    // back was never reached, every single rotation. This is the floor, for a
+    // feed short enough that it does not scroll at all.
+    const SEG_MIN_MS = 9000;
+    // A beat on the seam, so the last item isn't cut off the instant it lands.
+    const LAP_BUFFER_MS = 900;
+    const DATA_REFRESH_MS = 20000;  // ESPN's own cache here is 15s
+
+    let segments = [];       // [{ key, label, items: [html] }]
+    let pending = null;      // freshly built segments, applied on next rotate
+    let segIndex = 0;
+    let mode = '';
+    let rotateTimer = null;
+    let building = false;
+    let hovering = false;
+
+    const esc = (v) => String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const one = (n) => Number(n || 0).toFixed(1);
+    const signed = (n) => (n >= 0 ? '+' : '') + Number(n).toFixed(1);
+
+    function posClass(pos) {
+      const p = String(pos || '').toLowerCase();
+      return ['qb', 'rb', 'wr', 'te'].includes(p) ? ' sb-pos-' + p : '';
+    }
+
+    // ---- shared pieces of an item ----
+    // Same logo source the Weekly Schedule and the player modal use; a team
+    // with no logo there (FA, or an abbreviation Sleeper doesn't host) drops
+    // the image rather than leaving a broken-image box in the strip.
+    function logo(team, side) {
+      if (!team || team === 'FA') return '';
+      return `<img class="tk-logo${side ? ' tk-logo-' + side : ''}" ` +
+        `src="https://sleepercdn.com/images/team_logos/nfl/${esc(String(team).toLowerCase())}.png" ` +
+        `alt="" loading="lazy" onerror="this.remove()">`;
+    }
+
+    // The name is the click target for the player modal, so it carries the
+    // attributes openPlayerModalForId needs.
+    function playerCell(r) {
+      return `<span class="tk-pos${posClass(r.pos)}">${esc(r.pos || '')}</span>` +
+             `<span class="tk-name is-player" data-player-id="${esc(r.id)}" data-name="${esc(r.name)}" ` +
+             `data-team="${esc(r.team || '')}" data-pos="${esc(r.pos || '')}">${esc(r.name)}</span>` +
+             `${logo(r.team)}<span class="tk-team">${esc(r.team || 'FA')}</span>`;
+    }
+
+    // And the delta is the click target for that player's Weekly Sweats row.
+    function deltaCell(r) {
+      const d = (r.for.length || 0) - (r.against.length || 0);
+      const cls = d > 0 ? 'is-pos' : (d < 0 ? 'is-neg' : 'is-even');
+      const label = d > 0 ? `+${d} for you` : (d < 0 ? `${d} against you` : 'even');
+      return `<span class="tk-delta is-sweat ${cls}" data-sweat-id="${esc(r.id)}">${esc(label)}</span>`;
+    }
+
+    // ---- data ----
+    function leagueEntries() {
+      return Object.values(window.sleeperLeagueData || {});
+    }
+
+    function currentWeekSeason() {
+      const entries = leagueEntries();
+      if (!entries.length) return null;
+      const first = entries[0];
+      const season = (first.league && first.league.season) || String(new Date().getFullYear());
+      return { week: first.week, season };
+    }
+
+    // ESPN's map has one row per TEAM; two teams share a game, so fold it
+    // back down to one row per game before showing a scoreboard, orienting
+    // each pairing with the same sbOrientGame the Weekly Schedule uses.
+    function gamesFrom(espn) {
+      const info = window.__sleeperGameInfo || {};
+      const byEvent = {};
+      const done = new Set();
+      Object.keys(espn || {}).forEach(abbr => {
+        const g = espn[abbr];
+        if (!g || !g.eventId || !g.oppAbbr) return;
+        const key = [abbr, g.oppAbbr].sort().join('-');
+        if (done.has(key)) return;
+        done.add(key);
+        const sides = sbOrientGame(abbr, g.oppAbbr, info, espn);
+        const awayRow = espn[sides.away] || {};
+        const homeRow = espn[sides.home] || {};
+        byEvent[key] = {
+          eventId: g.eventId,
+          away: sides.away, awayScore: awayRow.score,
+          home: sides.home, homeScore: homeRow.score,
+          oriented: sides.oriented,
+          odds: g.odds || homeRow.odds || awayRow.odds || null,
+          state: g.state, detail: g.detail || homeRow.detail || awayRow.detail, when: g.when,
+        };
+      });
+      return Object.values(byEvent);
+    }
+
+    function pairing(g) {
+      return `${logo(g.away)}<span class="tk-side">${esc(g.away || '')}</span>` +
+        `<span class="tk-sub">${g.oriented ? 'at' : 'vs'}</span>` +
+        `<span class="tk-side">${esc(g.home || '')}</span>${logo(g.home)}`;
+    }
+
+    function isToday(when) {
+      if (!when) return false;
+      const d = new Date(when);
+      if (isNaN(d)) return false;
+      const now = new Date();
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    }
+
+    function kickoffLabel(when) {
+      const d = when ? new Date(when) : null;
+      if (!d || isNaN(d)) return '';
+      const day = d.toLocaleDateString(undefined, { weekday: 'short' });
+      const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      return `${day} ${time}`;
+    }
+
+    // ---- item builders --------------------------------------------------
+
+    function liveFantasyItems(rows, espn) {
+      return rows
+        .filter(r => {
+          const g = espn[r.team];
+          return g && g.state === 'in';
+        })
+        .sort((a, b) => (b.pprPoints || 0) - (a.pprPoints || 0))
+        .map(r => {
+          const poe = r.poe == null ? '' :
+            `<span class="tk-delta ${r.poe >= 0 ? 'is-pos' : 'is-neg'}">POE ${signed(r.poe)}</span>`;
+          return `<div class="tk-item">${playerCell(r)}` +
+                 `<span class="tk-pts">${one(r.pprPoints)}</span>` +
+                 `<span class="tk-sub">proj ${one(r.liveProj)}</span>` +
+                 poe + `</div>`;
+        });
+    }
+
+    function scoreItems(games) {
+      const rank = { in: 0, pre: 1, post: 2 };
+      return games
+        .slice()
+        .sort((a, b) => (rank[a.state] ?? 3) - (rank[b.state] ?? 3) ||
+                        (new Date(a.when || 0) - new Date(b.when || 0)))
+        .map(g => {
+          const tag = g.state === 'in'
+            ? `<span class="tk-live">${esc(g.detail || 'live')}</span>`
+            : (g.state === 'post'
+              ? '<span class="tk-final">Final</span>'
+              : `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span>`);
+          const line = g.state === 'pre'
+            ? pairing(g)
+            : `${logo(g.away)}<span class="tk-side">${esc(g.away || '')}</span>` +
+              `<span class="tk-pts">${esc(g.awayScore ?? 0)}</span>` +
+              `<span class="tk-sub">&ndash;</span>` +
+              `<span class="tk-pts">${esc(g.homeScore ?? 0)}</span>` +
+              `<span class="tk-side">${esc(g.home || '')}</span>${logo(g.home)}`;
+          return `<div class="tk-item is-game" data-event-id="${esc(g.eventId || '')}">${line}${tag}</div>`;
+        });
+    }
+
+    function scheduleItems(games) {
+      return games
+        .slice()
+        .sort((a, b) => new Date(a.when || 0) - new Date(b.when || 0))
+        .map(g => {
+          const line = g.odds && g.odds.details ? `<span class="tk-odds">${esc(g.odds.details)}</span>` : '';
+          const total = g.odds && g.odds.overUnder != null
+            ? `<span class="tk-sub">O/U ${esc(Number(g.odds.overUnder).toFixed(1))}</span>` : '';
+          return `<div class="tk-item is-game" data-event-id="${esc(g.eventId || '')}">${pairing(g)}` +
+            `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span>${line}${total}</div>`;
+        });
+    }
+
+    // The Weekly Sweats page's own order, read off the page itself.
+    //
+    // This used to rank players independently, which put every player I was
+    // rooting FOR ahead of every player I was rooting against -- so the
+    // names at the top of the Weekly Sweats page, the ones actually worth
+    // sweating, were buried 15 items into the strip or fell off the end.
+    // The page already sorts Root For by delta and Root Against by how far
+    // negative it goes, and it already honours the league checkboxes, the
+    // position filter and the $ / league-count toggle. Reading its rendered
+    // rows in DOM order inherits all of that for free and guarantees the two
+    // never disagree about who matters most this week.
+    //
+    // recomputeRootingGuide() runs on every sync whether or not that page has
+    // been opened, so the rows are there to read. Only rows carrying a
+    // data-player-id are real: the page ships with mock rows in the static
+    // markup, and those have no dataset to read.
+    function rgLeagueCount(str) {
+      const v = String(str || '').trim();
+      return v ? v.split(' &middot; ').length : 0;
+    }
+
+    function sweatRow(item, net, money) {
+      const cls = net > 0 ? 'is-pos' : (net < 0 ? 'is-neg' : 'is-even');
+      const label = money
+        ? (net > 0 ? `+$${net} for you` : (net < 0 ? `-$${Math.abs(net)} against you` : '$0'))
+        : (net > 0 ? `+${net} for you` : (net < 0 ? `${net} against you` : 'even'));
+      return `<div class="tk-item">${playerCell(item)}` +
+        `<span class="tk-delta is-sweat ${cls}" data-sweat-id="${esc(item.id)}">${esc(label)}</span>` +
+        `<span class="tk-sub">${esc(item.for.length)} for &middot; ${esc(item.against.length)} vs</span></div>`;
+    }
+
+    // Ten a side. The whole list belongs on the Weekly Sweats page; a ticker
+    // only wants the names at the top of each end, and the two lists are
+    // sliced separately so a lopsided week can't spend all twenty slots on
+    // one of them.
+    const SWEAT_PER_SIDE = 10;
+    function sweatItems(rows) {
+      const byId = {};
+      rows.forEach(r => { byId[r.id] = r; });
+      const topOf = (sel) => Array.from(
+        document.querySelectorAll(`${sel} .rg-list .rg-row[data-player-id]`)
+      ).slice(0, SWEAT_PER_SIDE);
+      // Each list already arrives in the page's own order -- Root For from
+      // most for you down, Root Against from most against you down.
+      const els = topOf('.rg-panel-for').concat(topOf('.rg-panel-against'));
+
+      if (els.length) {
+        // In $ mode the page ranks and labels by real money at stake, so the
+        // ticker says the same thing rather than quietly reverting to a
+        // league count the page isn't sorted by.
+        const money = !!window.__rgMoneyMode;
+        return els.map(el => {
+          const d = el.dataset;
+          const r = byId[d.playerId] || {};
+          const nameEl = el.querySelector('.rg-name');
+          const item = {
+            id: d.playerId,
+            name: d.name || r.name || (nameEl ? nameEl.textContent.trim() : ''),
+            team: d.team || r.team || '',
+            pos: d.pos || r.pos || '',
+            // Counts off the row's own dataset, not the raw feed, because the
+            // dataset is what is left after the page's league filters.
+            for: { length: rgLeagueCount(d.for) },
+            against: { length: rgLeagueCount(d.against) },
+          };
+          return sweatRow(item, Number(money ? d.dollar : d.delta) || 0, money);
+        });
+      }
+
+      // Nothing rendered yet (first sync, or the page's rows not built) --
+      // reproduce the order it will land on rather than showing an empty
+      // feed, and take the same ten a side.
+      const scored = rows
+        .filter(r => (r.for.length + r.against.length) > 0)
+        .map(r => ({ r, delta: r.for.length - r.against.length }))
+        .filter(x => x.delta !== 0);
+      const tie = (a, b) => (b.r.liveProj || 0) - (a.r.liveProj || 0);
+      // Each side ranked from its own extreme inwards, the way the page's
+      // two lists are: most for you first, then most against you first.
+      const forSide = scored.filter(x => x.delta > 0)
+        .sort((a, b) => b.delta - a.delta || tie(a, b)).slice(0, SWEAT_PER_SIDE);
+      const againstSide = scored.filter(x => x.delta < 0)
+        .sort((a, b) => a.delta - b.delta || tie(a, b)).slice(0, SWEAT_PER_SIDE);
+      return forSide.concat(againstSide).map(({ r, delta }) => sweatRow(r, delta, false));
+    }
+
+    // The same sweats, but ranked by what they are actually doing today --
+    // the players deciding this week's matchups while their games are on.
+    function impactItems(rows, espn) {
+      return rows
+        .filter(r => {
+          const g = espn[r.team];
+          return g && (g.state === 'in' || g.state === 'post') && (r.for.length + r.against.length) > 0;
+        })
+        .sort((a, b) => {
+          const swing = (r) => Math.abs(r.for.length - r.against.length) * (r.pprPoints || 0);
+          return swing(b) - swing(a);
+        })
+        .slice(0, 30)
+        .map(r => `<div class="tk-item">${playerCell(r)}` +
+          `<span class="tk-pts">${one(r.pprPoints)}</span>` +
+          deltaCell(r) + `</div>`);
+    }
+
+    // Betting lines ride along in the same ESPN scoreboard payload as the
+    // live scores -- no second service and no key -- and are shown on the
+    // schedule feed beside each kickoff. They are optional in that payload
+    // (absent for some games and most finished ones), so a game with no
+    // line is simply shown without one.
+
+    // Every one of this week's matchups: my record, my opponent's, the two
+    // projected totals and my chance of winning. Filtered exactly the way
+    // the Dashboard's PROJECTED WEEKLY RECORD is -- teams marked as tanking
+    // are left out, and co-managed leagues follow the Settings toggle --
+    // so the ticker covers the same leagues that record is counting.
+    //
+    // The projection and the percentage both come from sbMatchupWinPct and
+    // sbMatchupProjectedTotal rather than being worked out here, because
+    // two callers reaching for different projection stores is exactly how
+    // pages in this app have ended up quoting different numbers for the
+    // same matchup.
+    function matchupItems(espn, week) {
+      const tanks = (typeof sbGetTankList === 'function') ? sbGetTankList() : new Set();
+      const coManaged = (typeof isCoManagedIncluded === 'function') ? isCoManagedIncluded() : true;
+      // A record is coloured by what it is: above .500 green, below it red,
+      // dead even gold. Ties count as half a win, so 1-1-1 reads as even
+      // rather than as a losing record.
+      const record = (roster) => {
+        const st = (roster && roster.settings) || {};
+        const w = st.wins || 0, l = st.losses || 0, t = st.ties || 0;
+        const text = `${w}-${l}${t ? '-' + t : ''}`;
+        const margin = (w + t / 2) - (l + t / 2);
+        const cls = margin > 0 ? 'is-win' : (margin < 0 ? 'is-loss' : 'is-even');
+        return `<span class="tk-record ${cls}">${esc(text)}</span>`;
+      };
+      return Object.values(window.sleeperLeagueData || {})
+        .filter(e => e.roster && e.league && e.myMatchup && e.oppMatchup)
+        .filter(e => coManaged || !e.isCoOwned)
+        .filter(e => !tanks.has(e.league.name))
+        .map(e => {
+          return {
+            e,
+            myProj: sbMatchupProjectedTotal(e.myMatchup, null, e.league, espn, week),
+            oppProj: sbMatchupProjectedTotal(e.oppMatchup, null, e.league, espn, week),
+            pct: sbMatchupWinPct(e.myMatchup, e.oppMatchup, e.league, null, espn, week),
+          };
+        })
+        // Closest first, the same order GameCast lists leagues in.
+        .sort((a, b) => Math.abs((a.pct == null ? 50 : a.pct) - 50) - Math.abs((b.pct == null ? 50 : b.pct) - 50))
+        .map(m => {
+          const num = (v) => Number.isFinite(v) ? Number(v).toFixed(1) : '&mdash;';
+          const pctHtml = m.pct == null
+            ? '<span class="tk-sub">&mdash;</span>'
+            : `<span class="tk-delta ${m.pct >= 50 ? 'is-pos' : 'is-neg'}">${Math.round(m.pct)}%</span>`;
+          // Your side is always the left one, so it needs no label, and the
+          // opponent's name and record were noise at a glance -- the league,
+          // your record, the two projections and your odds are the row.
+          return `<div class="tk-item is-matchup" data-league-id="${esc(m.e.league.league_id || '')}">` +
+            `<span class="tk-league">${esc(m.e.league.name)}</span>` +
+            `${record(m.e.roster)}` +
+            `<span class="tk-pts">${num(m.myProj)}</span>` +
+            `<span class="tk-sub">&ndash;</span>` +
+            `<span class="tk-pts">${num(m.oppProj)}</span>` +
+            pctHtml + `</div>`;
+        });
+    }
+
+    // League-wide leaders, not just players someone happens to roster --
+    // scored off the same house line the Weekly Sweats page uses, so a
+    // number here is directly comparable with one there.
+    function leaderItems(statsMap, dict) {
+      if (!statsMap || !dict) return [];
+      const byPos = { QB: [], RB: [], WR: [], TE: [] };
+      Object.keys(statsMap).forEach(id => {
+        const p = dict[id];
+        if (!p || !byPos[p.position]) return;
+        const pts = sbHouseScore(id, statsMap[id], dict);
+        if (pts == null) return;
+        byPos[p.position].push({
+          id,
+          name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
+          team: p.team || 'FA',
+          pos: p.position,
+          pts,
+        });
+      });
+      const items = [];
+      ['QB', 'RB', 'WR', 'TE'].forEach(pos => {
+        byPos[pos].sort((a, b) => b.pts - a.pts).slice(0, 5).forEach((r, i) => {
+          items.push(`<div class="tk-item"><span class="tk-sub">${esc(pos)}${i + 1}</span>` +
+            playerCell(r) + `<span class="tk-pts">${one(r.pts)}</span></div>`);
+        });
+      });
+      return items;
+    }
+
+    // ---- slate assembly --------------------------------------------------
+
+    async function build() {
+      if (building) return;
+      building = true;
+      try {
+        const ws = currentWeekSeason();
+        if (!ws) {
+          applyNow('off', [{ key: 'none', label: '', items: [] }],
+            'Connect a Sleeper username on the Dashboard to fill the ticker.');
+          return;
+        }
+        const { week, season } = ws;
+        const rows = window.__sleeperRootingRows || [];
+        const espn = (window.sleeperGetEspnGameData
+          ? await window.sleeperGetEspnGameData(week, season).catch(() => ({}))
+          : {}) || {};
+        const games = gamesFrom(espn);
+
+        const anyLive = games.some(g => g.state === 'in');
+        const todays = games.filter(g => isToday(g.when));
+        const gameDay = todays.length > 0;
+
+        const segs = [];
+        let nextMode;
+
+        // Every slate carries the matchup card -- it is the one feed that is
+        // just as useful with no games on as it is mid-Sunday.
+        const matchups = { key: 'matchups', label: `Week ${week} Matchups`, items: matchupItems(espn, week) };
+
+        if (anyLive) {
+          nextMode = 'live';
+          segs.push({ key: 'liveFantasy', label: 'Live Fantasy', items: liveFantasyItems(rows, espn) });
+          segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(todays.length ? todays : games) });
+          segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
+          segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
+          segs.push(matchups);
+        } else if (gameDay) {
+          nextMode = 'game day';
+          segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(todays) });
+          segs.push(matchups);
+          segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
+          segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
+        } else {
+          nextMode = `week ${week}`;
+          segs.push(matchups);
+          segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
+          // Every game of this week is already finished, so the schedule
+          // worth showing is next week's, not a list of results.
+          const upcoming = games.filter(g => g.state !== 'post');
+          if (upcoming.length) {
+            segs.push({ key: 'schedule', label: `Week ${week} Schedule`, items: scheduleItems(upcoming) });
+          } else {
+            const nextGames = window.sleeperGetEspnGameData
+              ? gamesFrom(await window.sleeperGetEspnGameData(week + 1, season).catch(() => ({})) || {})
+              : [];
+            if (nextGames.length) {
+              segs.push({ key: 'schedule', label: `Week ${week + 1} Schedule`, items: scheduleItems(nextGames) });
+            }
+            if (games.length) {
+              segs.push({ key: 'results', label: `Week ${week} Results`, items: scoreItems(games) });
+            }
+          }
+        }
+
+        // Position leaders are only meaningful once the week has actually
+        // produced some stats, and the full stat feed is a real fetch -- so
+        // it's only pulled on a day there are games.
+        if ((anyLive || gameDay) && window.sleeperGetWeekStats && window.sleeperGetPlayerDict) {
+          try {
+            const [statsMap, dict] = await Promise.all([
+              window.sleeperGetWeekStats(season, week),
+              window.sleeperGetPlayerDict(),
+            ]);
+            const items = leaderItems(statsMap, dict);
+            if (items.length) segs.push({ key: 'leaders', label: 'Position Leaders', items });
+          } catch (e) {
+            // No leaders feed this pass; the other segments still rotate.
+          }
+        }
+
+        const usable = segs.filter(s => s.items.length);
+        if (!usable.length) {
+          applyNow(nextMode, [{ key: 'none', label: '', items: [] }], 'Nothing on the wire right now.');
+          return;
+        }
+        if (nextMode !== mode || !segments.length) applyNow(nextMode, usable);
+        else pending = usable;
+      } finally {
+        building = false;
+      }
+    }
+
+    // ---- rendering -------------------------------------------------------
+
+    let emptyMessage = 'Loading…';
+
+    function applyNow(nextMode, segs, message) {
+      if (message) emptyMessage = message;
+      const prevKey = segments[segIndex] && segments[segIndex].key;
+      mode = nextMode;
+      segments = segs;
+      pending = null;
+      // Hold the viewer on the feed they were already reading if it survived
+      // the rebuild, rather than snapping back to the first one every poll.
+      const keep = segs.findIndex(s => s.key === prevKey);
+      segIndex = keep >= 0 ? keep : 0;
+      modeLabel.textContent = mode.toUpperCase();
+      bar.classList.toggle('is-live', mode === 'live');
+      renderPips();
+      renderSegment();
+    }
+
+    function renderPips() {
+      if (!pipsEl) return;
+      pipsEl.innerHTML = segments
+        .map((s, i) => `<button class="ticker-seg-pip${i === segIndex ? ' is-active' : ''}" type="button" data-seg="${i}" title="${esc(s.label)}"></button>`)
+        .join('');
+    }
+
+    function renderSegment() {
+      const seg = segments[segIndex];
+      if (segLabelEl) segLabelEl.textContent = seg && seg.label ? seg.label : '';
+      track.classList.remove('is-scrolling');
+      track.style.animationDuration = '';
+      track.style.animationDelay = '';
+      track.dataset.doubled = '0';
+      // A new feed starts at its own beginning, so any hand-scrolling of the
+      // previous one is dropped rather than carried across.
+      clearTimeout(manualTimer);
+      viewport.classList.remove('tk-manual');
+      viewport.scrollLeft = 0;
+      if (!seg || !seg.items.length) {
+        track.innerHTML = `<div class="tk-empty">${esc(emptyMessage)}</div>`;
+        scheduleAdvance(SEG_MIN_MS);
+        return;
+      }
+      const html = seg.items.join('');
+      track.innerHTML = html;
+      // Provisional: a feed that turns out to fit on screen keeps this, since
+      // there is no lap to wait for.
+      scheduleAdvance(SEG_MIN_MS);
+      // One copy is measured first: if the whole feed already fits on screen
+      // there is nothing to scroll, and duplicating it would just show every
+      // item twice side by side.
+      requestAnimationFrame(() => {
+        if (segments[segIndex] !== seg) return;
+        const copyWidth = track.scrollWidth;
+        if (copyWidth <= viewport.clientWidth + 8) return;
+        track.innerHTML = html + html;
+        track.dataset.doubled = '1';
+        const durationSec = copyWidth / SCROLL_PX_PER_SEC;
+        track.style.animationDuration = durationSec + 's';
+        track.classList.add('is-scrolling');
+        // The track travels exactly one copy's width per lap, so a lap is
+        // every item in this feed passing through view once. However long
+        // that takes is how long the feed gets.
+        scheduleAdvance(durationSec * 1000 + LAP_BUFFER_MS);
+      });
+    }
+
+    // Moving on takes any freshly-built data with it, rather than treating a
+    // refresh as the thing to do INSTEAD of advancing. Handing pending to
+    // applyNow here used to re-render the feed already showing -- and since
+    // a rebuild lands every 20s while a full lap now runs far longer than
+    // that, there was always something pending when the lap ended and the
+    // strip would have replayed the same feed forever.
+    function advance(step) {
+      const dir = step || 1;
+      // Decide where we are going by NAME, off the list on screen, so
+      // swapping in a rebuilt list underneath can't change the destination.
+      const nextKey = segments.length
+        ? segments[(segIndex + dir + segments.length) % segments.length].key
+        : null;
+      if (pending) {
+        segments = pending;
+        pending = null;
+      }
+      if (!segments.length) { renderSegment(); return; }
+      const found = nextKey ? segments.findIndex(s => s.key === nextKey) : -1;
+      segIndex = found >= 0 ? found : (segIndex + dir + segments.length) % segments.length;
+      renderPips();
+      renderSegment();
+    }
+
+    // One-shot, re-armed by whatever renders next, rather than an interval
+    // that fires regardless of what the strip is in the middle of.
+    function scheduleAdvance(ms) {
+      clearTimeout(rotateTimer);
+      rotateTimer = setTimeout(() => {
+        // Never yank a feed away from someone reading it -- a hover or a
+        // hand-scroll holds it, and the lap resumes when they let go.
+        if (hovering || viewport.classList.contains('tk-manual')) {
+          scheduleAdvance(2000);
+          return;
+        }
+        advance(1);
+      }, Math.max(1200, ms));
+    }
+
+    // How long is left of the current lap, from where the track actually
+    // sits. Used after a pause, so time spent hovering isn't counted against
+    // the feed's turn.
+    function rescheduleRemaining() {
+      const durationSec = parseFloat(track.style.animationDuration) || 0;
+      const copyWidth = track.dataset.doubled === '1' ? track.scrollWidth / 2 : 0;
+      if (!track.classList.contains('is-scrolling') || !durationSec || !copyWidth) {
+        scheduleAdvance(SEG_MIN_MS);
+        return;
+      }
+      const frac = Math.min(1, Math.max(0, currentOffset() / copyWidth));
+      scheduleAdvance((1 - frac) * durationSec * 1000 + LAP_BUFFER_MS);
+    }
+
+    if (modeBtn) {
+      modeBtn.addEventListener('click', () => advance(1));
+    }
+
+    // The CSS already pauses the marquee on hover; this pauses its turn too,
+    // so a feed someone stopped to read doesn't lose the rest of its lap.
+    bar.addEventListener('mouseenter', () => { hovering = true; clearTimeout(rotateTimer); });
+    bar.addEventListener('mouseleave', () => { hovering = false; rescheduleRemaining(); });
+
+    // Clicks land on the track rather than on each item, because the track's
+    // contents are replaced wholesale every rotation. A player's NAME opens
+    // his full player card; his "+3 for you" opens him on Weekly Sweats,
+    // where the three leagues are named; a matchup opens that league.
+    track.addEventListener('click', (e) => {
+      const sweat = e.target.closest('.tk-delta.is-sweat');
+      if (sweat && window.rgJumpToPlayerId) {
+        window.rgJumpToPlayerId(sweat.dataset.sweatId);
+        return;
+      }
+      const name = e.target.closest('.tk-name.is-player');
+      if (name && window.openPlayerModalForId) {
+        window.openPlayerModalForId(name.dataset.playerId, name.dataset.name, name.dataset.team, name.dataset.pos);
+        return;
+      }
+      const matchup = e.target.closest('.tk-item.is-matchup');
+      if (matchup && matchup.dataset.leagueId && window.goToLeagueMatchup) {
+        // The Matchup Hub's expanded card -- both lineups and the win
+        // probability field -- rather than the league's own page.
+        window.goToLeagueMatchup(matchup.dataset.leagueId);
+        return;
+      }
+      const game = e.target.closest('.tk-item.is-game');
+      if (game && game.dataset.eventId && window.goToGameCast) window.goToGameCast(game.dataset.eventId);
+    });
+    if (pipsEl) {
+      pipsEl.addEventListener('click', (e) => {
+        const pip = e.target.closest('.ticker-seg-pip');
+        if (!pip) return;
+        segIndex = Number(pip.dataset.seg) || 0;
+        renderPips();
+        renderSegment();
+      });
+    }
+    // ---- scrolling it by hand -------------------------------------------
+    // A swipe or a two-finger trackpad scroll takes the strip over, so a
+    // particular matchup can be found now instead of on the next lap.
+    //
+    // The marquee and native scrolling cannot both be on: one translates the
+    // track, the other moves the viewport. So a drag hands over -- the
+    // animation's current offset becomes a real scrollLeft, the transform is
+    // dropped, and the viewport starts scrolling. Letting go hands back, and
+    // it picks up from where the strip actually sits rather than snapping to
+    // the start: a negative animation-delay of the equivalent fraction
+    // resumes the same loop mid-stride.
+    const MANUAL_RESUME_MS = 3500;
+    let manualTimer = null;
+
+    function currentOffset() {
+      const t = getComputedStyle(track).transform;
+      if (!t || t === 'none') return 0;
+      const m = new DOMMatrixReadOnly(t);
+      return Math.abs(m.m41);
+    }
+
+    // Returns true only on the transition into manual, which the wheel
+    // handler needs to know: the gesture that switches scrolling ON cannot
+    // also be scrolled by the browser, so that first delta is applied here
+    // or the strip ignores the opening flick.
+    function enterManual() {
+      clearTimeout(manualTimer);
+      let entered = false;
+      if (!viewport.classList.contains('tk-manual')) {
+        const offset = currentOffset();
+        track.classList.remove('is-scrolling');
+        track.style.animationDelay = '';
+        viewport.classList.add('tk-manual');
+        viewport.scrollLeft = offset;
+        entered = true;
+      }
+      manualTimer = setTimeout(exitManual, MANUAL_RESUME_MS);
+      return entered;
+    }
+
+    function exitManual() {
+      if (!viewport.classList.contains('tk-manual')) return;
+      const seg = segments[segIndex];
+      const copyWidth = track.scrollWidth / (track.dataset.doubled === '1' ? 2 : 1);
+      const offset = viewport.scrollLeft;
+      viewport.classList.remove('tk-manual');
+      viewport.scrollLeft = 0;
+      if (!seg || !seg.items.length || !copyWidth || track.dataset.doubled !== '1') return;
+      const duration = parseFloat(track.style.animationDuration) || 0;
+      if (!duration) return;
+      // Resume the loop at the fraction the strip was left sitting at.
+      const fraction = Math.min(0.999, Math.max(0, (offset % copyWidth) / copyWidth));
+      track.style.animationDelay = `-${(fraction * duration).toFixed(2)}s`;
+      track.classList.add('is-scrolling');
+      scheduleAdvance((1 - fraction) * duration * 1000 + LAP_BUFFER_MS);
+    }
+
+    ['wheel', 'touchstart', 'pointerdown'].forEach(type => {
+      viewport.addEventListener(type, (e) => {
+        // A vertical wheel over the strip is the page being scrolled past
+        // it, not an attempt to drive it.
+        if (type === 'wheel' && Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
+        const entered = enterManual();
+        if (type === 'wheel' && entered) viewport.scrollLeft += e.deltaX;
+      }, { passive: true });
+    });
+    viewport.addEventListener('scroll', () => {
+      if (viewport.classList.contains('tk-manual')) enterManual();
+    }, { passive: true });
+
+    // The animation is driven off a measured width, so a resize has to
+    // re-measure -- otherwise the loop point drifts off the seam.
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(renderSegment, 200);
+    });
+
+    window.refreshTicker = () => { build().catch(() => {}); };
+
+    renderSegment();
+    build().catch(() => {});
+    setInterval(() => build().catch(() => {}), DATA_REFRESH_MS);
+  })();
 </script>
 
 </body>
