@@ -23720,8 +23720,21 @@
     const pipsEl = document.getElementById('tickerSegs');
     if (!bar || !track || !viewport) return;
 
-    const SCROLL_PX_PER_SEC = 62;   // slow enough to actually read at a glance
-    const SEG_ROTATE_MS = 18000;    // how long one feed holds the strip
+    // Now that a feed holds the strip for a whole lap, this sets how long a
+    // turn takes: at 62 a 20-player sweats feed ran for nearly two minutes
+    // before anything else got a look in. 95px/s still reads easily -- a
+    // broadcast ticker runs faster than this -- and brings a full cycle of
+    // every feed back under three minutes.
+    const SCROLL_PX_PER_SEC = 95;
+    // A feed holds the strip for exactly one lap -- long enough for every
+    // item in it to pass through view once -- and then hands over. A fixed
+    // rotation was cutting long feeds off partway: 20 sweats or 18 matchups
+    // cannot scroll past in any one number of seconds, so whoever was at the
+    // back was never reached, every single rotation. This is the floor, for a
+    // feed short enough that it does not scroll at all.
+    const SEG_MIN_MS = 9000;
+    // A beat on the seam, so the last item isn't cut off the instant it lands.
+    const LAP_BUFFER_MS = 900;
     const DATA_REFRESH_MS = 20000;  // ESPN's own cache here is 15s
 
     let segments = [];       // [{ key, label, items: [html] }]
@@ -23730,6 +23743,7 @@
     let mode = '';
     let rotateTimer = null;
     let building = false;
+    let hovering = false;
 
     const esc = (v) => String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -24217,10 +24231,14 @@
       viewport.scrollLeft = 0;
       if (!seg || !seg.items.length) {
         track.innerHTML = `<div class="tk-empty">${esc(emptyMessage)}</div>`;
+        scheduleAdvance(SEG_MIN_MS);
         return;
       }
       const html = seg.items.join('');
       track.innerHTML = html;
+      // Provisional: a feed that turns out to fit on screen keeps this, since
+      // there is no lap to wait for.
+      scheduleAdvance(SEG_MIN_MS);
       // One copy is measured first: if the whole feed already fits on screen
       // there is nothing to scroll, and duplicating it would just show every
       // item twice side by side.
@@ -24230,30 +24248,77 @@
         if (copyWidth <= viewport.clientWidth + 8) return;
         track.innerHTML = html + html;
         track.dataset.doubled = '1';
-        track.style.animationDuration = (copyWidth / SCROLL_PX_PER_SEC) + 's';
+        const durationSec = copyWidth / SCROLL_PX_PER_SEC;
+        track.style.animationDuration = durationSec + 's';
         track.classList.add('is-scrolling');
+        // The track travels exactly one copy's width per lap, so a lap is
+        // every item in this feed passing through view once. However long
+        // that takes is how long the feed gets.
+        scheduleAdvance(durationSec * 1000 + LAP_BUFFER_MS);
       });
     }
 
+    // Moving on takes any freshly-built data with it, rather than treating a
+    // refresh as the thing to do INSTEAD of advancing. Handing pending to
+    // applyNow here used to re-render the feed already showing -- and since
+    // a rebuild lands every 20s while a full lap now runs far longer than
+    // that, there was always something pending when the lap ended and the
+    // strip would have replayed the same feed forever.
     function advance(step) {
+      const dir = step || 1;
+      // Decide where we are going by NAME, off the list on screen, so
+      // swapping in a rebuilt list underneath can't change the destination.
+      const nextKey = segments.length
+        ? segments[(segIndex + dir + segments.length) % segments.length].key
+        : null;
       if (pending) {
-        applyNow(mode, pending);
-        return;
+        segments = pending;
+        pending = null;
       }
-      if (segments.length < 2) { renderSegment(); return; }
-      segIndex = (segIndex + (step || 1) + segments.length) % segments.length;
+      if (!segments.length) { renderSegment(); return; }
+      const found = nextKey ? segments.findIndex(s => s.key === nextKey) : -1;
+      segIndex = found >= 0 ? found : (segIndex + dir + segments.length) % segments.length;
       renderPips();
       renderSegment();
     }
 
-    function restartRotation() {
-      if (rotateTimer) clearInterval(rotateTimer);
-      rotateTimer = setInterval(() => advance(1), SEG_ROTATE_MS);
+    // One-shot, re-armed by whatever renders next, rather than an interval
+    // that fires regardless of what the strip is in the middle of.
+    function scheduleAdvance(ms) {
+      clearTimeout(rotateTimer);
+      rotateTimer = setTimeout(() => {
+        // Never yank a feed away from someone reading it -- a hover or a
+        // hand-scroll holds it, and the lap resumes when they let go.
+        if (hovering || viewport.classList.contains('tk-manual')) {
+          scheduleAdvance(2000);
+          return;
+        }
+        advance(1);
+      }, Math.max(1200, ms));
+    }
+
+    // How long is left of the current lap, from where the track actually
+    // sits. Used after a pause, so time spent hovering isn't counted against
+    // the feed's turn.
+    function rescheduleRemaining() {
+      const durationSec = parseFloat(track.style.animationDuration) || 0;
+      const copyWidth = track.dataset.doubled === '1' ? track.scrollWidth / 2 : 0;
+      if (!track.classList.contains('is-scrolling') || !durationSec || !copyWidth) {
+        scheduleAdvance(SEG_MIN_MS);
+        return;
+      }
+      const frac = Math.min(1, Math.max(0, currentOffset() / copyWidth));
+      scheduleAdvance((1 - frac) * durationSec * 1000 + LAP_BUFFER_MS);
     }
 
     if (modeBtn) {
-      modeBtn.addEventListener('click', () => { advance(1); restartRotation(); });
+      modeBtn.addEventListener('click', () => advance(1));
     }
+
+    // The CSS already pauses the marquee on hover; this pauses its turn too,
+    // so a feed someone stopped to read doesn't lose the rest of its lap.
+    bar.addEventListener('mouseenter', () => { hovering = true; clearTimeout(rotateTimer); });
+    bar.addEventListener('mouseleave', () => { hovering = false; rescheduleRemaining(); });
 
     // Clicks land on the track rather than on each item, because the track's
     // contents are replaced wholesale every rotation. A player's NAME opens
@@ -24287,7 +24352,6 @@
         segIndex = Number(pip.dataset.seg) || 0;
         renderPips();
         renderSegment();
-        restartRotation();
       });
     }
     // ---- scrolling it by hand -------------------------------------------
@@ -24344,6 +24408,7 @@
       const fraction = Math.min(0.999, Math.max(0, (offset % copyWidth) / copyWidth));
       track.style.animationDelay = `-${(fraction * duration).toFixed(2)}s`;
       track.classList.add('is-scrolling');
+      scheduleAdvance((1 - fraction) * duration * 1000 + LAP_BUFFER_MS);
     }
 
     ['wheel', 'touchstart', 'pointerdown'].forEach(type => {
@@ -24370,7 +24435,6 @@
     window.refreshTicker = () => { build().catch(() => {}); };
 
     renderSegment();
-    restartRotation();
     build().catch(() => {});
     setInterval(() => build().catch(() => {}), DATA_REFRESH_MS);
   })();
