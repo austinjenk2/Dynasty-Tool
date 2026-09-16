@@ -241,8 +241,12 @@
     padding: 0 16px;
     border: none;
     border-right: 1px solid var(--border);
-    background: var(--ink);
-    color: #fff;
+    /* Same ground as the feed label beside it -- the badge was a solid
+       block of ink (red while live) that read as a different component
+       bolted onto the end of the bar. Its border-right still marks where
+       it stops. The dot is what carries the live state now. */
+    background: var(--bg);
+    color: var(--ink);
     font-family: inherit;
     font-size: 12px;
     font-weight: 800;
@@ -250,14 +254,13 @@
     text-transform: uppercase;
     white-space: nowrap;
   }
-  .ticker-mode:hover { filter: brightness(1.35); }
-  .ticker.is-live .ticker-mode { background: var(--red); }
+  .ticker-mode:hover { background: var(--border-soft); }
   .ticker-dot {
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--faint);
     flex-shrink: 0;
   }
-  .ticker.is-live .ticker-dot { background: #fff; animation: tk-pulse 1.4s ease-in-out infinite; }
+  .ticker.is-live .ticker-dot { background: var(--red); animation: tk-pulse 1.4s ease-in-out infinite; }
   @keyframes tk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
   .ticker-seg-label {
     flex-shrink: 0;
@@ -1677,7 +1680,7 @@
   }
 
   /* Rooting Guide */
-  .rg-header { text-align: center; margin-bottom: 18px; }
+  .rg-header { text-align: center; padding-top: 22px; margin-bottom: 18px; }
   .rg-header-top { display: flex; align-items: center; justify-content: center; gap: 16px; position: relative; }
   .rg-header-top .week-dropdown { position: absolute; right: 0; text-align: left; }
   .rg-header h2 { font-family: 'Source Serif 4', serif; font-size: 22px; margin: 0 0 6px; }
@@ -3049,10 +3052,11 @@
   .notebook-roster-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
   .notebook-auto { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-left: auto; }
 
-  /* A little more air than before: the ticker used to sit between the nav
-     and the first heading, and without that band the page read as starting
-     right on top of the nav's border. */
-  .page-title { padding: 28px 0 4px; }
+  /* Enough air to clear the nav's border without the page looking like it
+     starts halfway down. Weekly Sweats has its own header and matches this
+     deliberately (see .rg-header); Matchup Hub and GameCast run their own
+     and are left alone. */
+  .page-title { padding: 22px 0 4px; }
   .page-title.page-title-flex { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
   .mode-toggle-btn {
     flex-shrink: 0;
@@ -3724,7 +3728,8 @@
     .tk-logo { width: 18px; height: 18px; }
     .sync-status { margin-left: 0; }
 
-    .page-title { padding: 20px 0 4px; }
+    .page-title { padding: 16px 0 4px; }
+    .rg-header { padding-top: 16px; }
     .page-title h1 { font-size: 18px; }
     .page-title p { font-size: 12px; }
     .page-title.page-title-flex { flex-wrap: wrap; gap: 10px; }
