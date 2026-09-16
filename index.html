@@ -359,7 +359,6 @@
   .tk-record.is-loss { color: var(--red); background: var(--red-bg); }
   .tk-record.is-even { color: var(--gold); background: #f6efe0; }
   .tk-odds { font-size: 13px; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
-  .tk-ml { font-size: 12.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
   .tk-logo { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
   /* Clickable bits are underlined only on hover -- a strip where every
      player name is permanently underlined reads as noise at this size. */
@@ -12101,14 +12100,6 @@
     scheduleGroupsEl.addEventListener('click', (e) => {
       const chip = e.target.closest('.schedule-chip');
       if (!chip) return;
-      // GameCast carries everything the old inline preview did -- the
-      // leagues this game swings, each openable straight into the Matchup
-      // Hub -- alongside the live field, the box score and the injuries.
-      // Games from a week ESPN hasn't given us an id for keep the preview.
-      if (chip.dataset.eventId && window.goToGameCast) {
-        window.goToGameCast(chip.dataset.eventId);
-        return;
-      }
       const existing = chip.nextElementSibling;
       const isOpen = existing && existing.classList.contains('schedule-expand');
       document.querySelectorAll('.schedule-expand').forEach(el => el.remove());
@@ -20629,13 +20620,6 @@
           details: oddsRow.details != null ? String(oddsRow.details) : null,
           overUnder: oddsRow.overUnder != null ? Number(oddsRow.overUnder) : null,
         } : null;
-        const moneyLineOf = (side) => {
-          const o = oddsRow && oddsRow[side];
-          const ml = o && (o.moneyLine != null ? o.moneyLine : (o.current && o.current.moneyLine && o.current.moneyLine.american));
-          if (ml == null) return null;
-          const n = Number(String(ml).replace('+', ''));
-          return Number.isFinite(n) ? n : null;
-        };
         (comp.competitors || []).forEach(c => {
           const abbr = c.team && c.team.abbreviation;
           if (!abbr) return;
@@ -20665,7 +20649,6 @@
             period: comp.status ? comp.status.period : null,
             clock: comp.status ? comp.status.displayClock : null,
             odds,
-            moneyLine: moneyLineOf(c.homeAway === 'home' ? 'homeTeamOdds' : 'awayTeamOdds'),
           };
         });
       });
@@ -23817,8 +23800,8 @@
         const homeRow = espn[sides.home] || {};
         byEvent[key] = {
           eventId: g.eventId,
-          away: sides.away, awayScore: awayRow.score, awayMoneyLine: awayRow.moneyLine,
-          home: sides.home, homeScore: homeRow.score, homeMoneyLine: homeRow.moneyLine,
+          away: sides.away, awayScore: awayRow.score,
+          home: sides.home, homeScore: homeRow.score,
           oriented: sides.oriented,
           odds: g.odds || homeRow.odds || awayRow.odds || null,
           state: g.state, detail: g.detail || homeRow.detail || awayRow.detail, when: g.when,
@@ -23887,7 +23870,7 @@
               `<span class="tk-sub">&ndash;</span>` +
               `<span class="tk-pts">${esc(g.homeScore ?? 0)}</span>` +
               `<span class="tk-side">${esc(g.home || '')}</span>${logo(g.home)}`;
-          return `<div class="tk-item">${line}${tag}</div>`;
+          return `<div class="tk-item is-game" data-event-id="${esc(g.eventId || '')}">${line}${tag}</div>`;
         });
     }
 
@@ -23899,7 +23882,7 @@
           const line = g.odds && g.odds.details ? `<span class="tk-odds">${esc(g.odds.details)}</span>` : '';
           const total = g.odds && g.odds.overUnder != null
             ? `<span class="tk-sub">O/U ${esc(Number(g.odds.overUnder).toFixed(1))}</span>` : '';
-          return `<div class="tk-item">${pairing(g)}` +
+          return `<div class="tk-item is-game" data-event-id="${esc(g.eventId || '')}">${pairing(g)}` +
             `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span>${line}${total}</div>`;
         });
     }
@@ -23995,29 +23978,11 @@
           deltaCell(r) + `</div>`);
     }
 
-    // Real betting lines, straight off the ESPN scoreboard payload the live
-    // scores already come from -- the spread as that book writes it, the
-    // game total, and each side's moneyline. Nothing here is derived or
-    // estimated: a game ESPN has no line for is simply left out rather than
-    // shown with a made-up number.
-    function moneyLine(n) {
-      if (n == null) return '';
-      return `<span class="tk-ml">${n > 0 ? '+' : ''}${esc(n)}</span>`;
-    }
-    function oddsItems(games) {
-      return games
-        .filter(g => g.odds && (g.odds.details || g.odds.overUnder != null))
-        .sort((a, b) => new Date(a.when || 0) - new Date(b.when || 0))
-        .map(g => {
-          const spread = g.odds.details ? `<span class="tk-odds">${esc(g.odds.details)}</span>` : '';
-          const total = g.odds.overUnder != null
-            ? `<span class="tk-sub">O/U ${esc(Number(g.odds.overUnder).toFixed(1))}</span>` : '';
-          const mls = (g.awayMoneyLine != null || g.homeMoneyLine != null)
-            ? `<span class="tk-sub">ML</span>${moneyLine(g.awayMoneyLine)}<span class="tk-sub">/</span>${moneyLine(g.homeMoneyLine)}`
-            : '';
-          return `<div class="tk-item">${pairing(g)}${spread}${total}${mls}</div>`;
-        });
-    }
+    // Betting lines ride along in the same ESPN scoreboard payload as the
+    // live scores -- no second service and no key -- and are shown on the
+    // schedule feed beside each kickoff. They are optional in that payload
+    // (absent for some games and most finished ones), so a game with no
+    // line is simply shown without one.
 
     // Every one of this week's matchups: my record, my opponent's, the two
     // projected totals and my chance of winning. Filtered exactly the way
@@ -24049,10 +24014,8 @@
         .filter(e => coManaged || !e.isCoOwned)
         .filter(e => !tanks.has(e.league.name))
         .map(e => {
-          const oppRoster = (e.allRosters || []).find(r => r.roster_id === e.oppMatchup.roster_id) || null;
-          const oppName = (e.oppUser && (e.oppUser.display_name || e.oppUser.username)) || 'Opponent';
           return {
-            e, oppName, oppRoster,
+            e,
             myProj: sbMatchupProjectedTotal(e.myMatchup, null, e.league, espn, week),
             oppProj: sbMatchupProjectedTotal(e.oppMatchup, null, e.league, espn, week),
             pct: sbMatchupWinPct(e.myMatchup, e.oppMatchup, e.league, null, espn, week),
@@ -24065,13 +24028,15 @@
           const pctHtml = m.pct == null
             ? '<span class="tk-sub">&mdash;</span>'
             : `<span class="tk-delta ${m.pct >= 50 ? 'is-pos' : 'is-neg'}">${Math.round(m.pct)}%</span>`;
+          // Your side is always the left one, so it needs no label, and the
+          // opponent's name and record were noise at a glance -- the league,
+          // your record, the two projections and your odds are the row.
           return `<div class="tk-item is-matchup" data-league-id="${esc(m.e.league.league_id || '')}">` +
             `<span class="tk-league">${esc(m.e.league.name)}</span>` +
-            `<span class="tk-name">You</span>${record(m.e.roster)}` +
+            `${record(m.e.roster)}` +
             `<span class="tk-pts">${num(m.myProj)}</span>` +
             `<span class="tk-sub">&ndash;</span>` +
             `<span class="tk-pts">${num(m.oppProj)}</span>` +
-            `<span class="tk-name">${esc(m.oppName)}</span>${record(m.oppRoster)}` +
             pctHtml + `</div>`;
         });
     }
@@ -24135,8 +24100,6 @@
         // just as useful with no games on as it is mid-Sunday.
         const matchups = { key: 'matchups', label: `Week ${week} Matchups`, items: matchupItems(espn, week) };
 
-        const odds = { key: 'odds', label: 'Betting Lines', items: oddsItems(games) };
-
         if (anyLive) {
           nextMode = 'live';
           segs.push({ key: 'liveFantasy', label: 'Live Fantasy', items: liveFantasyItems(rows, espn) });
@@ -24144,19 +24107,16 @@
           segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
           segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
           segs.push(matchups);
-          segs.push(odds);
         } else if (gameDay) {
           nextMode = 'game day';
           segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(todays) });
           segs.push(matchups);
           segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
           segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
-          segs.push(odds);
         } else {
           nextMode = `week ${week}`;
           segs.push(matchups);
           segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
-          segs.push(odds);
           // Every game of this week is already finished, so the schedule
           // worth showing is next week's, not a list of results.
           const upcoming = games.filter(g => g.state !== 'post');
@@ -24302,7 +24262,10 @@
         // The Matchup Hub's expanded card -- both lineups and the win
         // probability field -- rather than the league's own page.
         window.goToLeagueMatchup(matchup.dataset.leagueId);
+        return;
       }
+      const game = e.target.closest('.tk-item.is-game');
+      if (game && game.dataset.eventId && window.goToGameCast) window.goToGameCast(game.dataset.eventId);
     });
     if (pipsEl) {
       pipsEl.addEventListener('click', (e) => {
