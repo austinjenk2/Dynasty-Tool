@@ -121,33 +121,55 @@
   .sleeper-connect-panel button:disabled { opacity: 0.6; cursor: default; }
   .sleeper-connect-status { font-size: 11.5px; color: var(--muted); margin-top: 8px; min-height: 14px; }
   .sleeper-connect-status.is-error { color: var(--red); }
-  /* On the Dashboard the connect panel is a plain inline block of the
-     account card, not the popover it used to be off the old top-bar chip. */
-  .desk-account .sleeper-connect-panel {
+  /* On Settings the connect panel is a plain inline block of the account
+     panel, not the popover it used to be off the old top-bar chip. */
+  #sleeperAccountPanel .sleeper-connect-panel {
     position: static;
     width: auto;
     padding: 0;
+    margin-top: 12px;
     border: none;
     border-radius: 0;
     box-shadow: none;
     background: transparent;
   }
-  /* The popover rules sized both of these to the full panel width, which
-     puts them on their own lines -- here they share one row. */
-  .desk-account .sleeper-connect-panel input { width: auto; margin-bottom: 0; }
-  .desk-account .sleeper-connect-panel button { width: auto; }
-  .desk-account .chip.user { height: 24px; padding: 0 10px; font-size: 11.5px; cursor: default; }
-  .desk-account .chip { height: 24px; padding: 0 10px; font-size: 11px; }
-  .desk-account .sync-status { margin-left: 0; font-size: 11.5px; }
-  .page-title-actions {
+  .settings-account-row { display: flex; gap: 8px; max-width: 420px; }
+  .settings-account-row input {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    height: 36px;
+    padding: 0 12px;
+    margin-bottom: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13.5px;
+  }
+  .settings-account-row button {
     flex-shrink: 0;
+    width: auto;
+    height: 36px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 6px;
+    background: var(--ink);
+    color: #fff;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .settings-account-row button:disabled { opacity: 0.6; cursor: default; }
+  .settings-account-foot {
     display: flex;
-    align-items: flex-start;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 12px;
+    margin-top: 14px;
   }
-  @media (max-width: 820px) {
-    .page-title-actions { flex-wrap: wrap; width: 100%; }
-  }
+  #sleeperAccountPanel .chip.user { cursor: default; }
+  #sleeperAccountPanel .sync-status { margin-left: 0; }
   .sync-dot.sync-error { background: var(--red); }
   .sync-dot.sync-pending { background: var(--gold); }
   .search-box {
@@ -300,7 +322,16 @@
   .tk-pos.sb-pos-wr { color: var(--blue); background: rgba(47,111,163,0.12); }
   .tk-pos.sb-pos-te { color: var(--gold); background: #f6efe0; }
   .tk-name { font-weight: 700; color: var(--ink); }
+  .tk-side { font-weight: 800; color: var(--ink); letter-spacing: 0.2px; }
   .tk-team { font-size: 11px; color: var(--faint); }
+  .tk-league { font-size: 11px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; color: var(--faint); }
+  .tk-logo { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
+  /* Clickable bits are underlined only on hover -- a strip where every
+     player name is permanently underlined reads as noise at this size. */
+  .tk-name.is-player, .tk-delta.is-sweat, .tk-item.is-matchup { cursor: pointer; }
+  .tk-name.is-player:hover { text-decoration: underline; }
+  .tk-delta.is-sweat:hover { text-decoration: underline; }
+  .tk-item.is-matchup:hover { background: var(--bg); }
   .tk-pts { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
   .tk-sub { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .tk-delta { font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -335,66 +366,6 @@
     .ticker-viewport { overflow-x: auto; }
   }
 
-  /* ---------- Sleeper account card (Dashboard) ---------- */
-  .desk-account {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 300px;
-    padding: 12px 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-  }
-  .desk-account-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .desk-account-label {
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: var(--faint);
-  }
-  .desk-account-row { display: flex; gap: 6px; }
-  .desk-account-row input {
-    flex: 1;
-    min-width: 0;
-    height: 32px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-family: inherit;
-    font-size: 13px;
-  }
-  .desk-account-row button {
-    flex-shrink: 0;
-    height: 32px;
-    padding: 0 14px;
-    border: none;
-    border-radius: 6px;
-    background: var(--ink);
-    color: #fff;
-    font-family: inherit;
-    font-weight: 700;
-    font-size: 12.5px;
-    cursor: pointer;
-  }
-  .desk-account-row button:disabled { opacity: 0.6; cursor: default; }
-  .desk-account-foot {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 11.5px;
-    color: var(--muted);
-  }
-
   /* ---------- Content shell ---------- */
   .content {
     max-width: 1400px;
@@ -404,11 +375,16 @@
   .panel-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    align-items: stretch;
+    align-items: start;
     gap: 20px;
   }
   #teamStrengthPanel { display: flex; flex-direction: column; }
-  #teamStrengthScatterWrap { flex: 1; min-height: 280px; aspect-ratio: unset; }
+  /* The scatter keeps its own aspect ratio instead of stretching to fill
+     whatever height the left column happens to be. Opening a game's
+     preview in the Weekly Schedule grows that column, and with flex:1
+     here the graph beside it resized every time -- the panel can run
+     short of its neighbour, but the chart no longer moves under you. */
+  #teamStrengthScatterWrap { flex: 0 0 auto; min-height: 280px; }
   @media (max-width: 980px) {
     .panel-grid { grid-template-columns: 1fr; }
   }
@@ -3607,7 +3583,6 @@
     .ticker-seg-label, .ticker-segs { display: none; }
     .tk-item { padding: 0 12px; font-size: 12px; }
     .sync-status { margin-left: 0; }
-    .desk-account { width: 100%; }
 
     .page-title { padding: 14px 0 4px; }
     .page-title h1 { font-size: 18px; }
@@ -3751,27 +3726,7 @@
         <h1>Dashboard</h1>
         <p>Portfolio-wide summary across all connected leagues.</p>
       </div>
-      <div class="page-title-actions">
-        <div class="desk-account sleeper-connect-wrap" id="sleeperConnectPanelHost">
-          <div class="desk-account-head">
-            <span class="desk-account-label">Sleeper account</span>
-            <span class="chip user" id="sleeperUserChip" title="The Sleeper account these leagues are pulled from">AusJ2</span>
-          </div>
-          <div class="sleeper-connect-panel" id="sleeperConnectPanel">
-            <label for="sleeperUsernameInput">Switch to another username</label>
-            <div class="desk-account-row">
-              <input type="text" id="sleeperUsernameInput" placeholder="e.g. AusJ2">
-              <button id="sleeperConnectBtn">Load</button>
-            </div>
-            <div class="sleeper-connect-status" id="sleeperConnectStatus"></div>
-          </div>
-          <div class="desk-account-foot">
-            <span class="chip" id="leagueCountChip">18 Leagues</span>
-            <span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncStatusText">Sample data &mdash; not connected</span></span>
-          </div>
-        </div>
-        <div class="mode-toggle-btn" id="modeToggleBtn" hidden></div>
-      </div>
+      <div class="mode-toggle-btn" id="modeToggleBtn" hidden></div>
     </div>
 
     <div class="record-row">
@@ -11273,6 +11228,27 @@
       <p>Preferences for how your Sleeper data is pulled in.</p>
     </div>
 
+    <div class="settings-panel sleeper-connect-wrap" id="sleeperAccountPanel">
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Sleeper Account</div>
+          <div class="settings-sub">The account every league on this site is pulled from. Loading a different username replaces the whole portfolio with theirs.</div>
+        </div>
+        <span class="chip user" id="sleeperUserChip" title="The Sleeper account these leagues are pulled from">AusJ2</span>
+      </div>
+      <div class="sleeper-connect-panel" id="sleeperConnectPanel">
+        <div class="settings-account-row">
+          <input type="text" id="sleeperUsernameInput" placeholder="Sleeper username">
+          <button id="sleeperConnectBtn">Load</button>
+        </div>
+        <div class="sleeper-connect-status" id="sleeperConnectStatus"></div>
+      </div>
+      <div class="settings-account-foot">
+        <span class="chip" id="leagueCountChip">18 Leagues</span>
+        <span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncStatusText">Sample data &mdash; not connected</span></span>
+      </div>
+    </div>
+
     <div class="settings-panel">
       <div class="settings-label">Site Mode</div>
       <div class="settings-sub">Which leagues show by default across the whole app -- classified from each league's own real Sleeper settings (keeper/dynasty leagues vs. season-only redraft leagues). Use the "Show All Leagues" button on the Dashboard any time you want to temporarily see everything regardless of mode.</div>
@@ -11966,6 +11942,12 @@
 
     const teams = Object.keys(gameInfo);
     if (!teams.length) { grid.innerHTML = ''; return; }
+
+    // Ahead of the pairing loop, because sbOrientGame reads ESPN's own
+    // home/away to decide which side is which.
+    if (!window.sleeperGetEspnGameData) { grid.innerHTML = ''; return; }
+    const espnGames = await window.sleeperGetEspnGameData(week, season);
+
     const seen = new Set();
     const games = [];
     teams.forEach(team => {
@@ -11974,14 +11956,10 @@
       const key = [team, info.opponent].sort().join('-');
       if (seen.has(key)) return;
       seen.add(key);
-      const away = info.isAway ? team : (gameInfo[info.opponent] && gameInfo[info.opponent].isAway ? info.opponent : team);
-      const home = away === team ? info.opponent : team;
-      games.push({ away, home, date: parseCalendarDate(info.date) });
+      const sides = sbOrientGame(team, info.opponent, gameInfo, espnGames);
+      games.push({ away: sides.away, home: sides.home, oriented: sides.oriented, date: parseCalendarDate(info.date) });
     });
     if (!games.length) { grid.innerHTML = ''; return; }
-
-    if (!window.sleeperGetEspnGameData) { grid.innerHTML = ''; return; }
-    const espnGames = await window.sleeperGetEspnGameData(week, season);
     games.forEach(g => {
       const info = espnGames[g.away] || espnGames[g.home];
       if (info && info.when) {
@@ -15054,8 +15032,8 @@
         gameEl.innerHTML = '<p class="pfm-empty">No schedule data for this week yet.</p>';
       } else {
         const opponent = info.opponent;
-        const away = info.isAway ? team : (gameInfo[opponent] && gameInfo[opponent].isAway ? opponent : team);
-        const home = away === team ? opponent : team;
+        const sides = sbOrientGame(team, opponent, gameInfo, espnGames);
+        const away = sides.away, home = sides.home;
         const awayInfo = espnGames[away] || {};
         const homeInfo = espnGames[home] || {};
         const isLive = awayInfo.state === 'in' || homeInfo.state === 'in';
@@ -15075,7 +15053,7 @@
           `<div class="pfm-game-time${isLive ? ' pfm-game-live' : ''}">${timeLabel}</div>` +
           '<div class="pfm-game-row">' +
             `<div class="pfm-game-team">${awayBall}<img src="https://sleepercdn.com/images/team_logos/nfl/${away.toLowerCase()}.png" alt="${away}" onerror="this.style.display='none'"><span>${away}</span>${showScore ? `<span class="pfm-game-score">${awayInfo.score}</span>` : ''}</div>` +
-            '<span class="pfm-game-at">@</span>' +
+            `<span class="pfm-game-at">${sides.oriented ? '@' : 'vs'}</span>` +
             `<div class="pfm-game-team">${homeBall}<img src="https://sleepercdn.com/images/team_logos/nfl/${home.toLowerCase()}.png" alt="${home}" onerror="this.style.display='none'"><span>${home}</span>${showScore ? `<span class="pfm-game-score">${homeInfo.score}</span>` : ''}</div>` +
           '</div>';
       }
@@ -15215,6 +15193,25 @@
     expand.innerHTML = rgExpandHtml(row);
     row.after(expand);
   }
+
+  // Open the Weekly Sweats page on one specific player, with his
+  // for/against league breakdown already unfolded. Used by the ticker, where
+  // clicking a player's "+3 for you" is a request to see which three.
+  // Scrolling is deferred a frame because goToSection() sends the page to
+  // the top, which would otherwise undo it.
+  window.rgJumpToPlayerId = function rgJumpToPlayerId(playerId) {
+    goToSection('rooting');
+    requestAnimationFrame(() => {
+      const row = document.querySelector(`.rg-row[data-player-id="${playerId}"]`);
+      if (!row) return;
+      document.querySelectorAll('.rg-expand').forEach(el => el.remove());
+      openRgExpand(row);
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.classList.remove('rg-row-flash');
+      void row.offsetWidth;
+      row.classList.add('rg-row-flash');
+    });
+  };
 
   document.addEventListener('click', (e) => {
     const leagueRow = e.target.closest('.rg-expand .pm-league-row[data-league]');
@@ -20572,6 +20569,11 @@
           const otherAbbr = other && other.team ? other.team.abbreviation : null;
           map[ESPN_TEAM_ABBR_FIX[abbr] || abbr] = {
             when,
+            // ESPN says outright which side is home. Sleeper's projections
+            // feed only implies it, via an "@" that isn't always on the
+            // opponent string -- so this is the authority for orientation
+            // wherever a game is drawn (see sbOrientGame).
+            homeAway: c.homeAway || null,
             score: c.score != null ? Number(c.score) : null,
             oppAbbr: otherAbbr ? (ESPN_TEAM_ABBR_FIX[otherAbbr] || otherAbbr) : null,
             oppScore: other && other.score != null ? Number(other.score) : null,
@@ -20610,6 +20612,41 @@
     return data;
   }
   window.sleeperGetEspnGameData = getEspnGameDataCached;
+
+  // Which of two teams is at home.
+  //
+  // This used to be read only off the "isAway" flag extractGameInfo derives
+  // from Sleeper's projections payload, by checking whether that player's
+  // opponent string starts with an "@". That string doesn't always carry
+  // the "@", so isAway came back false for BOTH sides of a game -- and the
+  // old fallback then picked the team it happened to be looking at as the
+  // away side, which is why the Weekly Schedule had games like Washington
+  // at Dallas printed the wrong way round.
+  //
+  // ESPN states it outright per competitor, so that goes first. Sleeper's
+  // flag is kept as a fallback for a week ESPN has no data for, and when
+  // neither can say, `oriented` comes back false so the caller can print a
+  // neutral "A vs B" instead of an "@" that might be backwards.
+  function sbOrientGame(teamA, teamB, gameInfo, espnGames) {
+    const espn = espnGames || {};
+    const a = espn[teamA], b = espn[teamB];
+    if (a && a.homeAway === 'home') return { home: teamA, away: teamB, oriented: true };
+    if (a && a.homeAway === 'away') return { home: teamB, away: teamA, oriented: true };
+    if (b && b.homeAway === 'home') return { home: teamB, away: teamA, oriented: true };
+    if (b && b.homeAway === 'away') return { home: teamA, away: teamB, oriented: true };
+
+    const info = gameInfo || {};
+    const ia = info[teamA], ib = info[teamB];
+    if (ia && typeof ia.isAway === 'boolean' && ib && typeof ib.isAway === 'boolean' && ia.isAway !== ib.isAway) {
+      // Only trusted when the two sides actually disagree -- both reading
+      // false is the missing-"@" case above, not two home teams.
+      return ia.isAway ? { home: teamB, away: teamA, oriented: true } : { home: teamA, away: teamB, oriented: true };
+    }
+    if (ia && ia.isAway === true) return { home: teamB, away: teamA, oriented: true };
+    if (ib && ib.isAway === true) return { home: teamA, away: teamB, oriented: true };
+    return { home: teamB, away: teamA, oriented: false };
+  }
+  window.sbOrientGame = sbOrientGame;
 
   // ---- Last 5 Plays -- real ESPN play-by-play, filtered down to plays
   // involving one of a fantasy roster's own starters, scored against that
@@ -21864,6 +21901,11 @@
       return;
     }
 
+    // Fetched before the games are assembled, not after: ESPN is what says
+    // which side is at home, and sbOrientGame needs it to get the pairing
+    // the right way round.
+    const espnGames = await getEspnGameData(week, season);
+
     const seen = new Set();
     const games = [];
     teams.forEach(team => {
@@ -21872,16 +21914,14 @@
       const key = [team, info.opponent].sort().join('-');
       if (seen.has(key)) return;
       seen.add(key);
-      const away = info.isAway ? team : (gameInfo[info.opponent] && gameInfo[info.opponent].isAway ? info.opponent : team);
-      const home = away === team ? info.opponent : team;
-      games.push({ away, home, date: parseCalendarDate(info.date) });
+      const sides = sbOrientGame(team, info.opponent, gameInfo, espnGames);
+      games.push({ away: sides.away, home: sides.home, oriented: sides.oriented, date: parseCalendarDate(info.date) });
     });
     if (!games.length) {
       container.innerHTML = '<div class="placeholder"><p>No schedule data available for this week.</p></div>';
       return;
     }
 
-    const espnGames = await getEspnGameData(week, season);
     let anyKickoff = false;
     games.forEach(g => {
       const info = espnGames[g.away] || espnGames[g.home];
@@ -21929,7 +21969,7 @@
         `<div class="schedule-time${timeClass}">${timeLabel}</div>` +
         '<div class="schedule-row">' +
           `<div class="schedule-team">${awayBallHtml}<img src="https://sleepercdn.com/images/team_logos/nfl/${awayLower}.png" alt="${g.away}" onerror="this.style.display='none'"><span>${g.away}</span>${awayScoreHtml}</div>` +
-          '<span class="schedule-at">@</span>' +
+          `<span class="schedule-at">${g.oriented ? '@' : 'vs'}</span>` +
           `<div class="schedule-team">${homeBallHtml}<img src="https://sleepercdn.com/images/team_logos/nfl/${homeLower}.png" alt="${g.home}" onerror="this.style.display='none'"><span>${g.home}</span>${homeScoreHtml}</div>` +
         '</div>' +
       '</div>';
@@ -22550,7 +22590,12 @@
       }
       window.__sleeperMatchupCache[cacheKey] = matchups;
     }
-    return (matchups || []).find(m => m.roster_id === rosterId) || null;
+    // Array-checked, not just null-checked: anything other than a real list
+    // here (an error object from Sleeper, a cached bad response) used to
+    // throw straight out of the player card's Game Log. The ticker opens
+    // that card on any player name in the strip, so this path is reached a
+    // great deal more often than it used to be.
+    return (Array.isArray(matchups) ? matchups : []).find(m => m.roster_id === rosterId) || null;
   }
 
   // Shared by the Game Log and Overview tabs -- both want the same
@@ -23634,17 +23679,31 @@
     }
 
     // ---- shared pieces of an item ----
-    function playerCell(r) {
-      return `<span class="tk-pos${posClass(r.pos)}">${esc(r.pos || '')}</span>` +
-             `<span class="tk-name">${esc(r.name)}</span>` +
-             `<span class="tk-team">${esc(r.team || 'FA')}</span>`;
+    // Same logo source the Weekly Schedule and the player modal use; a team
+    // with no logo there (FA, or an abbreviation Sleeper doesn't host) drops
+    // the image rather than leaving a broken-image box in the strip.
+    function logo(team, side) {
+      if (!team || team === 'FA') return '';
+      return `<img class="tk-logo${side ? ' tk-logo-' + side : ''}" ` +
+        `src="https://sleepercdn.com/images/team_logos/nfl/${esc(String(team).toLowerCase())}.png" ` +
+        `alt="" loading="lazy" onerror="this.remove()">`;
     }
 
-    function deltaCell(forCount, againstCount) {
-      const d = (forCount || 0) - (againstCount || 0);
+    // The name is the click target for the player modal, so it carries the
+    // attributes openPlayerModalForId needs.
+    function playerCell(r) {
+      return `<span class="tk-pos${posClass(r.pos)}">${esc(r.pos || '')}</span>` +
+             `<span class="tk-name is-player" data-player-id="${esc(r.id)}" data-name="${esc(r.name)}" ` +
+             `data-team="${esc(r.team || '')}" data-pos="${esc(r.pos || '')}">${esc(r.name)}</span>` +
+             `${logo(r.team)}<span class="tk-team">${esc(r.team || 'FA')}</span>`;
+    }
+
+    // And the delta is the click target for that player's Weekly Sweats row.
+    function deltaCell(r) {
+      const d = (r.for.length || 0) - (r.against.length || 0);
       const cls = d > 0 ? 'is-pos' : (d < 0 ? 'is-neg' : 'is-even');
       const label = d > 0 ? `+${d} for you` : (d < 0 ? `${d} against you` : 'even');
-      return `<span class="tk-delta ${cls}">${esc(label)}</span>`;
+      return `<span class="tk-delta is-sweat ${cls}" data-sweat-id="${esc(r.id)}">${esc(label)}</span>`;
     }
 
     // ---- data ----
@@ -23661,40 +23720,36 @@
     }
 
     // ESPN's map has one row per TEAM; two teams share a game, so fold it
-    // back down to one row per game before showing a scoreboard.
-    //
-    // That payload doesn't say which side is at home, but the Sleeper
-    // projections feed does (window.__sleeperGameInfo carries an isAway flag
-    // per team), so the two are crossed here to get "away at home" the right
-    // way round. With no game info loaded the pairing stays neutral -- "A vs
-    // B" -- rather than printing an "at" that might be backwards.
+    // back down to one row per game before showing a scoreboard, orienting
+    // each pairing with the same sbOrientGame the Weekly Schedule uses.
     function gamesFrom(espn) {
       const info = window.__sleeperGameInfo || {};
       const byEvent = {};
+      const done = new Set();
       Object.keys(espn || {}).forEach(abbr => {
         const g = espn[abbr];
-        if (!g || !g.eventId || byEvent[g.eventId]) return;
-        const mine = info[abbr];
-        const theirs = g.oppAbbr ? info[g.oppAbbr] : null;
-        let away = abbr, awayScore = g.score, home = g.oppAbbr, homeScore = g.oppScore, oriented = false;
-        if (mine && typeof mine.isAway === 'boolean') {
-          oriented = true;
-          if (!mine.isAway) { away = g.oppAbbr; awayScore = g.oppScore; home = abbr; homeScore = g.score; }
-        } else if (theirs && typeof theirs.isAway === 'boolean') {
-          oriented = true;
-          if (theirs.isAway) { away = g.oppAbbr; awayScore = g.oppScore; home = abbr; homeScore = g.score; }
-        }
-        byEvent[g.eventId] = {
+        if (!g || !g.eventId || !g.oppAbbr) return;
+        const key = [abbr, g.oppAbbr].sort().join('-');
+        if (done.has(key)) return;
+        done.add(key);
+        const sides = sbOrientGame(abbr, g.oppAbbr, info, espn);
+        const awayRow = espn[sides.away] || {};
+        const homeRow = espn[sides.home] || {};
+        byEvent[key] = {
           eventId: g.eventId,
-          home, homeScore, away, awayScore, oriented,
-          state: g.state, detail: g.detail, when: g.when,
+          away: sides.away, awayScore: awayRow.score,
+          home: sides.home, homeScore: homeRow.score,
+          oriented: sides.oriented,
+          state: g.state, detail: g.detail || homeRow.detail || awayRow.detail, when: g.when,
         };
       });
       return Object.values(byEvent);
     }
 
     function pairing(g) {
-      return `${esc(g.away || '')} ${g.oriented ? 'at' : 'vs'} ${esc(g.home || '')}`;
+      return `${logo(g.away)}<span class="tk-side">${esc(g.away || '')}</span>` +
+        `<span class="tk-sub">${g.oriented ? 'at' : 'vs'}</span>` +
+        `<span class="tk-side">${esc(g.home || '')}</span>${logo(g.home)}`;
     }
 
     function isToday(when) {
@@ -23745,10 +23800,12 @@
               ? '<span class="tk-final">Final</span>'
               : `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span>`);
           const line = g.state === 'pre'
-            ? `<span class="tk-name">${pairing(g)}</span>`
-            : `<span class="tk-name">${esc(g.away || '')} ${esc(g.awayScore ?? 0)}</span>` +
+            ? pairing(g)
+            : `${logo(g.away)}<span class="tk-side">${esc(g.away || '')}</span>` +
+              `<span class="tk-pts">${esc(g.awayScore ?? 0)}</span>` +
               `<span class="tk-sub">&ndash;</span>` +
-              `<span class="tk-name">${esc(g.home || '')} ${esc(g.homeScore ?? 0)}</span>`;
+              `<span class="tk-pts">${esc(g.homeScore ?? 0)}</span>` +
+              `<span class="tk-side">${esc(g.home || '')}</span>${logo(g.home)}`;
           return `<div class="tk-item">${line}${tag}</div>`;
         });
     }
@@ -23757,22 +23814,29 @@
       return games
         .slice()
         .sort((a, b) => new Date(a.when || 0) - new Date(b.when || 0))
-        .map(g => `<div class="tk-item">` +
-          `<span class="tk-name">${pairing(g)}</span>` +
+        .map(g => `<div class="tk-item">${pairing(g)}` +
           `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span></div>`);
     }
 
-    // Biggest swings in the portfolio: the players started in the most of my
-    // matchups, or against the most of them.
+    // Biggest swings in the portfolio, taken from BOTH ends: the players
+    // started in the most of my matchups, and the ones started against the
+    // most of them. Ranking on |delta| alone would have let one side crowd
+    // the other out entirely -- on a week where my teams are stacked, every
+    // slot went to players I was rooting for, and the ones capable of
+    // sinking me never appeared.
+    const SWEAT_PER_SIDE = 15;
     function sweatItems(rows) {
-      return rows
-        .slice()
-        .sort((a, b) => Math.abs(b.for.length - b.against.length) - Math.abs(a.for.length - a.against.length) ||
-                        (b.for.length + b.against.length) - (a.for.length + a.against.length))
-        .slice(0, 30)
+      const scored = rows
         .filter(r => (r.for.length + r.against.length) > 0)
-        .map(r => `<div class="tk-item">${playerCell(r)}` +
-          deltaCell(r.for.length, r.against.length) +
+        .map(r => ({ r, delta: r.for.length - r.against.length }));
+      const positives = scored.filter(x => x.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, SWEAT_PER_SIDE);
+      const negatives = scored.filter(x => x.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, SWEAT_PER_SIDE);
+      // Shown most-for first down through most-against, so the strip reads
+      // as one ranking rather than two lists stuck together.
+      return positives.concat(negatives)
+        .sort((a, b) => b.delta - a.delta)
+        .map(({ r }) => `<div class="tk-item">${playerCell(r)}` +
+          deltaCell(r) +
           `<span class="tk-sub">${esc(r.for.length)} for &middot; ${esc(r.against.length)} vs</span></div>`);
     }
 
@@ -23791,7 +23855,57 @@
         .slice(0, 30)
         .map(r => `<div class="tk-item">${playerCell(r)}` +
           `<span class="tk-pts">${one(r.pprPoints)}</span>` +
-          deltaCell(r.for.length, r.against.length) + `</div>`);
+          deltaCell(r) + `</div>`);
+    }
+
+    // Every one of this week's matchups: my record, my opponent's, the two
+    // projected totals and my chance of winning. Filtered exactly the way
+    // the Dashboard's PROJECTED WEEKLY RECORD is -- teams marked as tanking
+    // are left out, and co-managed leagues follow the Settings toggle --
+    // so the ticker covers the same leagues that record is counting.
+    //
+    // The projection and the percentage both come from sbMatchupWinPct and
+    // sbMatchupProjectedTotal rather than being worked out here, because
+    // two callers reaching for different projection stores is exactly how
+    // pages in this app have ended up quoting different numbers for the
+    // same matchup.
+    function matchupItems(espn, week) {
+      const tanks = (typeof sbGetTankList === 'function') ? sbGetTankList() : new Set();
+      const coManaged = (typeof isCoManagedIncluded === 'function') ? isCoManagedIncluded() : true;
+      const record = (roster) => {
+        const st = (roster && roster.settings) || {};
+        return `${st.wins || 0}-${st.losses || 0}${st.ties ? '-' + st.ties : ''}`;
+      };
+      return Object.values(window.sleeperLeagueData || {})
+        .filter(e => e.roster && e.league && e.myMatchup && e.oppMatchup)
+        .filter(e => coManaged || !e.isCoOwned)
+        .filter(e => !tanks.has(e.league.name))
+        .map(e => {
+          const oppRoster = (e.allRosters || []).find(r => r.roster_id === e.oppMatchup.roster_id) || null;
+          const oppName = (e.oppUser && (e.oppUser.display_name || e.oppUser.username)) || 'Opponent';
+          return {
+            e, oppName, oppRoster,
+            myProj: sbMatchupProjectedTotal(e.myMatchup, null, e.league, espn, week),
+            oppProj: sbMatchupProjectedTotal(e.oppMatchup, null, e.league, espn, week),
+            pct: sbMatchupWinPct(e.myMatchup, e.oppMatchup, e.league, null, espn, week),
+          };
+        })
+        // Closest first, the same order GameCast lists leagues in.
+        .sort((a, b) => Math.abs((a.pct == null ? 50 : a.pct) - 50) - Math.abs((b.pct == null ? 50 : b.pct) - 50))
+        .map(m => {
+          const num = (v) => Number.isFinite(v) ? Number(v).toFixed(1) : '&mdash;';
+          const pctHtml = m.pct == null
+            ? '<span class="tk-sub">&mdash;</span>'
+            : `<span class="tk-delta ${m.pct >= 50 ? 'is-pos' : 'is-neg'}">${Math.round(m.pct)}%</span>`;
+          return `<div class="tk-item is-matchup" data-league-name="${esc(m.e.league.name)}">` +
+            `<span class="tk-league">${esc(m.e.league.name)}</span>` +
+            `<span class="tk-name">You</span><span class="tk-sub">${esc(record(m.e.roster))}</span>` +
+            `<span class="tk-pts">${num(m.myProj)}</span>` +
+            `<span class="tk-sub">&ndash;</span>` +
+            `<span class="tk-pts">${num(m.oppProj)}</span>` +
+            `<span class="tk-name">${esc(m.oppName)}</span><span class="tk-sub">${esc(record(m.oppRoster))}</span>` +
+            pctHtml + `</div>`;
+        });
     }
 
     // League-wide leaders, not just players someone happens to roster --
@@ -23849,18 +23963,25 @@
         const segs = [];
         let nextMode;
 
+        // Every slate carries the matchup card -- it is the one feed that is
+        // just as useful with no games on as it is mid-Sunday.
+        const matchups = { key: 'matchups', label: `Week ${week} Matchups`, items: matchupItems(espn, week) };
+
         if (anyLive) {
           nextMode = 'live';
           segs.push({ key: 'liveFantasy', label: 'Live Fantasy', items: liveFantasyItems(rows, espn) });
           segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(todays.length ? todays : games) });
-          segs.push({ key: 'impact', label: 'Your Matchups', items: impactItems(rows, espn) });
+          segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
+          segs.push(matchups);
         } else if (gameDay) {
           nextMode = 'game day';
           segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(todays) });
-          segs.push({ key: 'impact', label: 'Your Matchups', items: impactItems(rows, espn) });
+          segs.push(matchups);
+          segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
           segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
         } else {
           nextMode = `week ${week}`;
+          segs.push(matchups);
           segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
           // Every game of this week is already finished, so the schedule
           // worth showing is next week's, not a list of results.
@@ -23978,6 +24099,25 @@
     if (modeBtn) {
       modeBtn.addEventListener('click', () => { advance(1); restartRotation(); });
     }
+
+    // Clicks land on the track rather than on each item, because the track's
+    // contents are replaced wholesale every rotation. A player's NAME opens
+    // his full player card; his "+3 for you" opens him on Weekly Sweats,
+    // where the three leagues are named; a matchup opens that league.
+    track.addEventListener('click', (e) => {
+      const sweat = e.target.closest('.tk-delta.is-sweat');
+      if (sweat && window.rgJumpToPlayerId) {
+        window.rgJumpToPlayerId(sweat.dataset.sweatId);
+        return;
+      }
+      const name = e.target.closest('.tk-name.is-player');
+      if (name && window.openPlayerModalForId) {
+        window.openPlayerModalForId(name.dataset.playerId, name.dataset.name, name.dataset.team, name.dataset.pos);
+        return;
+      }
+      const matchup = e.target.closest('.tk-item.is-matchup');
+      if (matchup && typeof goToLeagueDetail === 'function') goToLeagueDetail(matchup.dataset.leagueName);
+    });
     if (pipsEl) {
       pipsEl.addEventListener('click', (e) => {
         const pip = e.target.closest('.ticker-seg-pip');
