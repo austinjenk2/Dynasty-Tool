@@ -2840,6 +2840,8 @@
   .tt-team-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .tt-team-name { font-weight: 700; color: var(--ink); }
   .tt-pick { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .tt-rank { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .tt-rank-of { font-weight: 600; font-size: 10.5px; color: var(--faint); }
   .tt-blank { color: var(--faint); }
   .tt-score { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .tt-note {
@@ -11355,7 +11357,7 @@
     <div class="tt-section">
       <div class="tt-head">
         <h2>Future Pick Outlook</h2>
-        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today: teams out of the playoff picture are ordered by max PF (lowest picks first), teams in it by record with points for as the tiebreak. <span class="tt-blank">Playoff % is not worked out yet &mdash; the column is there for it.</span></p>
+        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today: teams out of the playoff picture are ordered by max PF (lowest picks first), teams in it by record with points for as the tiebreak. Points for and max points for are shown as their rank in that league, 1 being the most. <span class="tt-blank">Playoff % is not worked out yet &mdash; the column is there for it.</span></p>
       </div>
       <div class="rb-table-wrap">
         <table class="rb-table">
@@ -11366,8 +11368,8 @@
               <th class="tt-th-team">From</th>
               <th>Record</th>
               <th>Last Wk</th>
-              <th>PF</th>
-              <th>Max PF</th>
+              <th>PF Rank</th>
+              <th>Max PF Rank</th>
               <th class="rb-po-col">Proj Slot</th>
               <th>Playoff %</th>
             </tr>
@@ -23834,6 +23836,27 @@
     const winsOf = (r) => ((r && r.settings && r.settings.wins) || 0);
     const num = (v) => Number(v || 0).toFixed(1);
 
+    // 1 = most in the league, ties sharing a rank, the same way the Leagues
+    // page ranks a roster. Written here rather than reaching for ldRankOf,
+    // which is closed over by another module.
+    function rankOf(rosters, valueFn, rosterId) {
+      const sorted = rosters.slice().sort((a, b) => valueFn(b) - valueFn(a));
+      let rank = 1;
+      for (let i = 0; i < sorted.length; i++) {
+        if (i > 0 && valueFn(sorted[i]) < valueFn(sorted[i - 1])) rank = i + 1;
+        if (sorted[i].roster_id === rosterId) return rank;
+      }
+      return sorted.length;
+    }
+
+    // "11/12" reads at a glance and survives leagues of different sizes,
+    // which a bare "11th" would not.
+    function rankCell(rosters, valueFn, rosterId) {
+      if (!rosters.length) return '<span class="tt-blank">&mdash;</span>';
+      return `<span class="tt-rank">${rankOf(rosters, valueFn, rosterId)}` +
+        `<span class="tt-rank-of">/${rosters.length}</span></span>`;
+    }
+
     function recordOf(r) {
       const s = (r && r.settings) || {};
       const w = s.wins || 0, l = s.losses || 0, t = s.ties || 0;
@@ -23995,10 +24018,14 @@
         return;
       }
 
-      // Earliest projected pick first -- the ones actually worth watching.
-      picks.sort((a, b) => (a.slot == null ? 99 : a.slot) - (b.slot == null ? 99 : b.slot)
-        || a.pick.season - b.pick.season
-        || a.pick.round - b.pick.round);
+      // Draft-class order: every 2027 1st, then every 2027 2nd, and so on
+      // into 2028. Sorting by projected slot first read as one scrambled
+      // list, because a 2028 4th from a tanking team outranked a 2027 1st.
+      // Within a round the best projected pick still comes first.
+      picks.sort((a, b) => Number(a.pick.season) - Number(b.pick.season)
+        || a.pick.round - b.pick.round
+        || (a.slot == null ? 99 : a.slot) - (b.slot == null ? 99 : b.slot)
+        || a.entry.league.name.localeCompare(b.entry.league.name));
 
       const lastWeeks = await Promise.all(picks.map(p => ttLastWeek(p.entry, p.pick.fromRosterId).catch(() => null)));
 
@@ -24010,8 +24037,8 @@
           `<td class="tt-team-cell">${teamCell(p.entry, p.from)}</td>` +
           `<td>${sbFieldEsc(recordOf(p.from))}</td>` +
           `<td>${lastWeekCell(lastWeeks[i])}</td>` +
-          `<td>${num(pfOf(p.from))}</td>` +
-          `<td>${num(pptsOf(p.from))}</td>` +
+          `<td>${rankCell(p.entry.allRosters || [], pfOf, p.pick.fromRosterId)}</td>` +
+          `<td>${rankCell(p.entry.allRosters || [], pptsOf, p.pick.fromRosterId)}</td>` +
           `<td class="rb-po-col">${slotCell(p.slot, p.order)}</td>` +
           `<td class="tt-blank">&mdash;</td>` +
         `</tr>`;
