@@ -22,6 +22,7 @@
     --gold: #a3760a;
     --blue: #2f6fa3;
     --red-bg: #f7e7e7;
+    --ticker-h: 48px;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -30,6 +31,9 @@
     color: var(--ink);
     font-family: 'Source Sans 3', sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* Room at the foot of every page for the fixed ticker, so the last row
+       of a table is never sitting underneath it. */
+    padding-bottom: var(--ticker-h);
   }
   a { color: inherit; text-decoration: none; }
   button { font-family: inherit; cursor: pointer; }
@@ -75,15 +79,9 @@
   .section-tab:hover:not(.active) { color: var(--ink); }
   .section-tab.active { color: var(--ink); border-bottom-color: var(--red); }
 
-  /* ---------- Utility bar ---------- */
-  .utility-bar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 24px;
-    max-width: 1400px;
-    margin: 0 auto;
-  }
+  /* ---------- Chips and the Settings account panel ----------
+     What is left of the old utility bar: the bar itself is now the ticker,
+     styled further down, and these pieces moved onto Settings. */
   .chip {
     height: 32px;
     display: flex;
@@ -206,25 +204,30 @@
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #2f9e56; }
 
   /* ---------- Live ticker ----------------------------------------------
-     Takes the strip directly under the site nav (where the search box /
-     user chip / sync label used to live). Those controls moved onto the
-     Dashboard as the "Sleeper Account" card; the ticker is here instead so
-     it shows on every page. */
+     Pinned to the foot of the window, the way a broadcast ticker sits: it
+     stays put through any amount of scrolling and shows on every page. It
+     used to run directly under the site nav, which pushed every page's
+     content down by its own height for something you only glance at.
+     Below the full-screen overlays (the player card at 30, the mode
+     chooser at 50) so those still cover it, above everything on the page
+     itself. */
   .utility-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 25;
     display: block;
-    padding: 0;
-    max-width: none;
-    /* The page title below sets its own top padding, but on its own that
-       left the strip sitting right on top of the heading. This is the gap
-       that keeps the ticker reading as its own band. */
-    margin: 0 0 20px;
   }
   .ticker {
     display: flex;
     align-items: stretch;
-    height: 48px;
+    height: var(--ticker-h);
     background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    /* Lifts the bar off the page it is covering, so content scrolling
+       underneath reads as passing behind it rather than colliding. */
+    box-shadow: 0 -2px 10px -4px rgba(20,20,26,0.18);
     overflow: hidden;
     position: relative;
   }
@@ -2908,7 +2911,9 @@
     position: fixed;
     inset: 0;
     background: rgba(20,20,26,0.35);
-    z-index: 20;
+    /* Above the fixed ticker (25): this dims the whole page, and a strip
+       glowing through the dimmer would look like a bug. */
+    z-index: 26;
   }
   .notebook-panel {
     position: fixed;
@@ -2918,7 +2923,7 @@
     background: var(--surface);
     border-left: 1px solid var(--border);
     box-shadow: -12px 0 32px -12px rgba(0,0,0,0.25);
-    z-index: 21;
+    z-index: 27;
     display: flex;
     flex-direction: column;
     padding: 20px 20px 0;
@@ -3044,7 +3049,10 @@
   .notebook-roster-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
   .notebook-auto { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-left: auto; }
 
-  .page-title { padding: 20px 0 4px; }
+  /* A little more air than before: the ticker used to sit between the nav
+     and the first heading, and without that band the page read as starting
+     right on top of the nav's border. */
+  .page-title { padding: 28px 0 4px; }
   .page-title.page-title-flex { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
   .mode-toggle-btn {
     flex-shrink: 0;
@@ -3469,7 +3477,8 @@
   .trade-photo-menu-icon { font-size: 13px; }
   .photo-export-toast {
     position: fixed;
-    left: 50%; bottom: 28px;
+    /* Clear of the fixed ticker, not on top of it. */
+    left: 50%; bottom: calc(var(--ticker-h) + 22px);
     transform: translate(-50%, 12px);
     background: var(--ink);
     color: var(--bg);
@@ -3699,12 +3708,13 @@
       pointer-events: none;
     }
 
-    .utility-bar { padding: 0; margin-bottom: 14px; }
     /* The ticker stays on a phone, at close to full size -- it is the one
-       thing on the page worth glancing at one-handed. What goes is the
-       per-feed label (the mode badge already names the slate) and the pip
-       rail, which is a mouse target; swiping the strip replaces it. */
-    .ticker { height: 45px; }
+       thing on the page worth glancing at one-handed, and pinned to the
+       foot of the screen it sits right where a thumb already is. What goes
+       is the per-feed label (the mode badge already names the slate) and
+       the pip rail, which is a mouse target; swiping the strip replaces
+       it. Changing the variable moves the page's bottom padding with it. */
+    :root { --ticker-h: 45px; }
     .ticker-mode { padding: 0 11px; font-size: 11px; letter-spacing: 0.4px; }
     .ticker-seg-label, .ticker-segs { display: none; }
     .tk-item { padding: 0 13px; font-size: 13.5px; gap: 8px; }
@@ -3714,7 +3724,7 @@
     .tk-logo { width: 18px; height: 18px; }
     .sync-status { margin-left: 0; }
 
-    .page-title { padding: 14px 0 4px; }
+    .page-title { padding: 20px 0 4px; }
     .page-title h1 { font-size: 18px; }
     .page-title p { font-size: 12px; }
     .page-title.page-title-flex { flex-wrap: wrap; gap: 10px; }
@@ -3832,20 +3842,6 @@
         <div class="mode-chooser-sub">Season-only leagues</div>
       </div>
     </div>
-  </div>
-</div>
-
-<div class="utility-bar">
-  <div class="ticker" id="tickerBar">
-    <button class="ticker-mode" id="tickerMode" type="button" title="Click for the next feed">
-      <span class="ticker-dot" id="tickerDot"></span>
-      <span id="tickerModeLabel">NFL</span>
-    </button>
-    <div class="ticker-seg-label" id="tickerSegLabel"></div>
-    <div class="ticker-viewport" id="tickerViewport">
-      <div class="ticker-track" id="tickerTrack"></div>
-    </div>
-    <div class="ticker-segs" id="tickerSegs"></div>
   </div>
 </div>
 
@@ -11878,6 +11874,20 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<div class="utility-bar">
+  <div class="ticker" id="tickerBar">
+    <button class="ticker-mode" id="tickerMode" type="button" title="Click for the next feed">
+      <span class="ticker-dot" id="tickerDot"></span>
+      <span id="tickerModeLabel">NFL</span>
+    </button>
+    <div class="ticker-seg-label" id="tickerSegLabel"></div>
+    <div class="ticker-viewport" id="tickerViewport">
+      <div class="ticker-track" id="tickerTrack"></div>
+    </div>
+    <div class="ticker-segs" id="tickerSegs"></div>
   </div>
 </div>
 
