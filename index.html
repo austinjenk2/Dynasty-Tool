@@ -121,6 +121,33 @@
   .sleeper-connect-panel button:disabled { opacity: 0.6; cursor: default; }
   .sleeper-connect-status { font-size: 11.5px; color: var(--muted); margin-top: 8px; min-height: 14px; }
   .sleeper-connect-status.is-error { color: var(--red); }
+  /* On the Dashboard the connect panel is a plain inline block of the
+     account card, not the popover it used to be off the old top-bar chip. */
+  .desk-account .sleeper-connect-panel {
+    position: static;
+    width: auto;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  /* The popover rules sized both of these to the full panel width, which
+     puts them on their own lines -- here they share one row. */
+  .desk-account .sleeper-connect-panel input { width: auto; margin-bottom: 0; }
+  .desk-account .sleeper-connect-panel button { width: auto; }
+  .desk-account .chip.user { height: 24px; padding: 0 10px; font-size: 11.5px; cursor: default; }
+  .desk-account .chip { height: 24px; padding: 0 10px; font-size: 11px; }
+  .desk-account .sync-status { margin-left: 0; font-size: 11.5px; }
+  .page-title-actions {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  @media (max-width: 820px) {
+    .page-title-actions { flex-wrap: wrap; width: 100%; }
+  }
   .sync-dot.sync-error { background: var(--red); }
   .sync-dot.sync-pending { background: var(--gold); }
   .search-box {
@@ -155,6 +182,218 @@
     margin-left: auto;
   }
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #2f9e56; }
+
+  /* ---------- Live ticker ----------------------------------------------
+     Takes the strip directly under the site nav (where the search box /
+     user chip / sync label used to live). Those controls moved onto the
+     Dashboard as the "Sleeper Account" card; the ticker is here instead so
+     it shows on every page. */
+  .utility-bar {
+    display: block;
+    padding: 0;
+    max-width: none;
+    margin: 0;
+  }
+  .ticker {
+    display: flex;
+    align-items: stretch;
+    height: 42px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+  /* The mode badge is also the control: clicking it advances to the next
+     feed in the current slate instead of waiting out the rotation. */
+  .ticker-mode {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 14px;
+    border: none;
+    border-right: 1px solid var(--border);
+    background: var(--ink);
+    color: #fff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .ticker-mode:hover { filter: brightness(1.35); }
+  .ticker.is-live .ticker-mode { background: var(--red); }
+  .ticker-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--faint);
+    flex-shrink: 0;
+  }
+  .ticker.is-live .ticker-dot { background: #fff; animation: tk-pulse 1.4s ease-in-out infinite; }
+  @keyframes tk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .ticker-seg-label {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 14px;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .ticker-viewport {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    position: relative;
+  }
+  /* Fades the cut edge so items enter and leave instead of popping. */
+  .ticker-viewport::after {
+    content: '';
+    position: absolute; right: 0; top: 0; bottom: 0; width: 34px;
+    background: linear-gradient(to right, transparent, var(--surface));
+    pointer-events: none;
+  }
+  .ticker-track {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    width: max-content;
+    will-change: transform;
+  }
+  /* The track holds the item list TWICE, so translating it exactly one
+     copy's width (-50%) lands on a frame identical to the first -- the
+     loop has no seam and needs no JS per frame. */
+  .ticker-track.is-scrolling { animation: tk-scroll linear infinite; }
+  @keyframes tk-scroll {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(-50%, 0, 0); }
+  }
+  .ticker:hover .ticker-track.is-scrolling { animation-play-state: paused; }
+
+  .tk-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    padding: 0 16px;
+    white-space: nowrap;
+    font-size: 12.5px;
+    border-right: 1px solid var(--border-soft);
+  }
+  .tk-pos {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: var(--bg);
+    color: var(--muted);
+  }
+  .tk-pos.sb-pos-qb { color: var(--red); background: var(--red-bg); }
+  .tk-pos.sb-pos-rb { color: var(--green); background: var(--green-bg); }
+  .tk-pos.sb-pos-wr { color: var(--blue); background: rgba(47,111,163,0.12); }
+  .tk-pos.sb-pos-te { color: var(--gold); background: #f6efe0; }
+  .tk-name { font-weight: 700; color: var(--ink); }
+  .tk-team { font-size: 11px; color: var(--faint); }
+  .tk-pts { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .tk-sub { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tk-delta { font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tk-delta.is-pos { color: var(--green); }
+  .tk-delta.is-neg { color: var(--red); }
+  .tk-delta.is-even { color: var(--faint); }
+  .tk-live { font-size: 10px; font-weight: 800; letter-spacing: 0.4px; color: var(--red); text-transform: uppercase; }
+  .tk-final { font-size: 10px; font-weight: 800; letter-spacing: 0.4px; color: var(--faint); text-transform: uppercase; }
+  .tk-empty { display: inline-flex; align-items: center; height: 100%; padding: 0 16px; font-size: 12.5px; color: var(--muted); }
+
+  /* Which feed of the current slate is showing, and how many there are. */
+  .ticker-segs {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 14px;
+    border-left: 1px solid var(--border);
+  }
+  .ticker-seg-pip {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    padding: 0; border: none;
+  }
+  .ticker-seg-pip.is-active { background: var(--ink); }
+
+  /* Someone who has asked the OS to stop moving things gets a strip they
+     can scroll by hand rather than one that animates under them. */
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-track.is-scrolling { animation: none; }
+    .ticker-viewport { overflow-x: auto; }
+  }
+
+  /* ---------- Sleeper account card (Dashboard) ---------- */
+  .desk-account {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 300px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .desk-account-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .desk-account-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .desk-account-row { display: flex; gap: 6px; }
+  .desk-account-row input {
+    flex: 1;
+    min-width: 0;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .desk-account-row button {
+    flex-shrink: 0;
+    height: 32px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 6px;
+    background: var(--ink);
+    color: #fff;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .desk-account-row button:disabled { opacity: 0.6; cursor: default; }
+  .desk-account-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
 
   /* ---------- Content shell ---------- */
   .content {
@@ -3359,8 +3598,16 @@
       pointer-events: none;
     }
 
-    .utility-bar { flex-wrap: wrap; padding: 10px 14px; gap: 8px; }
+    .utility-bar { padding: 0; }
+    .ticker { height: 38px; }
+    .ticker-mode { padding: 0 10px; font-size: 10px; letter-spacing: 0.5px; }
+    /* Two labels plus the pips leave almost nothing for the feed itself on a
+       phone -- the mode badge already names the slate, so the per-feed label
+       and the pip rail drop out and the whole width goes to the items. */
+    .ticker-seg-label, .ticker-segs { display: none; }
+    .tk-item { padding: 0 12px; font-size: 12px; }
     .sync-status { margin-left: 0; }
+    .desk-account { width: 100%; }
 
     .page-title { padding: 14px 0 4px; }
     .page-title h1 { font-size: 18px; }
@@ -3483,20 +3730,17 @@
 </div>
 
 <div class="utility-bar">
-  <div class="sleeper-connect-wrap">
-    <div class="chip user" id="sleeperUserChip" title="Click to connect your Sleeper account">AusJ2</div>
-    <div class="sleeper-connect-panel" id="sleeperConnectPanel" hidden>
-      <label for="sleeperUsernameInput">Sleeper username</label>
-      <input type="text" id="sleeperUsernameInput" placeholder="e.g. AusJ2">
-      <button id="sleeperConnectBtn">Connect</button>
-      <div class="sleeper-connect-status" id="sleeperConnectStatus"></div>
+  <div class="ticker" id="tickerBar">
+    <button class="ticker-mode" id="tickerMode" type="button" title="Click for the next feed">
+      <span class="ticker-dot" id="tickerDot"></span>
+      <span id="tickerModeLabel">NFL</span>
+    </button>
+    <div class="ticker-seg-label" id="tickerSegLabel"></div>
+    <div class="ticker-viewport" id="tickerViewport">
+      <div class="ticker-track" id="tickerTrack"></div>
     </div>
+    <div class="ticker-segs" id="tickerSegs"></div>
   </div>
-  <div class="search-box">
-    <input type="text" placeholder="Search Username / League">
-  </div>
-  <div class="chip" id="leagueCountChip">18 Leagues</div>
-  <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncStatusText">Sample data &mdash; not connected</span></div>
 </div>
 
 <div class="content">
@@ -3507,7 +3751,27 @@
         <h1>Dashboard</h1>
         <p>Portfolio-wide summary across all connected leagues.</p>
       </div>
-      <div class="mode-toggle-btn" id="modeToggleBtn" hidden></div>
+      <div class="page-title-actions">
+        <div class="desk-account sleeper-connect-wrap" id="sleeperConnectPanelHost">
+          <div class="desk-account-head">
+            <span class="desk-account-label">Sleeper account</span>
+            <span class="chip user" id="sleeperUserChip" title="The Sleeper account these leagues are pulled from">AusJ2</span>
+          </div>
+          <div class="sleeper-connect-panel" id="sleeperConnectPanel">
+            <label for="sleeperUsernameInput">Switch to another username</label>
+            <div class="desk-account-row">
+              <input type="text" id="sleeperUsernameInput" placeholder="e.g. AusJ2">
+              <button id="sleeperConnectBtn">Load</button>
+            </div>
+            <div class="sleeper-connect-status" id="sleeperConnectStatus"></div>
+          </div>
+          <div class="desk-account-foot">
+            <span class="chip" id="leagueCountChip">18 Leagues</span>
+            <span class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncStatusText">Sample data &mdash; not connected</span></span>
+          </div>
+        </div>
+        <div class="mode-toggle-btn" id="modeToggleBtn" hidden></div>
+      </div>
     </div>
 
     <div class="record-row">
@@ -15947,13 +16211,11 @@
     }
     setInterval(tickSyncedLabel, 5000);
 
-    userChip.addEventListener('click', (e) => {
-      e.stopPropagation();
-      connectPanel.hidden = !connectPanel.hidden;
-      if (!connectPanel.hidden) usernameInput.focus();
-    });
-    connectPanel.addEventListener('click', (e) => e.stopPropagation());
-    document.addEventListener('click', () => { connectPanel.hidden = true; });
+    // The panel used to be a popover hanging off a chip in the old top bar.
+    // It now sits open on the Dashboard as part of the account card, so the
+    // only thing the chip still does is focus the field.
+    connectPanel.hidden = false;
+    userChip.addEventListener('click', () => usernameInput.focus());
 
     connectBtn.addEventListener('click', () => connectSleeperUser(usernameInput.value.trim()));
     usernameInput.addEventListener('keydown', (e) => {
@@ -15970,7 +16232,6 @@
         if (!user || !user.user_id) throw new Error('not found');
         saveUser({ username: user.display_name || user.username || username, userId: user.user_id });
         userChip.textContent = user.display_name || user.username || username;
-        connectPanel.hidden = true;
         connectStatus.textContent = '';
         usernameInput.value = '';
         await loadSleeperData();
@@ -16450,6 +16711,7 @@
         if (window.renderRealTrades) window.renderRealTrades();
         if (window.renderRealWaiverWire) window.renderRealWaiverWire();
         if (window.renderRealRootingGuide) window.renderRealRootingGuide(window.__rgSelectedWeek || undefined);
+        if (window.refreshTicker) window.refreshTicker();
         if (window.renderRealDraftRoom) window.renderRealDraftRoom();
         if (window.renderRealMyAdp) window.renderRealMyAdp();
         if (window.renderRealDashboard) window.renderRealDashboard();
@@ -18776,11 +19038,8 @@
           if (window.sleeperReloadData) window.sleeperReloadData();
           // Picking a mode with no Sleeper account connected yet would
           // otherwise just drop you on an empty Dashboard with no obvious
-          // next step -- open the connect prompt right away instead of
-          // relying on someone noticing the small account chip. Deferred a
-          // tick so it opens *after* this same click finishes bubbling to
-          // document's own listener, which closes the panel on any outside
-          // click -- opening it inline here would have it close itself.
+          // next step -- put the cursor in the username field instead of
+          // relying on someone noticing the account card.
           if (!getSavedUser()) {
             setTimeout(() => { connectPanel.hidden = false; usernameInput.focus(); }, 0);
           }
@@ -23330,6 +23589,420 @@
   tcRender();
 
   refreshExpBoard();
+
+  // ---- The ticker ------------------------------------------------------
+  // The strip under the site nav, on every page. What it carries depends on
+  // what the NFL is doing right now: live fantasy lines while games are
+  // being played, the day's scoreboard and leaders on a game day, and the
+  // week's sweats plus the upcoming schedule when nothing is on.
+  //
+  // Almost none of this is new data. The Weekly Sweats page already builds
+  // one row per player who is started (by me or against me) anywhere in the
+  // portfolio, carrying his live points, his live projection and his Points
+  // Over Expected off the shared house scoring line -- window.__sleeperRootingRows.
+  // Reading that means the ticker quotes the same numbers as the page it
+  // came from instead of computing a second, slightly different set.
+  (function initTicker() {
+    const bar = document.getElementById('tickerBar');
+    const track = document.getElementById('tickerTrack');
+    const viewport = document.getElementById('tickerViewport');
+    const modeBtn = document.getElementById('tickerMode');
+    const modeLabel = document.getElementById('tickerModeLabel');
+    const segLabelEl = document.getElementById('tickerSegLabel');
+    const pipsEl = document.getElementById('tickerSegs');
+    if (!bar || !track || !viewport) return;
+
+    const SCROLL_PX_PER_SEC = 62;   // slow enough to actually read at a glance
+    const SEG_ROTATE_MS = 18000;    // how long one feed holds the strip
+    const DATA_REFRESH_MS = 20000;  // ESPN's own cache here is 15s
+
+    let segments = [];       // [{ key, label, items: [html] }]
+    let pending = null;      // freshly built segments, applied on next rotate
+    let segIndex = 0;
+    let mode = '';
+    let rotateTimer = null;
+    let building = false;
+
+    const esc = (v) => String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const one = (n) => Number(n || 0).toFixed(1);
+    const signed = (n) => (n >= 0 ? '+' : '') + Number(n).toFixed(1);
+
+    function posClass(pos) {
+      const p = String(pos || '').toLowerCase();
+      return ['qb', 'rb', 'wr', 'te'].includes(p) ? ' sb-pos-' + p : '';
+    }
+
+    // ---- shared pieces of an item ----
+    function playerCell(r) {
+      return `<span class="tk-pos${posClass(r.pos)}">${esc(r.pos || '')}</span>` +
+             `<span class="tk-name">${esc(r.name)}</span>` +
+             `<span class="tk-team">${esc(r.team || 'FA')}</span>`;
+    }
+
+    function deltaCell(forCount, againstCount) {
+      const d = (forCount || 0) - (againstCount || 0);
+      const cls = d > 0 ? 'is-pos' : (d < 0 ? 'is-neg' : 'is-even');
+      const label = d > 0 ? `+${d} for you` : (d < 0 ? `${d} against you` : 'even');
+      return `<span class="tk-delta ${cls}">${esc(label)}</span>`;
+    }
+
+    // ---- data ----
+    function leagueEntries() {
+      return Object.values(window.sleeperLeagueData || {});
+    }
+
+    function currentWeekSeason() {
+      const entries = leagueEntries();
+      if (!entries.length) return null;
+      const first = entries[0];
+      const season = (first.league && first.league.season) || String(new Date().getFullYear());
+      return { week: first.week, season };
+    }
+
+    // ESPN's map has one row per TEAM; two teams share a game, so fold it
+    // back down to one row per game before showing a scoreboard.
+    //
+    // That payload doesn't say which side is at home, but the Sleeper
+    // projections feed does (window.__sleeperGameInfo carries an isAway flag
+    // per team), so the two are crossed here to get "away at home" the right
+    // way round. With no game info loaded the pairing stays neutral -- "A vs
+    // B" -- rather than printing an "at" that might be backwards.
+    function gamesFrom(espn) {
+      const info = window.__sleeperGameInfo || {};
+      const byEvent = {};
+      Object.keys(espn || {}).forEach(abbr => {
+        const g = espn[abbr];
+        if (!g || !g.eventId || byEvent[g.eventId]) return;
+        const mine = info[abbr];
+        const theirs = g.oppAbbr ? info[g.oppAbbr] : null;
+        let away = abbr, awayScore = g.score, home = g.oppAbbr, homeScore = g.oppScore, oriented = false;
+        if (mine && typeof mine.isAway === 'boolean') {
+          oriented = true;
+          if (!mine.isAway) { away = g.oppAbbr; awayScore = g.oppScore; home = abbr; homeScore = g.score; }
+        } else if (theirs && typeof theirs.isAway === 'boolean') {
+          oriented = true;
+          if (theirs.isAway) { away = g.oppAbbr; awayScore = g.oppScore; home = abbr; homeScore = g.score; }
+        }
+        byEvent[g.eventId] = {
+          eventId: g.eventId,
+          home, homeScore, away, awayScore, oriented,
+          state: g.state, detail: g.detail, when: g.when,
+        };
+      });
+      return Object.values(byEvent);
+    }
+
+    function pairing(g) {
+      return `${esc(g.away || '')} ${g.oriented ? 'at' : 'vs'} ${esc(g.home || '')}`;
+    }
+
+    function isToday(when) {
+      if (!when) return false;
+      const d = new Date(when);
+      if (isNaN(d)) return false;
+      const now = new Date();
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    }
+
+    function kickoffLabel(when) {
+      const d = when ? new Date(when) : null;
+      if (!d || isNaN(d)) return '';
+      const day = d.toLocaleDateString(undefined, { weekday: 'short' });
+      const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      return `${day} ${time}`;
+    }
+
+    // ---- item builders --------------------------------------------------
+
+    function liveFantasyItems(rows, espn) {
+      return rows
+        .filter(r => {
+          const g = espn[r.team];
+          return g && g.state === 'in';
+        })
+        .sort((a, b) => (b.pprPoints || 0) - (a.pprPoints || 0))
+        .map(r => {
+          const poe = r.poe == null ? '' :
+            `<span class="tk-delta ${r.poe >= 0 ? 'is-pos' : 'is-neg'}">POE ${signed(r.poe)}</span>`;
+          return `<div class="tk-item">${playerCell(r)}` +
+                 `<span class="tk-pts">${one(r.pprPoints)}</span>` +
+                 `<span class="tk-sub">proj ${one(r.liveProj)}</span>` +
+                 poe + `</div>`;
+        });
+    }
+
+    function scoreItems(games) {
+      const rank = { in: 0, pre: 1, post: 2 };
+      return games
+        .slice()
+        .sort((a, b) => (rank[a.state] ?? 3) - (rank[b.state] ?? 3) ||
+                        (new Date(a.when || 0) - new Date(b.when || 0)))
+        .map(g => {
+          const tag = g.state === 'in'
+            ? `<span class="tk-live">${esc(g.detail || 'live')}</span>`
+            : (g.state === 'post'
+              ? '<span class="tk-final">Final</span>'
+              : `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span>`);
+          const line = g.state === 'pre'
+            ? `<span class="tk-name">${pairing(g)}</span>`
+            : `<span class="tk-name">${esc(g.away || '')} ${esc(g.awayScore ?? 0)}</span>` +
+              `<span class="tk-sub">&ndash;</span>` +
+              `<span class="tk-name">${esc(g.home || '')} ${esc(g.homeScore ?? 0)}</span>`;
+          return `<div class="tk-item">${line}${tag}</div>`;
+        });
+    }
+
+    function scheduleItems(games) {
+      return games
+        .slice()
+        .sort((a, b) => new Date(a.when || 0) - new Date(b.when || 0))
+        .map(g => `<div class="tk-item">` +
+          `<span class="tk-name">${pairing(g)}</span>` +
+          `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span></div>`);
+    }
+
+    // Biggest swings in the portfolio: the players started in the most of my
+    // matchups, or against the most of them.
+    function sweatItems(rows) {
+      return rows
+        .slice()
+        .sort((a, b) => Math.abs(b.for.length - b.against.length) - Math.abs(a.for.length - a.against.length) ||
+                        (b.for.length + b.against.length) - (a.for.length + a.against.length))
+        .slice(0, 30)
+        .filter(r => (r.for.length + r.against.length) > 0)
+        .map(r => `<div class="tk-item">${playerCell(r)}` +
+          deltaCell(r.for.length, r.against.length) +
+          `<span class="tk-sub">${esc(r.for.length)} for &middot; ${esc(r.against.length)} vs</span></div>`);
+    }
+
+    // The same sweats, but ranked by what they are actually doing today --
+    // the players deciding this week's matchups while their games are on.
+    function impactItems(rows, espn) {
+      return rows
+        .filter(r => {
+          const g = espn[r.team];
+          return g && (g.state === 'in' || g.state === 'post') && (r.for.length + r.against.length) > 0;
+        })
+        .sort((a, b) => {
+          const swing = (r) => Math.abs(r.for.length - r.against.length) * (r.pprPoints || 0);
+          return swing(b) - swing(a);
+        })
+        .slice(0, 30)
+        .map(r => `<div class="tk-item">${playerCell(r)}` +
+          `<span class="tk-pts">${one(r.pprPoints)}</span>` +
+          deltaCell(r.for.length, r.against.length) + `</div>`);
+    }
+
+    // League-wide leaders, not just players someone happens to roster --
+    // scored off the same house line the Weekly Sweats page uses, so a
+    // number here is directly comparable with one there.
+    function leaderItems(statsMap, dict) {
+      if (!statsMap || !dict) return [];
+      const byPos = { QB: [], RB: [], WR: [], TE: [] };
+      Object.keys(statsMap).forEach(id => {
+        const p = dict[id];
+        if (!p || !byPos[p.position]) return;
+        const pts = sbHouseScore(id, statsMap[id], dict);
+        if (pts == null) return;
+        byPos[p.position].push({
+          id,
+          name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
+          team: p.team || 'FA',
+          pos: p.position,
+          pts,
+        });
+      });
+      const items = [];
+      ['QB', 'RB', 'WR', 'TE'].forEach(pos => {
+        byPos[pos].sort((a, b) => b.pts - a.pts).slice(0, 5).forEach((r, i) => {
+          items.push(`<div class="tk-item"><span class="tk-sub">${esc(pos)}${i + 1}</span>` +
+            playerCell(r) + `<span class="tk-pts">${one(r.pts)}</span></div>`);
+        });
+      });
+      return items;
+    }
+
+    // ---- slate assembly --------------------------------------------------
+
+    async function build() {
+      if (building) return;
+      building = true;
+      try {
+        const ws = currentWeekSeason();
+        if (!ws) {
+          applyNow('off', [{ key: 'none', label: '', items: [] }],
+            'Connect a Sleeper username on the Dashboard to fill the ticker.');
+          return;
+        }
+        const { week, season } = ws;
+        const rows = window.__sleeperRootingRows || [];
+        const espn = (window.sleeperGetEspnGameData
+          ? await window.sleeperGetEspnGameData(week, season).catch(() => ({}))
+          : {}) || {};
+        const games = gamesFrom(espn);
+
+        const anyLive = games.some(g => g.state === 'in');
+        const todays = games.filter(g => isToday(g.when));
+        const gameDay = todays.length > 0;
+
+        const segs = [];
+        let nextMode;
+
+        if (anyLive) {
+          nextMode = 'live';
+          segs.push({ key: 'liveFantasy', label: 'Live Fantasy', items: liveFantasyItems(rows, espn) });
+          segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(todays.length ? todays : games) });
+          segs.push({ key: 'impact', label: 'Your Matchups', items: impactItems(rows, espn) });
+        } else if (gameDay) {
+          nextMode = 'game day';
+          segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(todays) });
+          segs.push({ key: 'impact', label: 'Your Matchups', items: impactItems(rows, espn) });
+          segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
+        } else {
+          nextMode = `week ${week}`;
+          segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
+          // Every game of this week is already finished, so the schedule
+          // worth showing is next week's, not a list of results.
+          const upcoming = games.filter(g => g.state !== 'post');
+          if (upcoming.length) {
+            segs.push({ key: 'schedule', label: `Week ${week} Schedule`, items: scheduleItems(upcoming) });
+          } else {
+            const nextGames = window.sleeperGetEspnGameData
+              ? gamesFrom(await window.sleeperGetEspnGameData(week + 1, season).catch(() => ({})) || {})
+              : [];
+            if (nextGames.length) {
+              segs.push({ key: 'schedule', label: `Week ${week + 1} Schedule`, items: scheduleItems(nextGames) });
+            }
+            if (games.length) {
+              segs.push({ key: 'results', label: `Week ${week} Results`, items: scoreItems(games) });
+            }
+          }
+        }
+
+        // Position leaders are only meaningful once the week has actually
+        // produced some stats, and the full stat feed is a real fetch -- so
+        // it's only pulled on a day there are games.
+        if ((anyLive || gameDay) && window.sleeperGetWeekStats && window.sleeperGetPlayerDict) {
+          try {
+            const [statsMap, dict] = await Promise.all([
+              window.sleeperGetWeekStats(season, week),
+              window.sleeperGetPlayerDict(),
+            ]);
+            const items = leaderItems(statsMap, dict);
+            if (items.length) segs.push({ key: 'leaders', label: 'Position Leaders', items });
+          } catch (e) {
+            // No leaders feed this pass; the other segments still rotate.
+          }
+        }
+
+        const usable = segs.filter(s => s.items.length);
+        if (!usable.length) {
+          applyNow(nextMode, [{ key: 'none', label: '', items: [] }], 'Nothing on the wire right now.');
+          return;
+        }
+        if (nextMode !== mode || !segments.length) applyNow(nextMode, usable);
+        else pending = usable;
+      } finally {
+        building = false;
+      }
+    }
+
+    // ---- rendering -------------------------------------------------------
+
+    let emptyMessage = 'Loading…';
+
+    function applyNow(nextMode, segs, message) {
+      if (message) emptyMessage = message;
+      const prevKey = segments[segIndex] && segments[segIndex].key;
+      mode = nextMode;
+      segments = segs;
+      pending = null;
+      // Hold the viewer on the feed they were already reading if it survived
+      // the rebuild, rather than snapping back to the first one every poll.
+      const keep = segs.findIndex(s => s.key === prevKey);
+      segIndex = keep >= 0 ? keep : 0;
+      modeLabel.textContent = mode.toUpperCase();
+      bar.classList.toggle('is-live', mode === 'live');
+      renderPips();
+      renderSegment();
+    }
+
+    function renderPips() {
+      if (!pipsEl) return;
+      pipsEl.innerHTML = segments
+        .map((s, i) => `<button class="ticker-seg-pip${i === segIndex ? ' is-active' : ''}" type="button" data-seg="${i}" title="${esc(s.label)}"></button>`)
+        .join('');
+    }
+
+    function renderSegment() {
+      const seg = segments[segIndex];
+      if (segLabelEl) segLabelEl.textContent = seg && seg.label ? seg.label : '';
+      track.classList.remove('is-scrolling');
+      track.style.animationDuration = '';
+      if (!seg || !seg.items.length) {
+        track.innerHTML = `<div class="tk-empty">${esc(emptyMessage)}</div>`;
+        return;
+      }
+      const html = seg.items.join('');
+      track.innerHTML = html;
+      // One copy is measured first: if the whole feed already fits on screen
+      // there is nothing to scroll, and duplicating it would just show every
+      // item twice side by side.
+      requestAnimationFrame(() => {
+        if (segments[segIndex] !== seg) return;
+        const copyWidth = track.scrollWidth;
+        if (copyWidth <= viewport.clientWidth + 8) return;
+        track.innerHTML = html + html;
+        track.style.animationDuration = (copyWidth / SCROLL_PX_PER_SEC) + 's';
+        track.classList.add('is-scrolling');
+      });
+    }
+
+    function advance(step) {
+      if (pending) {
+        applyNow(mode, pending);
+        return;
+      }
+      if (segments.length < 2) { renderSegment(); return; }
+      segIndex = (segIndex + (step || 1) + segments.length) % segments.length;
+      renderPips();
+      renderSegment();
+    }
+
+    function restartRotation() {
+      if (rotateTimer) clearInterval(rotateTimer);
+      rotateTimer = setInterval(() => advance(1), SEG_ROTATE_MS);
+    }
+
+    if (modeBtn) {
+      modeBtn.addEventListener('click', () => { advance(1); restartRotation(); });
+    }
+    if (pipsEl) {
+      pipsEl.addEventListener('click', (e) => {
+        const pip = e.target.closest('.ticker-seg-pip');
+        if (!pip) return;
+        segIndex = Number(pip.dataset.seg) || 0;
+        renderPips();
+        renderSegment();
+        restartRotation();
+      });
+    }
+    // The animation is driven off a measured width, so a resize has to
+    // re-measure -- otherwise the loop point drifts off the seam.
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(renderSegment, 200);
+    });
+
+    window.refreshTicker = () => { build().catch(() => {}); };
+
+    renderSegment();
+    restartRotation();
+    build().catch(() => {});
+    setInterval(() => build().catch(() => {}), DATA_REFRESH_MS);
+  })();
 </script>
 
 </body>
