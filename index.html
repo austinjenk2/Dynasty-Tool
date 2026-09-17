@@ -24208,6 +24208,9 @@
     // ESPN's map has one row per TEAM; two teams share a game, so fold it
     // back down to one row per game before showing a scoreboard, orienting
     // each pairing with the same sbOrientGame the Weekly Schedule uses.
+    // The one game that takes the strip to itself once it kicks off.
+    const HOME_TEAM = 'DET';
+
     function gamesFrom(espn) {
       const info = window.__sleeperGameInfo || {};
       const byEvent = {};
@@ -24551,7 +24554,12 @@
           segs.push({ key: 'liveFantasy', label: 'Live Fantasy', items: liveFantasyItems(rows, espn) });
           // Once the ball is in the air the strip belongs to the games being
           // played -- a slate of kickoff times is noise next to a live score.
-          segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(games.filter(g => g.state === 'in')) });
+          // And once the Lions are the ones playing, that is the only game
+          // worth the strip: every other live score steps on it.
+          const liveGames = games.filter(g => g.state === 'in');
+          const liveLions = liveGames.filter(g => g.away === HOME_TEAM || g.home === HOME_TEAM);
+          segs.push({ key: 'scores', label: 'NFL Scores',
+            items: scoreItems(liveLions.length ? liveLions : liveGames) });
           segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
           segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
           segs.push(matchups);
