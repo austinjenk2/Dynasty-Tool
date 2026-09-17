@@ -24208,6 +24208,9 @@
     // ESPN's map has one row per TEAM; two teams share a game, so fold it
     // back down to one row per game before showing a scoreboard, orienting
     // each pairing with the same sbOrientGame the Weekly Schedule uses.
+    // The one game that takes the strip to itself once it kicks off.
+    const HOME_TEAM = 'DET';
+
     function gamesFrom(espn) {
       const info = window.__sleeperGameInfo || {};
       const byEvent = {};
@@ -24237,6 +24240,19 @@
       return `${logo(g.away)}<span class="tk-side">${esc(g.away || '')}</span>` +
         `<span class="tk-sub">${g.oriented ? 'at' : 'vs'}</span>` +
         `<span class="tk-side">${esc(g.home || '')}</span>${logo(g.home)}`;
+    }
+
+    // Spread and total for a game that has not kicked off yet. ESPN hands
+    // back the line as a details string ("DET -3.5") plus a separate
+    // overUnder number; once a game is under way the line is history, so
+    // this is only ever drawn on a pre-game item.
+    function oddsCells(g) {
+      const o = g && g.odds;
+      if (!o) return '';
+      const line = o.details ? `<span class="tk-odds">${esc(o.details)}</span>` : '';
+      const total = o.overUnder != null
+        ? `<span class="tk-sub">O/U ${esc(Number(o.overUnder).toFixed(1))}</span>` : '';
+      return line + total;
     }
 
     function isToday(when) {
@@ -24287,7 +24303,7 @@
               ? '<span class="tk-final">Final</span>'
               : `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span>`);
           const line = g.state === 'pre'
-            ? pairing(g)
+            ? pairing(g) + oddsCells(g)
             : `${logo(g.away)}<span class="tk-side">${esc(g.away || '')}</span>` +
               `<span class="tk-pts">${esc(g.awayScore ?? 0)}</span>` +
               `<span class="tk-sub">&ndash;</span>` +
@@ -24302,11 +24318,8 @@
         .slice()
         .sort((a, b) => new Date(a.when || 0) - new Date(b.when || 0))
         .map(g => {
-          const line = g.odds && g.odds.details ? `<span class="tk-odds">${esc(g.odds.details)}</span>` : '';
-          const total = g.odds && g.odds.overUnder != null
-            ? `<span class="tk-sub">O/U ${esc(Number(g.odds.overUnder).toFixed(1))}</span>` : '';
           return `<div class="tk-item is-game" data-event-id="${esc(g.eventId || '')}">${pairing(g)}` +
-            `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span>${line}${total}</div>`;
+            `<span class="tk-sub">${esc(kickoffLabel(g.when))}</span>${oddsCells(g)}</div>`;
         });
     }
 
@@ -24539,13 +24552,24 @@
         if (anyLive) {
           nextMode = 'live';
           segs.push({ key: 'liveFantasy', label: 'Live Fantasy', items: liveFantasyItems(rows, espn) });
-          segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(todays.length ? todays : games) });
+          // Once the ball is in the air the strip belongs to the games being
+          // played -- a slate of kickoff times is noise next to a live score.
+          // And once the Lions are the ones playing, that is the only game
+          // worth the strip: every other live score steps on it.
+          const liveGames = games.filter(g => g.state === 'in');
+          const liveLions = liveGames.filter(g => g.away === HOME_TEAM || g.home === HOME_TEAM);
+          segs.push({ key: 'scores', label: 'NFL Scores',
+            items: scoreItems(liveLions.length ? liveLions : liveGames) });
           segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
           segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
           segs.push(matchups);
         } else if (gameDay) {
           nextMode = 'game day';
-          segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(todays) });
+          // Before anything kicks off, the whole week is worth carrying --
+          // today's games first (the sort puts kickoffs in order), with the
+          // spread and total on each one that has not started. Narrowing to
+          // today alone left the strip showing a single game all Thursday.
+          segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(games.length ? games : todays) });
           segs.push(matchups);
           segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
           segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
