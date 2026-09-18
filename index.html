@@ -307,8 +307,11 @@
     align-items: center;
     height: 100%;
     width: max-content;
-    will-change: transform;
   }
+  /* will-change is deliberately not set here. It pins a compositor layer
+     for the whole track, and the track is thousands of pixels wide -- the
+     transform animation below gets composited on its own merits without
+     asking the browser to hold that layer permanently. */
   /* The track holds the item list TWICE, so translating it exactly one
      copy's width (-50%) lands on a frame identical to the first -- the
      loop has no seam and needs no JS per frame. */
@@ -24144,7 +24147,11 @@
     const SEG_MIN_MS = 9000;
     // A beat on the seam, so the last item isn't cut off the instant it lands.
     const LAP_BUFFER_MS = 900;
-    const DATA_REFRESH_MS = 20000;  // ESPN's own cache here is 15s
+    // A rebuild is only ever consumed when the current lap ends, and a lap
+    // runs 30-120s -- so at 20s two or three of every four builds were
+    // thrown away. Each one walks the whole week's stat line to rank the
+    // position leaders, so they were not free.
+    const DATA_REFRESH_MS = 60000;
 
     let segments = [];       // [{ key, label, items: [html] }]
     let pending = null;      // freshly built segments, applied on next rotate
@@ -24172,7 +24179,7 @@
       if (!team || team === 'FA') return '';
       return `<img class="tk-logo${side ? ' tk-logo-' + side : ''}" ` +
         `src="https://sleepercdn.com/images/team_logos/nfl/${esc(String(team).toLowerCase())}.png" ` +
-        `alt="" loading="lazy" onerror="this.remove()">`;
+        `alt="" onerror="this.remove()">`;
     }
 
     // The name is the click target for the player modal, so it carries the
@@ -24273,20 +24280,48 @@
 
     // ---- item builders --------------------------------------------------
 
-    function liveFantasyItems(rows, espn) {
+    // Every feed is capped. Two copies of a feed sit in the track at once
+    // (that is what makes the loop seamless), so an uncapped Live Fantasy
+    // on a full Sunday built a 66,000px-wide element -- far past the size a
+    // browser will keep on the GPU, which drops it back to repainting the
+    // whole strip on the main thread every frame. That is what made the
+    // site lag. It also gave that feed a 5m48s lap, so the players at the
+    // back were never reached anyway.
+    const FEED_MAX = 24;
+    // A backstop on the width of the element the browser has to animate,
+    // not a routine trimmer: set so a full portfolio's matchups all fit,
+    // and only the pathological case gets cut. Before the feeds were capped
+    // a live Sunday built this to 66,000px, which is a lot of layer to keep
+    // moving at 60fps for a strip 48 pixels tall.
+    const MAX_TRACK_PX = 20000;
+
+    // One feed for what your players are doing, not two. Live Fantasy had
+    // the score, the live projection and points over expected; Your Swings
+    // had the same players again with how many of your matchups they swing.
+    // Rotating past the same names twice to collect both halves was the
+    // worst of both, so the row carries all of it.
+    //
+    // `states` is which games count: while anything is live that is the
+    // games actually being played, and on a day with none in progress it
+    // widens to include finished ones so the feed still has something real
+    // in it.
+    function playerItems(rows, espn, states) {
       return rows
         .filter(r => {
           const g = espn[r.team];
-          return g && g.state === 'in';
+          return g && states.indexOf(g.state) !== -1;
         })
         .sort((a, b) => (b.pprPoints || 0) - (a.pprPoints || 0))
+        .slice(0, FEED_MAX)
         .map(r => {
           const poe = r.poe == null ? '' :
             `<span class="tk-delta ${r.poe >= 0 ? 'is-pos' : 'is-neg'}">POE ${signed(r.poe)}</span>`;
+          // Only players actually in one of your matchups carry a swing.
+          const swing = (r.for.length + r.against.length) > 0 ? deltaCell(r) : '';
           return `<div class="tk-item">${playerCell(r)}` +
                  `<span class="tk-pts">${one(r.pprPoints)}</span>` +
                  `<span class="tk-sub">proj ${one(r.liveProj)}</span>` +
-                 poe + `</div>`;
+                 poe + swing + `</div>`;
         });
     }
 
@@ -24411,22 +24446,6 @@
 
     // The same sweats, but ranked by what they are actually doing today --
     // the players deciding this week's matchups while their games are on.
-    function impactItems(rows, espn) {
-      return rows
-        .filter(r => {
-          const g = espn[r.team];
-          return g && (g.state === 'in' || g.state === 'post') && (r.for.length + r.against.length) > 0;
-        })
-        .sort((a, b) => {
-          const swing = (r) => Math.abs(r.for.length - r.against.length) * (r.pprPoints || 0);
-          return swing(b) - swing(a);
-        })
-        .slice(0, 30)
-        .map(r => `<div class="tk-item">${playerCell(r)}` +
-          `<span class="tk-pts">${one(r.pprPoints)}</span>` +
-          deltaCell(r) + `</div>`);
-    }
-
     // Betting lines ride along in the same ESPN scoreboard payload as the
     // live scores -- no second service and no key -- and are shown on the
     // schedule feed beside each kickoff. They are optional in that payload
@@ -24551,7 +24570,12 @@
 
         if (anyLive) {
           nextMode = 'live';
-          segs.push({ key: 'liveFantasy', label: 'Live Fantasy', items: liveFantasyItems(rows, espn) });
+          // While the ball is in the air the strip is about what is
+          // happening now: your players, the games, your matchups. Weekly
+          // Sweats is a standings view of the week and keeps for when the
+          // games are off -- during them it was a lap spent on names the
+          // Live Fantasy feed was already carrying, with worse numbers.
+          segs.push({ key: 'liveFantasy', label: 'Live Fantasy', items: playerItems(rows, espn, ['in']) });
           // Once the ball is in the air the strip belongs to the games being
           // played -- a slate of kickoff times is noise next to a live score.
           // And once the Lions are the ones playing, that is the only game
@@ -24560,8 +24584,6 @@
           const liveLions = liveGames.filter(g => g.away === HOME_TEAM || g.home === HOME_TEAM);
           segs.push({ key: 'scores', label: 'NFL Scores',
             items: scoreItems(liveLions.length ? liveLions : liveGames) });
-          segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
-          segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
           segs.push(matchups);
         } else if (gameDay) {
           nextMode = 'game day';
@@ -24571,8 +24593,10 @@
           // today alone left the strip showing a single game all Thursday.
           segs.push({ key: 'scores', label: 'NFL Scores', items: scoreItems(games.length ? games : todays) });
           segs.push(matchups);
+          // Nothing in progress, so the player feed widens to games already
+          // finished -- otherwise it is empty all morning and all evening.
+          segs.push({ key: 'liveFantasy', label: 'Your Players', items: playerItems(rows, espn, ['in', 'post']) });
           segs.push({ key: 'sweats', label: 'Weekly Sweats', items: sweatItems(rows) });
-          segs.push({ key: 'impact', label: 'Your Swings', items: impactItems(rows, espn) });
         } else {
           nextMode = `week ${week}`;
           segs.push(matchups);
@@ -24667,8 +24691,8 @@
         scheduleAdvance(SEG_MIN_MS);
         return;
       }
-      const html = seg.items.join('');
-      track.innerHTML = html;
+      let items = seg.items;
+      track.innerHTML = items.join('');
       // Provisional: a feed that turns out to fit on screen keeps this, since
       // there is no lap to wait for.
       scheduleAdvance(SEG_MIN_MS);
@@ -24677,9 +24701,29 @@
       // item twice side by side.
       requestAnimationFrame(() => {
         if (segments[segIndex] !== seg) return;
-        const copyWidth = track.scrollWidth;
+        let copyWidth = track.scrollWidth;
         if (copyWidth <= viewport.clientWidth + 8) return;
-        track.innerHTML = html + html;
+
+        // Both copies live in the track at once, so the element the browser
+        // has to animate is twice this wide. Past a certain size that is no
+        // longer something it will keep on the GPU as one layer, and the
+        // whole strip falls back to being repainted on the main thread every
+        // frame -- which is felt as the entire site going sluggish, not just
+        // the ticker. Trim from the end until the pair fits. The items are
+        // already ordered with the ones worth seeing first, so what goes is
+        // what mattered least, and a shorter lap means the rest come round
+        // sooner.
+        if (copyWidth * 2 > MAX_TRACK_PX && items.length > 1) {
+          const perItem = copyWidth / items.length;
+          const room = Math.max(1, Math.floor((MAX_TRACK_PX / 2) / perItem));
+          if (room < items.length) {
+            items = items.slice(0, room);
+            track.innerHTML = items.join('');
+            copyWidth = track.scrollWidth;
+          }
+        }
+
+        track.innerHTML = items.join('') + items.join('');
         track.dataset.doubled = '1';
         const durationSec = copyWidth / SCROLL_PX_PER_SEC;
         track.style.animationDuration = durationSec + 's';
@@ -24867,9 +24911,27 @@
 
     window.refreshTicker = () => { build().catch(() => {}); };
 
+    // A hidden tab has nobody watching the strip, so it neither animates nor
+    // rebuilds: the marquee stops (a background tab translating an element
+    // this wide is pure waste) and the data refresh stands down until the
+    // tab is looked at again, when it catches up immediately.
+    let missedBuild = false;
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        track.classList.remove('is-scrolling');
+        clearTimeout(rotateTimer);
+        return;
+      }
+      if (missedBuild) { missedBuild = false; build().catch(() => {}); }
+      renderSegment();
+    });
+
     renderSegment();
     build().catch(() => {});
-    setInterval(() => build().catch(() => {}), DATA_REFRESH_MS);
+    setInterval(() => {
+      if (document.hidden) { missedBuild = true; return; }
+      build().catch(() => {});
+    }, DATA_REFRESH_MS);
   })();
 </script>
 
