@@ -11907,6 +11907,104 @@
 </div>
 
 <script>
+
+  // ---- The post-sync repaint queue --------------------------------------
+  // A sync lands every 60 seconds, and it used to be followed by a straight
+  // run of every render function on the site -- the Dashboard, the Matchup
+  // Hub, GameCast, Exposures, the Record Book, the Draft Room, all of it,
+  // back to back on the main thread, whether or not you were looking at any
+  // of them. Each one walks every league and every roster and rebuilds a
+  // page's worth of DOM. On a full portfolio that is seconds of work during
+  // which the browser cannot paint, scroll, or answer a click: the whole
+  // site going out to lunch, once a minute, forever.
+  //
+  // Same work, handed out differently. Renders are queued instead of run,
+  // the page you are actually on goes first, and the queue drains in ~8ms
+  // slices with the browser free to do its own job in between. Nothing is
+  // dropped -- everything still repaints, just without one long block.
+  const DESK_RENDER_BUDGET_MS = 8;
+  // Keyed, so a sync landing while the last one is still draining replaces
+  // the pending repaint rather than stacking a second one behind it.
+  const deskRenderQueue = new Map();
+  let deskRenderScheduled = false;
+
+  function deskActiveView() {
+    const el = document.querySelector('[data-view].is-active');
+    return el ? el.dataset.view : null;
+  }
+
+  // view is which page this render paints, used only to put the page you
+  // are on at the front of the queue. A wrong or missing name costs a few
+  // milliseconds of ordering, never correctness.
+  function deskQueueRender(key, view, fn) {
+    deskRenderQueue.set(key, { fn, view });
+    if (!deskRenderScheduled) {
+      deskRenderScheduled = true;
+      deskScheduleDrain();
+    }
+  }
+
+  function deskScheduleDrain() {
+    const run = () => deskDrainRenders();
+    // A timeout on the idle callback so a busy page still repaints promptly
+    // rather than waiting for an idle moment that never comes.
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 400 });
+    else setTimeout(run, 0);
+  }
+
+  function deskRunRender(key, entry) {
+    deskRenderQueue.delete(key);
+    try {
+      entry.fn();
+    } catch (e) {
+      // One page failing to repaint must not take the rest of the queue
+      // down with it -- that would leave the whole site stale.
+    }
+  }
+
+  function deskDrainRenders() {
+    deskRenderScheduled = false;
+    if (!deskRenderQueue.size) return;
+    // Nobody is watching a hidden tab repaint; hold the queue until it is
+    // looked at again rather than burning a background CPU on it.
+    if (document.hidden) {
+      document.addEventListener('visibilitychange', function once() {
+        document.removeEventListener('visibilitychange', once);
+        if (!deskRenderScheduled && deskRenderQueue.size) { deskRenderScheduled = true; deskScheduleDrain(); }
+      });
+      return;
+    }
+    const active = deskActiveView();
+    const keys = [...deskRenderQueue.keys()].sort((a, b) => {
+      const av = deskRenderQueue.get(a).view === active ? 0 : 1;
+      const bv = deskRenderQueue.get(b).view === active ? 0 : 1;
+      return av - bv;
+    });
+    const started = performance.now();
+    for (const key of keys) {
+      const entry = deskRenderQueue.get(key);
+      if (!entry) continue;
+      deskRunRender(key, entry);
+      // At least one per slice, however slow it is -- otherwise a single
+      // render heavier than the whole budget would never get to run.
+      if (performance.now() - started > DESK_RENDER_BUDGET_MS) break;
+    }
+    if (deskRenderQueue.size) {
+      deskRenderScheduled = true;
+      deskScheduleDrain();
+    }
+  }
+
+  // Navigating to a page you have a repaint pending for runs it now, so a
+  // page is never shown with last sync's numbers on it while its refresh
+  // sits in a queue behind five pages you are not looking at.
+  function deskFlushView(view) {
+    for (const [key, entry] of [...deskRenderQueue]) {
+      if (entry.view === view) deskRunRender(key, entry);
+    }
+  }
+  window.deskFlushView = deskFlushView;
+
   const sectionTabs = document.querySelectorAll('.section-tab');
   const views = document.querySelectorAll('[data-view]');
   sectionTabs.forEach(tab => {
@@ -11915,12 +12013,14 @@
       tab.classList.add('active');
       const target = tab.dataset.section;
       views.forEach(v => v.classList.toggle('is-active', v.dataset.view === target));
+      deskFlushView(target);
     });
   });
 
   function goToSection(name) {
     sectionTabs.forEach(t => t.classList.toggle('active', t.dataset.section === name));
     views.forEach(v => v.classList.toggle('is-active', v.dataset.view === name));
+    deskFlushView(name);
     window.scrollTo(0, 0);
   }
   function goToLeagueDetail(name, targetRosterId) {
@@ -16940,30 +17040,38 @@
         if (leagueCountChip) leagueCountChip.textContent = `${leagues.length} League${leagues.length === 1 ? '' : 's'}`;
         lastSyncedAt = Date.now();
         setSyncState('ok', 'Synced just now');
-        if (window.renderRealExposures) window.renderRealExposures();
-        if (window.renderRealScoreboard) window.renderRealScoreboard();
+        // The Weekly Sweats rows are not just that page: the ticker reads
+        // window.__sleeperRootingRows to build its live feeds, so this one
+        // produces data other things consume and runs now rather than from
+        // the queue. Same for the ticker rebuild that follows it.
+        if (window.renderRealRootingGuide) window.renderRealRootingGuide(window.__rgSelectedWeek || undefined);
+        if (window.refreshTicker) window.refreshTicker();
+        // Everything else is a page repainting itself, so it goes through
+        // the queue: the page in front of you first, the rest in ~8ms
+        // slices with the browser free in between. See deskQueueRender.
+        const q = (key, view, fn) => deskQueueRender(key, view, fn);
+        q('exposures', 'exposures', () => window.renderRealExposures && window.renderRealExposures());
+        q('scoreboard', 'lineups', () => window.renderRealScoreboard && window.renderRealScoreboard());
         // A week picked from the dropdown was fetched once and then left to
         // go stale while the live week kept refreshing. Re-pull it on every
         // sync so a past week picks up stat corrections and a future week
         // picks up lineup changes, exactly as the live week does.
-        if (window.refreshScoreboardWeekOverride) window.refreshScoreboardWeekOverride();
-        if (window.renderRealGameCast) window.renderRealGameCast();
-        if (window.renderRealTrades) window.renderRealTrades();
-        if (window.renderRealWaiverWire) window.renderRealWaiverWire();
-        if (window.renderRealRootingGuide) window.renderRealRootingGuide(window.__rgSelectedWeek || undefined);
-        if (window.refreshTicker) window.refreshTicker();
-        if (window.renderRealDraftRoom) window.renderRealDraftRoom();
-        if (window.renderRealMyAdp) window.renderRealMyAdp();
-        if (window.renderRealDashboard) window.renderRealDashboard();
-        if (window.renderRealNotebook) window.renderRealNotebook();
-        if (window.renderRealSchedule) window.renderRealSchedule(window.__scheduleSelectedWeek || undefined);
-        if (window.renderRealRecordBook) window.renderRealRecordBook();
-        if (window.renderRealTankingTracker) window.renderRealTankingTracker();
-        if (window.renderRecordBookMoneySettings) window.renderRecordBookMoneySettings();
-        renderLeagueBlacklistSettings();
-        if (window.renderContendingRanks) window.renderContendingRanks();
-        if (window.renderRosterTypeCategories) window.renderRosterTypeCategories();
-        if (window.renderRosterValueRanks) window.renderRosterValueRanks();
+        q('scoreboardWeek', 'lineups', () => window.refreshScoreboardWeekOverride && window.refreshScoreboardWeekOverride());
+        q('gamecast', 'gamecast', () => window.renderRealGameCast && window.renderRealGameCast());
+        q('trades', 'trades', () => window.renderRealTrades && window.renderRealTrades());
+        q('waiver', 'waiver', () => window.renderRealWaiverWire && window.renderRealWaiverWire());
+        q('draftRoom', 'draft', () => window.renderRealDraftRoom && window.renderRealDraftRoom());
+        q('myAdp', 'draft', () => window.renderRealMyAdp && window.renderRealMyAdp());
+        q('dashboard', 'dashboard', () => window.renderRealDashboard && window.renderRealDashboard());
+        q('notebook', 'settings', () => window.renderRealNotebook && window.renderRealNotebook());
+        q('schedule', 'dashboard', () => window.renderRealSchedule && window.renderRealSchedule(window.__scheduleSelectedWeek || undefined));
+        q('recordBook', 'records', () => window.renderRealRecordBook && window.renderRealRecordBook());
+        q('tanking', 'tanking', () => window.renderRealTankingTracker && window.renderRealTankingTracker());
+        q('rbMoney', 'settings', () => window.renderRecordBookMoneySettings && window.renderRecordBookMoneySettings());
+        q('blacklist', 'settings', () => renderLeagueBlacklistSettings());
+        q('contending', 'dashboard', () => window.renderContendingRanks && window.renderContendingRanks());
+        q('rosterTypes', 'dashboard', () => window.renderRosterTypeCategories && window.renderRosterTypeCategories());
+        q('rosterValue', 'dashboard', () => window.renderRosterValueRanks && window.renderRosterValueRanks());
         if (window.updateModeToggleBtn) window.updateModeToggleBtn();
         if (leagueCountChip) {
           const mode = getSiteMode();
