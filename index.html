@@ -16886,9 +16886,22 @@
       }
     }
 
+    // A sync is hundreds of requests against Sleeper -- every league's
+    // rosters, matchups, users and transactions, plus every week of the
+    // season for the Record Book. On a real connection that can take longer
+    // than the 60 seconds between polls, and nothing stopped the next poll
+    // from starting anyway: two full syncs then ran at once, each competing
+    // for the browser's six connections per host, so both took longer, so
+    // the poll after that overlapped as well. The site got slower the
+    // longer it was left open, which is exactly the shape of the problem.
+    // One sync at a time; a poll arriving mid-sync is dropped, since the
+    // sync already in flight is fetching the same numbers it wanted.
+    let syncInFlight = false;
     async function loadSleeperData() {
       const saved = getSavedUser();
       if (!saved) return;
+      if (syncInFlight) return;
+      syncInFlight = true;
       setSyncState('pending', 'Syncing…');
       try {
         let leagues = [];
@@ -17096,6 +17109,8 @@
         }
       } catch (err) {
         setSyncState('error', "Couldn't sync — check your connection");
+      } finally {
+        syncInFlight = false;
       }
     }
 
@@ -17111,28 +17126,74 @@
     const PLAYER_CACHE_TTL = 24 * 60 * 60 * 1000;
     let playerDictPromise = null;
 
+    // Sleeper's whole player dictionary, and the single biggest thing this
+    // site loads. It used to be cached in localStorage -- which never once
+    // worked: the payload is ~10MB and localStorage caps out around 5, so
+    // setItem threw QuotaExceeded every single time and the catch below
+    // quietly wrote it off as "refetch next time". Every page load therefore
+    // re-downloaded and re-parsed ten megabytes, and paid for a 10MB
+    // JSON.stringify on the main thread on the way to a write that was
+    // always going to fail.
+    //
+    // IndexedDB has no such cap and stores the object as an object -- no
+    // stringify going in, no parse coming out, and both ends are off the
+    // main thread.
+    const PLAYER_DB = 'dynastyToolCache';
+    const PLAYER_STORE = 'players';
+
+    function playerDb() {
+      return new Promise((resolve, reject) => {
+        if (!window.indexedDB) return reject(new Error('no indexedDB'));
+        const req = indexedDB.open(PLAYER_DB, 1);
+        req.onupgradeneeded = () => {
+          if (!req.result.objectStoreNames.contains(PLAYER_STORE)) req.result.createObjectStore(PLAYER_STORE);
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function playerDbGet() {
+      return playerDb().then(db => new Promise((resolve, reject) => {
+        const req = db.transaction(PLAYER_STORE, 'readonly').objectStore(PLAYER_STORE).get('nfl');
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      }));
+    }
+
+    function playerDbPut(dict) {
+      return playerDb().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(PLAYER_STORE, 'readwrite');
+        tx.objectStore(PLAYER_STORE).put({ at: Date.now(), dict }, 'nfl');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      }));
+    }
+
     function getPlayerDict() {
       if (window.__sleeperPlayerDict) return Promise.resolve(window.__sleeperPlayerDict);
       if (playerDictPromise) return playerDictPromise;
       playerDictPromise = (async () => {
+        // One-time cleanup: the old key never held a full dictionary, but a
+        // partial write from a smaller season is still dead weight in a
+        // 5MB budget the rest of the site has to share.
         try {
-          const at = Number(localStorage.getItem(PLAYER_CACHE_AT_KEY) || 0);
-          const cached = at && (Date.now() - at < PLAYER_CACHE_TTL) ? localStorage.getItem(PLAYER_CACHE_KEY) : null;
-          if (cached) {
-            const dict = JSON.parse(cached);
-            window.__sleeperPlayerDict = dict;
-            return dict;
-          }
+          localStorage.removeItem(PLAYER_CACHE_KEY);
+          localStorage.removeItem(PLAYER_CACHE_AT_KEY);
         } catch (e) {}
+        try {
+          const hit = await playerDbGet();
+          if (hit && hit.dict && Date.now() - (hit.at || 0) < PLAYER_CACHE_TTL) {
+            window.__sleeperPlayerDict = hit.dict;
+            return hit.dict;
+          }
+        } catch (e) {
+          // No usable cache (private mode, blocked storage) -- fetch it.
+        }
         const dict = await sleeperFetch('/players/nfl');
         window.__sleeperPlayerDict = dict;
-        try {
-          localStorage.setItem(PLAYER_CACHE_KEY, JSON.stringify(dict));
-          localStorage.setItem(PLAYER_CACHE_AT_KEY, String(Date.now()));
-        } catch (e) {
-          // Player dictionary is ~5MB; if it doesn't fit in localStorage we
-          // just refetch next time instead of failing the render.
-        }
+        // Don't make the first render wait on the write.
+        playerDbPut(dict).catch(() => {});
         return dict;
       })();
       return playerDictPromise;
@@ -17586,8 +17647,22 @@
     async function loadSeasonAllWeekMatchups(leagueId) {
       const cached = window.__sleeperSeasonMatchupsCache[leagueId];
       if (cached && (Date.now() - cached.at < SEASON_MATCHUPS_TTL)) return cached.byWeek;
+      // A week that is over is over: its scores are final and refetching it
+      // returns the same numbers it returned a minute ago. Only the live
+      // week (and anything after it, which can still see lineup changes)
+      // actually needs pulling again. This used to refetch all 18 weeks for
+      // every league every 60 seconds -- on a 14-league portfolio that is
+      // 252 requests a minute, on their own, to learn nothing, while the
+      // browser's six connections per host were wanted by the live data.
+      const entry = (window.sleeperLeagueData || {})[leagueId];
+      const liveWeek = (entry && entry.week) || 1;
       const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
-      const byWeek = await Promise.all(weeks.map(w => sleeperFetch(`/league/${leagueId}/matchups/${w}`).catch(() => [])));
+      const prev = cached && cached.byWeek;
+      const byWeek = await Promise.all(weeks.map((w, i) => {
+        // Index i holds week i+1. A past week we already have is reused.
+        if (prev && w < liveWeek && prev[i] && prev[i].length) return prev[i];
+        return sleeperFetch(`/league/${leagueId}/matchups/${w}`).catch(() => (prev && prev[i]) || []);
+      }));
       window.__sleeperSeasonMatchupsCache[leagueId] = { byWeek, at: Date.now() };
       return byWeek;
     }
