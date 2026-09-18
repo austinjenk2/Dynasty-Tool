@@ -224,12 +224,19 @@
     align-items: stretch;
     height: var(--ticker-h);
     background: var(--surface);
+    /* Marks the bar off from the page it is covering. This used to be a
+       blurred box-shadow, but a FIXED element with a soft shadow over
+       moving content makes the browser repaint that seam on every scroll
+       frame -- a cost paid by the page, not by the ticker. A second hard
+       rule reads as a lip at this size and costs nothing. */
     border-top: 1px solid var(--border);
-    /* Lifts the bar off the page it is covering, so content scrolling
-       underneath reads as passing behind it rather than colliding. */
-    box-shadow: 0 -2px 10px -4px rgba(20,20,26,0.18);
+    box-shadow: 0 -1px 0 var(--border-soft);
     overflow: hidden;
     position: relative;
+    /* Nothing inside the strip can affect the layout or the painting of
+       anything outside it, so the browser is free to keep the rest of the
+       page's paint intact while the marquee runs. */
+    contain: layout paint;
   }
   /* The mode badge is also the control: clicking it advances to the next
      feed in the current slate instead of waiting out the rotation. */
@@ -16718,8 +16725,31 @@
     // Game Log tab, which wants a real "Opp" column and a real team per
     // team-to-compute-snap-% grouping.
     window.__sleeperStatsMetaCache = window.__sleeperStatsMetaCache || {};
+    // The ticker asks for this once a minute, and every other caller asks
+    // whenever a popup opens -- so an unconditional refetch meant pulling
+    // and re-parsing the league-wide stat line, thousands of players, on
+    // the main thread on a timer. The payload only moves while games are
+    // being played, and not faster than the scoreboard does, so a pull
+    // inside this window is served from what we already have. Concurrent
+    // callers share one in-flight request rather than racing two.
+    const WEEK_STATS_FRESH_MS = 45000;
+    window.__sleeperStatsFetchedAt = window.__sleeperStatsFetchedAt || {};
+    const weekStatsInFlight = {};
     async function getWeekStats(season, week) {
       const cacheKey = `${season}_${week}`;
+      const cached = window.__sleeperStatsCache[cacheKey];
+      const age = Date.now() - (window.__sleeperStatsFetchedAt[cacheKey] || 0);
+      if (cached && age < WEEK_STATS_FRESH_MS) return cached;
+      if (weekStatsInFlight[cacheKey]) return weekStatsInFlight[cacheKey];
+      const promise = fetchWeekStats(season, week, cacheKey);
+      weekStatsInFlight[cacheKey] = promise;
+      try {
+        return await promise;
+      } finally {
+        delete weekStatsInFlight[cacheKey];
+      }
+    }
+    async function fetchWeekStats(season, week, cacheKey) {
       try {
         const list = await sleeperFetchRoot(
           `/stats/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
@@ -16733,6 +16763,7 @@
         });
         window.__sleeperStatsCache[cacheKey] = statsMap;
         window.__sleeperStatsMetaCache[cacheKey] = metaMap;
+        window.__sleeperStatsFetchedAt[cacheKey] = Date.now();
         return statsMap;
       } catch (e) {
         return window.__sleeperStatsCache[cacheKey] || {};
@@ -24288,12 +24319,19 @@
     // site lag. It also gave that feed a 5m48s lap, so the players at the
     // back were never reached anyway.
     const FEED_MAX = 24;
-    // A backstop on the width of the element the browser has to animate,
-    // not a routine trimmer: set so a full portfolio's matchups all fit,
-    // and only the pathological case gets cut. Before the feeds were capped
-    // a live Sunday built this to 66,000px, which is a lot of layer to keep
-    // moving at 60fps for a strip 48 pixels tall.
-    const MAX_TRACK_PX = 20000;
+    // A hard ceiling on the width of the element the browser has to animate,
+    // and the single most important number in here. A transform animation
+    // stays on the GPU only while the layer it moves fits in one texture --
+    // 8192px wide on a good deal of hardware, and this track was allowed to
+    // be 20,000. Past that limit the compositor hands the whole thing back
+    // to the main thread, which then repaints a strip thousands of pixels
+    // wide on every single frame: the ticker keeps moving, and the entire
+    // site goes sluggish around it, which is exactly the symptom.
+    // Both copies live in the track at once, so this is the budget for the
+    // pair -- 7000 keeps it inside the smallest limit we can expect to meet
+    // with room to spare. A feed too long for it gets trimmed (below), and
+    // a shorter lap means the rest come round sooner anyway.
+    const MAX_TRACK_PX = 7000;
 
     // One feed for what your players are doing, not two. Live Fantasy had
     // the score, the live projection and points over expected; Your Swings
@@ -24680,6 +24718,7 @@
       track.classList.remove('is-scrolling');
       track.style.animationDuration = '';
       track.style.animationDelay = '';
+      track.style.animationPlayState = pausedForScroll ? 'paused' : '';
       track.dataset.doubled = '0';
       // A new feed starts at its own beginning, so any hand-scrolling of the
       // previous one is dropped rather than carried across.
@@ -24718,8 +24757,12 @@
           const room = Math.max(1, Math.floor((MAX_TRACK_PX / 2) / perItem));
           if (room < items.length) {
             items = items.slice(0, room);
-            track.innerHTML = items.join('');
-            copyWidth = track.scrollWidth;
+            // Width of the trimmed copy is arithmetic off the measurement
+            // we already took. Writing the short copy just to read
+            // scrollWidth off it again would cost a second forced layout of
+            // a flex row thousands of pixels wide, and the doubled write
+            // below is about to replace it anyway.
+            copyWidth = perItem * items.length;
           }
         }
 
@@ -24899,6 +24942,27 @@
     });
     viewport.addEventListener('scroll', () => {
       if (viewport.classList.contains('tk-manual')) enterManual();
+    }, { passive: true });
+
+    // ---- yielding to the page --------------------------------------------
+    // The marquee and a page scroll want the same frames, and the page has
+    // the stronger claim: nobody scrolling a table cares that the strip
+    // kept crawling through it. So the animation stands down while the page
+    // is actually moving and picks its lap back up a beat after it stops.
+    // Pausing rather than stopping means the track holds its position, so
+    // nothing jumps -- and animation-play-state costs nothing to toggle.
+    let scrollIdleTimer = null;
+    let pausedForScroll = false;
+    window.addEventListener('scroll', () => {
+      if (!pausedForScroll) {
+        pausedForScroll = true;
+        track.style.animationPlayState = 'paused';
+      }
+      clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = setTimeout(() => {
+        pausedForScroll = false;
+        track.style.animationPlayState = '';
+      }, 160);
     }, { passive: true });
 
     // The animation is driven off a measured width, so a resize has to
