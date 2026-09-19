@@ -3466,6 +3466,72 @@
      down while one is on -- shown, rather than silently ignored. */
   .trade-range-toggle.is-overridden { opacity: 0.4; }
   .trade-history-note { font-size: 12px; color: var(--faint); margin: 0 0 12px; }
+  /* Fleeceable / Stay Away, and one league's own best and worst */
+  .trade-boards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 760px) { .trade-boards { grid-template-columns: 1fr; } }
+  .tb-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .tb-title { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; }
+  .tb-title.is-up { color: var(--green); }
+  .tb-title.is-down { color: var(--red); }
+  .tb-sub { font-size: 11.5px; color: var(--faint); margin: 2px 0 10px; }
+  .tb-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: baseline;
+    gap: 10px;
+    padding: 6px 0;
+    border-top: 1px solid var(--border-soft);
+    cursor: pointer;
+  }
+  .tb-row:hover { background: var(--bg); }
+  .tb-name { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tb-meta { font-size: 11px; color: var(--faint); white-space: nowrap; }
+  .tb-net { font-weight: 800; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  .tb-net.is-up { color: var(--green); }
+  .tb-net.is-down { color: var(--red); }
+  .tb-empty { font-size: 12px; color: var(--faint); padding: 6px 0; }
+
+  .trade-league-board {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px 6px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+  }
+  .tlb-head { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+  .tlb-note { color: var(--faint); }
+  .tlb-row {
+    display: grid;
+    grid-template-columns: 110px minmax(90px, 1fr) 54px 36px minmax(90px, 1fr) 54px 64px minmax(0, 1.4fr);
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 0;
+    border-top: 1px solid var(--border-soft);
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  .tlb-date { color: var(--faint); font-size: 11.5px; }
+  .tlb-winner { font-weight: 800; color: var(--green); overflow: hidden; text-overflow: ellipsis; }
+  .tlb-loser { font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+  .tlb-got { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .tlb-vs { color: var(--faint); font-size: 11px; }
+  .tlb-mult { font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
+  .tlb-assets { color: var(--faint); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 900px) {
+    .tlb-row { grid-template-columns: 1fr auto; }
+    .tlb-date, .tlb-vs, .tlb-assets { display: none; }
+  }
   .trade-daterange { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   .trade-count { font-size: 12px; color: var(--faint); font-weight: 700; margin-left: auto; white-space: nowrap; }
   /* The head-to-head ledger, shown only while a manager filter is on. */
@@ -10990,6 +11056,8 @@
         <div class="trade-range-btn active" data-trade-sort="NEW">Newest</div>
         <div class="trade-range-btn" data-trade-sort="OLD">Oldest</div>
         <div class="trade-range-btn" data-trade-sort="LEAGUE">League</div>
+        <div class="trade-range-btn" data-trade-sort="BEST">Best</div>
+        <div class="trade-range-btn" data-trade-sort="WORST">Worst</div>
       </div>
       <div class="trade-range-toggle">
         <div class="trade-range-btn" data-trade-range="1M">1M</div>
@@ -11002,6 +11070,9 @@
     </div>
 
     <div class="trade-history-note" id="tradeHistoryNote" hidden></div>
+
+    <div class="trade-boards" id="tradeBoards" hidden></div>
+    <div class="trade-league-board" id="tradeLeagueBoard" hidden></div>
 
     <div class="trade-ledger" id="tradeLedger" hidden></div>
 
@@ -12835,6 +12906,67 @@
     }
   })();
 
+  // How lopsided a trade was, as a multiple rather than a difference: what
+  // came back divided by what went out. A difference makes every big trade
+  // look like a fleecing and every small one look fair -- 4.0 for 2.0 is the
+  // same robbery as 0.4 for 0.2, and only the ratio says so.
+  //
+  // A side that gave nothing has no denominator, so it is capped rather than
+  // left at infinity: it still sorts above every real trade, which is right,
+  // without being un-comparable to the other gifts.
+  const SB_RATIO_CAP = 99;
+  function sbTradeRatio(got, gave) {
+    const g = Number(got) || 0, v = Number(gave) || 0;
+    if (g <= 0 && v <= 0) return '';          // nothing valued on either side
+    if (v <= 0) return String(SB_RATIO_CAP);  // got something for nothing
+    return String(Math.min(SB_RATIO_CAP, g / v));
+  }
+
+  // Both sides of one trade, per roster, whoever was in it -- the card above
+  // only ever works out your own side. Used for a league's own best and
+  // worst trades, which are mostly other people's.
+  function sbTradeSides(t, entry, dict, pickSelections) {
+    const sides = {};
+    const side = (rid) => (sides[rid] = sides[rid] || { rosterId: rid, got: 0, gave: 0, assets: [] });
+    (t.roster_ids || []).forEach(side);
+
+    Object.entries(t.adds || {}).forEach(([pid, rid]) => {
+      const v = ppValueForPlayerId(pid, dict) || 0;
+      const p = dict && dict[pid];
+      side(rid).got += v;
+      side(rid).assets.push((p && (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' '))) || 'Player');
+    });
+    Object.entries(t.drops || {}).forEach(([pid, rid]) => {
+      side(rid).gave += ppValueForPlayerId(pid, dict) || 0;
+    });
+    (t.draft_picks || []).forEach(pick => {
+      const resolved = pickSelections ? (pickSelections.get(pick) || null) : null;
+      const v = ppPickValueResolved(resolved, pick.round, dict) || 0;
+      if (pick.owner_id != null) {
+        side(pick.owner_id).got += v;
+        const named = resolved && dict && dict[resolved.playerId];
+        side(pick.owner_id).assets.push(named
+          ? (named.full_name || [named.first_name, named.last_name].filter(Boolean).join(' '))
+          : `${pick.season} ${sbOrdinal(pick.round)}`);
+      }
+      if (pick.previous_owner_id != null) side(pick.previous_owner_id).gave += v;
+    });
+
+    // Name each side by whoever managed it that season.
+    Object.values(sides).forEach(sd => {
+      const roster = (entry.allRosters || []).find(r => r.roster_id === sd.rosterId);
+      const uid = roster && roster.owner_id;
+      const u = uid && (entry.users || []).find(x => x.user_id === uid);
+      sd.name = (u && (u.display_name || u.username)) || `Roster ${sd.rosterId}`;
+    });
+    return Object.values(sides);
+  }
+
+  function sbOrdinal(n) {
+    const v = Number(n);
+    return v === 1 ? '1st' : v === 2 ? '2nd' : v === 3 ? '3rd' : `${v}th`;
+  }
+
   // ---- Trades from seasons already finished --------------------------
   // Sleeper gives every season of a league its own league_id, chained by
   // previous_league_id, and the sync only ever pulls the CURRENT one's
@@ -13120,17 +13252,167 @@
       // the top, but within each group the chosen sort holds -- so "League"
       // plus a search reads as that player's trades league by league.
       const byDateDesc = (a, b) => (b.dataset.date || '').localeCompare(a.dataset.date || '');
+      // Best and worst rank on the ratio. A card with nothing valued on
+      // either side cannot be ranked at all, so it sorts to the back of
+      // both rather than pretending to be an even trade in the middle.
+      const ratioOf = (c) => (c.dataset.ratio === '' || c.dataset.ratio == null) ? null : Number(c.dataset.ratio);
+      const byRatio = (dir) => (a, b) => {
+        const av = ratioOf(a), bv = ratioOf(b);
+        if (av == null && bv == null) return byDateDesc(a, b);
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        return av === bv ? byDateDesc(a, b) : (dir === 'BEST' ? bv - av : av - bv);
+      };
       const order = tradeSort === 'OLD'
         ? (a, b) => (a.dataset.date || '').localeCompare(b.dataset.date || '')
         : tradeSort === 'LEAGUE'
           ? (a, b) => (a.dataset.league || '').localeCompare(b.dataset.league || '') || byDateDesc(a, b)
+          : (tradeSort === 'BEST' || tradeSort === 'WORST') ? byRatio(tradeSort)
           : byDateDesc;
       const ordered = visibleCards.slice().sort(order);
       (tradeQuery ? matches.slice().sort(order).concat(nonMatches.slice().sort(order)) : ordered)
         .forEach(c => tradeGrid.appendChild(c));
       if (tradeCountEl) tradeCountEl.textContent = `${visibleCount} trade${visibleCount === 1 ? '' : 's'}`;
+      renderTradeBoards();
+      renderTradeLeagueBoard().catch(() => {});
       document.querySelectorAll('.trade-range-toggle').forEach(el => el.classList.toggle('is-overridden', !!tradeManager));
       renderTradeLedger(visibleCards);
+    }
+
+
+    // ---- Who you should and should not be trading with ------------------
+    // Net value across every trade you have made with each manager, added
+    // up over all leagues and all seasons. Deliberately not filtered by the
+    // toolbar: this is the standing answer to "who do I keep beating", not
+    // a view of whatever is on screen. Only leagues carrying dynasty values
+    // can contribute -- a redraft trade has no value line to add.
+    function renderTradeBoards() {
+      const el = document.getElementById('tradeBoards');
+      if (!el) return;
+      const byManager = new Map();
+      tradeCards.forEach(card => {
+        if (card.dataset.hasValue !== '1') return;
+        const label = card.dataset.managerLabel;
+        if (!label) return;
+        const key = label.toLowerCase();
+        const cur = byManager.get(key) || { label, net: 0, got: 0, gave: 0, count: 0, leagues: new Set() };
+        cur.got += Number(card.dataset.gotValue) || 0;
+        cur.gave += Number(card.dataset.gaveValue) || 0;
+        cur.net = cur.got - cur.gave;
+        cur.count += 1;
+        cur.leagues.add(card.dataset.league);
+        byManager.set(key, cur);
+      });
+
+      const all = Array.from(byManager.values());
+      const fleece = all.filter(m => m.net > 0).sort((a, b) => b.net - a.net).slice(0, 5);
+      const avoid = all.filter(m => m.net < 0).sort((a, b) => a.net - b.net).slice(0, 5);
+      if (!fleece.length && !avoid.length) { el.hidden = true; return; }
+
+      const row = (m, kind) => {
+        const n = m.net;
+        return `<div class="tb-row" data-manager="${sbFieldEsc(m.label)}">` +
+          `<span class="tb-name">${sbFieldEsc(m.label)}</span>` +
+          `<span class="tb-meta">${m.count} trade${m.count === 1 ? '' : 's'} &middot; ` +
+            `${m.leagues.size} league${m.leagues.size === 1 ? '' : 's'}</span>` +
+          `<span class="tb-net ${kind}">${n >= 0 ? '+' : ''}${n.toFixed(2)}</span></div>`;
+      };
+      const col = (title, sub, rows, kind) =>
+        `<div class="tb-col"><div class="tb-title ${kind}">${title}</div>` +
+        `<div class="tb-sub">${sub}</div>` +
+        (rows.length ? rows.join('') : '<div class="tb-empty">Nobody yet.</div>') + '</div>';
+
+      el.innerHTML =
+        col('Fleeceable', 'Managers you come out ahead on', fleece.map(m => row(m, 'is-up')), 'is-up') +
+        col('Stay Away', 'Managers who come out ahead on you', avoid.map(m => row(m, 'is-down')), 'is-down');
+      el.hidden = false;
+      el.querySelectorAll('.tb-row').forEach(r => {
+        r.addEventListener('click', () => {
+          if (!tradeManagerInput) return;
+          tradeManagerInput.value = r.dataset.manager;
+          tradeManager = r.dataset.manager.toLowerCase();
+          applyTradeFilters();
+        });
+      });
+    }
+
+    // ---- One league's own best and worst, whoever made them -------------
+    // Every trade in the league, not just yours. entry.allTrades already
+    // carries them; what was missing was working out both sides, since the
+    // card above only ever computes your own.
+    async function renderTradeLeagueBoard() {
+      const el = document.getElementById('tradeLeagueBoard');
+      if (!el) return;
+      if (tradeLeague === 'ALL' || !window.sleeperGetPlayerDict) { el.hidden = true; return; }
+      let dict;
+      try { dict = await window.sleeperGetPlayerDict(); } catch (e) { el.hidden = true; return; }
+
+      const entries = Object.values(window.sleeperLeagueData || {})
+        .filter(e => e.roster && e.league)
+        .concat(window.__sleeperHistoricTrades || [])
+        .filter(e => e.league.name === tradeLeague);
+      if (!entries.length) { el.hidden = true; return; }
+
+      const picks = new Map();
+      const rows = [];
+      await Promise.all(entries.flatMap(entry =>
+        (entry.allTrades || []).flatMap(t =>
+          (t.draft_picks || []).map(async (pick) => {
+            const r = await ppResolveDraftedPick(entry, pick).catch(() => null);
+            if (r) picks.set(pick, r);
+          }))));
+
+      entries.forEach(entry => {
+        (entry.allTrades || []).forEach(t => {
+          const sides = sbTradeSides(t, entry, dict, picks);
+          if (sides.length < 2) return;
+          // The trade's own lopsidedness is the best ratio any side got.
+          let best = null;
+          sides.forEach(sd => {
+            const r = sbTradeRatio(sd.got, sd.gave);
+            if (r === '') return;
+            const n = Number(r);
+            if (!best || n > best.ratio) best = { ratio: n, side: sd };
+          });
+          if (!best) return;
+          const loser = sides.find(sd => sd !== best.side);
+          rows.push({
+            date: t.created ? new Date(t.created) : null,
+            season: entry.league.season,
+            winner: best.side, loser, ratio: best.ratio,
+          });
+        });
+      });
+
+      if (!rows.length) { el.hidden = true; return; }
+      rows.sort((a, b) => b.ratio - a.ratio);
+      const worstFirst = rows.slice().reverse();
+      const show = tradeSort === 'WORST' ? worstFirst : rows;
+
+      const line = (r) => {
+        const when = r.date
+          ? r.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : `${r.season} season`;
+        const mult = r.ratio >= SB_RATIO_CAP ? 'for nothing' : `${r.ratio.toFixed(1)}&times;`;
+        return `<div class="tlb-row">` +
+          `<span class="tlb-date">${sbFieldEsc(when)}</span>` +
+          `<span class="tlb-winner">${sbFieldEsc(r.winner.name)}</span>` +
+          `<span class="tlb-got">${r.winner.got.toFixed(2)}</span>` +
+          `<span class="tlb-vs">over</span>` +
+          `<span class="tlb-loser">${sbFieldEsc(r.loser ? r.loser.name : '&mdash;')}</span>` +
+          `<span class="tlb-got">${r.loser ? r.loser.got.toFixed(2) : '0.00'}</span>` +
+          `<span class="tlb-mult">${mult}</span>` +
+          `<span class="tlb-assets">${sbFieldEsc(r.winner.assets.slice(0, 3).join(', '))}</span>` +
+        `</div>`;
+      };
+
+      el.innerHTML =
+        `<div class="tlb-head"><b>${sbFieldEsc(tradeLeague)}</b> &mdash; ` +
+        `${tradeSort === 'WORST' ? 'worst' : 'best'} trades in league history, anyone's. ` +
+        `<span class="tlb-note">${rows.length} trade${rows.length === 1 ? '' : 's'}; ` +
+        `ranked by what one side got over what it gave.</span></div>` +
+        show.slice(0, 25).map(line).join('');
+      el.hidden = false;
     }
 
     // Value won and lost against one manager, added up across every trade on
@@ -13351,7 +13633,8 @@
 
         return `<div class="trade-card" data-league="${entry.league.name}" data-date="${dateIso}" data-players="${players}"
             data-managers="${sbFieldEsc(managerData)}" data-manager-label="${sbFieldEsc(withName)}" data-manager-names="${sbFieldEsc(managerNames.join('|'))}"
-            data-has-value="${hasValue}" data-got-value="${gotValue.toFixed(4)}" data-gave-value="${gaveValue.toFixed(4)}">
+            data-has-value="${hasValue}" data-got-value="${gotValue.toFixed(4)}" data-gave-value="${gaveValue.toFixed(4)}"
+            data-ratio="${sbTradeRatio(gotValue, gaveValue)}">
             <div class="trade-card-head">
               <div class="trade-card-title">${entry.league.name} &middot; ${dateLabel}</div>
               <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
@@ -20794,7 +21077,17 @@
   // its place in the order; the draft pick record names the slot. Matching
   // round + slot gives the one selection that pick became.
   window.__ppSeasonDraftCache = window.__ppSeasonDraftCache || {};
-  function ppSeasonDraft(entry, season) {
+  // Every completed draft a league ran in one season, not just the one its
+  // league object happens to point at.
+  //
+  // A league-season can carry more than one: a startup and a supplemental,
+  // or a startup that was re-run. league.draft_id names only the latest, so
+  // picking that one and stopping meant a pick from any other draft that
+  // year resolved to nothing -- and a startup's deep rounds are exactly
+  // where that bites, because a startup 6th is a real player (often a
+  // better one than a 1st in the rookie draft that replaced it) while a
+  // rookie 6th does not exist at all.
+  function ppSeasonDrafts(entry, season) {
     const key = `${entry.league.league_id}:${season}`;
     if (window.__ppSeasonDraftCache[key] !== undefined) return window.__ppSeasonDraftCache[key];
     const promise = (async () => {
@@ -20802,68 +21095,73 @@
       // A chain already walked knows every one of its seasons from any of
       // them, forwards as well as back. That is the only way to reach a
       // pick for a LATER season than the trade happened in -- a 2026 pick
-      // traded during 2025, which is most of the picks on this page --
-      // because Sleeper only ever links a league to its previous one.
+      // traded during 2025 -- because Sleeper only links a league back.
       const known = (window.__sbSeasonLeagues || {})[lg.league_id];
       if (known && known[String(season)]) {
         lg = known[String(season)];
       } else {
-        // Otherwise walk back down previous_league_id until the season
-        // matches. A pick for a season this league has not reached yet
-        // cannot have been drafted.
         let guard = 0;
         while (lg && String(lg.season) !== String(season) && guard++ < 25) {
-          if (Number(lg.season) < Number(season) || !lg.previous_league_id) return null;
+          if (Number(lg.season) < Number(season) || !lg.previous_league_id) return [];
           lg = await window.sleeperFetch(`/league/${lg.previous_league_id}`).catch(() => null);
         }
       }
-      if (!lg || String(lg.season) !== String(season)) return null;
+      if (!lg || String(lg.season) !== String(season)) return [];
 
       window.__sleeperDraftCache = window.__sleeperDraftCache || {};
-      // This season's draft is already pulled and cached by the main sync --
-      // use it rather than asking Sleeper for the league's draft list again
-      // once per league, every time Trade History renders.
-      if (lg.draft_id && window.__sleeperDraftCache[lg.draft_id] && window.__sleeperDraftCache[lg.draft_id].picks) {
-        const own = window.__sleeperDraftCache[lg.draft_id];
-        return own.draft && own.draft.status === 'complete' ? own : null;
-      }
       const drafts = await window.sleeperFetch(`/league/${lg.league_id}/drafts`).catch(() => null);
-      const list = Array.isArray(drafts) ? drafts : (lg.draft_id ? [{ draft_id: lg.draft_id }] : []);
-      // A league can carry more than one draft in a season (a startup and a
-      // supplemental, say). The one that matters is the completed one this
-      // league points at, falling back to any completed draft of that season.
-      const chosen = list.find(d => d && d.draft_id === lg.draft_id) || list[0];
-      if (!chosen || !chosen.draft_id) return null;
-      let cached = window.__sleeperDraftCache[chosen.draft_id];
-      if (!cached || !cached.picks) {
-        const [draft, picks] = await Promise.all([
-          window.sleeperFetch(`/draft/${chosen.draft_id}`).catch(() => null),
-          window.sleeperFetch(`/draft/${chosen.draft_id}/picks`).catch(() => null),
-        ]);
-        if (!draft || !picks) return null;
-        cached = { draft, picks };
-        window.__sleeperDraftCache[chosen.draft_id] = cached;
-      }
-      if (!cached.draft || cached.draft.status !== 'complete') return null;
-      return cached;
-    })().catch(() => null);
+      const ids = [];
+      (Array.isArray(drafts) ? drafts : []).forEach(d => {
+        if (d && d.draft_id && ids.indexOf(d.draft_id) === -1) ids.push(d.draft_id);
+      });
+      if (lg.draft_id && ids.indexOf(lg.draft_id) === -1) ids.push(lg.draft_id);
+      if (!ids.length) return [];
+
+      const loaded = await Promise.all(ids.map(async (id) => {
+        let cached = window.__sleeperDraftCache[id];
+        if (!cached || !cached.picks) {
+          const [draft, picks] = await Promise.all([
+            window.sleeperFetch(`/draft/${id}`).catch(() => null),
+            window.sleeperFetch(`/draft/${id}/picks`).catch(() => null),
+          ]);
+          if (!draft || !picks) return null;
+          cached = { draft, picks };
+          window.__sleeperDraftCache[id] = cached;
+        }
+        return cached;
+      }));
+      return loaded.filter(d => d && d.draft && d.draft.status === 'complete' && Array.isArray(d.picks));
+    })().catch(() => []);
     window.__ppSeasonDraftCache[key] = promise;
     return promise;
   }
 
-  // -> { playerId, round, slot, pickNo } for a pick that has been used, or
-  // null for one that is still a future pick (or a draft we can't read).
   async function ppResolveDraftedPick(entry, pick) {
     if (!entry || !pick || !pick.season || !pick.round || !window.sleeperFetch) return null;
-    const cached = await ppSeasonDraft(entry, pick.season);
-    if (!cached) return null;
-    const slotMap = cached.draft.slot_to_roster_id || {};
-    const slot = Object.keys(slotMap).find(k => Number(slotMap[k]) === Number(pick.roster_id));
-    if (slot == null) return null;
-    const made = (cached.picks || []).find(dp =>
-      Number(dp.round) === Number(pick.round) && Number(dp.draft_slot) === Number(slot));
-    if (!made || !made.player_id) return null;
-    return { playerId: made.player_id, round: Number(made.round), slot: Number(slot), pickNo: made.pick_no };
+    const drafts = await ppSeasonDrafts(entry, pick.season);
+    if (!drafts || !drafts.length) return null;
+
+    // A traded pick names the roster it originally belonged to, so the slot
+    // has to come from the draft's own order -- picks[].roster_id is whoever
+    // ENDED UP making the selection, which for a traded pick is the other
+    // side of this very trade.
+    for (const cached of drafts) {
+      const slotMap = cached.draft.slot_to_roster_id || {};
+      const slot = Object.keys(slotMap).find(k => Number(slotMap[k]) === Number(pick.roster_id));
+      if (slot == null) continue;
+      const made = cached.picks.find(dp =>
+        Number(dp.round) === Number(pick.round) && Number(dp.draft_slot) === Number(slot));
+      // A draft that does not run that deep is the wrong draft for this
+      // pick, not the end of the search -- try the next one this league ran
+      // that season before giving up.
+      if (!made || !made.player_id) continue;
+      return {
+        playerId: made.player_id, round: Number(made.round), slot: Number(slot),
+        pickNo: made.pick_no,
+        rounds: Number((cached.draft.settings && cached.draft.settings.rounds) || 0),
+      };
+    }
+    return null;
   }
 
   // What a pick in a trade is worth: the drafted player's real value once
