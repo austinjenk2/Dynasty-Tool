@@ -3503,6 +3503,24 @@
   .tb-net.is-up { color: var(--green); }
   .tb-net.is-down { color: var(--red); }
   .tb-empty { font-size: 12px; color: var(--faint); padding: 6px 0; }
+  .tb-pos { display: block; font-size: 10.5px; font-weight: 600; color: var(--faint); }
+  .trade-player-line {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .tpl-name { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; color: var(--ink); }
+  .trade-player-line .is-up { color: var(--green); }
+  .trade-player-line .is-down { color: var(--red); }
+  .tpl-more { font-size: 11.5px; color: var(--faint); }
 
   .trade-league-board {
     background: var(--surface);
@@ -11076,12 +11094,15 @@
       </div>
       <div class="chip trade-daterange">&#128197; Date Range</div>
       <div class="chip trade-boards-btn" id="tradeBoardsBtn" title="Who you come out ahead on, and who comes out ahead on you">Fleeceable / Stay Away</div>
+      <div class="chip trade-boards-btn" id="tradePlayersBtn" title="The players whose trades have gone best and worst for you">Player P&amp;L</div>
       <div class="trade-count" id="tradeCount">15 trades</div>
       <div class="exp-refresh trade-hide-btn" id="tradeHideBtn" title="Hide trade values">&#128065;</div>
     </div>
 
     <div class="trade-history-note" id="tradeHistoryNote" hidden></div>
 
+    <div class="trade-player-line" id="tradePlayerLine" hidden></div>
+    <div class="trade-boards" id="tradePlayerBoards" hidden></div>
     <div class="trade-boards" id="tradeBoards" hidden></div>
     <div class="trade-league-board" id="tradeLeagueBoard" hidden></div>
 
@@ -13178,6 +13199,10 @@
     let tradeBoardsOpen = (() => {
       try { return localStorage.getItem(TRADE_BOARDS_KEY) === '1'; } catch (e) { return false; }
     })();
+    const TRADE_PLAYERS_KEY = 'dynastyToolTradePlayers';
+    let tradePlayersOpen = (() => {
+      try { return localStorage.getItem(TRADE_PLAYERS_KEY) === '1'; } catch (e) { return false; }
+    })();
 
     const tradeLeagueMenu = document.getElementById('tradeLeagueMenu');
     const tradeLeagueSelect = document.getElementById('tradeLeagueSelect');
@@ -13226,6 +13251,15 @@
       document.addEventListener('click', () => { tradeLeagueMenu.hidden = true; });
     }
     window.setTradeLeagueOptions = buildTradeLeagueMenu;
+
+    const tradePlayersBtn = document.getElementById('tradePlayersBtn');
+    if (tradePlayersBtn) {
+      tradePlayersBtn.addEventListener('click', () => {
+        tradePlayersOpen = !tradePlayersOpen;
+        try { localStorage.setItem(TRADE_PLAYERS_KEY, tradePlayersOpen ? '1' : '0'); } catch (e) {}
+        renderTradePlayerBoards();
+      });
+    }
 
     const tradeBoardsBtn = document.getElementById('tradeBoardsBtn');
     if (tradeBoardsBtn) {
@@ -13353,11 +13387,98 @@
         .forEach(c => tradeGrid.appendChild(c));
       if (tradeCountEl) tradeCountEl.textContent = `${visibleCount} trade${visibleCount === 1 ? '' : 's'}`;
       renderTradeBoards();
+      renderTradePlayerBoards();
+      renderTradePlayerLine();
       renderTradeLeagueBoard().catch(() => {});
       document.querySelectorAll('.trade-range-toggle').forEach(el => el.classList.toggle('is-overridden', !!tradeManager));
       renderTradeLedger(visibleCards);
     }
 
+
+    // ---- How your trades for a player have actually gone ----------------
+    // For each player, the net of every trade he was part of: what came back
+    // minus what went out, added up. Deliberately the whole trade's net and
+    // not an attempt to split it between the pieces -- there is no honest
+    // way to say how much of a two-for-one was "his" share, and pretending
+    // otherwise would put a number on it that does not mean anything. So
+    // this answers "have my trades involving him worked out", which is the
+    // question worth asking, and the label says exactly that.
+    //
+    // A pick that has since been used counts as the player it became.
+    function tradePlayerRows() {
+      const ledger = window.__tradePlayerLedger;
+      return ledger ? Array.from(ledger.values()) : [];
+    }
+
+    function playerLedgerRowHtml(r) {
+      const cls = r.net > 0 ? 'is-up' : (r.net < 0 ? 'is-down' : '');
+      const moves = [r.acquired ? `got ${r.acquired}×` : '', r.sent ? `sent ${r.sent}×` : '']
+        .filter(Boolean).join(' · ');
+      return `<div class="tb-row" data-player="${sbFieldEsc(r.name)}">` +
+        `<span class="tb-name">${sbFieldEsc(r.name)}` +
+          `<span class="tb-pos">${sbFieldEsc([r.pos, r.team].filter(Boolean).join(' · '))}</span></span>` +
+        `<span class="tb-meta">${r.trades} trade${r.trades === 1 ? '' : 's'}${moves ? ' · ' + moves : ''}</span>` +
+        `<span class="tb-net ${cls}">${r.net >= 0 ? '+' : ''}${r.net.toFixed(2)}</span></div>`;
+    }
+
+    function renderTradePlayerBoards() {
+      const el = document.getElementById('tradePlayerBoards');
+      if (!el) return;
+      const btn = document.getElementById('tradePlayersBtn');
+      if (btn) btn.classList.toggle('is-on', tradePlayersOpen);
+      if (!tradePlayersOpen) { el.hidden = true; return; }
+
+      const rows = tradePlayerRows();
+      const best = rows.filter(r => r.net > 0).sort((a, b) => b.net - a.net).slice(0, 8);
+      const worst = rows.filter(r => r.net < 0).sort((a, b) => a.net - b.net).slice(0, 8);
+      if (!best.length && !worst.length) { el.hidden = true; return; }
+
+      const col = (title, sub, list, kind) =>
+        `<div class="tb-col"><div class="tb-title ${kind}">${title}</div>` +
+        `<div class="tb-sub">${sub}</div>` +
+        (list.length ? list.map(playerLedgerRowHtml).join('') : '<div class="tb-empty">Nobody yet.</div>') +
+        '</div>';
+
+      el.innerHTML =
+        col('Most Profitable', 'Trades he was in have gone your way', best, 'is-up') +
+        col('Least Profitable', 'Trades he was in have gone against you', worst, 'is-down');
+      el.hidden = false;
+      el.querySelectorAll('.tb-row').forEach(r => {
+        r.addEventListener('click', () => {
+          if (!tradeSearchInput) return;
+          tradeSearchInput.value = r.dataset.player;
+          tradeQuery = r.dataset.player.toLowerCase();
+          applyTradeFilters();
+        });
+      });
+    }
+
+    // Searching a name answers the same question for that one player,
+    // without needing the panel open.
+    function renderTradePlayerLine() {
+      const el = document.getElementById('tradePlayerLine');
+      if (!el) return;
+      if (!tradeQuery) { el.hidden = true; return; }
+      const hits = tradePlayerRows().filter(r => r.name.toLowerCase().includes(tradeQuery));
+      if (!hits.length) { el.hidden = true; return; }
+      // Whoever the query most plainly means: an exact name first, then the
+      // one with the most trades behind him.
+      hits.sort((a, b) => {
+        const ax = a.name.toLowerCase() === tradeQuery ? 1 : 0;
+        const bx = b.name.toLowerCase() === tradeQuery ? 1 : 0;
+        return bx - ax || b.trades - a.trades;
+      });
+      const r = hits[0];
+      const verdict = r.net > 0 ? 'ahead' : (r.net < 0 ? 'behind' : 'level');
+      const cls = r.net > 0 ? 'is-up' : (r.net < 0 ? 'is-down' : '');
+      el.innerHTML =
+        `<span class="tpl-name">${sbFieldEsc(r.name)}</span>` +
+        `<span class="tpl-text">across ${r.trades} trade${r.trades === 1 ? '' : 's'} he was part of, ` +
+        `you have come out <b class="${cls}">${verdict}</b> by</span>` +
+        `<span class="tb-net ${cls}">${Math.abs(r.net).toFixed(2)}</span>` +
+        (hits.length > 1 ? `<span class="tpl-more">+${hits.length - 1} other match${hits.length === 2 ? '' : 'es'}</span>` : '');
+      el.hidden = false;
+    }
 
     // ---- Who you should and should not be trading with ------------------
     // Net value across every trade you have made with each manager, added
@@ -13651,11 +13772,17 @@
 
       const managerLabels = new Map();
 
+      // Every player who has been through one of my trades, and how those
+      // trades went. Built here rather than from the cards afterwards
+      // because a pick that became a player is only known at this point.
+      const playerLedger = new Map();
+
       const cardsHtml = allTrades.map(({ entry, t }) => {
         const myRosterId = entry.roster.roster_id;
         const gotHtml = [];
         const gaveHtml = [];
         const playerNames = [];
+        const cardPlayers = [];   // [{ id, side }] for the ledger below
         const showValue = getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league);
         let gotValue = 0;
         let gaveValue = 0;
@@ -13665,6 +13792,7 @@
             const asset = tradePlayerAssetHtml(pid, dict);
             gotHtml.push(asset.html);
             playerNames.push(asset.name);
+            cardPlayers.push({ id: pid, side: 'got' });
             gotValue += ppValueForPlayerId(pid, dict);
           }
         });
@@ -13673,14 +13801,24 @@
             const asset = tradePlayerAssetHtml(pid, dict);
             gaveHtml.push(asset.html);
             playerNames.push(asset.name);
+            cardPlayers.push({ id: pid, side: 'gave' });
             gaveValue += ppValueForPlayerId(pid, dict);
           }
         });
         (t.draft_picks || []).forEach(pick => {
           const resolved = pickSelections.get(pick) || null;
           const value = ppPickValueResolved(resolved, pick.round, dict);
-          if (pick.owner_id === myRosterId) { gotHtml.push(tradePickAssetHtml(pick, entry, resolved, dict)); gotValue += value; }
-          else if (pick.previous_owner_id === myRosterId) { gaveHtml.push(tradePickAssetHtml(pick, entry, resolved, dict)); gaveValue += value; }
+          if (pick.owner_id === myRosterId) {
+            gotHtml.push(tradePickAssetHtml(pick, entry, resolved, dict));
+            gotValue += value;
+            // A pick that has been used IS the player it became, so it
+            // counts toward his ledger the same as trading for him would.
+            if (resolved) cardPlayers.push({ id: resolved.playerId, side: 'got' });
+          } else if (pick.previous_owner_id === myRosterId) {
+            gaveHtml.push(tradePickAssetHtml(pick, entry, resolved, dict));
+            gaveValue += value;
+            if (resolved) cardPlayers.push({ id: resolved.playerId, side: 'gave' });
+          }
         });
         (t.waiver_budget || []).forEach(wb => {
           if (wb.receiver === myRosterId) gotHtml.push(tradeFaabAssetHtml(wb.amount));
@@ -13715,6 +13853,27 @@
         const managerData = managerNames.join('|').toLowerCase();
         const hasValue = sbLeagueIsDynasty(entry.league) ? '1' : '0';
 
+        // Only a league that carries dynasty values can say how a trade
+        // went, so a redraft trade contributes nothing rather than a zero.
+        if (showValue && cardPlayers.length) {
+          const net = gotValue - gaveValue;
+          const seen = new Set();
+          cardPlayers.forEach(({ id, side }) => {
+            const p = dict && dict[id];
+            if (!p) return;
+            const cur = playerLedger.get(id) || {
+              id, name: p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id,
+              pos: p.position || '', team: p.team || '',
+              net: 0, trades: 0, acquired: 0, sent: 0,
+            };
+            // One trade counts once for a player even if he appears on both
+            // sides of it (a pick that became him, plus him by name).
+            if (!seen.has(id)) { cur.net += net; cur.trades += 1; seen.add(id); }
+            if (side === 'got') cur.acquired += 1; else cur.sent += 1;
+            playerLedger.set(id, cur);
+          });
+        }
+
         const created = t.created ? new Date(t.created) : new Date();
         const dateIso = created.toISOString().slice(0, 10);
         const dateLabel = created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -13743,6 +13902,7 @@
           </div>`;
       });
 
+      window.__tradePlayerLedger = playerLedger;
       tradeGrid.innerHTML = cardsHtml.join('') || '<div class="exp-loading">No trades found yet.</div>';
       tradeCards = Array.from(tradeGrid.querySelectorAll('.trade-card'));
       // Every manager you have ever traded with, offered as you type.
