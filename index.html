@@ -3465,6 +3465,7 @@
   /* A manager filter answers "every trade ever", so the date window stands
      down while one is on -- shown, rather than silently ignored. */
   .trade-range-toggle.is-overridden { opacity: 0.4; }
+  .trade-history-note { font-size: 12px; color: var(--faint); margin: 0 0 12px; }
   .trade-daterange { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   .trade-count { font-size: 12px; color: var(--faint); font-weight: 700; margin-left: auto; white-space: nowrap; }
   /* The head-to-head ledger, shown only while a manager filter is on. */
@@ -10986,14 +10987,16 @@
       <div class="exp-search trade-manager-search" style="max-width:220px"><input type="text" id="tradeManagerInput" placeholder="Filter by manager..." list="tradeManagerList"></div>
       <datalist id="tradeManagerList"></datalist>
       <div class="trade-range-toggle">
-        <div class="trade-range-btn active" data-trade-range="1M">1M</div>
+        <div class="trade-range-btn" data-trade-range="1M">1M</div>
         <div class="trade-range-btn" data-trade-range="3M">3M</div>
-        <div class="trade-range-btn" data-trade-range="ALL">All</div>
+        <div class="trade-range-btn active" data-trade-range="ALL">All</div>
       </div>
       <div class="chip trade-daterange">&#128197; Date Range</div>
       <div class="trade-count" id="tradeCount">15 trades</div>
       <div class="exp-refresh trade-hide-btn" id="tradeHideBtn" title="Hide trade values">&#128065;</div>
     </div>
+
+    <div class="trade-history-note" id="tradeHistoryNote" hidden></div>
 
     <div class="trade-ledger" id="tradeLedger" hidden></div>
 
@@ -12827,6 +12830,104 @@
     }
   })();
 
+  // ---- Trades from seasons already finished --------------------------
+  // Sleeper gives every season of a league its own league_id, chained by
+  // previous_league_id, and the sync only ever pulls the CURRENT one's
+  // transactions. So Trade History could only ever show this season --
+  // "All" on the range toggle meant all of this year, which is not what a
+  // dynasty manager means by trade history.
+  //
+  // This walks each league back through its own chain and pulls the real
+  // transactions from each past season. It is deliberately not part of the
+  // 60s sync: a finished season's trades never change, so this runs once,
+  // on demand, the first time Trade History is opened, and is held for the
+  // rest of the session.
+  let sbHistoricTradesPromise = null;
+
+  function sbSavedUserId() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('dynastyToolSleeperUser') || 'null');
+      return (saved && saved.userId) || null;
+    } catch (e) { return null; }
+  }
+
+  // Runs at most `limit` of these at once. Sleeper is being asked for a
+  // season's worth of weeks across every league here, and firing all of it
+  // at once would take every connection the browser has and hold up the
+  // live data that the rest of the page is waiting on.
+  async function sbMapLimit(items, limit, fn) {
+    const out = new Array(items.length);
+    let next = 0;
+    const worker = async () => {
+      while (next < items.length) {
+        const i = next++;
+        out[i] = await fn(items[i], i);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+    return out;
+  }
+
+  async function sbLoadHistoricTrades() {
+    if (window.__sleeperHistoricTrades) return window.__sleeperHistoricTrades;
+    if (sbHistoricTradesPromise) return sbHistoricTradesPromise;
+    sbHistoricTradesPromise = (async () => {
+      const userId = sbSavedUserId();
+      const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.league);
+      if (!userId || !entries.length || !window.sleeperFetch) return [];
+      const out = [];
+
+      await sbMapLimit(entries, 3, async (entry) => {
+        // Every season of this league before the one being played.
+        const past = [];
+        let cur = entry.league;
+        while (cur && cur.previous_league_id) {
+          const prev = await window.sleeperFetch(`/league/${cur.previous_league_id}`).catch(() => null);
+          if (!prev) break;
+          past.push(prev);
+          cur = prev;
+        }
+        if (!past.length) return;
+
+        await sbMapLimit(past, 2, async (lg) => {
+          const [rosters, users] = await Promise.all([
+            window.sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => null),
+            window.sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []),
+          ]);
+          if (!Array.isArray(rosters) || !rosters.length) return;
+          // Which roster was mine that year -- co-owned counts, the same as
+          // it does for the current season.
+          const mine = rosters.find(r =>
+            r.owner_id === userId || (r.co_owners || []).includes(userId));
+          if (!mine) return;
+
+          // There is no "all transactions" endpoint, only per-week, and a
+          // trade can land in any of them.
+          const weeks = [];
+          for (let w = 0; w <= 18; w++) weeks.push(w);
+          const byWeek = await sbMapLimit(weeks, 6, (w) =>
+            window.sleeperFetch(`/league/${lg.league_id}/transactions/${w}`).catch(() => []));
+          const leagueTrades = byWeek.flat().filter(t =>
+            t && t.type === 'trade' && t.status === 'complete');
+          const myTrades = leagueTrades.filter(t => (t.roster_ids || []).includes(mine.roster_id));
+          if (!myTrades.length) return;
+
+          // Shaped exactly like a live entry, so every card, value and
+          // filter downstream treats it the same way.
+          out.push({
+            league: lg, roster: mine, allRosters: rosters, users,
+            trades: myTrades, allTrades: leagueTrades, isHistoric: true,
+          });
+        });
+      });
+
+      window.__sleeperHistoricTrades = out;
+      return out;
+    })();
+    return sbHistoricTradesPromise;
+  }
+  window.sbLoadHistoricTrades = sbLoadHistoricTrades;
+
   (function initTradeHistory() {
     const tradeGrid = document.getElementById('tradeGrid');
     if (!tradeGrid) return;
@@ -12841,7 +12942,7 @@
     const tradeCountEl = document.getElementById('tradeCount');
     const tradeNow = new Date();
     let tradeLeague = 'ALL';
-    let tradeRange = '1M';
+    let tradeRange = 'ALL';
     let tradeQuery = '';
     let tradeManager = '';
 
@@ -13067,11 +13168,37 @@
         return;
       }
 
+      // Past seasons load once, on demand, and are held for the session --
+      // they are not part of the 60s sync, because a finished season's
+      // trades never change. The current season paints immediately and the
+      // older ones fold in when they arrive, rather than the page waiting
+      // on a few hundred requests before it shows anything.
+      const historic = window.__sleeperHistoricTrades || [];
+      const allEntries = entries.concat(historic);
+
       const allTrades = [];
-      entries.forEach(entry => {
+      allEntries.forEach(entry => {
         (entry.trades || []).forEach(t => allTrades.push({ entry, t }));
       });
       allTrades.sort((a, b) => (b.t.created || 0) - (a.t.created || 0));
+
+      // Only fetched while this page is the one on screen. Every sync
+      // queues a repaint for all 22 pages, so without this check a
+      // portfolio's worth of past seasons would be pulled on first load for
+      // someone who never opens Trade History -- exactly the kind of work
+      // the render queue exists to avoid.
+      const tradesView = document.querySelector('[data-view="trades"]');
+      const tradesOnScreen = tradesView && tradesView.classList.contains('is-active');
+      if (tradesOnScreen && !window.__sleeperHistoricTrades && window.sbLoadHistoricTrades) {
+        const note = document.getElementById('tradeHistoryNote');
+        if (note) { note.hidden = false; note.textContent = 'Loading previous seasons\u2026'; }
+        // Guarded on the cache being set rather than on the result, so an
+        // account with no past seasons cannot loop.
+        window.sbLoadHistoricTrades().then(() => {
+          if (note) note.hidden = true;
+          renderRealTrades();
+        }).catch(() => { if (note) note.hidden = true; });
+      }
 
       // Resolve every traded pick against its league's real draft before any
       // card is written, so a pick that has been used can be both NAMED by
@@ -13188,11 +13315,18 @@
           .map(n => `<option value="${sbFieldEsc(n)}"></option>`).join('');
       }
       if (window.setTradeLeagueOptions) {
-        window.setTradeLeagueOptions(entries.map(e => e.league.name).sort());
+        const names = [];
+        allEntries.forEach(e => { if (names.indexOf(e.league.name) === -1) names.push(e.league.name); });
+        window.setTradeLeagueOptions(names.sort());
       }
       applyTradeFilters();
     }
     window.renderRealTrades = renderRealTrades;
+
+    document.querySelectorAll('.section-tab').forEach(tab => {
+      if (tab.dataset.section !== 'trades') return;
+      tab.addEventListener('click', () => { renderRealTrades(); });
+    });
   })();
 
   // Shared "export this card as a real image" machinery -- used by Trade
