@@ -10986,6 +10986,11 @@
       <div class="exp-search" style="max-width:220px"><input type="text" id="tradeSearchInput" placeholder="Search player..."></div>
       <div class="exp-search trade-manager-search" style="max-width:220px"><input type="text" id="tradeManagerInput" placeholder="Filter by manager..." list="tradeManagerList"></div>
       <datalist id="tradeManagerList"></datalist>
+      <div class="trade-range-toggle trade-sort-toggle">
+        <div class="trade-range-btn active" data-trade-sort="NEW">Newest</div>
+        <div class="trade-range-btn" data-trade-sort="OLD">Oldest</div>
+        <div class="trade-range-btn" data-trade-sort="LEAGUE">League</div>
+      </div>
       <div class="trade-range-toggle">
         <div class="trade-range-btn" data-trade-range="1M">1M</div>
         <div class="trade-range-btn" data-trade-range="3M">3M</div>
@@ -12868,6 +12873,54 @@
     return out;
   }
 
+  // Every season of a league, reachable from ANY season of it. Sleeper
+  // only links backwards (previous_league_id), so a pick for a season
+  // LATER than the one a trade happened in was unreachable -- which is
+  // every 2026 pick traded during 2025, i.e. most of the picks on the
+  // page. Walking a chain once and remembering it both ways fixes that.
+  window.__sbSeasonLeagues = window.__sbSeasonLeagues || {};
+  function sbRememberChain(chain) {
+    chain.forEach(from => {
+      const bySeason = window.__sbSeasonLeagues[from.league_id] || {};
+      chain.forEach(to => { bySeason[String(to.season)] = to; });
+      window.__sbSeasonLeagues[from.league_id] = bySeason;
+    });
+  }
+
+  // Rosters, users and every trade from one season of one league.
+  async function sbSeasonTradeEntry(lg, userId) {
+    const [rosters, users] = await Promise.all([
+      window.sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => null),
+      window.sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []),
+    ]);
+    if (!Array.isArray(rosters) || !rosters.length) return null;
+    // Which roster was mine that year -- co-owned counts, the same as it
+    // does for the current season.
+    const mine = rosters.find(r => r.owner_id === userId || (r.co_owners || []).includes(userId));
+    if (!mine) return null;
+
+    // There is no "all transactions" endpoint, only per-week, and a trade
+    // can land in any of them.
+    const weeks = [];
+    for (let w = 0; w <= 18; w++) weeks.push(w);
+    const byWeek = await sbMapLimit(weeks, 6, (w) =>
+      window.sleeperFetch(`/league/${lg.league_id}/transactions/${w}`).catch(() => []));
+    const leagueTrades = byWeek.flat().filter(t => t && t.type === 'trade' && t.status === 'complete');
+    const myTrades = leagueTrades.filter(t => (t.roster_ids || []).includes(mine.roster_id));
+    if (!myTrades.length) return null;
+
+    // Shaped exactly like a live entry, so every card, value and filter
+    // downstream treats it the same way.
+    return {
+      league: lg, roster: mine, allRosters: rosters, users,
+      trades: myTrades, allTrades: leagueTrades, isHistoric: true,
+    };
+  }
+
+  // How many seasons back to look for leagues that are no longer on the
+  // account. Stops early once two in a row come back with nothing.
+  const SB_HISTORY_SEASONS = 5;
+
   async function sbLoadHistoricTrades() {
     if (window.__sleeperHistoricTrades) return window.__sleeperHistoricTrades;
     if (sbHistoricTradesPromise) return sbHistoricTradesPromise;
@@ -12875,52 +12928,46 @@
       const userId = sbSavedUserId();
       const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.league);
       if (!userId || !entries.length || !window.sleeperFetch) return [];
-      const out = [];
 
+      const seen = new Set();
+      const past = [];
+
+      // 1. Each current league, walked back through its own chain.
       await sbMapLimit(entries, 3, async (entry) => {
-        // Every season of this league before the one being played.
-        const past = [];
+        seen.add(entry.league.league_id);
+        const chain = [entry.league];
         let cur = entry.league;
         while (cur && cur.previous_league_id) {
           const prev = await window.sleeperFetch(`/league/${cur.previous_league_id}`).catch(() => null);
           if (!prev) break;
-          past.push(prev);
+          chain.push(prev);
           cur = prev;
         }
-        if (!past.length) return;
-
-        await sbMapLimit(past, 2, async (lg) => {
-          const [rosters, users] = await Promise.all([
-            window.sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => null),
-            window.sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []),
-          ]);
-          if (!Array.isArray(rosters) || !rosters.length) return;
-          // Which roster was mine that year -- co-owned counts, the same as
-          // it does for the current season.
-          const mine = rosters.find(r =>
-            r.owner_id === userId || (r.co_owners || []).includes(userId));
-          if (!mine) return;
-
-          // There is no "all transactions" endpoint, only per-week, and a
-          // trade can land in any of them.
-          const weeks = [];
-          for (let w = 0; w <= 18; w++) weeks.push(w);
-          const byWeek = await sbMapLimit(weeks, 6, (w) =>
-            window.sleeperFetch(`/league/${lg.league_id}/transactions/${w}`).catch(() => []));
-          const leagueTrades = byWeek.flat().filter(t =>
-            t && t.type === 'trade' && t.status === 'complete');
-          const myTrades = leagueTrades.filter(t => (t.roster_ids || []).includes(mine.roster_id));
-          if (!myTrades.length) return;
-
-          // Shaped exactly like a live entry, so every card, value and
-          // filter downstream treats it the same way.
-          out.push({
-            league: lg, roster: mine, allRosters: rosters, users,
-            trades: myTrades, allTrades: leagueTrades, isHistoric: true,
-          });
-        });
+        sbRememberChain(chain);
+        chain.slice(1).forEach(lg => { if (!seen.has(lg.league_id)) { seen.add(lg.league_id); past.push(lg); } });
       });
 
+      // 2. Leagues that are no longer on the account at all. Sleeper will
+      //    still list what a user was in for a past season, so a league left
+      //    behind after that year is reachable this way and no other -- it
+      //    is not on the current list and nothing chains forward to it.
+      const thisSeason = Number(entries[0].league.season) || new Date().getFullYear();
+      let empties = 0;
+      for (let yr = thisSeason - 1; yr >= thisSeason - SB_HISTORY_SEASONS; yr--) {
+        const list = await window.sleeperFetch(`/user/${userId}/leagues/nfl/${yr}`).catch(() => null);
+        if (!Array.isArray(list) || !list.length) {
+          if (++empties >= 2) break;
+          continue;
+        }
+        empties = 0;
+        list.forEach(lg => {
+          if (lg && lg.league_id && !seen.has(lg.league_id)) { seen.add(lg.league_id); past.push(lg); }
+        });
+      }
+
+      // 3. One entry per past season that actually carries a trade of mine.
+      const built = await sbMapLimit(past, 3, (lg) => sbSeasonTradeEntry(lg, userId).catch(() => null));
+      const out = built.filter(Boolean);
       window.__sleeperHistoricTrades = out;
       return out;
     })();
@@ -12943,6 +12990,7 @@
     const tradeNow = new Date();
     let tradeLeague = 'ALL';
     let tradeRange = 'ALL';
+    let tradeSort = 'NEW';
     let tradeQuery = '';
     let tradeManager = '';
 
@@ -12988,7 +13036,16 @@
     }
     window.setTradeLeagueOptions = buildTradeLeagueMenu;
 
-    document.querySelectorAll('.trade-range-btn').forEach(btn => {
+    document.querySelectorAll('.trade-sort-toggle .trade-range-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.trade-sort-toggle .trade-range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tradeSort = btn.dataset.tradeSort;
+        applyTradeFilters();
+      });
+    });
+
+    document.querySelectorAll('.trade-range-btn[data-trade-range]').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.trade-range-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -13059,10 +13116,18 @@
           else nonMatches.push(card);
         }
       });
-      if (tradeQuery) {
-        matches.forEach(c => tradeGrid.appendChild(c));
-        nonMatches.forEach(c => tradeGrid.appendChild(c));
-      }
+      // Order the visible cards. A player search still floats its hits to
+      // the top, but within each group the chosen sort holds -- so "League"
+      // plus a search reads as that player's trades league by league.
+      const byDateDesc = (a, b) => (b.dataset.date || '').localeCompare(a.dataset.date || '');
+      const order = tradeSort === 'OLD'
+        ? (a, b) => (a.dataset.date || '').localeCompare(b.dataset.date || '')
+        : tradeSort === 'LEAGUE'
+          ? (a, b) => (a.dataset.league || '').localeCompare(b.dataset.league || '') || byDateDesc(a, b)
+          : byDateDesc;
+      const ordered = visibleCards.slice().sort(order);
+      (tradeQuery ? matches.slice().sort(order).concat(nonMatches.slice().sort(order)) : ordered)
+        .forEach(c => tradeGrid.appendChild(c));
       if (tradeCountEl) tradeCountEl.textContent = `${visibleCount} trade${visibleCount === 1 ? '' : 's'}`;
       document.querySelectorAll('.trade-range-toggle').forEach(el => el.classList.toggle('is-overridden', !!tradeManager));
       renderTradeLedger(visibleCards);
@@ -20733,13 +20798,24 @@
     const key = `${entry.league.league_id}:${season}`;
     if (window.__ppSeasonDraftCache[key] !== undefined) return window.__ppSeasonDraftCache[key];
     const promise = (async () => {
-      // Walk back down previous_league_id until the season matches. A pick
-      // for a season this league has not reached yet cannot have been drafted.
       let lg = entry.league;
-      let guard = 0;
-      while (lg && String(lg.season) !== String(season) && guard++ < 25) {
-        if (Number(lg.season) < Number(season) || !lg.previous_league_id) return null;
-        lg = await window.sleeperFetch(`/league/${lg.previous_league_id}`).catch(() => null);
+      // A chain already walked knows every one of its seasons from any of
+      // them, forwards as well as back. That is the only way to reach a
+      // pick for a LATER season than the trade happened in -- a 2026 pick
+      // traded during 2025, which is most of the picks on this page --
+      // because Sleeper only ever links a league to its previous one.
+      const known = (window.__sbSeasonLeagues || {})[lg.league_id];
+      if (known && known[String(season)]) {
+        lg = known[String(season)];
+      } else {
+        // Otherwise walk back down previous_league_id until the season
+        // matches. A pick for a season this league has not reached yet
+        // cannot have been drafted.
+        let guard = 0;
+        while (lg && String(lg.season) !== String(season) && guard++ < 25) {
+          if (Number(lg.season) < Number(season) || !lg.previous_league_id) return null;
+          lg = await window.sleeperFetch(`/league/${lg.previous_league_id}`).catch(() => null);
+        }
       }
       if (!lg || String(lg.season) !== String(season)) return null;
 
