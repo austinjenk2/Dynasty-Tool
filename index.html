@@ -3466,6 +3466,9 @@
      down while one is on -- shown, rather than silently ignored. */
   .trade-range-toggle.is-overridden { opacity: 0.4; }
   .trade-history-note { font-size: 12px; color: var(--faint); margin: 0 0 12px; }
+  .trade-boards-btn { cursor: pointer; white-space: nowrap; }
+  .trade-boards-btn:hover { border-color: var(--faint); }
+  .trade-boards-btn.is-on { background: var(--ink); color: #fff; border-color: var(--ink); }
   /* Fleeceable / Stay Away, and one league's own best and worst */
   .trade-boards {
     display: grid;
@@ -3510,6 +3513,9 @@
     overflow-x: auto;
   }
   .tlb-head { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+  .tlb-league { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; color: var(--ink); display: block; }
+  .tlb-kind { display: block; font-size: 12px; font-weight: 700; color: var(--ink); margin-top: 1px; }
+  .tlb-row.is-mine { background: var(--bg); }
   .tlb-note { color: var(--faint); }
   .tlb-row {
     display: grid;
@@ -11069,6 +11075,7 @@
         <div class="trade-range-btn active" data-trade-range="ALL">All</div>
       </div>
       <div class="chip trade-daterange">&#128197; Date Range</div>
+      <div class="chip trade-boards-btn" id="tradeBoardsBtn" title="Who you come out ahead on, and who comes out ahead on you">Fleeceable / Stay Away</div>
       <div class="trade-count" id="tradeCount">15 trades</div>
       <div class="exp-refresh trade-hide-btn" id="tradeHideBtn" title="Hide trade values">&#128065;</div>
     </div>
@@ -12918,13 +12925,28 @@
   // A side that gave nothing has no denominator, so it is capped rather than
   // left at infinity: it still sorts above every real trade, which is right,
   // without being un-comparable to the other gifts.
-  const SB_RATIO_CAP = 99;
+  // A raw ratio is wrong at both ends. It makes 0.003 for 0.001 a 3x
+  // fleecing when both assets are irrelevant, and it makes anything given
+  // away for a FAAB token infinite -- so junk sorted above every real trade.
+  // A raw DIFFERENCE is wrong the other way: it calls 10.0 for 9.0 the best
+  // trade ever made, when a whole first out of that pile is barely a dent.
+  //
+  // Both sides get a replacement-level asset added before dividing. That one
+  // constant does all the work: it gives a nothing-for-nothing trade a
+  // denominator, it drowns out two trivial assets, and it leaves a real
+  // win on a small base looking like the win it is. 0.10 for 0.50 comes out
+  // at 2.6x, 9.00 for 10.00 at 1.1x, and 0.001 for 0.003 at 1.0x.
+  const SB_RATIO_SMOOTH = 0.15;
+  // And below this much value in total, nothing worth ranking changed hands.
+  const SB_RATIO_MIN_STAKE = 0.10;
   function sbTradeRatio(got, gave) {
-    const g = Number(got) || 0, v = Number(gave) || 0;
-    if (g <= 0 && v <= 0) return '';          // nothing valued on either side
-    if (v <= 0) return String(SB_RATIO_CAP);  // got something for nothing
-    return String(Math.min(SB_RATIO_CAP, g / v));
+    const g = Math.max(0, Number(got) || 0);
+    const v = Math.max(0, Number(gave) || 0);
+    if (g + v < SB_RATIO_MIN_STAKE) return '';
+    return String((g + SB_RATIO_SMOOTH) / (v + SB_RATIO_SMOOTH));
   }
+
+  window.sbTradeRatio = sbTradeRatio;
 
   // Both sides of one trade, per roster, whoever was in it -- the card above
   // only ever works out your own side. Used for a league's own best and
@@ -13043,7 +13065,11 @@
       window.sleeperFetch(`/league/${lg.league_id}/transactions/${w}`).catch(() => []));
     const leagueTrades = byWeek.flat().filter(t => t && t.type === 'trade' && t.status === 'complete');
     const myTrades = leagueTrades.filter(t => (t.roster_ids || []).includes(mine.roster_id));
-    if (!myTrades.length) return null;
+    // Kept even when none of them are mine. A season where I sat still still
+    // holds everyone else's trades, and the league's own best and worst are
+    // mostly other people's -- dropping the season lost them entirely.
+    // Cards are built from `trades`, so an entry with none adds none.
+    if (!leagueTrades.length) return null;
 
     // Shaped exactly like a live entry, so every card, value and filter
     // downstream treats it the same way.
@@ -13146,6 +13172,12 @@
     })();
     let tradeQuery = '';
     let tradeManager = '';
+    // Off unless asked for: it is a verdict on the people you play with, and
+    // not everyone wants that sitting on the page every time they open it.
+    const TRADE_BOARDS_KEY = 'dynastyToolTradeBoards';
+    let tradeBoardsOpen = (() => {
+      try { return localStorage.getItem(TRADE_BOARDS_KEY) === '1'; } catch (e) { return false; }
+    })();
 
     const tradeLeagueMenu = document.getElementById('tradeLeagueMenu');
     const tradeLeagueSelect = document.getElementById('tradeLeagueSelect');
@@ -13154,16 +13186,22 @@
     function buildTradeLeagueMenu(names) {
       if (!tradeLeagueMenu) return;
       tradeLeagueMenu.innerHTML = '';
-      tradeLeague = 'ALL';
-      if (tradeLeagueSelectLabel) tradeLeagueSelectLabel.textContent = 'All Leagues';
+      // The menu is rebuilt on every render, and it used to reset the
+      // selection to All each time -- so picking a league and then having a
+      // sync land put you back on everything, with whatever had already
+      // drawn still on screen under a label that no longer matched it.
+      if (tradeLeague !== 'ALL' && names.indexOf(tradeLeague) === -1) tradeLeague = 'ALL';
+      if (tradeLeagueSelectLabel) {
+        tradeLeagueSelectLabel.textContent = tradeLeague === 'ALL' ? 'All Leagues' : tradeLeague;
+      }
       const allOpt = document.createElement('div');
-      allOpt.className = 'sort-option active';
+      allOpt.className = 'sort-option' + (tradeLeague === 'ALL' ? ' active' : '');
       allOpt.textContent = 'All Leagues';
       allOpt.dataset.league = 'ALL';
       tradeLeagueMenu.appendChild(allOpt);
       names.forEach(name => {
         const opt = document.createElement('div');
-        opt.className = 'sort-option';
+        opt.className = 'sort-option' + (name === tradeLeague ? ' active' : '');
         opt.textContent = name;
         opt.dataset.league = name;
         tradeLeagueMenu.appendChild(opt);
@@ -13189,6 +13227,15 @@
     }
     window.setTradeLeagueOptions = buildTradeLeagueMenu;
 
+    const tradeBoardsBtn = document.getElementById('tradeBoardsBtn');
+    if (tradeBoardsBtn) {
+      tradeBoardsBtn.addEventListener('click', () => {
+        tradeBoardsOpen = !tradeBoardsOpen;
+        try { localStorage.setItem(TRADE_BOARDS_KEY, tradeBoardsOpen ? '1' : '0'); } catch (e) {}
+        renderTradeBoards();
+      });
+    }
+
     document.querySelectorAll('.trade-scope-toggle .trade-range-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tradeScope === tradeScope);
       btn.addEventListener('click', () => {
@@ -13211,7 +13258,7 @@
 
     document.querySelectorAll('.trade-range-btn[data-trade-range]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.trade-range-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.trade-range-btn[data-trade-range]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         tradeRange = btn.dataset.tradeRange;
         applyTradeFilters();
@@ -13321,6 +13368,9 @@
     function renderTradeBoards() {
       const el = document.getElementById('tradeBoards');
       if (!el) return;
+      const btn = document.getElementById('tradeBoardsBtn');
+      if (btn) btn.classList.toggle('is-on', tradeBoardsOpen);
+      if (!tradeBoardsOpen) { el.hidden = true; return; }
       const byManager = new Map();
       tradeCards.forEach(card => {
         if (card.dataset.hasValue !== '1') return;
@@ -13408,10 +13458,12 @@
           });
           if (!best) return;
           const loser = sides.find(sd => sd !== best.side);
+          const myRosterId = entry.roster && entry.roster.roster_id;
           rows.push({
             date: t.created ? new Date(t.created) : null,
             season: entry.league.season,
             winner: best.side, loser, ratio: best.ratio,
+            involvesMe: (t.roster_ids || []).indexOf(myRosterId) !== -1,
           });
         });
       });
@@ -13425,8 +13477,9 @@
         const when = r.date
           ? r.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
           : `${r.season} season`;
-        const mult = r.ratio >= SB_RATIO_CAP ? 'for nothing' : `${r.ratio.toFixed(1)}&times;`;
-        return `<div class="tlb-row">` +
+        const mult = (r.loser && r.loser.got <= 0 && r.winner.got > 0)
+          ? 'for nothing' : `${r.ratio.toFixed(1)}&times;`;
+        return `<div class="tlb-row${r.involvesMe ? ' is-mine' : ''}">` +
           `<span class="tlb-date">${sbFieldEsc(when)}</span>` +
           `<span class="tlb-winner">${sbFieldEsc(r.winner.name)}</span>` +
           `<span class="tlb-got">${r.winner.got.toFixed(2)}</span>` +
@@ -13438,11 +13491,14 @@
         `</div>`;
       };
 
+      const mineCount = rows.filter(r => r.involvesMe).length;
       el.innerHTML =
-        `<div class="tlb-head"><b>${sbFieldEsc(tradeLeague)}</b> &mdash; ` +
-        `${tradeSort === 'WORST' ? 'worst' : 'best'} trades in league history, anyone's. ` +
-        `<span class="tlb-note">${rows.length} trade${rows.length === 1 ? '' : 's'}; ` +
-        `ranked by what one side got over what it gave.</span></div>` +
+        `<div class="tlb-head"><span class="tlb-league">${sbFieldEsc(tradeLeague)}</span>` +
+        `<span class="tlb-kind">${tradeSort === 'WORST' ? 'Worst' : 'Best'} trades in league history</span>` +
+        `<span class="tlb-note">Everyone's, not just yours &mdash; ${rows.length} trade` +
+        `${rows.length === 1 ? '' : 's'}, ${mineCount} of them yours. Ranked on what one side ` +
+        `got against what it gave, with a replacement-level asset added to both so two ` +
+        `scraps cannot outrank a real win.</span></div>` +
         show.slice(0, 25).map(line).join('');
       el.hidden = false;
     }
