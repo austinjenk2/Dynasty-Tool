@@ -11052,6 +11052,10 @@
       <div class="exp-search" style="max-width:220px"><input type="text" id="tradeSearchInput" placeholder="Search player..."></div>
       <div class="exp-search trade-manager-search" style="max-width:220px"><input type="text" id="tradeManagerInput" placeholder="Filter by manager..." list="tradeManagerList"></div>
       <datalist id="tradeManagerList"></datalist>
+      <div class="trade-range-toggle trade-scope-toggle" title="Leagues you have since left">
+        <div class="trade-range-btn" data-trade-scope="CURRENT">My Leagues</div>
+        <div class="trade-range-btn active" data-trade-scope="ALL">+ Left Leagues</div>
+      </div>
       <div class="trade-range-toggle trade-sort-toggle">
         <div class="trade-range-btn active" data-trade-sort="NEW">Newest</div>
         <div class="trade-range-btn" data-trade-sort="OLD">Oldest</div>
@@ -13063,6 +13067,10 @@
 
       const seen = new Set();
       const past = [];
+      // Which of the past leagues are still part of the portfolio (an older
+      // season of a league still on the account) and which are gone for
+      // good. The toolbar lets you keep the strip to the first kind.
+      const leftBehind = new Set();
 
       // 1. Each current league, walked back through its own chain.
       await sbMapLimit(entries, 3, async (entry) => {
@@ -13093,13 +13101,18 @@
         }
         empties = 0;
         list.forEach(lg => {
-          if (lg && lg.league_id && !seen.has(lg.league_id)) { seen.add(lg.league_id); past.push(lg); }
+          if (lg && lg.league_id && !seen.has(lg.league_id)) {
+            seen.add(lg.league_id);
+            leftBehind.add(lg.league_id);
+            past.push(lg);
+          }
         });
       }
 
       // 3. One entry per past season that actually carries a trade of mine.
       const built = await sbMapLimit(past, 3, (lg) => sbSeasonTradeEntry(lg, userId).catch(() => null));
       const out = built.filter(Boolean);
+      out.forEach(e => { e.isLeftLeague = leftBehind.has(e.league.league_id); });
       window.__sleeperHistoricTrades = out;
       return out;
     })();
@@ -13123,6 +13136,14 @@
     let tradeLeague = 'ALL';
     let tradeRange = 'ALL';
     let tradeSort = 'NEW';
+    // Whether trades from leagues no longer on the account count. Kept in
+    // localStorage: this is a standing preference about what your own
+    // history means, not a filter you re-pick every visit.
+    const TRADE_SCOPE_KEY = 'dynastyToolTradeScope';
+    let tradeScope = (() => {
+      try { return localStorage.getItem(TRADE_SCOPE_KEY) === 'CURRENT' ? 'CURRENT' : 'ALL'; }
+      catch (e) { return 'ALL'; }
+    })();
     let tradeQuery = '';
     let tradeManager = '';
 
@@ -13167,6 +13188,17 @@
       document.addEventListener('click', () => { tradeLeagueMenu.hidden = true; });
     }
     window.setTradeLeagueOptions = buildTradeLeagueMenu;
+
+    document.querySelectorAll('.trade-scope-toggle .trade-range-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tradeScope === tradeScope);
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.trade-scope-toggle .trade-range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tradeScope = btn.dataset.tradeScope;
+        try { localStorage.setItem(TRADE_SCOPE_KEY, tradeScope); } catch (e) {}
+        renderRealTrades();
+      });
+    });
 
     document.querySelectorAll('.trade-sort-toggle .trade-range-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -13520,7 +13552,8 @@
       // trades never change. The current season paints immediately and the
       // older ones fold in when they arrive, rather than the page waiting
       // on a few hundred requests before it shows anything.
-      const historic = window.__sleeperHistoricTrades || [];
+      const historic = (window.__sleeperHistoricTrades || [])
+        .filter(h => tradeScope === 'ALL' || !h.isLeftLeague);
       const allEntries = entries.concat(historic);
 
       const allTrades = [];
@@ -21102,11 +21135,11 @@
       } else {
         let guard = 0;
         while (lg && String(lg.season) !== String(season) && guard++ < 25) {
-          if (Number(lg.season) < Number(season) || !lg.previous_league_id) return [];
+          if (Number(lg.season) < Number(season) || !lg.previous_league_id) return { league: null, drafts: [] };
           lg = await window.sleeperFetch(`/league/${lg.previous_league_id}`).catch(() => null);
         }
       }
-      if (!lg || String(lg.season) !== String(season)) return [];
+      if (!lg || String(lg.season) !== String(season)) return { league: null, drafts: [] };
 
       window.__sleeperDraftCache = window.__sleeperDraftCache || {};
       const drafts = await window.sleeperFetch(`/league/${lg.league_id}/drafts`).catch(() => null);
@@ -21115,7 +21148,7 @@
         if (d && d.draft_id && ids.indexOf(d.draft_id) === -1) ids.push(d.draft_id);
       });
       if (lg.draft_id && ids.indexOf(lg.draft_id) === -1) ids.push(lg.draft_id);
-      if (!ids.length) return [];
+      if (!ids.length) return { league: lg, drafts: [] };
 
       const loaded = await Promise.all(ids.map(async (id) => {
         let cached = window.__sleeperDraftCache[id];
@@ -21130,16 +21163,54 @@
         }
         return cached;
       }));
-      return loaded.filter(d => d && d.draft && d.draft.status === 'complete' && Array.isArray(d.picks));
-    })().catch(() => []);
+      return {
+        league: lg,
+        drafts: loaded.filter(d => d && d.draft && d.draft.status === 'complete' && Array.isArray(d.picks)),
+      };
+    })().catch(() => ({ league: null, drafts: [] }));
     window.__ppSeasonDraftCache[key] = promise;
+    return promise;
+  }
+
+  window.__ppSeasonRosterCache = window.__ppSeasonRosterCache || {};
+  function ppSeasonRosters(leagueId) {
+    if (window.__ppSeasonRosterCache[leagueId] !== undefined) return window.__ppSeasonRosterCache[leagueId];
+    const promise = window.sleeperFetch(`/league/${leagueId}/rosters`)
+      .then(r => (Array.isArray(r) ? r : []))
+      .catch(() => []);
+    window.__ppSeasonRosterCache[leagueId] = promise;
     return promise;
   }
 
   async function ppResolveDraftedPick(entry, pick) {
     if (!entry || !pick || !pick.season || !pick.round || !window.sleeperFetch) return null;
-    const drafts = await ppSeasonDrafts(entry, pick.season);
-    if (!drafts || !drafts.length) return null;
+    const found = await ppSeasonDrafts(entry, pick.season);
+    const drafts = (found && found.drafts) || [];
+    if (!drafts.length) return null;
+
+    // Roster numbers are per season. A pick traded in 2024 names a roster in
+    // the 2024 league; the 2025 draft's slot_to_roster_id names rosters in
+    // the 2025 league, and Sleeper rebuilds rosters when a league rolls
+    // over, so the two numberings need not agree. Matching them directly
+    // worked only when the trade and the draft happened in the same season
+    // -- which is why a pick traded in-season resolved and the identical
+    // pick traded the November before did not.
+    //
+    // The manager is what survives the rollover, so the number is translated
+    // through him: pick's roster -> his user id in the trade's season -> his
+    // roster in the draft's season.
+    let slotRosterId = Number(pick.roster_id);
+    const draftLeagueId = found.league && found.league.league_id;
+    if (draftLeagueId && draftLeagueId !== entry.league.league_id) {
+      const ownerOf = (entry.allRosters || []).find(r => r.roster_id === Number(pick.roster_id));
+      const ownerId = ownerOf && ownerOf.owner_id;
+      if (ownerId) {
+        const draftRosters = await ppSeasonRosters(draftLeagueId);
+        const there = draftRosters.find(r =>
+          r.owner_id === ownerId || (r.co_owners || []).includes(ownerId));
+        if (there) slotRosterId = Number(there.roster_id);
+      }
+    }
 
     // A traded pick names the roster it originally belonged to, so the slot
     // has to come from the draft's own order -- picks[].roster_id is whoever
@@ -21147,7 +21218,12 @@
     // side of this very trade.
     for (const cached of drafts) {
       const slotMap = cached.draft.slot_to_roster_id || {};
-      const slot = Object.keys(slotMap).find(k => Number(slotMap[k]) === Number(pick.roster_id));
+      let slot = Object.keys(slotMap).find(k => Number(slotMap[k]) === slotRosterId);
+      // Last resort for a league whose rosters were renumbered and whose
+      // owner could not be matched either way.
+      if (slot == null && slotRosterId !== Number(pick.roster_id)) {
+        slot = Object.keys(slotMap).find(k => Number(slotMap[k]) === Number(pick.roster_id));
+      }
       if (slot == null) continue;
       const made = cached.picks.find(dp =>
         Number(dp.round) === Number(pick.round) && Number(dp.draft_slot) === Number(slot));
