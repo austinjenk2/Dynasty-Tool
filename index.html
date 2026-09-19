@@ -35,6 +35,12 @@
        of a table is never sitting underneath it. */
     padding-bottom: var(--ticker-h);
   }
+  /* Ticker switched off in Settings. Zeroing the variable on the body takes
+     the foot-of-page reservation out with the bar itself, so nothing is left
+     sitting above an empty strip. The bar is also emptied and its timers
+     dropped in JS -- this only handles what is on screen. */
+  body.ticker-off { --ticker-h: 0px; }
+  body.ticker-off .ticker { display: none; }
   a { color: inherit; text-decoration: none; }
   button { font-family: inherit; cursor: pointer; }
 
@@ -3456,8 +3462,26 @@
   .trade-range-toggle { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .trade-range-btn { padding: 8px 14px; font-size: 12.5px; font-weight: 700; color: var(--muted); cursor: pointer; }
   .trade-range-btn.active { background: var(--ink); color: #fff; }
+  /* A manager filter answers "every trade ever", so the date window stands
+     down while one is on -- shown, rather than silently ignored. */
+  .trade-range-toggle.is-overridden { opacity: 0.4; }
   .trade-daterange { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   .trade-count { font-size: 12px; color: var(--faint); font-weight: 700; margin-left: auto; white-space: nowrap; }
+  /* The head-to-head ledger, shown only while a manager filter is on. */
+  .trade-ledger {
+    display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 18px; margin: -4px 0 18px;
+  }
+  .trade-ledger[hidden] { display: none; }
+  .trade-ledger-who { font-size: 14px; font-weight: 700; color: var(--ink); margin-right: auto; }
+  .trade-ledger-who span { display: block; font-size: 11.5px; font-weight: 400; color: var(--faint); margin-top: 2px; }
+  .trade-ledger-stat { text-align: right; }
+  .trade-ledger-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); }
+  .trade-ledger-value { font-size: 19px; font-weight: 700; font-family: 'Source Serif 4', serif; margin-top: 2px; }
+  .trade-ledger-value.plus { color: var(--green); }
+  .trade-ledger-value.minus { color: var(--red); }
+  .trade-ledger-note { flex-basis: 100%; font-size: 11px; color: var(--faint); }
   .trade-hide-btn.active { background: var(--ink); color: #fff; }
 
   .trade-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -10959,6 +10983,8 @@
         <div class="sort-menu" id="tradeLeagueMenu" hidden></div>
       </div>
       <div class="exp-search" style="max-width:220px"><input type="text" id="tradeSearchInput" placeholder="Search player..."></div>
+      <div class="exp-search trade-manager-search" style="max-width:220px"><input type="text" id="tradeManagerInput" placeholder="Filter by manager..." list="tradeManagerList"></div>
+      <datalist id="tradeManagerList"></datalist>
       <div class="trade-range-toggle">
         <div class="trade-range-btn active" data-trade-range="1M">1M</div>
         <div class="trade-range-btn" data-trade-range="3M">3M</div>
@@ -10968,6 +10994,8 @@
       <div class="trade-count" id="tradeCount">15 trades</div>
       <div class="exp-refresh trade-hide-btn" id="tradeHideBtn" title="Hide trade values">&#128065;</div>
     </div>
+
+    <div class="trade-ledger" id="tradeLedger" hidden></div>
 
     <div class="trade-grid" id="tradeGrid">
         <div class="trade-card" data-league="PURPLE PEOPLE" data-date="2026-08-29" data-players="CeeDee Lamb,Rhamondre Stevenson,A.J. Brown,Breece Hall">
@@ -11467,6 +11495,19 @@
         </div>
         <label class="toggle-switch">
           <input type="checkbox" id="coManagedToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-panel">
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Live ticker</div>
+          <div class="settings-sub">The scrolling strip pinned to the foot of every page. It animates continuously and rebuilds itself every minute, which on a slower machine is felt as the whole site dragging. Turn it off and it stops entirely -- no strip, no animation, no minute-by-minute rebuild -- and the page gets the bottom of the window back.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="tickerToggle" checked>
           <span class="toggle-slider"></span>
         </label>
       </div>
@@ -12802,6 +12843,7 @@
     let tradeLeague = 'ALL';
     let tradeRange = '1M';
     let tradeQuery = '';
+    let tradeManager = '';
 
     const tradeLeagueMenu = document.getElementById('tradeLeagueMenu');
     const tradeLeagueSelect = document.getElementById('tradeLeagueSelect');
@@ -12862,6 +12904,20 @@
       });
     }
 
+    // Typing a manager's name narrows the page to the trades made with that
+    // person, everywhere -- every league they are in, co-managed ones
+    // included -- and opens the head-to-head ledger above the cards. A
+    // manager is matched on their Sleeper username AND their display name,
+    // since a card shows one and people remember the other.
+    const tradeManagerInput = document.getElementById('tradeManagerInput');
+    const tradeLedgerEl = document.getElementById('tradeLedger');
+    if (tradeManagerInput) {
+      tradeManagerInput.addEventListener('input', () => {
+        tradeManager = tradeManagerInput.value.trim().toLowerCase();
+        applyTradeFilters();
+      });
+    }
+
     const tradeHideBtn = document.getElementById('tradeHideBtn');
     if (tradeHideBtn) {
       tradeHideBtn.addEventListener('click', () => {
@@ -12879,17 +12935,24 @@
       return new Date(dateStr + 'T00:00:00') >= cutoff;
     }
 
+    // "Every trade you have EVER made with him" is the whole point of the
+    // manager filter, so it overrides the 1M/3M window rather than fighting
+    // it -- otherwise the default view would answer the question with the
+    // last month of it.
     function applyTradeFilters() {
       let visibleCount = 0;
       const matches = [];
       const nonMatches = [];
+      const visibleCards = [];
       tradeCards.forEach(card => {
         const leagueOk = tradeLeague === 'ALL' || card.dataset.league === tradeLeague;
-        const rangeOk = withinRange(card.dataset.date);
-        const visible = leagueOk && rangeOk;
+        const rangeOk = !!tradeManager || withinRange(card.dataset.date);
+        const managerOk = !tradeManager || (card.dataset.managers || '').includes(tradeManager);
+        const visible = leagueOk && rangeOk && managerOk;
         card.classList.toggle('trade-row-hidden', !visible);
         if (visible) {
           visibleCount++;
+          visibleCards.push(card);
           const players = (card.dataset.players || '').toLowerCase();
           if (tradeQuery && players.includes(tradeQuery)) matches.push(card);
           else nonMatches.push(card);
@@ -12900,6 +12963,45 @@
         nonMatches.forEach(c => tradeGrid.appendChild(c));
       }
       if (tradeCountEl) tradeCountEl.textContent = `${visibleCount} trade${visibleCount === 1 ? '' : 's'}`;
+      document.querySelectorAll('.trade-range-toggle').forEach(el => el.classList.toggle('is-overridden', !!tradeManager));
+      renderTradeLedger(visibleCards);
+    }
+
+    // Value won and lost against one manager, added up across every trade on
+    // screen. Only leagues that carry dynasty values contribute -- a redraft
+    // league has no value line to add -- and the note says how many did.
+    function renderTradeLedger(visibleCards) {
+      if (!tradeLedgerEl) return;
+      if (!tradeManager) { tradeLedgerEl.hidden = true; return; }
+      let got = 0, gave = 0, valued = 0;
+      const leagues = new Set();
+      let label = tradeManagerInput ? tradeManagerInput.value.trim() : '';
+      visibleCards.forEach(card => {
+        leagues.add(card.dataset.league);
+        // Name them the way their league does, whatever was typed to find
+        // them -- "coguy" typed in shows the ledger headed "CoGuy".
+        const hit = (card.dataset.managerNames || '').split('|')
+          .find(n => n && n.toLowerCase().includes(tradeManager));
+        if (hit) label = hit;
+        if (card.dataset.hasValue !== '1') return;
+        valued++;
+        got += Number(card.dataset.gotValue || 0);
+        gave += Number(card.dataset.gaveValue || 0);
+      });
+      const net = got - gave;
+      const sign = (n) => (n > 0.004 ? 'plus' : (n < -0.004 ? 'minus' : ''));
+      if (!visibleCards.length) {
+        tradeLedgerEl.hidden = false;
+        tradeLedgerEl.innerHTML = `<div class="trade-ledger-who">No trades with &ldquo;${sbFieldEsc(label)}&rdquo;<span>Check the spelling, or clear the league filter.</span></div>`;
+        return;
+      }
+      tradeLedgerEl.hidden = false;
+      tradeLedgerEl.innerHTML =
+        `<div class="trade-ledger-who">${sbFieldEsc(label)}<span>${visibleCards.length} trade${visibleCards.length === 1 ? '' : 's'} across ${leagues.size} league${leagues.size === 1 ? '' : 's'} &middot; all time</span></div>` +
+        `<div class="trade-ledger-stat"><div class="trade-ledger-label">VALUE WON</div><div class="trade-ledger-value plus">${got.toFixed(2)}</div></div>` +
+        `<div class="trade-ledger-stat"><div class="trade-ledger-label">VALUE LOST</div><div class="trade-ledger-value minus">${gave.toFixed(2)}</div></div>` +
+        `<div class="trade-ledger-stat"><div class="trade-ledger-label">NET</div><div class="trade-ledger-value ${sign(net)}">${net >= 0 ? '+' : ''}${net.toFixed(2)}</div></div>` +
+        `<div class="trade-ledger-note">${valued} of ${visibleCards.length} carry dynasty values; picks already drafted are valued at the player taken with them.</div>`;
     }
 
     applyTradeFilters();
@@ -12924,14 +13026,30 @@
       };
     }
 
-    function tradePickAssetHtml(pick, entry) {
+    // A pick nobody has used yet is named by its class, round and whose it
+    // originally was -- "2028 1st (PaulPatterson)". A pick that has since
+    // been spent gets a second line naming the selection it turned into, so
+    // the trade reads as what was actually exchanged rather than as a round
+    // number whose outcome you have to remember.
+    function tradePickAssetHtml(pick, entry, resolved, dict) {
       const originalRoster = (entry.allRosters || []).find(r => r.roster_id === pick.roster_id);
       const originalUser = originalRoster ? (entry.users || []).find(u => u.user_id === originalRoster.owner_id) : null;
       const originalName = originalUser ? (originalUser.display_name || originalUser.username) : null;
       const label = `${pick.season} ${tradeOrdinal(pick.round)}${originalName ? ` (${originalName})` : ''}`;
+      let sub = '';
+      if (resolved) {
+        const p = dict && dict[resolved.playerId];
+        const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || resolved.playerId) : resolved.playerId;
+        const pos = p && p.position ? ` &middot; ${p.position}` : '';
+        const slot = `${resolved.round}.${String(resolved.slot).padStart(2, '0')}`;
+        // The badge stays the round, so a pick still reads as a pick at a
+        // glance; who it became goes underneath, where the original owner
+        // already sits.
+        sub = `<div class="trade-asset-sub">${slot} &rarr; ${sbFieldEsc(name)}${pos}</div>`;
+      }
       return '<div class="trade-asset-pick">' +
         `<span class="trade-pick-badge">${tradeOrdinal(pick.round)}</span>` +
-        `<div><div class="trade-asset-name">${label}</div></div>` +
+        `<div><div class="trade-asset-name">${label}</div>${sub}</div>` +
         '</div>';
     }
 
@@ -12954,6 +13072,21 @@
         (entry.trades || []).forEach(t => allTrades.push({ entry, t }));
       });
       allTrades.sort((a, b) => (b.t.created || 0) - (a.t.created || 0));
+
+      // Resolve every traded pick against its league's real draft before any
+      // card is written, so a pick that has been used can be both NAMED by
+      // the player it became and VALUED at what he is worth today. Keyed by
+      // the pick record itself; the league/season fetches behind it are
+      // cached, so this is a handful of requests, not one per pick.
+      const pickSelections = new Map();
+      await Promise.all(allTrades.flatMap(({ entry, t }) =>
+        (t.draft_picks || []).map(async (pick) => {
+          const resolved = await ppResolveDraftedPick(entry, pick).catch(() => null);
+          if (resolved) pickSelections.set(pick, resolved);
+        })
+      )).catch(() => {});
+
+      const managerLabels = new Map();
 
       const cardsHtml = allTrades.map(({ entry, t }) => {
         const myRosterId = entry.roster.roster_id;
@@ -12981,31 +13114,58 @@
           }
         });
         (t.draft_picks || []).forEach(pick => {
-          if (pick.owner_id === myRosterId) { gotHtml.push(tradePickAssetHtml(pick, entry)); gotValue += ppPickValue(pick.round); }
-          else if (pick.previous_owner_id === myRosterId) { gaveHtml.push(tradePickAssetHtml(pick, entry)); gaveValue += ppPickValue(pick.round); }
+          const resolved = pickSelections.get(pick) || null;
+          const value = ppPickValueResolved(resolved, pick.round, dict);
+          if (pick.owner_id === myRosterId) { gotHtml.push(tradePickAssetHtml(pick, entry, resolved, dict)); gotValue += value; }
+          else if (pick.previous_owner_id === myRosterId) { gaveHtml.push(tradePickAssetHtml(pick, entry, resolved, dict)); gaveValue += value; }
         });
         (t.waiver_budget || []).forEach(wb => {
           if (wb.receiver === myRosterId) gotHtml.push(tradeFaabAssetHtml(wb.amount));
           else if (wb.sender === myRosterId) gaveHtml.push(tradeFaabAssetHtml(wb.amount));
         });
 
-        const otherRosterId = (t.roster_ids || []).find(id => id !== myRosterId);
-        const otherRoster = (entry.allRosters || []).find(r => r.roster_id === otherRosterId);
-        const otherUser = otherRoster ? (entry.users || []).find(u => u.user_id === otherRoster.owner_id) : null;
-        const withName = otherUser ? (otherUser.display_name || otherUser.username || 'Unknown') : 'Unknown';
+        // Everyone on the other side of this trade, by every name they go
+        // by. A trade can involve more than two teams, and a team can have
+        // co-managers -- all of them count as having traded with you, so the
+        // manager filter finds this card under any of their names.
+        const otherRosterIds = (t.roster_ids || []).filter(id => id !== myRosterId);
+        const otherUsers = [];
+        otherRosterIds.forEach(rid => {
+          const roster = (entry.allRosters || []).find(r => r.roster_id === rid);
+          if (!roster) return;
+          [roster.owner_id].concat(roster.co_owners || []).forEach(uid => {
+            const u = uid && (entry.users || []).find(x => x.user_id === uid);
+            if (u && !otherUsers.includes(u)) otherUsers.push(u);
+          });
+        });
+        const primary = otherUsers[0];
+        const withName = primary ? (primary.display_name || primary.username || 'Unknown') : 'Unknown';
+        // Plenty of people's display name and username differ only in case
+        // ("CoGuy"/"coguy"), so the two are one name here, not two.
+        const managerNames = [];
+        otherUsers.forEach(u => {
+          [u.display_name, u.username].forEach(n => {
+            if (n && !managerNames.some(x => x.toLowerCase() === String(n).toLowerCase())) managerNames.push(n);
+          });
+        });
+        managerNames.forEach(n => managerLabels.set(n.toLowerCase(), n));
+        const managerData = managerNames.join('|').toLowerCase();
+        const hasValue = sbLeagueIsDynasty(entry.league) ? '1' : '0';
 
         const created = t.created ? new Date(t.created) : new Date();
         const dateIso = created.toISOString().slice(0, 10);
         const dateLabel = created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const players = playerNames.filter(Boolean).join(',');
 
-        return `<div class="trade-card" data-league="${entry.league.name}" data-date="${dateIso}" data-players="${players}">
+        return `<div class="trade-card" data-league="${entry.league.name}" data-date="${dateIso}" data-players="${players}"
+            data-managers="${sbFieldEsc(managerData)}" data-manager-label="${sbFieldEsc(withName)}" data-manager-names="${sbFieldEsc(managerNames.join('|'))}"
+            data-has-value="${hasValue}" data-got-value="${gotValue.toFixed(4)}" data-gave-value="${gaveValue.toFixed(4)}">
             <div class="trade-card-head">
               <div class="trade-card-title">${entry.league.name} &middot; ${dateLabel}</div>
               <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
             </div>
             <div class="trade-card-meta">${entry.league.total_rosters || 12} Teams</div>
-            <div class="trade-card-with">with <b>${withName}</b></div>
+            <div class="trade-card-with">with <b>${sbFieldEsc(withName)}</b>${otherUsers.length > 1 ? ` &middot; ${sbFieldEsc(otherUsers.slice(1).map(u => u.display_name || u.username).join(', '))}` : ''}</div>
             <div class="trade-cols">
               <div class="trade-col">
                 <div class="trade-side-label">YOU GOT${showValue ? ` <span class="trade-side-total">${gotValue.toFixed(2)} val</span>` : ''}</div>
@@ -13021,6 +13181,12 @@
 
       tradeGrid.innerHTML = cardsHtml.join('') || '<div class="exp-loading">No trades found yet.</div>';
       tradeCards = Array.from(tradeGrid.querySelectorAll('.trade-card'));
+      // Every manager you have ever traded with, offered as you type.
+      const managerList = document.getElementById('tradeManagerList');
+      if (managerList) {
+        managerList.innerHTML = Array.from(managerLabels.values()).sort((a, b) => a.localeCompare(b))
+          .map(n => `<option value="${sbFieldEsc(n)}"></option>`).join('');
+      }
       if (window.setTradeLeagueOptions) {
         window.setTradeLeagueOptions(entries.map(e => e.league.name).sort());
       }
@@ -19436,6 +19602,15 @@
       });
     }
 
+    const tickerToggle = document.getElementById('tickerToggle');
+    if (tickerToggle) {
+      tickerToggle.checked = isTickerEnabled();
+      tickerToggle.addEventListener('change', () => {
+        try { localStorage.setItem('dynastyToolTickerEnabled', String(tickerToggle.checked)); } catch (e) {}
+        if (window.setTickerEnabled) window.setTickerEnabled(tickerToggle.checked);
+      });
+    }
+
     const saved = getSavedUser();
     if (saved) {
       userChip.textContent = saved.username;
@@ -19962,6 +20137,20 @@
     } catch (e) { return true; }
   }
 
+  // The ticker is the one piece of this app that runs work every frame, so
+  // it is also the one worth being able to switch off. Default on.
+  // The key is written out at both ends rather than shared through a const:
+  // the Settings wiring that reads this runs earlier in the file than any
+  // const declared here would be initialized, and the catch below would have
+  // swallowed the temporal-dead-zone ReferenceError as "on".
+  function isTickerEnabled() {
+    try {
+      const v = localStorage.getItem('dynastyToolTickerEnabled');
+      return v === null ? true : v === 'true';
+    } catch (e) { return true; }
+  }
+  window.isTickerEnabled = isTickerEnabled;
+
   // A fully blacklisted league (Settings page) is excluded before it's ever
   // fetched into window.sleeperLeagueData -- unlike the co-managed toggle or
   // the Rooting Guide/Scoreboard "tanking" lists, which just filter what an
@@ -20385,6 +20574,99 @@
   const PICK_ROUND_VALUES = { 1: 1.0, 2: 0.3, 3: 0.1, 4: 0.05 };
   function ppPickValue(round) {
     return PICK_ROUND_VALUES[round] || 0;
+  }
+
+  // ---- A pick that has already been used ------------------------------
+  // PICK_ROUND_VALUES above is the right shape for a pick nobody has spent
+  // yet: a 2028 1st is a lottery ticket, and 1.0 is what an average one is
+  // worth. It is the wrong shape the moment the draft happens. A 2026 1st
+  // traded last winter is not "a 1st" any more -- it is Jeremiyah Love, or
+  // whoever else came off the board at that slot, and it is worth exactly
+  // what that player is worth now.
+  //
+  // So for any pick whose draft is complete, this resolves the selection out
+  // of the league's own real draft and values the pick at the drafted
+  // player's Pure Potential value. Nothing is hardcoded per slot: each
+  // league drafted its own order, so 1.01 in one league and 1.01 in another
+  // are different players, and both are read from Sleeper.
+  //
+  // The join is the draft's slot_to_roster_id map. A traded pick names the
+  // roster it ORIGINALLY belonged to (pick.roster_id), which is what fixes
+  // its place in the order; the draft pick record names the slot. Matching
+  // round + slot gives the one selection that pick became.
+  window.__ppSeasonDraftCache = window.__ppSeasonDraftCache || {};
+  function ppSeasonDraft(entry, season) {
+    const key = `${entry.league.league_id}:${season}`;
+    if (window.__ppSeasonDraftCache[key] !== undefined) return window.__ppSeasonDraftCache[key];
+    const promise = (async () => {
+      // Walk back down previous_league_id until the season matches. A pick
+      // for a season this league has not reached yet cannot have been drafted.
+      let lg = entry.league;
+      let guard = 0;
+      while (lg && String(lg.season) !== String(season) && guard++ < 25) {
+        if (Number(lg.season) < Number(season) || !lg.previous_league_id) return null;
+        lg = await window.sleeperFetch(`/league/${lg.previous_league_id}`).catch(() => null);
+      }
+      if (!lg || String(lg.season) !== String(season)) return null;
+
+      window.__sleeperDraftCache = window.__sleeperDraftCache || {};
+      // This season's draft is already pulled and cached by the main sync --
+      // use it rather than asking Sleeper for the league's draft list again
+      // once per league, every time Trade History renders.
+      if (lg.draft_id && window.__sleeperDraftCache[lg.draft_id] && window.__sleeperDraftCache[lg.draft_id].picks) {
+        const own = window.__sleeperDraftCache[lg.draft_id];
+        return own.draft && own.draft.status === 'complete' ? own : null;
+      }
+      const drafts = await window.sleeperFetch(`/league/${lg.league_id}/drafts`).catch(() => null);
+      const list = Array.isArray(drafts) ? drafts : (lg.draft_id ? [{ draft_id: lg.draft_id }] : []);
+      // A league can carry more than one draft in a season (a startup and a
+      // supplemental, say). The one that matters is the completed one this
+      // league points at, falling back to any completed draft of that season.
+      const chosen = list.find(d => d && d.draft_id === lg.draft_id) || list[0];
+      if (!chosen || !chosen.draft_id) return null;
+      let cached = window.__sleeperDraftCache[chosen.draft_id];
+      if (!cached || !cached.picks) {
+        const [draft, picks] = await Promise.all([
+          window.sleeperFetch(`/draft/${chosen.draft_id}`).catch(() => null),
+          window.sleeperFetch(`/draft/${chosen.draft_id}/picks`).catch(() => null),
+        ]);
+        if (!draft || !picks) return null;
+        cached = { draft, picks };
+        window.__sleeperDraftCache[chosen.draft_id] = cached;
+      }
+      if (!cached.draft || cached.draft.status !== 'complete') return null;
+      return cached;
+    })().catch(() => null);
+    window.__ppSeasonDraftCache[key] = promise;
+    return promise;
+  }
+
+  // -> { playerId, round, slot, pickNo } for a pick that has been used, or
+  // null for one that is still a future pick (or a draft we can't read).
+  async function ppResolveDraftedPick(entry, pick) {
+    if (!entry || !pick || !pick.season || !pick.round || !window.sleeperFetch) return null;
+    const cached = await ppSeasonDraft(entry, pick.season);
+    if (!cached) return null;
+    const slotMap = cached.draft.slot_to_roster_id || {};
+    const slot = Object.keys(slotMap).find(k => Number(slotMap[k]) === Number(pick.roster_id));
+    if (slot == null) return null;
+    const made = (cached.picks || []).find(dp =>
+      Number(dp.round) === Number(pick.round) && Number(dp.draft_slot) === Number(slot));
+    if (!made || !made.player_id) return null;
+    return { playerId: made.player_id, round: Number(made.round), slot: Number(slot), pickNo: made.pick_no };
+  }
+
+  // What a pick in a trade is worth: the drafted player's real value once
+  // the draft has happened, the round's placeholder until then.
+  function ppPickValueResolved(resolved, round, dict) {
+    if (resolved) {
+      const v = ppValueForPlayerId(resolved.playerId, dict);
+      if (v != null) return v;
+      // Drafted, but too deep to be ranked -- a used pick that produced
+      // nobody of value is worth nothing, not a full round's placeholder.
+      return 0;
+    }
+    return ppPickValue(round);
   }
 
   // Every future pick (next 2 draft classes, rounds 1-4) a roster actually
@@ -24374,6 +24656,9 @@
     let rotateTimer = null;
     let building = false;
     let hovering = false;
+    // Off in Settings means off, not hidden: no lap, no rebuild, no marquee.
+    // Everything below that costs a frame or a fetch checks this first.
+    let enabled = (typeof isTickerEnabled === 'function') ? isTickerEnabled() : true;
 
     const esc = (v) => String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -24762,7 +25047,7 @@
     // ---- slate assembly --------------------------------------------------
 
     async function build() {
-      if (building) return;
+      if (!enabled || building) return;
       building = true;
       try {
         const ws = currentWeekSeason();
@@ -24896,6 +25181,7 @@
     }
 
     function renderSegment() {
+      if (!enabled) return;
       const seg = segments[segIndex];
       if (segLabelEl) segLabelEl.textContent = seg && seg.label ? seg.label : '';
       track.classList.remove('is-scrolling');
@@ -24989,6 +25275,7 @@
     // that fires regardless of what the strip is in the middle of.
     function scheduleAdvance(ms) {
       clearTimeout(rotateTimer);
+      if (!enabled) return;
       rotateTimer = setTimeout(() => {
         // Never yank a feed away from someone reading it -- a hover or a
         // hand-scroll holds it, and the lap resumes when they let go.
@@ -25137,6 +25424,7 @@
     let scrollIdleTimer = null;
     let pausedForScroll = false;
     window.addEventListener('scroll', () => {
+      if (!enabled) return;
       if (!pausedForScroll) {
         pausedForScroll = true;
         track.style.animationPlayState = 'paused';
@@ -25164,6 +25452,7 @@
     // tab is looked at again, when it catches up immediately.
     let missedBuild = false;
     document.addEventListener('visibilitychange', () => {
+      if (!enabled) return;
       if (document.hidden) {
         track.classList.remove('is-scrolling');
         clearTimeout(rotateTimer);
@@ -25173,9 +25462,40 @@
       renderSegment();
     });
 
-    renderSegment();
-    build().catch(() => {});
+    // Switching it off tears the strip down rather than just hiding it: the
+    // rotation timer, the marquee animation and the pending feed all go, and
+    // the track is emptied so there is nothing left for the browser to keep
+    // composited. The minute rebuild is an interval, so that one is checked
+    // on each tick instead. Switching it back on rebuilds from scratch.
+    function applyEnabled(on) {
+      enabled = !!on;
+      document.body.classList.toggle('ticker-off', !enabled);
+      if (!enabled) {
+        clearTimeout(rotateTimer);
+        clearTimeout(manualTimer);
+        clearTimeout(scrollIdleTimer);
+        track.classList.remove('is-scrolling');
+        track.style.animationDuration = '';
+        track.style.animationDelay = '';
+        track.innerHTML = '';
+        track.dataset.doubled = '0';
+        viewport.classList.remove('tk-manual');
+        segments = [];
+        pending = null;
+        segIndex = 0;
+        mode = '';
+        if (pipsEl) pipsEl.innerHTML = '';
+        return;
+      }
+      emptyMessage = 'Loading\u2026';
+      renderSegment();
+      build().catch(() => {});
+    }
+    window.setTickerEnabled = applyEnabled;
+
+    applyEnabled(enabled);
     setInterval(() => {
+      if (!enabled) return;
       if (document.hidden) { missedBuild = true; return; }
       build().catch(() => {});
     }, DATA_REFRESH_MS);
