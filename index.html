@@ -3499,6 +3499,19 @@
   .tb-row:hover { background: var(--bg); }
   .tb-row.is-active { background: var(--bg); box-shadow: inset 2px 0 0 var(--red); }
   .trade-clear-btn { cursor: pointer; white-space: nowrap; }
+  .trade-subtabs {
+    display: flex; gap: 4px; margin: 0 0 14px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .trade-subtab {
+    padding: 8px 14px; font-size: 13px; font-weight: 700; color: var(--faint);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    white-space: nowrap;
+  }
+  .trade-subtab:hover:not(.active) { color: var(--ink); }
+  .trade-subtab.active { color: var(--ink); border-bottom-color: var(--red); }
+  /* A league trade has a column per side, not a you/them pair. */
+  .trade-col.is-mine .trade-side-label { color: var(--red); }
   .trade-clear-btn:hover { border-color: var(--red); color: var(--red); }
   .insight-hint, .insight-empty { font-size: 12px; color: var(--faint); }
   .insight-hint { align-self: center; }
@@ -3955,7 +3968,6 @@
     <a class="section-tab" data-section="draft">Draft Room</a>
     <a class="section-tab" data-section="exposures">Exposures</a>
     <a class="section-tab" data-section="trades">Trade History</a>
-    <a class="section-tab" data-section="insights">Insights</a>
     <a class="section-tab" data-section="records">Results</a>
     <a class="section-tab" data-section="calculator">Trade Calc</a>
     <a class="section-tab" data-section="tanking">Tanking Tracker</a>
@@ -11075,6 +11087,13 @@
       <p>Every trade you've made, across all of your leagues.</p>
     </div>
 
+    <div class="trade-subtabs">
+      <div class="trade-subtab active" data-trade-panel="trades">Trades</div>
+      <div class="trade-subtab" data-trade-panel="leagues">Leagues</div>
+      <div class="trade-subtab" data-trade-panel="insights">Insights</div>
+    </div>
+
+    <div class="trade-panel" data-panel="trades">
     <div class="trade-toolbar">
       <div class="sort-dropdown" id="tradeLeagueDropdown">
         <div class="sort-select" id="tradeLeagueSelect"><span id="tradeLeagueSelectLabel">All Leagues</span> <span>&#9662;</span></div>
@@ -11410,29 +11429,37 @@
           </div>
         </div>
     </div>
-  </div>
-  <div data-view="insights">
-    <div class="page-title">
-      <h1>Insights</h1>
-      <p>What every trade you have made adds up to &mdash; by player, by manager, and by league.</p>
+    </div><!-- /panel trades -->
+
+    <div class="trade-panel" data-panel="leagues" hidden>
+      <div class="trade-toolbar">
+        <div class="sort-dropdown" id="leagueSecDropdown">
+          <div class="sort-select" id="insightLeagueSelect"><span id="insightLeagueSelectLabel">Pick a league</span> <span>&#9662;</span></div>
+          <div class="sort-menu" id="insightLeagueMenu" hidden></div>
+        </div>
+        <div class="trade-range-toggle league-who-toggle" title="Yours, or everything that has happened in the league">
+          <div class="trade-range-btn active" data-league-who="MINE">My Trades</div>
+          <div class="trade-range-btn" data-league-who="ALL">All League Trades</div>
+        </div>
+        <div class="trade-range-toggle league-sort-toggle">
+          <div class="trade-range-btn active" data-league-sort="NEW">Newest</div>
+          <div class="trade-range-btn" data-league-sort="OLD">Oldest</div>
+          <div class="trade-range-btn" data-league-sort="UNFAIR">Most Unfair</div>
+          <div class="trade-range-btn league-mine-only" data-league-sort="BEST">Best</div>
+          <div class="trade-range-btn league-mine-only" data-league-sort="WORST">Worst</div>
+        </div>
+        <div class="trade-count" id="leagueCount"></div>
+      </div>
+      <div class="insight-hint" id="leagueHint">Pick a league to see its trades.</div>
+      <div class="trade-grid" id="leagueGrid"></div>
     </div>
 
-    <div class="trade-toolbar">
-      <div class="sort-dropdown" id="insightLeagueDropdown">
-        <div class="sort-select" id="insightLeagueSelect"><span id="insightLeagueSelectLabel">All Leagues</span> <span>&#9662;</span></div>
-        <div class="sort-menu" id="insightLeagueMenu" hidden></div>
-      </div>
-      <div class="trade-range-toggle insight-sort-toggle">
-        <div class="trade-range-btn active" data-insight-sort="BEST">Best</div>
-        <div class="trade-range-btn" data-insight-sort="WORST">Worst</div>
-      </div>
-      <div class="insight-hint" id="insightHint">Pick a league to see its own best and worst trades. Click any row to open those trades.</div>
+    <div class="trade-panel" data-panel="insights" hidden>
+      <div class="insight-hint" id="insightHint">Every trade you have made, added up &mdash; by player and by manager.</div>
+      <div class="trade-boards" id="tradePlayerBoards" hidden></div>
+      <div class="trade-boards" id="tradeBoards" hidden></div>
+      <div class="insight-empty" id="insightEmpty" hidden>Open Trade History once and your trades will load here.</div>
     </div>
-
-    <div class="trade-boards" id="tradePlayerBoards" hidden></div>
-    <div class="trade-boards" id="tradeBoards" hidden></div>
-    <div class="trade-league-board" id="tradeLeagueBoard" hidden></div>
-    <div class="insight-empty" id="insightEmpty" hidden>Open Trade History once and your trades will load here.</div>
   </div>
   <div data-view="records">
     <div class="page-title" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
@@ -13247,49 +13274,61 @@
     })();
     let tradeQuery = '';
     let tradeManager = '';
+    // Both boards live on the Insights tab now, where showing them IS the
+    // point of the tab, so there is nothing left to toggle.
     const tradeBoardsOpen = true;
-    // Both boards live on Insights now, where showing them IS the point of
-    // the page, so there is nothing left to toggle.
     const tradePlayersOpen = true;
-    let insightSort = 'BEST';
+    // The Leagues tab keeps its own selection. Picking a league there is
+    // going somewhere, not filtering the page you are already on, so it
+    // deliberately does not move the Trades tab underneath you.
+    let leagueSel = 'ALL';
+    let leagueWho = 'MINE';
+    let leagueSort = 'NEW';
+    let tradeEntries = [];
 
-    // Trade History and Insights each carry a league picker, and there is
-    // only one selection behind them, so choosing a league on either page
-    // means the same thing on both.
     const tradeLeaguePickers = [
-      { menu: 'tradeLeagueMenu', select: 'tradeLeagueSelect', label: 'tradeLeagueSelectLabel' },
-      { menu: 'insightLeagueMenu', select: 'insightLeagueSelect', label: 'insightLeagueSelectLabel' },
-    ].map(ids => ({
+      { key: 'trades', menu: 'tradeLeagueMenu', select: 'tradeLeagueSelect', label: 'tradeLeagueSelectLabel',
+        get: () => tradeLeague, set: (v) => { tradeLeague = v; }, allLabel: 'All Leagues' },
+      { key: 'leagues', menu: 'insightLeagueMenu', select: 'insightLeagueSelect', label: 'insightLeagueSelectLabel',
+        get: () => leagueSel, set: (v) => { leagueSel = v; }, allLabel: 'Pick a league' },
+    ].map(ids => Object.assign({}, ids, {
       menu: document.getElementById(ids.menu),
       select: document.getElementById(ids.select),
       label: document.getElementById(ids.label),
     })).filter(x => x.menu && x.select);
     const tradeLeagueMenu = tradeLeaguePickers[0] && tradeLeaguePickers[0].menu;
 
+    // The real league names, once a sync has supplied them. Rebuilding the
+    // menu from the placeholder list would quietly drop every league you
+    // actually play in, so whatever was last handed in is what gets reused.
+    let tradeLeagueNames = tradeLeagues;
     function buildTradeLeagueMenu(names) {
-      tradeLeaguePickers.forEach(pk => buildOneLeagueMenu(pk, names));
+      if (names) tradeLeagueNames = names;
+      tradeLeaguePickers.forEach(pk => buildOneLeagueMenu(pk, tradeLeagueNames));
     }
 
     function buildOneLeagueMenu(pk, names) {
       const tradeLeagueMenu = pk.menu;
       const tradeLeagueSelectLabel = pk.label;
+      const tradeLeague = pk.get();
       tradeLeagueMenu.innerHTML = '';
       // The menu is rebuilt on every render, and it used to reset the
       // selection to All each time -- so picking a league and then having a
       // sync land put you back on everything, with whatever had already
       // drawn still on screen under a label that no longer matched it.
-      if (tradeLeague !== 'ALL' && names.indexOf(tradeLeague) === -1) tradeLeague = 'ALL';
+      if (tradeLeague !== 'ALL' && names.indexOf(tradeLeague) === -1) pk.set('ALL');
+      const sel = pk.get();
       if (tradeLeagueSelectLabel) {
-        tradeLeagueSelectLabel.textContent = tradeLeague === 'ALL' ? 'All Leagues' : tradeLeague;
+        tradeLeagueSelectLabel.textContent = sel === 'ALL' ? pk.allLabel : sel;
       }
       const allOpt = document.createElement('div');
-      allOpt.className = 'sort-option' + (tradeLeague === 'ALL' ? ' active' : '');
-      allOpt.textContent = 'All Leagues';
+      allOpt.className = 'sort-option' + (sel === 'ALL' ? ' active' : '');
+      allOpt.textContent = pk.allLabel;
       allOpt.dataset.league = 'ALL';
       tradeLeagueMenu.appendChild(allOpt);
       names.forEach(name => {
         const opt = document.createElement('div');
-        opt.className = 'sort-option' + (name === tradeLeague ? ' active' : '');
+        opt.className = 'sort-option' + (name === sel ? ' active' : '');
         opt.textContent = name;
         opt.dataset.league = name;
         tradeLeagueMenu.appendChild(opt);
@@ -13298,11 +13337,11 @@
         option.addEventListener('click', () => {
           tradeLeagueMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
           option.classList.add('active');
-          tradeLeague = option.dataset.league;
+          pk.set(option.dataset.league);
           tradeLeagueMenu.hidden = true;
-          // Relabel BOTH pickers, not just the one that was clicked.
-          buildTradeLeagueMenu(names);
-          applyTradeFilters();
+          buildTradeLeagueMenu();
+          if (pk.key === 'leagues') renderLeagueSection().catch(() => {});
+          else applyTradeFilters();
         });
       });
     }
@@ -13323,14 +13362,35 @@
     window.setTradeLeagueOptions = buildTradeLeagueMenu;
 
 
-    document.querySelectorAll('.insight-sort-toggle .trade-range-btn').forEach(btn => {
+    document.querySelectorAll('.league-who-toggle .trade-range-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.insight-sort-toggle .trade-range-btn')
+        document.querySelectorAll('.league-who-toggle .trade-range-btn')
           .forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        insightSort = btn.dataset.insightSort;
-        renderTradeLeagueBoard().catch(() => {});
+        leagueWho = btn.dataset.leagueWho;
+        renderLeagueSection().catch(() => {});
       });
+    });
+    document.querySelectorAll('.league-sort-toggle .trade-range-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.league-sort-toggle .trade-range-btn')
+          .forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        leagueSort = btn.dataset.leagueSort;
+        renderLeagueSection().catch(() => {});
+      });
+    });
+
+    // Trade History is three tabs over one set of trades, not three pages.
+    const tradePanels = Array.from(document.querySelectorAll('.trade-panel'));
+    function showTradePanel(name) {
+      tradePanels.forEach(el => { el.hidden = el.dataset.panel !== name; });
+      document.querySelectorAll('.trade-subtab').forEach(t =>
+        t.classList.toggle('active', t.dataset.tradePanel === name));
+      if (name === 'leagues') renderLeagueSection().catch(() => {});
+    }
+    document.querySelectorAll('.trade-subtab').forEach(tab => {
+      tab.addEventListener('click', () => showTradePanel(tab.dataset.tradePanel));
     });
 
     document.querySelectorAll('.trade-scope-toggle .trade-range-btn').forEach(btn => {
@@ -13402,12 +13462,9 @@
     function renderInsightsChrome() {
       const hint = document.getElementById('insightHint');
       const empty = document.getElementById('insightEmpty');
-      const drawn = ['tradePlayerBoards', 'tradeBoards', 'tradeLeagueBoard']
+      const drawn = ['tradePlayerBoards', 'tradeBoards']
         .some(id => { const el = document.getElementById(id); return el && !el.hidden; });
-      if (hint) {
-        hint.hidden = tradeLeague !== 'ALL';
-        hint.textContent = 'Pick a league to see its own best and worst trades, yours and everyone else\u2019s.';
-      }
+      if (hint) hint.hidden = !drawn;
       if (empty) {
         empty.hidden = drawn || !tradeCards.length;
         if (tradeCards.length) {
@@ -13432,7 +13489,7 @@
       if (tradeManagerInput) tradeManagerInput.value = '';
       document.querySelectorAll('.trade-range-btn[data-trade-range]').forEach(b =>
         b.classList.toggle('active', b.dataset.tradeRange === 'ALL'));
-      buildTradeLeagueMenu(tradeLeagues);
+      buildTradeLeagueMenu();
       applyTradeFilters();
     }
     const tradeClearBtn = document.getElementById('tradeClearBtn');
@@ -13451,7 +13508,7 @@
       input.value = value;
       if (kind === 'player') tradeQuery = next; else tradeManager = next;
       applyTradeFilters();
-      if (typeof goToSection === 'function') goToSection('trades');
+      showTradePanel('trades');
     }
 
     function withinRange(dateStr) {
@@ -13516,9 +13573,9 @@
       renderTradeBoards();
       renderTradePlayerBoards();
       renderTradePlayerLine();
-      renderTradeLeagueBoard().catch(() => {});
       updateTradeClear();
       renderInsightsChrome();
+      renderLeagueSection().catch(() => {});
       document.querySelectorAll('.trade-range-toggle').forEach(el => el.classList.toggle('is-overridden', !!tradeManager));
       renderTradeLedger(visibleCards);
     }
@@ -13656,91 +13713,198 @@
       });
     }
 
-    // ---- One league's own best and worst, whoever made them -------------
-    // Every trade in the league, not just yours. entry.allTrades already
-    // carries them; what was missing was working out both sides, since the
-    // card above only ever computes your own.
-    async function renderTradeLeagueBoard() {
-      const el = document.getElementById('tradeLeagueBoard');
-      if (!el) return;
-      if (tradeLeague === 'ALL' || !window.sleeperGetPlayerDict) { el.hidden = true; return; }
-      let dict;
-      try { dict = await window.sleeperGetPlayerDict(); } catch (e) { el.hidden = true; return; }
+    // ---- One league, on its own terms -----------------------------------
+    // A league is not a filter on your own history, it is a place with a
+    // history of its own -- so it gets a section rather than a dropdown,
+    // and it can show trades you were never part of. "My Trades" reuses the
+    // cards already built for this league; "All League Trades" builds them
+    // from scratch for every manager in it, because nothing else on the
+    // page ever works out a trade from someone else's side.
+    //
+    // Best and worst only mean anything about your own trades. For everyone
+    // else's the question is how lopsided a trade was whoever won it, which
+    // is what Most Unfair ranks -- and it is the one people actually want,
+    // since the reason to open a league's history is the fleecing everybody
+    // still argues about.
+    const leaguePickCache = new Map();
+    async function leagueResolvePicks(entry, trades) {
+      await Promise.all(trades.flatMap(t => (t.draft_picks || []).map(async (pick) => {
+        if (leaguePickCache.has(pick)) return;
+        const r = await ppResolveDraftedPick(entry, pick, t.created).catch(() => null);
+        leaguePickCache.set(pick, r || null);
+      })));
+      return leaguePickCache;
+    }
 
-      const entries = Object.values(window.sleeperLeagueData || {})
-        .filter(e => e.roster && e.league)
-        .concat(window.__sleeperHistoricTrades || [])
-        .filter(e => e.league.name === tradeLeague);
-      if (!entries.length) { el.hidden = true; return; }
-
-      const picks = new Map();
-      const rows = [];
-      await Promise.all(entries.flatMap(entry =>
-        (entry.allTrades || []).flatMap(t =>
-          (t.draft_picks || []).map(async (pick) => {
-            const r = await ppResolveDraftedPick(entry, pick, t.created).catch(() => null);
-            if (r) picks.set(pick, r);
-          }))));
-
-      entries.forEach(entry => {
-        (entry.allTrades || []).forEach(t => {
-          const sides = sbTradeSides(t, entry, dict, picks);
-          if (sides.length < 2) return;
-          // The trade's own lopsidedness is the best ratio any side got.
-          let best = null;
-          sides.forEach(sd => {
-            const sc = sbTradeScore(sd.got, sd.gave);
-            if (sc === '') return;
-            const n = Number(sc);
-            if (!best || n > best.score) {
-              best = { score: n, ratio: Number(sbTradeRatio(sd.got, sd.gave)) || 1, side: sd };
-            }
-          });
-          if (!best) return;
-          const loser = sides.find(sd => sd !== best.side);
-          const myRosterId = entry.roster && entry.roster.roster_id;
-          rows.push({
-            date: t.created ? new Date(t.created) : null,
-            season: entry.league.season,
-            winner: best.side, loser, ratio: best.ratio, score: best.score,
-            involvesMe: (t.roster_ids || []).indexOf(myRosterId) !== -1,
-          });
-        });
+    // One trade laid out by what each side came away with. A trade you are
+    // not in has no "you got" column to build, so every side gets its own.
+    function leagueTradeCardHtml(entry, t, dict, picks, myRosterId) {
+      const sides = new Map();
+      const S = (rid) => {
+        const k = Number(rid);
+        if (!sides.has(k)) sides.set(k, { rosterId: k, got: 0, gave: 0, html: [], names: [] });
+        return sides.get(k);
+      };
+      (t.roster_ids || []).forEach(S);
+      Object.entries(t.adds || {}).forEach(([pid, rid]) => {
+        const a = tradePlayerAssetHtml(pid, dict);
+        S(rid).html.push(a.html);
+        S(rid).names.push(a.name);
+        S(rid).got += ppValueForPlayerId(pid, dict) || 0;
+      });
+      Object.entries(t.drops || {}).forEach(([pid, rid]) => {
+        S(rid).gave += ppValueForPlayerId(pid, dict) || 0;
+      });
+      (t.draft_picks || []).forEach(pick => {
+        const r = picks.get(pick) || null;
+        const v = ppPickValueResolved(r, pick.round, dict) || 0;
+        if (pick.owner_id != null) {
+          S(pick.owner_id).html.push(tradePickAssetHtml(pick, entry, r, dict));
+          S(pick.owner_id).got += v;
+          const rp = r && dict && dict[r.playerId];
+          if (rp) S(pick.owner_id).names.push(rp.full_name || [rp.first_name, rp.last_name].filter(Boolean).join(' '));
+        }
+        if (pick.previous_owner_id != null) S(pick.previous_owner_id).gave += v;
+      });
+      (t.waiver_budget || []).forEach(wb => {
+        if (wb.receiver != null) S(wb.receiver).html.push(tradeFaabAssetHtml(wb.amount));
       });
 
-      if (!rows.length) { el.hidden = true; return; }
-      rows.sort((a, b) => b.score - a.score);
-      const worstFirst = rows.slice().reverse();
-      const show = insightSort === 'WORST' ? worstFirst : rows;
+      const list = Array.from(sides.values());
+      if (list.length < 2) return '';
+      list.forEach(sd => {
+        const roster = (entry.allRosters || []).find(r => r.roster_id === sd.rosterId);
+        const uid = roster && roster.owner_id;
+        const u = uid && (entry.users || []).find(x => x.user_id === uid);
+        sd.name = (u && (u.display_name || u.username)) || `Roster ${sd.rosterId}`;
+        sd.isMine = sd.rosterId === Number(myRosterId);
+      });
 
-      const line = (r) => {
-        const when = r.date
-          ? r.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-          : `${r.season} season`;
-        const mult = (r.loser && r.loser.got <= 0 && r.winner.got > 0)
-          ? 'for nothing' : `${r.ratio.toFixed(1)}&times;`;
-        return `<div class="tlb-row${r.involvesMe ? ' is-mine' : ''}">` +
-          `<span class="tlb-date">${sbFieldEsc(when)}</span>` +
-          `<span class="tlb-winner">${sbFieldEsc(r.winner.name)}</span>` +
-          `<span class="tlb-got">${r.winner.got.toFixed(2)}</span>` +
-          `<span class="tlb-vs">over</span>` +
-          `<span class="tlb-loser">${sbFieldEsc(r.loser ? r.loser.name : '&mdash;')}</span>` +
-          `<span class="tlb-got">${r.loser ? r.loser.got.toFixed(2) : '0.00'}</span>` +
-          `<span class="tlb-mult">${mult}</span>` +
-          `<span class="tlb-assets">${sbFieldEsc(r.winner.assets.slice(0, 3).join(', '))}</span>` +
-        `</div>`;
-      };
+      const showValue = getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league);
+      // How lopsided it was, whoever won -- the best score any one side got.
+      let unfair = null;
+      list.forEach(sd => {
+        const sc = sbTradeScore(sd.got, sd.gave);
+        if (sc === '') return;
+        const n = Number(sc);
+        if (unfair == null || n > unfair) unfair = n;
+      });
+      const created = t.created ? new Date(t.created) : new Date();
+      const dateIso = created.toISOString().slice(0, 10);
+      const dateLabel = created.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const cols = list.map(sd =>
+        `<div class="trade-col${sd.isMine ? ' is-mine' : ''}">` +
+          `<div class="trade-side-label">${sbFieldEsc(sd.name.toUpperCase())} GOT` +
+          (showValue ? ` <span class="trade-side-total">${sd.got.toFixed(2)} val</span>` : '') + '</div>' +
+          (sd.html.join('') || '<div class="trade-asset-name" style="color:var(--faint)">Nothing</div>') +
+        '</div>').join('');
+      const players = list.flatMap(sd => sd.names).filter(Boolean).join(',');
 
-      const mineCount = rows.filter(r => r.involvesMe).length;
-      el.innerHTML =
-        `<div class="tlb-head"><span class="tlb-league">${sbFieldEsc(tradeLeague)}</span>` +
-        `<span class="tlb-kind">${insightSort === 'WORST' ? 'Worst' : 'Best'} trades in league history</span>` +
-        `<span class="tlb-note">Everyone's, not just yours &mdash; ${rows.length} trade` +
-        `${rows.length === 1 ? '' : 's'}, ${mineCount} of them yours. Ranked on what one side ` +
-        `got against what it gave &mdash; mostly on how much value moved, ` +
-        `nudged by how lopsided it was.</span></div>` +
-        show.slice(0, 25).map(line).join('');
-      el.hidden = false;
+      return `<div class="trade-card" data-league="${sbFieldEsc(entry.league.name)}" data-date="${dateIso}"` +
+        ` data-players="${sbFieldEsc(players)}" data-unfair="${unfair == null ? '' : unfair}"` +
+        ` data-mine="${list.some(sd => sd.isMine) ? '1' : '0'}">` +
+        '<div class="trade-card-head">' +
+          `<div class="trade-card-title">${sbFieldEsc(entry.league.name)} &middot; ${dateLabel}</div>` +
+          '<div class="trade-card-icons"><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>' +
+        '</div>' +
+        `<div class="trade-card-meta">${entry.league.season} season &middot; ${list.length} sides` +
+        (unfair != null && showValue ? ` &middot; ${Math.abs(unfair).toFixed(2)} apart` : '') + '</div>' +
+        `<div class="trade-cols">${cols}</div>` +
+      '</div>';
+    }
+
+    async function renderLeagueSection() {
+      const grid = document.getElementById('leagueGrid');
+      const hint = document.getElementById('leagueHint');
+      const countEl = document.getElementById('leagueCount');
+      if (!grid) return;
+      // Every filter change on the Trades tab calls through here. Building
+      // a league's whole history -- other people's trades included, with
+      // their picks resolved -- is real work, so it only happens while the
+      // tab that shows it is the one on screen. Switching to it renders.
+      const panel = grid.closest('.trade-panel');
+      if (panel && panel.hidden) return;
+      // Best and worst are about you, so they are only offered on your own.
+      document.querySelectorAll('.league-mine-only').forEach(el => {
+        el.hidden = leagueWho !== 'MINE';
+      });
+      if (leagueWho !== 'MINE' && (leagueSort === 'BEST' || leagueSort === 'WORST')) {
+        leagueSort = 'UNFAIR';
+        document.querySelectorAll('.league-sort-toggle .trade-range-btn').forEach(b =>
+          b.classList.toggle('active', b.dataset.leagueSort === leagueSort));
+      }
+      if (leagueSel === 'ALL') {
+        grid.innerHTML = '';
+        if (countEl) countEl.textContent = '';
+        if (hint) { hint.hidden = false; hint.textContent = 'Pick a league to see its trades.'; }
+        return;
+      }
+      if (hint) hint.hidden = true;
+
+      const byDateDesc = (a, b) => (b.date || '').localeCompare(a.date || '');
+      const sortRows = (rows) => rows.sort((a, b) => {
+        if (leagueSort === 'OLD') return (a.date || '').localeCompare(b.date || '');
+        if (leagueSort === 'UNFAIR') {
+          const av = a.unfair == null ? -Infinity : Math.abs(a.unfair);
+          const bv = b.unfair == null ? -Infinity : Math.abs(b.unfair);
+          return bv - av || byDateDesc(a, b);
+        }
+        if (leagueSort === 'BEST' || leagueSort === 'WORST') {
+          const av = a.score == null ? null : a.score, bv = b.score == null ? null : b.score;
+          if (av == null && bv == null) return byDateDesc(a, b);
+          if (av == null) return 1;
+          if (bv == null) return -1;
+          return av === bv ? byDateDesc(a, b) : (leagueSort === 'BEST' ? bv - av : av - bv);
+        }
+        return byDateDesc(a, b);
+      });
+
+      if (leagueWho === 'MINE') {
+        // Already built, and built from your side -- just the ones from here.
+        const rows = tradeCards
+          .filter(c => c.dataset.league === leagueSel)
+          .map(c => ({
+            html: c.outerHTML, date: c.dataset.date,
+            score: c.dataset.score === '' || c.dataset.score == null ? null : Number(c.dataset.score),
+            unfair: c.dataset.score === '' || c.dataset.score == null ? null : Number(c.dataset.score),
+          }));
+        sortRows(rows);
+        grid.innerHTML = rows.map(r => r.html).join('')
+          || '<div class="exp-loading">No trades of yours in this league yet.</div>';
+        if (countEl) countEl.textContent = `${rows.length} trade${rows.length === 1 ? '' : 's'}`;
+        return;
+      }
+
+      if (!window.sleeperGetPlayerDict) return;
+      let dict;
+      try { dict = await window.sleeperGetPlayerDict(); } catch (e) { return; }
+      const entries = (tradeEntries || []).filter(e => e.league && e.league.name === leagueSel);
+      if (!entries.length) {
+        grid.innerHTML = '<div class="exp-loading">Nothing loaded for this league yet.</div>';
+        if (countEl) countEl.textContent = '';
+        return;
+      }
+      grid.innerHTML = '<div class="exp-loading">Reading the league\u2019s history\u2026</div>';
+      const rows = [];
+      for (const entry of entries) {
+        const trades = entry.allTrades || [];
+        if (!trades.length) continue;
+        const picks = await leagueResolvePicks(entry, trades);
+        const myRosterId = entry.roster && entry.roster.roster_id;
+        trades.forEach(t => {
+          const html = leagueTradeCardHtml(entry, t, dict, picks, myRosterId);
+          if (!html) return;
+          const m = html.match(/data-date="([^"]*)"[\s\S]*?data-unfair="([^"]*)"/);
+          rows.push({
+            html, date: m ? m[1] : '',
+            unfair: m && m[2] !== '' ? Number(m[2]) : null, score: null,
+          });
+        });
+      }
+      sortRows(rows);
+      grid.innerHTML = rows.map(r => r.html).join('')
+        || '<div class="exp-loading">No trades found in this league.</div>';
+      if (countEl) countEl.textContent = `${rows.length} trade${rows.length === 1 ? '' : 's'} in the league`;
     }
 
     // Value won and lost against one manager, added up across every trade on
@@ -14030,6 +14194,7 @@
       });
 
       window.__tradePlayerLedger = playerLedger;
+      tradeEntries = allEntries;
       tradeGrid.innerHTML = cardsHtml.join('') || '<div class="exp-loading">No trades found yet.</div>';
       tradeCards = Array.from(tradeGrid.querySelectorAll('.trade-card'));
       // Every manager you have ever traded with, offered as you type.
