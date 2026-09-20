@@ -11094,7 +11094,7 @@
       </div>
       <div class="chip trade-daterange">&#128197; Date Range</div>
       <div class="chip trade-boards-btn" id="tradeBoardsBtn" title="Who you come out ahead on, and who comes out ahead on you">Fleeceable / Stay Away</div>
-      <div class="chip trade-boards-btn" id="tradePlayersBtn" title="The players whose trades have gone best and worst for you">Player P&amp;L</div>
+      <div class="chip trade-boards-btn" id="tradePlayersBtn" title="The players whose trades have gone best and worst for you">Player History</div>
       <div class="trade-count" id="tradeCount">15 trades</div>
       <div class="exp-refresh trade-hide-btn" id="tradeHideBtn" title="Hide trade values">&#128065;</div>
     </div>
@@ -12847,7 +12847,7 @@
         const rowsHtml = [];
         for (let round = 1; round <= rounds; round++) {
           const pick = picks.find(p => p.draft_slot === slot && p.round === round);
-          const pickNum = round + '.' + String(slot).padStart(2, '0');
+          const pickNum = ppPickSlotLabel(round, slot, slots.length, pick && pick.pick_no, draft.type);
           if (!pick) {
             rowsHtml.push(
               '<div class="dr-pick">' +
@@ -12922,7 +12922,7 @@
           used.add(match);
           const { pick, info } = match;
           const posClass = info.pos ? 'dr-pos-' + info.pos.toLowerCase() : '';
-          const pickNum = pick.round + '.' + String(pick.draft_slot).padStart(2, '0');
+          const pickNum = ppPickSlotLabel(pick.round, pick.draft_slot, Object.keys(draft.slot_to_roster_id || {}).length, pick.pick_no, draft.type);
           const value = ppValueForPlayerId(pick.player_id, dict);
           return '<div class="dr-roster-player">' +
             '<span class="dr-roster-pos ' + posClass + '">' + slotLabel + '</span>' +
@@ -12968,6 +12968,33 @@
   }
 
   window.sbTradeRatio = sbTradeRatio;
+
+  // How lopsided a trade was, for ranking the best and worst.
+  //
+  // The ratio alone answered "how many times over did one side win", which
+  // put a 0.10-for-0.50 swap above a 9.00-for-10.00 one. That is true as a
+  // multiple and wrong as a trade: the second moved a whole first round
+  // pick's worth of value and the first moved 0.40. So the score is the NET
+  // value -- what actually changed hands -- tilted by how lopsided it was,
+  // and the tilt is capped so it can only ever reorder trades of similar
+  // size. At the cap a five-times fleecing counts for 1.73x its net, which
+  // is enough to put it above an equal-net trade that was nearly even and
+  // nowhere near enough to lift a 0.40 swing over a 1.00 one.
+  const SB_SCORE_TILT_CAP = 3;
+  function sbTradeScore(got, gave) {
+    const g = Math.max(0, Number(got) || 0);
+    const v = Math.max(0, Number(gave) || 0);
+    if (g + v < SB_RATIO_MIN_STAKE) return '';
+    const net = g - v;
+    const ratio = (g + SB_RATIO_SMOOTH) / (v + SB_RATIO_SMOOTH);
+    // Measured the same way whichever side won, so the worst list is the
+    // mirror of the best list rather than a differently-shaped one.
+    const lopsided = net >= 0 ? ratio : (ratio > 0 ? 1 / ratio : 1);
+    const tilt = Math.sqrt(Math.min(Math.max(lopsided, 1), SB_SCORE_TILT_CAP));
+    return String(net * tilt);
+  }
+
+  window.sbTradeScore = sbTradeScore;
 
   // Both sides of one trade, per roster, whoever was in it -- the card above
   // only ever works out your own side. Used for a league's own best and
@@ -13368,9 +13395,9 @@
       // Best and worst rank on the ratio. A card with nothing valued on
       // either side cannot be ranked at all, so it sorts to the back of
       // both rather than pretending to be an even trade in the middle.
-      const ratioOf = (c) => (c.dataset.ratio === '' || c.dataset.ratio == null) ? null : Number(c.dataset.ratio);
-      const byRatio = (dir) => (a, b) => {
-        const av = ratioOf(a), bv = ratioOf(b);
+      const scoreOf = (c) => (c.dataset.score === '' || c.dataset.score == null) ? null : Number(c.dataset.score);
+      const byScore = (dir) => (a, b) => {
+        const av = scoreOf(a), bv = scoreOf(b);
         if (av == null && bv == null) return byDateDesc(a, b);
         if (av == null) return 1;
         if (bv == null) return -1;
@@ -13380,7 +13407,7 @@
         ? (a, b) => (a.dataset.date || '').localeCompare(b.dataset.date || '')
         : tradeSort === 'LEAGUE'
           ? (a, b) => (a.dataset.league || '').localeCompare(b.dataset.league || '') || byDateDesc(a, b)
-          : (tradeSort === 'BEST' || tradeSort === 'WORST') ? byRatio(tradeSort)
+          : (tradeSort === 'BEST' || tradeSort === 'WORST') ? byScore(tradeSort)
           : byDateDesc;
       const ordered = visibleCards.slice().sort(order);
       (tradeQuery ? matches.slice().sort(order).concat(nonMatches.slice().sort(order)) : ordered)
@@ -13561,7 +13588,7 @@
       await Promise.all(entries.flatMap(entry =>
         (entry.allTrades || []).flatMap(t =>
           (t.draft_picks || []).map(async (pick) => {
-            const r = await ppResolveDraftedPick(entry, pick).catch(() => null);
+            const r = await ppResolveDraftedPick(entry, pick, t.created).catch(() => null);
             if (r) picks.set(pick, r);
           }))));
 
@@ -13572,10 +13599,12 @@
           // The trade's own lopsidedness is the best ratio any side got.
           let best = null;
           sides.forEach(sd => {
-            const r = sbTradeRatio(sd.got, sd.gave);
-            if (r === '') return;
-            const n = Number(r);
-            if (!best || n > best.ratio) best = { ratio: n, side: sd };
+            const sc = sbTradeScore(sd.got, sd.gave);
+            if (sc === '') return;
+            const n = Number(sc);
+            if (!best || n > best.score) {
+              best = { score: n, ratio: Number(sbTradeRatio(sd.got, sd.gave)) || 1, side: sd };
+            }
           });
           if (!best) return;
           const loser = sides.find(sd => sd !== best.side);
@@ -13583,14 +13612,14 @@
           rows.push({
             date: t.created ? new Date(t.created) : null,
             season: entry.league.season,
-            winner: best.side, loser, ratio: best.ratio,
+            winner: best.side, loser, ratio: best.ratio, score: best.score,
             involvesMe: (t.roster_ids || []).indexOf(myRosterId) !== -1,
           });
         });
       });
 
       if (!rows.length) { el.hidden = true; return; }
-      rows.sort((a, b) => b.ratio - a.ratio);
+      rows.sort((a, b) => b.score - a.score);
       const worstFirst = rows.slice().reverse();
       const show = tradeSort === 'WORST' ? worstFirst : rows;
 
@@ -13618,8 +13647,8 @@
         `<span class="tlb-kind">${tradeSort === 'WORST' ? 'Worst' : 'Best'} trades in league history</span>` +
         `<span class="tlb-note">Everyone's, not just yours &mdash; ${rows.length} trade` +
         `${rows.length === 1 ? '' : 's'}, ${mineCount} of them yours. Ranked on what one side ` +
-        `got against what it gave, with a replacement-level asset added to both so two ` +
-        `scraps cannot outrank a real win.</span></div>` +
+        `got against what it gave &mdash; mostly on how much value moved, ` +
+        `nudged by how lopsided it was.</span></div>` +
         show.slice(0, 25).map(line).join('');
       el.hidden = false;
     }
@@ -13698,7 +13727,7 @@
         const p = dict && dict[resolved.playerId];
         const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || resolved.playerId) : resolved.playerId;
         const pos = p && p.position ? ` &middot; ${p.position}` : '';
-        const slot = `${resolved.round}.${String(resolved.slot).padStart(2, '0')}`;
+        const slot = ppPickSlotLabel(resolved.round, resolved.slot, resolved.teams, resolved.pickNo, resolved.draftType);
         // The badge stays the round, so a pick still reads as a pick at a
         // glance; who it became goes underneath, where the original owner
         // already sits.
@@ -13765,7 +13794,7 @@
       const pickSelections = new Map();
       await Promise.all(allTrades.flatMap(({ entry, t }) =>
         (t.draft_picks || []).map(async (pick) => {
-          const resolved = await ppResolveDraftedPick(entry, pick).catch(() => null);
+          const resolved = await ppResolveDraftedPick(entry, pick, t.created).catch(() => null);
           if (resolved) pickSelections.set(pick, resolved);
         })
       )).catch(() => {});
@@ -13882,7 +13911,7 @@
         return `<div class="trade-card" data-league="${entry.league.name}" data-date="${dateIso}" data-players="${players}"
             data-managers="${sbFieldEsc(managerData)}" data-manager-label="${sbFieldEsc(withName)}" data-manager-names="${sbFieldEsc(managerNames.join('|'))}"
             data-has-value="${hasValue}" data-got-value="${gotValue.toFixed(4)}" data-gave-value="${gaveValue.toFixed(4)}"
-            data-ratio="${sbTradeRatio(gotValue, gaveValue)}">
+            data-ratio="${sbTradeRatio(gotValue, gaveValue)}" data-score="${sbTradeScore(gotValue, gaveValue)}">
             <div class="trade-card-head">
               <div class="trade-card-title">${entry.league.name} &middot; ${dateLabel}</div>
               <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
@@ -21398,7 +21427,7 @@
     return promise;
   }
 
-  async function ppResolveDraftedPick(entry, pick) {
+  async function ppResolveDraftedPick(entry, pick, tradedAt) {
     if (!entry || !pick || !pick.season || !pick.round || !window.sleeperFetch) return null;
     const found = await ppSeasonDrafts(entry, pick.season);
     const drafts = (found && found.drafts) || [];
@@ -21428,11 +21457,37 @@
       }
     }
 
+    // WHICH draft, when a season ran more than one.
+    //
+    // A dynasty league founded in year X holds its startup that offseason
+    // and its rookie draft the following spring -- both in the same season,
+    // both with a 3rd round. Searching them in whatever order Sleeper
+    // listed them meant "2026 3rd" landed in the rookie draft and came back
+    // as a rookie tight end, when the pick traded was a startup 3rd and
+    // became a quarterback. Deep rounds resolved correctly only by accident:
+    // a 12th is not in a four-round rookie draft, so it fell through to the
+    // startup on its own. A 3rd is in both, and stopped at the first.
+    //
+    // A pick can only be traded while its draft is still ahead of it, so the
+    // trade's own date says which one it was: the pick belongs to the next
+    // draft that had not happened yet. Trade in January, before the startup
+    // -- it is a startup pick. Trade in March, after the startup and before
+    // the rookie draft -- the same "2026 3rd" is a rookie pick. A season
+    // with one draft is unaffected, which is every established league.
+    const when = Number(tradedAt) || 0;
+    const timeOf = (d) => Number((d.draft && (d.draft.start_time || d.draft.last_picked || d.draft.created)) || 0) || Infinity;
+    const ahead = [], behind = [];
+    drafts.forEach(d => (timeOf(d) > when ? ahead : behind).push(d));
+    const byTime = (a, b) => timeOf(a) - timeOf(b);
+    // Drafts already run at the time of the trade stay in the search as a
+    // last resort, since a missing start_time should not lose a pick.
+    const ordered = ahead.sort(byTime).concat(behind.sort(byTime));
+
     // A traded pick names the roster it originally belonged to, so the slot
     // has to come from the draft's own order -- picks[].roster_id is whoever
     // ENDED UP making the selection, which for a traded pick is the other
     // side of this very trade.
-    for (const cached of drafts) {
+    for (const cached of ordered) {
       const slotMap = cached.draft.slot_to_roster_id || {};
       let slot = Object.keys(slotMap).find(k => Number(slotMap[k]) === slotRosterId);
       // Last resort for a league whose rosters were renumbered and whose
@@ -21450,11 +21505,43 @@
       return {
         playerId: made.player_id, round: Number(made.round), slot: Number(slot),
         pickNo: made.pick_no,
+        teams: Object.keys(slotMap).length,
+        draftType: cached.draft.type || '',
         rounds: Number((cached.draft.settings && cached.draft.settings.rounds) || 0),
       };
     }
     return null;
   }
+
+  // What a selection is actually CALLED.
+  //
+  // A draft slot is the column a team sits in for the whole draft; the pick
+  // number is where a selection fell inside its round. In a linear draft
+  // they are the same number, which is why reading the slot straight out
+  // looked right for years. In a snake they are the same only in odd
+  // rounds: the order reverses in even ones, so the team in slot 11 of a
+  // 12-team league picks 2nd in round 2, and calling that "2.11" is wrong
+  // by nine picks. Sleeper's own reversal_round leagues turn it over again
+  // later still.
+  //
+  // So the label is derived from pick_no whenever there is one, which is
+  // exact for every draft type without needing to know which type it is:
+  // subtract the rounds already gone and what is left is the position in
+  // this round. The snake guess below is only for a slot with no selection
+  // against it -- an empty cell on a board.
+  function ppPickSlotLabel(round, slot, teams, pickNo, type) {
+    const r = Number(round) || 1;
+    const n = Number(teams) || 0;
+    let inRound = Number(slot) || 0;
+    const derived = Number(pickNo) - (r - 1) * n;
+    if (pickNo && n > 0 && derived >= 1 && derived <= n) {
+      inRound = derived;
+    } else if (n > 0 && r % 2 === 0 && String(type || '').indexOf('snake') !== -1) {
+      inRound = n - inRound + 1;
+    }
+    return r + '.' + String(inRound).padStart(2, '0');
+  }
+  window.ppPickSlotLabel = ppPickSlotLabel;
 
   // What a pick in a trade is worth: the drafted player's real value once
   // the draft has happened, the round's placeholder until then.
