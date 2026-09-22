@@ -11641,7 +11641,7 @@
     <div class="tt-section">
       <div class="tt-head">
         <h2>Future Pick Outlook</h2>
-        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today. <b>Where It Lands</b> is where it can still land once the rest of the season is actually played out &mdash; one bar per slot, and the 10th-to-90th percentile range under it. <b>Value</b> is what that whole range is worth on the same 0&ndash;3 scale as a player, not a flat "a 1st is 1.00". Points for and max points for are shown as their rank in that league, 1 being the most.</p>
+        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today. <b>Where It Lands</b> is where it can still land once the rest of the season is actually played out &mdash; one bar per slot, and the 10th-to-90th percentile range under it. <b>Value</b> is what that whole range is worth in Base 1s &mdash; the same unit the player rankings use, where a 1st in a vacuum is exactly 1.00 &mdash; instead of every 1st being called a base 1st. Points for and max points for are shown as their rank in that league, 1 being the most.</p>
       </div>
       <div class="rb-table-wrap">
         <table class="rb-table">
@@ -21722,11 +21722,12 @@
   }
 
   // A whole round as one number, kept only as the last fallback: what a
-  // pick is worth before anything is known about whose pick it is. Every
-  // real valuation goes through ppPickForecast below, which knows the
-  // league, the team the pick came from, and how much season is left.
-  // Anything beyond round 4 (or a round Sleeper doesn't report) is 0.
-  const PICK_ROUND_VALUES = { 1: 1.0, 2: 0.3, 3: 0.1, 4: 0.05 };
+  // pick is worth before anything is known about whose pick it is. A base
+  // 1st is 1.00 by definition (see PP_SLOT_CURVE below); the other rounds
+  // are that same curve averaged across their twelve slots, so the
+  // fallback and the real model cannot disagree about what a round is
+  // worth on average. Anything beyond round 4 is 0.
+  const PICK_ROUND_VALUES = { 1: 1.0, 2: 0.33, 3: 0.15, 4: 0.07 };
   function ppPickValue(round) {
     return PICK_ROUND_VALUES[round] || 0;
   }
@@ -21735,9 +21736,10 @@
   // What a future rookie pick is actually worth
   // =====================================================================
   //
-  // A flat "a 1st is 1.00" is wrong in both directions at once: the 1.01
-  // off the league's worst team is a top-five dynasty asset, and the
-  // last-place-in-the-playoffs team's 1st is a late second in disguise.
+  // Calling every 1st a base 1st is wrong in both directions at once: a
+  // base 1st is a pick equally likely to land anywhere in the round, and
+  // hardly any real pick is that. The 1.01 is worth two of them; the pick
+  // of a team that just missed the playoffs is worth half of one.
   // What a pick is worth is the value of the slot it lands in, and where
   // it lands is not known -- it is a distribution, and the distribution
   // tightens as the season runs out.
@@ -21752,15 +21754,31 @@
   // each simulated finish. Nothing about the slot is assumed.
 
   // ---- The slot curve -------------------------------------------------
-  // What the pick at a given slot is worth on the same 0-3 Base 1 scale
-  // the player rankings use. Fitted (calibration/pickcurve.cjs) to where
-  // the comparable rookie-class assets actually sit in those rankings --
-  // a 1.01 around a top-five overall asset, a 1.12 around a low-end WR2,
-  // a 2nd-rounder in the fringe-starter band, a 4th at dart-throw value.
-  // Anchored on a 12-team draft; other league sizes map onto the same
-  // curve by where the slot falls through the round, so a 10-team 1.10 is
-  // worth about what a 12-team 1.12 is and not what a 12-team 1.10 is.
-  const PP_SLOT_CURVE = { a: 2.42, b: 0.11, c: 0.96 };
+  // What the pick at a given slot is worth, in Base 1s.
+  //
+  // A Base 1 (Jakob Sanderson's term, and the unit every player value in
+  // these rankings is already denominated in) is a 1st in a vacuum: a pick
+  // equally likely to land anywhere from 1.01 to 1.12. It is worth 1.00 by
+  // definition, which is the whole reason a player and a pick can be put
+  // on the two sides of a trade and compared at all. So the curve has to
+  // satisfy one hard constraint -- the twelve round-1 slots must average
+  // exactly 1.00 -- and nothing else about it matters if it does not.
+  //
+  // Fitted (calibration/pickcurve.cjs) to Austin's own slot ladder, which
+  // is what a real 1st is worth at each landing spot. That ladder as
+  // written averages 1.10 rather than 1.00, so it is scaled to the unit
+  // before fitting; everything below is in true Base 1s. One continuous
+  // curve runs the whole draft, so a 2.01 is correctly worth less than a
+  // 1.12 -- and, as a check nothing forced, extending the round-1 shape
+  // lands rounds 2/3/4 at 0.33/0.15/0.07, right beside the 0.3/0.1/0.05
+  // flat constants this app had been carrying by feel.
+  //
+  // Anchored on a 12-team draft; other league sizes map on by where the
+  // slot falls through the round, so a 10-team 1.10 is worth about what a
+  // 12-team 1.12 is and not what a 12-team 1.10 is. A base 1st comes out
+  // between 0.98 and 1.04 across 8- through 16-team leagues, so the unit
+  // holds whatever the league size.
+  const PP_SLOT_CURVE = { a: 2.06, b: 0.276, c: 0.67 };
   function ppSlotValue(round, slot, teams) {
     const r = Number(round) || 1;
     const n = Math.max(1, Number(teams) || 12);
