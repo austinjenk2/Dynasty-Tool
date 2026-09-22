@@ -29,19 +29,36 @@
 // What a 1st is worth at each slot it can land on, 1.01 through 1.12.
 const SLOT_LADDER = [2.25, 1.75, 1.50, 1.25, 1.10, 1.00, 0.90, 0.82, 0.75, 0.68, 0.62, 0.58];
 const NORMALIZE = true;
+// The two units the whole scale hangs off: a base 1st is 1.00 and a base
+// 2nd is 0.30. Both are enforced as heavily weighted terms in the fit
+// rather than checked afterwards, because a curve that misses them is not
+// measuring in Base 1s however well it traces the ladder.
+const ROUND_MEANS = { 1: 1.00, 2: 0.30 };
+const ROUND_MEAN_WEIGHT = 60;
 
 const ladderMean = SLOT_LADDER.reduce((a, b) => a + b, 0) / SLOT_LADDER.length;
 const scale = NORMALIZE ? 1 / ladderMean : 1;
 const anchors = SLOT_LADDER.map((value, i) => [i + 1, value * scale]);
 
 const v = (n, a, b, c) => a * Math.exp(-b * Math.pow(n - 1, c));
-const sse = (a, b, c) => anchors.reduce((acc, [n, target]) =>
-  acc + Math.pow(Math.log(v(n, a, b, c)) - Math.log(target), 2), 0);
+const roundMean = (round, a, b, c) => {
+  let sum = 0;
+  for (let slot = 1; slot <= 12; slot++) sum += v((round - 1) * 12 + slot, a, b, c);
+  return sum / 12;
+};
+const sse = (a, b, c) => {
+  let err = anchors.reduce((acc, [n, target]) =>
+    acc + Math.pow(Math.log(v(n, a, b, c)) - Math.log(target), 2), 0);
+  for (const [round, target] of Object.entries(ROUND_MEANS)) {
+    err += ROUND_MEAN_WEIGHT * Math.pow(Math.log(roundMean(Number(round), a, b, c) / target), 2);
+  }
+  return err;
+};
 
 let best = null;
 for (let a = 1.50; a <= 2.60; a += 0.005) {
-  for (let b = 0.050; b <= 1.200; b += 0.002) {
-    for (let c = 0.30; c <= 1.60; c += 0.01) {
+  for (let b = 0.050; b <= 1.400; b += 0.002) {
+    for (let c = 0.30; c <= 1.70; c += 0.01) {
       const err = sse(a, b, c);
       if (!best || err < best.err) best = { err, a, b, c };
     }
@@ -61,12 +78,13 @@ anchors.forEach(([n, target]) => {
 
 // The constraint, checked rather than assumed -- plus what the same curve
 // implies for the rounds the ladder says nothing about.
-console.log('\nround averages (round 1 MUST be 1.000):');
+console.log('\nround averages (1 MUST be 1.000, 2 MUST be 0.300):');
 for (let round = 1; round <= 4; round++) {
-  let sum = 0;
-  for (let slot = 1; slot <= 12; slot++) sum += v((round - 1) * 12 + slot, best.a, best.b, best.c);
-  console.log(`  round ${round}: ${(sum / 12).toFixed(3)}`);
+  const got = roundMean(round, best.a, best.b, best.c);
+  const want = ROUND_MEANS[round];
+  console.log(`  round ${round}: ${got.toFixed(3)}${want ? ` (target ${want.toFixed(2)})` : ''}`);
 }
+console.log(`\nthe seam: 1.12 = ${v(12, best.a, best.b, best.c).toFixed(3)}, 2.01 = ${v(13, best.a, best.b, best.c).toFixed(3)} -- a 2.01 must be worth less`);
 
 // A base 1st should stay a base 1st whatever the league size.
 console.log('\na base 1st by league size:');

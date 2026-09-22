@@ -15029,6 +15029,17 @@
     return { rank, of: allRosters.length };
   }
 
+  // Exposed for the pick-value model, which lives in another module and
+  // needs every roster's optimal-lineup projection as its read on team
+  // strength -- the same number Contending Rank is built from.
+  //
+  // Deliberately different names: these are top-level `function`
+  // declarations, so they are already window properties, and assigning a
+  // wrapper over the same name replaces the function with one that calls
+  // itself. (Same reason window.ppResolvePick is not window.ppResolveDraftedPick.)
+  window.sbTeamOptimalProjection = (playerIds, league) => sbOptimalLineupTotal(playerIds, league);
+  window.sbTeamContendingRanks = (entry) => sbLeagueContendingRanks(entry);
+
   function sbOrdinal(n) {
     const rem100 = n % 100;
     const suffix = (rem100 >= 11 && rem100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
@@ -21727,7 +21738,7 @@
   // are that same curve averaged across their twelve slots, so the
   // fallback and the real model cannot disagree about what a round is
   // worth on average. Anything beyond round 4 is 0.
-  const PICK_ROUND_VALUES = { 1: 1.0, 2: 0.33, 3: 0.15, 4: 0.07 };
+  const PICK_ROUND_VALUES = { 1: 1.0, 2: 0.30, 3: 0.12, 4: 0.05 };
   function ppPickValue(round) {
     return PICK_ROUND_VALUES[round] || 0;
   }
@@ -21764,21 +21775,26 @@
   // satisfy one hard constraint -- the twelve round-1 slots must average
   // exactly 1.00 -- and nothing else about it matters if it does not.
   //
+  // A base 2nd is 0.30 on the same footing, so that is the second hard
+  // constraint: the twelve round-2 slots must average 0.30, which is what
+  // puts a late 2nd properly below a base one rather than beside it.
+  //
   // Fitted (calibration/pickcurve.cjs) to Austin's own slot ladder, which
   // is what a real 1st is worth at each landing spot. That ladder as
   // written averages 1.10 rather than 1.00, so it is scaled to the unit
   // before fitting; everything below is in true Base 1s. One continuous
-  // curve runs the whole draft, so a 2.01 is correctly worth less than a
-  // 1.12 -- and, as a check nothing forced, extending the round-1 shape
-  // lands rounds 2/3/4 at 0.33/0.15/0.07, right beside the 0.3/0.1/0.05
-  // flat constants this app had been carrying by feel.
+  // curve runs the whole draft, so a 2.01 (0.46) is correctly worth less
+  // than a 1.12 (0.50) -- and it hits both round means on the nose while
+  // staying within about 4% of every rung of the ladder. Rounds 3 and 4
+  // fall out at 0.12 and 0.05, which nothing forced and which land beside
+  // the 0.1/0.05 this app had been carrying by feel.
   //
   // Anchored on a 12-team draft; other league sizes map on by where the
   // slot falls through the round, so a 10-team 1.10 is worth about what a
   // 12-team 1.12 is and not what a 12-team 1.10 is. A base 1st comes out
   // between 0.98 and 1.04 across 8- through 16-team leagues, so the unit
   // holds whatever the league size.
-  const PP_SLOT_CURVE = { a: 2.06, b: 0.276, c: 0.67 };
+  const PP_SLOT_CURVE = { a: 2.02, b: 0.242, c: 0.73 };
   function ppSlotValue(round, slot, teams) {
     const r = Number(round) || 1;
     const n = Math.max(1, Number(teams) || 12);
@@ -21828,6 +21844,16 @@
   }
 
   const PP_SIM_RUNS = 1500;
+  // How many weeks of real results it takes for what a team has scored to
+  // carry as much weight as what its roster projects to score. Six is
+  // about half a regular season, so the two are level around week 6 and
+  // the roster still has real pull as late as week 10.
+  const PP_STRENGTH_WEEKS = 6;
+  // How many drafts past the next one the model will forecast. 0 means
+  // only the draft the current season is deciding; everything further out
+  // falls back to the flat round value, because the strength read that
+  // would carry it is not trustworthy enough yet.
+  const PP_FORECAST_YEARS_OUT = 0;
 
   // The league's own draft-order rule, applied to one finished (or
   // simulated-to-finish) season. Teams out of the playoffs draft first,
@@ -21886,9 +21912,41 @@
 
     const allScores = Object.values(scoresById).flat();
     if (!allScores.length) return null;
+
     const leagueMean = allScores.reduce((a, b) => a + b, 0) / allScores.length;
     const leagueVar = allScores.reduce((a, b) => a + (b - leagueMean) * (b - leagueMean), 0) / Math.max(1, allScores.length - 1);
     const leagueSd = Math.sqrt(Math.max(1, leagueVar));
+
+    // ---- Team strength ------------------------------------------------
+    // What a team has scored is not the same as how good it is. Eight
+    // weeks of results carry a lot of schedule and a lot of luck, and a
+    // roster that has been quietly the best in the league while losing
+    // coin flips is not a bottom-three team going forward -- but the
+    // draft order treats it like one until the scoring catches up.
+    //
+    // So the rest of the season is projected off both: what the team has
+    // actually scored, and what its roster projects to score. The second
+    // is the optimal-lineup projection Contending Rank is already built
+    // from, rescaled from "best possible lineup" onto the same footing as
+    // real started scores (nobody starts their optimal lineup, and the
+    // league-wide ratio between the two is what says by how much).
+    const strengthById = {};
+    if (window.sbTeamOptimalProjection) {
+      let optSum = 0, optCount = 0;
+      rosters.forEach(r => {
+        const opt = window.sbTeamOptimalProjection(r.players, league);
+        if (opt != null && opt > 0) { strengthById[r.roster_id] = opt; optSum += opt; optCount++; }
+      });
+      if (optCount === rosters.length && optSum > 0) {
+        const optMean = optSum / optCount;
+        const realism = leagueMean / optMean;
+        rosters.forEach(r => { strengthById[r.roster_id] *= realism; });
+      } else {
+        // A partial read is worse than none: rescaling against a mean
+        // built from some of the league would bend every team toward it.
+        Object.keys(strengthById).forEach(k => { delete strengthById[k]; });
+      }
+    }
 
     const model = rosters.map(r => {
       const st = r.settings || {};
@@ -21905,11 +21963,22 @@
       }
       // Same shrink on the mean: four weeks is not a true talent level.
       const meanWeight = Math.min(1, n / 8);
+      const scored = meanWeight * mean + (1 - meanWeight) * leagueMean;
+      // ...and then weighed against what the roster itself projects to
+      // score. Early on the roster is nearly all of the answer, because
+      // three weeks of results are barely evidence; by the back half the
+      // season has said enough and the results carry it. The crossover is
+      // deliberately gradual -- this is the difference between a pick's
+      // value drifting as a team's real quality shows, and it snapping
+      // around every Sunday.
+      const strength = strengthById[r.roster_id];
+      const scoredWeight = strength == null ? 1 : n / (n + PP_STRENGTH_WEEKS);
+      const projectedMean = strength == null ? scored : scoredWeight * scored + (1 - scoredWeight) * strength;
       const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
       const ppts = (st.ppts || 0) + (st.ppts_decimal || 0) / 100;
       return {
         id: r.roster_id,
-        mean: meanWeight * mean + (1 - meanWeight) * leagueMean,
+        mean: projectedMean,
         sd,
         weeksPlayed: n,
         wins: (st.wins || 0) + (st.ties || 0) * 0.5,
@@ -22097,6 +22166,7 @@
     // The season currently being played decides next year's draft, so that
     // one is yearsOut 0 -- the simulated finish, not a guess.
     const yearsOut = Number(season) - (currentSeason + 1);
+    if (yearsOut > PP_FORECAST_YEARS_OUT) return null;
     const year = yearsOut <= 0 ? model.current : model.future[Math.min(3, yearsOut)];
     if (!year || !year.slotProb) return null;
     const dist = year.slotProb[fromRosterId];
@@ -22131,9 +22201,16 @@
     for (const entry of entries) {
       if (run !== ppPickModelRun) return;
       let current = null;
-      try { current = await ppSimulateSeason(entry); } catch (e) { current = null; }
+      try {
+        current = await ppSimulateSeason(entry);
+      } catch (err) {
+        // Falling back to the flat round value is the right behaviour, but
+        // doing it silently hid a real bug once already.
+        console.warn('Pick model: season simulation failed for', entry.league.name, err);
+        current = null;
+      }
       const future = {};
-      for (let k = 1; k <= 3; k++) {
+      for (let k = 1; k <= PP_FORECAST_YEARS_OUT; k++) {
         try { future[k] = ppSimulateFutureYear(entry, dict, k); } catch (e) { future[k] = null; }
       }
       window.__ppPickModel[entry.league.league_id] = { current, future };
@@ -25821,6 +25898,9 @@
     const years = [season + 1, season + 2];
     const entry = tcLeagueEntry;
     if (entry && (entry.allRosters || []).length && window.ppPickForecast) {
+      // Only the draft the current season is deciding gets split into a
+      // real pick per team; a year the model will not forecast stays one
+      // generic pick rather than twelve identical ones.
       years.forEach(y => {
         [1, 2, 3, 4].forEach(round => {
           entry.allRosters.forEach(r => {
@@ -25836,9 +25916,11 @@
           });
         });
       });
-      if (picks.length) return picks;
     }
+    // Any year that produced no per-team picks above still needs its
+    // generic one, so the two lists are merged rather than swapped.
     years.forEach(y => {
+      if (picks.some(pk => pk.season === y)) return;
       [1, 2, 3, 4].forEach(round => {
         picks.push({
           id: `pick_${y}_${round}`, kind: 'pick', name: `${y} ${TC_ROUND_LABELS[round]}`,
