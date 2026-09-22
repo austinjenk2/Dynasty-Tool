@@ -1254,6 +1254,44 @@
      win prob = standing at the 37, i.e. the opponent's 37). */
   .sb-exp-league-title { font-family: 'Source Serif 4', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
   .sb-exp-body { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+
+  /* An open matchup and its panel are one block, not a card and a
+     separate sheet that happens to sit under it. The panel spans the
+     whole grid, so in the two-column Scoreboard a card in the right
+     column used to leave its panel below and to the left, with the
+     league name repeated inside it just to say which matchup you had
+     opened. Instead the open card widens to the full grid too, so it
+     sits directly on top of its own panel and stays the only heading:
+     the borders join, the gap between them collapses, and the accent
+     runs around both. */
+  #sbGrid .sb-card.is-open {
+    grid-column: 1 / -1;
+    margin-bottom: -10px;
+    border-color: var(--navy);
+    box-shadow: inset 0 0 0 1px var(--navy);
+  }
+  .sb-card.is-open {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .sb-card.is-open + .sb-expand {
+    margin-top: 0;
+    border-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+  #sbGrid .sb-card.is-open + .sb-expand {
+    border-color: var(--navy);
+    box-shadow: inset -1px -1px 0 0 var(--navy), inset 1px 0 0 0 var(--navy);
+  }
+  /* Opening is a move, not a jump -- the panel grows out from under the
+     card it belongs to rather than appearing whole. */
+  .sb-expand { animation: sbExpandOpen 0.16s ease-out; transform-origin: top center; }
+  @keyframes sbExpandOpen {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .sb-expand { animation: none; } }
   .field-panel {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -5234,17 +5272,11 @@
 
         <template id="sbLineupTemplate">
           <div class="sb-expand">
-            <div class="sb-exp-header">
-              <div class="sb-exp-logo"></div>
-              <div class="sb-exp-title">
-                <div class="sb-exp-name"></div>
-                <div class="sb-exp-meta"></div>
-              </div>
-              <div class="sb-exp-right">
-                <div class="sb-exp-score"></div>
-                <div class="sb-badge"></div>
-              </div>
-            </div>
+            <!-- No logo/name/badge in here: the open card sitting directly
+                 above is this panel's heading, and repeating it read as
+                 two headers for the one matchup. Only the scoreline, which
+                 the card does not already say, stays. -->
+            <div class="sb-exp-scoreline"><span class="sb-exp-score-item sb-exp-score"></span></div>
             <div class="sb-lineups-cols">
               <div class="sb-lineup-col">
                 <div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>
@@ -11465,7 +11497,7 @@
     <div class="page-title" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
       <div>
         <h1>Results</h1>
-        <p>Every league's season in one grid &mdash; finish, PF rank, playoffs, weekly results, and bracket rounds. Net is entered in Settings.</p>
+        <p>Every league's season in one grid &mdash; finish, PF rank, points, playoffs, weekly results, and bracket rounds. Records and points update as soon as a week's games go final on Monday night. Net settles after a season ends, so it reads $0 until then.</p>
       </div>
       <span class="week-dropdown" id="rbYearDropdown">
         <span class="week-select" id="rbYearSelect"><span id="rbYearLabel">Year</span> <span>&#9662;</span></span>
@@ -16338,7 +16370,6 @@
         `<span class="sb-exp-score-item">${ctx.myOrig.toFixed(1)} vs ${ctx.oppOrig.toFixed(1)} <i>started at</i></span>`
       : `<span class="sb-exp-score-item">${card.querySelector('.sb-card-score').textContent}</span>`;
     panel.innerHTML =
-      `<div class="sb-exp-league-title">${sbFieldEsc(entry.league.name)}</div>` +
       `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
       '<div class="sb-exp-body">' +
         '<div class="sb-lineups-cols">' +
@@ -16669,17 +16700,7 @@
       }
 
       const panel = sbLineupTemplate.content.cloneNode(true);
-      const cardLogo = card.querySelector('.sb-card-logo');
-      const panelLogo = panel.querySelector('.sb-exp-logo');
-      panelLogo.style.background = cardLogo.style.background;
-      panelLogo.textContent = cardLogo.textContent;
-      panel.querySelector('.sb-exp-name').textContent = card.querySelector('.sb-card-name').textContent;
-      panel.querySelector('.sb-exp-meta').innerHTML = card.querySelector('.sb-card-meta').innerHTML;
       panel.querySelector('.sb-exp-score').innerHTML = card.querySelector('.sb-card-score').innerHTML;
-      const badge = card.querySelector('.sb-badge');
-      panel.querySelector('.sb-exp-header .sb-badge').className = badge.className;
-      panel.querySelector('.sb-exp-header .sb-badge').textContent = badge.textContent;
-
       card.after(panel);
       card.classList.add('is-open');
     });
@@ -19091,11 +19112,15 @@
       if (!myRoster || !allRosters.length) return null;
 
       const s = myRoster.settings || {};
-      const wins = s.wins || 0, losses = s.losses || 0, ties = s.ties || 0;
-      const record = `${wins}-${losses}${ties ? '-' + ties : ''}`;
+      // Sleeper's own wins/losses (and season points) only move when it
+      // rolls the week over, which is hours after Monday night's last
+      // whistle. The weekly matchup rows below already know the real
+      // result the moment the games are final, so the record and the PF
+      // rank are derived from those, and Sleeper's counts are only used
+      // while they are the ones further along.
+      const sleeperWins = s.wins || 0, sleeperLosses = s.losses || 0, sleeperTies = s.ties || 0;
 
       const pfOf = r => { const rs = r.settings || {}; return (rs.fpts || 0) + (rs.fpts_decimal || 0) / 100; };
-      const pfRank = ldRankOf(allRosters, pfOf, myRoster.roster_id);
 
       // "Pts From 1.01": real Sleeper potential points (ppts -- your best
       // possible lineup score, sometimes called "max points for"), shown as
@@ -19149,6 +19174,13 @@
       // built on beating the median ten times is a different season from one
       // that scraped six wins while scoring below it.
       const weekMedianResults = [];
+      // Which weeks are real, finished results rather than a live
+      // projection -- only these count toward the derived record.
+      const weekSettled = [];
+      // Every roster's season points, summed from the same settled weeks,
+      // so the PF rank moves with Monday night rather than with Sleeper's
+      // week rollover.
+      const seasonPtsByRoster = {};
       // Points for and against, week high and week low. Every one of these
       // is already sitting in the same weekly rows the record is built from
       // -- the page was computing a PF RANK while never showing the points
@@ -19166,9 +19198,22 @@
           const winPct = oppLiveProj != null ? sbWinProbability(myLiveProj, oppLiveProj,
             sbMatchupSigma(mine, opp, null, league, currentWeekEspnGameData, week)) : null;
           weekResults.push(winPct == null ? null : (winPct >= 90 ? 'W' : (winPct <= 10 ? 'L' : null)));
+          // A week still being played is never a settled result, however
+          // lopsided it looks -- and its median cell stays empty so the
+          // weekly arrays keep lining up week for week.
+          weekSettled.push(false);
+          weekMedianResults.push(null);
           continue;
         }
-        weekResults.push(notPlayed ? null : (row.win ? 'W' : 'L'));
+        weekResults.push(notPlayed || row.win == null
+          ? null
+          : (row.myScore === row.oppScore ? 'T' : (row.win ? 'W' : 'L')));
+        weekSettled.push(!notPlayed && !!row && row.win != null);
+        if (!notPlayed && weekMatchups) {
+          weekMatchups.forEach(m => {
+            seasonPtsByRoster[m.roster_id] = (seasonPtsByRoster[m.roster_id] || 0) + (Number(m.points) || 0);
+          });
+        }
         if (!notPlayed && row) {
           const mine = Number(row.myScore) || 0;
           pfSum += mine;
@@ -19187,13 +19232,44 @@
         }
       }
 
+      // Every settled week, counted the way this league actually counts
+      // them: the head-to-head result, plus the median result on top of it
+      // where the league plays a median (Sleeper folds that second result
+      // into the same wins/losses column). Used in place of Sleeper's own
+      // counts as soon as it is further along -- which is Monday night,
+      // the moment the last game goes final.
+      let derivedW = 0, derivedL = 0, derivedT = 0;
+      weekResults.forEach((res, i) => {
+        if (!weekSettled[i]) return;
+        if (res === 'W') derivedW++; else if (res === 'L') derivedL++; else if (res === 'T') derivedT++;
+        if (!hasMedian) return;
+        const med = weekMedianResults[i];
+        if (med === 'W') derivedW++; else if (med === 'L') derivedL++; else if (med === 'T') derivedT++;
+      });
+      const sleeperPlayed = sleeperWins + sleeperLosses + sleeperTies;
+      const useDerivedRecord = (derivedW + derivedL + derivedT) > sleeperPlayed;
+      const wins = useDerivedRecord ? derivedW : sleeperWins;
+      const losses = useDerivedRecord ? derivedL : sleeperLosses;
+      const ties = useDerivedRecord ? derivedT : sleeperTies;
+      const record = `${wins}-${losses}${ties ? '-' + ties : ''}`;
+
+      // Same idea for the points: rank on the settled weekly scores while
+      // Sleeper's season totals are still a week behind, and hand back to
+      // Sleeper's own numbers the moment they catch up.
+      const sleeperPf = pfOf(myRoster);
+      const derivedPf = seasonPtsByRoster[myRoster.roster_id] || 0;
+      const useDerivedPts = derivedPf > sleeperPf + 0.01;
+      const pfRank = useDerivedPts
+        ? ldRankOf(allRosters, r => seasonPtsByRoster[r.roster_id] || 0, myRoster.roster_id)
+        : ldRankOf(allRosters, pfOf, myRoster.roster_id);
+
       const bracketResults = await rbBracketRoundResults(league.league_id, myRoster.roster_id);
 
       return {
         league, entry,
         wins, losses, ties, record,
         pfRank, finishRank, seasonDecided, madePlayoffs, ptsFromMin,
-        totalPf: pfOf(myRoster),
+        totalPf: useDerivedPts ? derivedPf : sleeperPf,
         pf: pfSum, pa: paSum, weeksPlayed,
         avgPf: weeksPlayed ? pfSum / weeksPlayed : null,
         weekHigh, weekLow,
@@ -19204,10 +19280,11 @@
           return { w, l, t, played: w + l + t };
         })(),
         wc: bracketResults.WC || null, sf: bracketResults.SF || null, chip: bracketResults.CHIP || null,
-        // No games played yet this season -- whatever's entered in
-        // Settings is a target/plan, not a real result, so show $0
-        // instead of implying money has already been won or lost.
-        net: (wins + losses + ties) === 0 ? 0 : rbGetNet(league.league_id, league.season),
+        // Net is what a league actually paid out or cost once it is over
+        // -- it isn't known while the season is still being played, and a
+        // running guess at it was wrong every week it was shown. Held at
+        // $0 until there is a real result to settle against.
+        net: 0,
       };
     }
 
@@ -19226,7 +19303,7 @@
       return `${m.w}-${m.l}${m.t ? '-' + m.t : ''}`;
     }
 
-    function rbRowHtml(row, maxRegWeeks) {
+    function rbRowHtml(row, maxRegWeeks, showMedian) {
       const finishHtml = row.finishRank != null ? ldOrdinal(row.finishRank) : '&mdash;';
       const playoffHtml = !row.seasonDecided
         ? '<span class="rb-playoff-tbd">TBD</span>'
@@ -19254,9 +19331,9 @@
       return `<tr data-league-id="${sbFieldEsc(row.league.league_id)}" data-league-name="${sbFieldEsc(row.league.name)}">
         <td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(row.league.name)}</span>${coBadge}</td>
         <td>${row.record}</td>
-        <td class="rb-median-cell${row.hasMedian ? ' rb-median-live' : ''}" title="${row.hasMedian
+        ${showMedian ? `<td class="rb-median-cell${row.hasMedian ? ' rb-median-live' : ''}" title="${row.hasMedian
           ? 'This league plays a median, so these results are already counted in the record'
-          : 'How you would have done against the league median each week -- not counted in this league'}">${rbMedianText(row)}</td>
+          : 'This league does not play a median'}">${row.hasMedian ? rbMedianText(row) : '&mdash;'}</td>` : ''}
         <td>${finishHtml}</td>
         <td>${ldOrdinal(row.pfRank)}</td>
         <td class="rb-num">${rbPts(row.pf)}</td>
@@ -19274,7 +19351,7 @@
       </tr>`;
     }
 
-    function rbTotalRowHtml(rows, maxRegWeeks, label) {
+    function rbTotalRowHtml(rows, maxRegWeeks, label, showMedian) {
       const totalWins = rows.reduce((s, r) => s + r.wins, 0);
       const totalLosses = rows.reduce((s, r) => s + r.losses, 0);
       const totalTies = rows.reduce((s, r) => s + r.ties, 0);
@@ -19291,9 +19368,10 @@
         ? Math.round(rows.reduce((s, r) => s + r.ptsFromMin, 0) / rows.length)
         : 0;
 
-      const netRows = rows.filter(r => r.net != null);
-      const totalNet = netRows.length ? netRows.reduce((s, r) => s + r.net, 0) : null;
-      const netCls = totalNet == null ? '' : ldrecSignClass(totalNet);
+      // Held at $0 per league (see rbComputeLeagueRow), so the total is
+      // $0 too until seasons start settling.
+      const totalNet = rows.reduce((s, r) => s + (r.net || 0), 0);
+      const netCls = ldrecSignClass(totalNet);
 
       const weeklyRecordOf = (res) => {
         let w = 0, l = 0;
@@ -19326,8 +19404,10 @@
       const bestWeek = highs.length ? Math.max(...highs) : null;
       const worstWeek = lows.length ? Math.min(...lows) : null;
 
+      // Only the leagues that actually play a median have a median record
+      // to total -- the rest have no second result to add.
       const medTotals = rows.reduce((a, r) => {
-        const m = r.medianRecord;
+        const m = r.hasMedian ? r.medianRecord : null;
         if (m) { a.w += m.w; a.l += m.l; a.t += m.t; }
         return a;
       }, { w: 0, l: 0, t: 0 });
@@ -19337,7 +19417,7 @@
       return `<tr class="rb-total-row">
         <td class="rb-league-cell"><span class="rb-league-name">${label || 'Overall Record'}</span></td>
         <td>${totalRecord}</td>
-        <td class="rb-median-cell">${medianTotal}</td>
+        ${showMedian ? `<td class="rb-median-cell">${medianTotal}</td>` : ''}
         <td>${avgFinish}</td>
         <td>${avgPfRank}</td>
         <td class="rb-num">${rbPts(sumPf)}</td>
@@ -19363,7 +19443,7 @@
     const RB_SORT_KEYS = {
       league: r => r.league.name.toLowerCase(),
       rec: r => (r.wins + r.losses + r.ties) ? r.wins / (r.wins + r.losses + r.ties) : 0,
-      median: r => (r.medianRecord && r.medianRecord.played) ? r.medianRecord.w / r.medianRecord.played : -1,
+      median: r => (r.hasMedian && r.medianRecord && r.medianRecord.played) ? r.medianRecord.w / r.medianRecord.played : -1,
       pfpts: r => r.pf == null ? -Infinity : r.pf,
       papts: r => r.pa == null ? -Infinity : r.pa,
       avg: r => r.avgPf == null ? -Infinity : r.avgPf,
@@ -19422,6 +19502,10 @@
     }
 
     function rbTableHtml(rows, totalLabel) {
+      // vs Median is only a real column for leagues that play one. Where
+      // none of the leagues on screen do, the column is dropped entirely
+      // rather than carrying a hypothetical nobody asked for.
+      const showMedian = rows.some(r => r.hasMedian);
       let weekHeadHtml = '';
       for (let i = 1; i <= rbMaxRegWeeks; i++) weekHeadHtml += `<th>W${i}</th>`;
       const sortArrow = (key) => key === rbSortKey ? (rbSortDir === 'desc' ? ' &#9660;' : ' &#9650;') : '';
@@ -19429,14 +19513,14 @@
       return `<div class="rb-table-wrap"><table class="rb-table">
         <thead><tr>
           ${th('league', 'League')}
-          ${th('rec', 'Rec')}${th('median', 'vs Median')}${th('finish', 'Finish')}${th('pf', 'PF Rank')}
+          ${th('rec', 'Rec')}${showMedian ? th('median', 'vs Median') : ''}${th('finish', 'Finish')}${th('pf', 'PF Rank')}
           ${th('pfpts', 'PF')}${th('papts', 'PA')}${th('avg', 'Avg')}${th('high', 'High')}${th('low', 'Low')}
           ${th('pts', 'Pts From 1.01')}${th('po', 'PO')}${th('net', 'Net')}
           ${weekHeadHtml}
           <th class="rb-po-col">WC</th><th>SF</th><th>Chip</th>
         </tr></thead>
-        <tbody>${rows.map(r => rbRowHtml(r, rbMaxRegWeeks)).join('')}</tbody>
-        <tfoot>${rbTotalRowHtml(rows, rbMaxRegWeeks, totalLabel)}</tfoot>
+        <tbody>${rows.map(r => rbRowHtml(r, rbMaxRegWeeks, showMedian)).join('')}</tbody>
+        <tfoot>${rbTotalRowHtml(rows, rbMaxRegWeeks, totalLabel, showMedian)}</tfoot>
       </table></div>`;
     }
 
