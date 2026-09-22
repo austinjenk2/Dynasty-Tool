@@ -2896,6 +2896,24 @@
   .tt-gap.is-chasing { color: var(--red); }
   .tt-gap.is-holding { color: var(--green); }
   .tt-gap.is-level { color: var(--gold); }
+  /* Where a pick can still land, drawn rather than described. One bar per
+     slot, its height the chance of landing there, colored by what that
+     slot is worth -- a tall green block on the left is a pick that is
+     almost certainly a top-three, a low flat spread is a pick nobody can
+     call yet. The number under it is the 10th-to-90th percentile range,
+     which is the honest version of a single "projected slot". */
+  .tt-dist { display: inline-flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+  .tt-dist-track { display: flex; align-items: flex-end; gap: 1px; height: 18px; }
+  .tt-dist-bar { width: 4px; border-radius: 1px; background: var(--muted); opacity: 0.30; min-height: 1px; }
+  .tt-dist-bar.is-top { background: var(--green); opacity: 0.85; }
+  .tt-dist-bar.is-lottery { background: var(--gold); opacity: 0.7; }
+  .tt-dist-bar.is-empty { opacity: 0.12; }
+  .tt-range { font-size: 10.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.2px; }
+  .tt-odds { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .tt-odds.is-live { color: var(--green); }
+  .tt-pickval { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .tt-pickval-sub { display: block; font-size: 9.5px; font-weight: 700; color: var(--faint); letter-spacing: 0.3px; }
+
   .tt-slot {
     display: inline-block;
     min-width: 34px;
@@ -11509,7 +11527,7 @@
   <div data-view="calculator">
     <div class="page-title">
       <h1>Trade Calc</h1>
-      <p>Build a trade and see who wins it, using real dynasty player values.</p>
+      <p>Build a trade and see who wins it, using real dynasty player values. Pick a league and every draft pick is priced as that league's own pick from that team &mdash; where it is actually projected to land, and how wide that range still is &mdash; instead of one flat number per round.</p>
     </div>
 
     <div class="tc-toolbar">
@@ -11518,7 +11536,7 @@
         <button type="button" class="sb-view-toggle-btn" data-tc-source="dynasty">Dynasty Values</button>
       </div>
       <div class="sort-dropdown" id="tcLeagueDropdown">
-        <div class="sort-select" id="tcLeagueSelect"><span id="tcLeagueSelectLabel">Match League Settings&hellip;</span> <span>&#9662;</span></div>
+        <div class="sort-select" id="tcLeagueSelect" title="Sets the scoring format AND prices every pick as that league's real pick from a real team"><span id="tcLeagueSelectLabel">Match League &amp; Picks&hellip;</span> <span>&#9662;</span></div>
         <div class="sort-menu" id="tcLeagueMenu" hidden></div>
       </div>
       <div class="chip" id="tcFormatChip">12 Teams &middot; 1QB &middot; Full PPR</div>
@@ -11598,7 +11616,7 @@
     <div class="tt-section">
       <div class="tt-head">
         <h2>Race To The 1.01</h2>
-        <p class="tt-sub">Draft order runs off potential points &mdash; max points for, Sleeper's best-possible-lineup total &mdash; lowest first. A <b class="tt-pos-ex">positive</b> number is how much max PF you would have to shed to take the 1.01. A <b class="tt-neg-ex">negative</b> one means you already hold it, and that is your cushion before the next team takes it off you.</p>
+        <p class="tt-sub">Draft order runs off potential points &mdash; max points for, Sleeper's best-possible-lineup total &mdash; lowest first. A <b class="tt-pos-ex">positive</b> number is how much max PF you would have to shed to take the 1.01. A <b class="tt-neg-ex">negative</b> one means you already hold it, and that is your cushion before the next team takes it off you. <b>Where It Lands</b> and <b>1.01 %</b> come from simulating every remaining week off your own scoring through your real schedule, so they tighten as the season runs out.</p>
       </div>
       <div class="rb-table-wrap">
         <table class="rb-table">
@@ -11609,6 +11627,9 @@
               <th>PF</th>
               <th>Max PF</th>
               <th>Proj Slot</th>
+              <th>Where It Lands</th>
+              <th>1.01 %</th>
+              <th>Value</th>
               <th class="rb-po-col">Pts From 1.01</th>
             </tr>
           </thead>
@@ -11620,7 +11641,7 @@
     <div class="tt-section">
       <div class="tt-head">
         <h2>Future Pick Outlook</h2>
-        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today: teams out of the playoff picture are ordered by max PF (lowest picks first), teams in it by record with points for as the tiebreak. Points for and max points for are shown as their rank in that league, 1 being the most. <span class="tt-blank">Playoff % is not worked out yet &mdash; the column is there for it.</span></p>
+        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today. <b>Where It Lands</b> is where it can still land once the rest of the season is actually played out &mdash; one bar per slot, and the 10th-to-90th percentile range under it. <b>Value</b> is what that whole range is worth on the same 0&ndash;3 scale as a player, not a flat "a 1st is 1.00". Points for and max points for are shown as their rank in that league, 1 being the most.</p>
       </div>
       <div class="rb-table-wrap">
         <table class="rb-table">
@@ -11634,7 +11655,9 @@
               <th>PF Rank</th>
               <th>Max PF Rank</th>
               <th class="rb-po-col">Proj Slot</th>
-              <th>Playoff %</th>
+              <th>Where It Lands</th>
+              <th>Top 3 %</th>
+              <th>Value</th>
             </tr>
           </thead>
           <tbody id="ttPicksBody"></tbody>
@@ -13101,7 +13124,7 @@
     });
     (t.draft_picks || []).forEach(pick => {
       const resolved = pickSelections ? (pickSelections.get(pick) || null) : null;
-      const v = ppPickValueResolved(resolved, pick.round, dict) || 0;
+      const v = ppPickValueResolved(resolved, pick.round, dict, entry, pick) || 0;
       if (pick.owner_id != null) {
         side(pick.owner_id).got += v;
         const named = resolved && dict && dict[resolved.playerId];
@@ -13789,7 +13812,7 @@
       });
       (t.draft_picks || []).forEach(pick => {
         const r = picks.get(pick) || null;
-        const v = ppPickValueResolved(r, pick.round, dict) || 0;
+        const v = ppPickValueResolved(r, pick.round, dict, entry, pick) || 0;
         if (pick.owner_id != null) {
           S(pick.owner_id).html.push(tradePickAssetHtml(pick, entry, r, dict));
           S(pick.owner_id).got += v;
@@ -14124,7 +14147,7 @@
         });
         (t.draft_picks || []).forEach(pick => {
           const resolved = pickSelections.get(pick) || null;
-          const value = ppPickValueResolved(resolved, pick.round, dict);
+          const value = ppPickValueResolved(resolved, pick.round, dict, entry, pick);
           // Searching a name has to find the trades he came in THROUGH A
           // PICK as well as the ones he was named in -- otherwise a player
           // drafted with a traded pick showed a ledger entry and no cards
@@ -15098,7 +15121,7 @@
       const isDynastyLeague = sbLeagueIsDynasty(entry.league);
       const values = allRosters.map(r => ({
         rosterId: r.roster_id,
-        value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(entry, r.roster_id).reduce((s, p) => s + ppPickValue(p.round), 0) : 0),
+        value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(entry, r.roster_id).reduce((s, p) => s + window.ppPickValueFuture(entry, p), 0) : 0),
       }));
       const myValue = values.find(v => v.rosterId === entry.roster.roster_id);
       if (!myValue) { cell.textContent = '—'; return; }
@@ -18306,6 +18329,19 @@
         q('contending', 'dashboard', () => window.renderContendingRanks && window.renderContendingRanks());
         q('rosterTypes', 'dashboard', () => window.renderRosterTypeCategories && window.renderRosterTypeCategories());
         q('rosterValue', 'dashboard', () => window.renderRosterValueRanks && window.renderRosterValueRanks());
+        // Pick values: every league's rest-of-season is simulated once per
+        // sync, off the render path entirely. Until it lands, everything
+        // that prices a pick falls back to the flat round value; when it
+        // does, the pages that show a pick value are asked to redraw with
+        // the real numbers.
+        if (window.ppBuildPickModels) {
+          window.ppBuildPickModels(() => {
+            if (window.renderRealTankingTracker) window.renderRealTankingTracker();
+            if (window.renderRealDashboard) window.renderRealDashboard();
+            if (window.renderRosterValueRanks) window.renderRosterValueRanks();
+            if (window.renderContendingRanks) window.renderContendingRanks();
+          });
+        }
         if (window.updateModeToggleBtn) window.updateModeToggleBtn();
         if (leagueCountChip) {
           const mode = getSiteMode();
@@ -18531,7 +18567,7 @@
         return '<div class="ld-pick-row">' +
           `<span class="ld-pick-when">${p.season} &middot; ${roundLabels[p.round]}</span>` +
           (originalOwnerName ? `<span class="ld-pick-owner">(${sbFieldEsc(originalOwnerName)})</span>` : '') +
-          `<span class="ld-pick-val">${ppPickValue(p.round).toFixed(2)}<br><i>VAL</i></span>` +
+          `<span class="ld-pick-val">${window.ppPickValueFuture(entry, p).toFixed(2)}<br><i>VAL</i></span>` +
         '</div>';
       }).join('') || '<div class="ld-pick-row"><span class="ld-pick-when" style="color:var(--faint)">No picks owned</span></div>';
 
@@ -18719,7 +18755,7 @@
       if (ldValueEl) {
         if (getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league)) {
           const totalValue = ppRosterValue(activeRoster, dict) +
-            ppPicksOwnedBy(entry, activeRoster.roster_id).reduce((sum, p) => sum + ppPickValue(p.round), 0);
+            ppPicksOwnedBy(entry, activeRoster.roster_id).reduce((sum, p) => sum + window.ppPickValueFuture(entry, p), 0);
           ldValueEl.textContent = totalValue.toFixed(2);
         } else {
           ldValueEl.textContent = '—';
@@ -20505,7 +20541,7 @@
       const dict = window.__sleeperPlayerDict;
       const useRealValue = getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league) && dict;
       const realValueOf = r => ppRosterValue(r, dict) +
-        ppPicksOwnedBy(entry, r.roster_id).reduce((sum, p) => sum + ppPickValue(p.round), 0);
+        ppPicksOwnedBy(entry, r.roster_id).reduce((sum, p) => sum + window.ppPickValueFuture(entry, p), 0);
       const valueOf = useRealValue ? realValueOf : pfOf;
 
       // Positional Value Rank: each roster's total real dynasty value at one
@@ -21685,14 +21721,410 @@
     }, 0);
   }
 
-  // Placeholder draft-pick values until a real pick-value source exists --
-  // rough "how much is a future rookie pick worth" shape (1sts worth a lot
-  // more than 2nds, tailing off fast), not tied to any real market data.
+  // A whole round as one number, kept only as the last fallback: what a
+  // pick is worth before anything is known about whose pick it is. Every
+  // real valuation goes through ppPickForecast below, which knows the
+  // league, the team the pick came from, and how much season is left.
   // Anything beyond round 4 (or a round Sleeper doesn't report) is 0.
   const PICK_ROUND_VALUES = { 1: 1.0, 2: 0.3, 3: 0.1, 4: 0.05 };
   function ppPickValue(round) {
     return PICK_ROUND_VALUES[round] || 0;
   }
+
+  // =====================================================================
+  // What a future rookie pick is actually worth
+  // =====================================================================
+  //
+  // A flat "a 1st is 1.00" is wrong in both directions at once: the 1.01
+  // off the league's worst team is a top-five dynasty asset, and the
+  // last-place-in-the-playoffs team's 1st is a late second in disguise.
+  // What a pick is worth is the value of the slot it lands in, and where
+  // it lands is not known -- it is a distribution, and the distribution
+  // tightens as the season runs out.
+  //
+  // So a pick is valued as an expectation over that distribution:
+  //
+  //   value = SUM over slots s of  P(pick lands at s) * value of slot s
+  //
+  // P(lands at s) comes from simulating the rest of the season week by
+  // week off each team's own real scoring, through the league's real
+  // remaining schedule, and running the league's own draft-order rule on
+  // each simulated finish. Nothing about the slot is assumed.
+
+  // ---- The slot curve -------------------------------------------------
+  // What the pick at a given slot is worth on the same 0-3 Base 1 scale
+  // the player rankings use. Fitted (calibration/pickcurve.cjs) to where
+  // the comparable rookie-class assets actually sit in those rankings --
+  // a 1.01 around a top-five overall asset, a 1.12 around a low-end WR2,
+  // a 2nd-rounder in the fringe-starter band, a 4th at dart-throw value.
+  // Anchored on a 12-team draft; other league sizes map onto the same
+  // curve by where the slot falls through the round, so a 10-team 1.10 is
+  // worth about what a 12-team 1.12 is and not what a 12-team 1.10 is.
+  const PP_SLOT_CURVE = { a: 2.42, b: 0.11, c: 0.96 };
+  function ppSlotValue(round, slot, teams) {
+    const r = Number(round) || 1;
+    const n = Math.max(1, Number(teams) || 12);
+    const s = Math.min(n, Math.max(1, Number(slot) || 1));
+    if (r < 1 || r > 4) return 0;
+    const equivalent = (r - 1) * 12 + (s - 1) * (12 / n) + 1;
+    const { a, b, c } = PP_SLOT_CURVE;
+    return a * Math.exp(-b * Math.pow(equivalent - 1, c));
+  }
+
+  // ---- Player ages ----------------------------------------------------
+  // From the same Pure Potential export as the values. Only used to tell a
+  // good roster that stays good from a good roster that is about to fall
+  // over, which is what decides a pick two drafts out.
+  const PP_PLAYER_AGES = {"josh allen":30.3,"jaxon smith-njigba":24.6,"jahmyr gibbs":24.5,"bijan robinson":24.6,"jamarr chase":26.6,"malik nabers":23.2,"puka nacua":25.3,"ashton jeanty":22.8,"caleb williams":24.8,"drake maye":24.1,"jeremiyah love":21.3,"brock bowers":23.8,"amon-ra st brown":26.9,"trey mcbride":26.8,"lamar jackson":29.7,"justin jefferson":27.3,"ceedee lamb":27.5,"patrick mahomes":31.0,"drake london":25.2,"joe burrow":29.8,"jalen hurts":28.1,"tetairoa mcmillan":23.5,"jaxson dart":23.4,"colston loveland":22.5,"chris olave":26.2,"jonathan taylor":27.7,"kenneth walker":25.9,"trevor lawrence":27.0,"brock purdy":26.7,"justin herbert":28.5,"jayden daniels":25.8,"omarion hampton":23.5,"james cook":27.0,"garrett wilson":26.2,"devon achane":24.9,"nico collins":27.5,"george pickens":25.6,"zay flowers":26.0,"ladd mcconkey":24.9,"devonta smith":27.9,"jordyn tyson":22.1,"parker washington":24.5,"tyler warren":24.3,"jordan love":27.9,"emeka egbuka":23.9,"carnell tate":21.7,"breece hall":25.3,"chase brown":26.5,"christian mccaffrey":30.3,"luther burden":22.8,"bo nix":26.6,"makai lemon":22.3,"jaylen waddle":27.8,"tee higgins":27.7,"bucky irving":24.1,"fernando mendoza":23.0,"dak prescott":33.2,"jared goff":31.9,"quinshon judkins":22.9,"treveyon henderson":23.9,"sam laporta":25.7,"dalton kincaid":26.9,"tucker kraft":25.9,"matthew golden":23.1,"christian watson":27.4,"tyler shough":27.0,"jameson williams":25.5,"kc concepcion":22.0,"javonte williams":26.4,"saquon barkley":29.6,"jadarian price":23.0,"kyren williams":26.1,"derrick henry":32.7,"cam skattebo":24.6,"dandre swift":27.7,"bryce young":25.2,"brian thomas":24.0,"bhayshul tuten":23.6,"harold fannin":22.2,"jalen coker":24.9,"rome odunze":24.3,"aj brown":29.2,"denzel boston":22.8,"baker mayfield":31.4,"kyler murray":29.1,"sam darnold":29.3,"cj stroud":25.0,"rashee rice":26.4,"kenyon sadiq":21.6,"daniel jones":29.3,"matthew stafford":38.6,"josh downs":25.1,"isaiah likely":26.4,"cam ward":24.3,"jordan addison":24.7,"mike evans":33.1,"malik willis":27.3,"dk metcalf":28.8,"george kittle":33.0,"chuba hubbard":27.3,"kyle pitts":26.0,"dj moore":29.4,"ty simpson":23.8,"marvin harrison":24.1,"david montgomery":29.3,"travis etienne":27.7,"michael wilson":26.6,"alec pierce":26.4,"omar cooper":22.8,"terry mclaurin":31.0,"davante adams":33.7,"kyle monangai":24.3,"jaylen warren":27.9,"josh jacobs":28.6,"jonah coleman":23.1,"jonathon brooks":23.2,"rj harvey":25.6,"terrance ferguson":23.5,"germie bernard":22.8,"antonio williams":22.2,"travis hunter":23.4,"dezhaun stribling":23.8,"caleb douglas":23.0,"blake corum":25.8,"rhamondre stevenson":28.6,"michael penix":26.4,"stefon diggs":32.8,"oronde gadsden":23.2,"xavier worthy":23.4,"eli raridon":22.6,"brenton strange":25.7,"jake ferguson":27.7,"emmett johnson":23.0,"chris godwin":30.6,"jacory croskey-merritt":25.4,"pat bryant":23.8,"jakobi lane":22.4,"quentin johnston":25.0,"michael pittman":29.0,"geno smith":36.0,"juwan johnson":30.0,"deebo samuel":30.7,"eli stowers":23.4,"travis kelce":37.0,"chig okonkwo":27.0,"rico dowdle":28.3,"rachaad white":27.7,"kaelon black":24.9,"dallas goedert":31.7,"jk dobbins":27.8,"jayden reed":26.4,"khalil shakir":26.6,"chris bell":22.3,"dalton schultz":30.2,"mark andrews":31.0,"shedeur sanders":24.6,"mac jones":28.0,"woody marks":25.7,"dontayvion wicks":25.3,"adonai mitchell":24.0,"wandale robinson":25.7,"courtland sutton":31.0,"jakobi meyers":29.9,"romeo doubs":26.4,"michael mayer":25.2,"mike washington":23.2,"zach charbonnet":25.7,"tua tagovailoa":28.6,"keaton mitchell":24.7,"aaron jones":31.8,"marshawn lloyd":25.7,"kenny gainwell":27.5,"tank bigsby":24.1,"tyjae spears":25.3,"nicholas singleton":22.7,"jalen mcmillan":24.8,"carson beck":23.8,"jacoby brissett":33.8,"aaron rodgers":42.8,"ricky pearsall":26.0,"ted hurst":22.2,"jayden higgins":23.8,"oscar delp":23.1,"jordan mason":27.3,"aj barner":24.4,"tre harris":24.6,"zachariah branch":22.5,"drew allar":22.5,"kaytron allen":23.7,"tony pollard":29.4,"tyler allgeier":26.4,"braelon allen":22.7,"brian robinson":27.5,"ray davis":26.9,"elijah sarratt":23.3,"tre tucker":25.5,"malik washington":25.7,"dylan sampson":22.0,"pat freiermuth":27.9,"deshaun watson":31.0,"max klare":23.2,"adam randall":22.2,"demond claiborne":23.0,"chris rodriguez":27.0,"rashid shaheed":28.1,"tj hockenson":29.2,"hunter henry":31.8,"gunnar helm":24.0,"cyrus allen":23.6,"devaughn vele":28.8,"malachi fields":23.1,"jaylin noel":24.1,"kayshon boutte":24.4,"cade otton":27.4,"seth mcgowan":24.9,"kalif raymond":32.1,"ryan flournoy":26.9,"jalen nailor":27.6,"jj mccarthy":23.7,"alvin kamara":31.2,"elijah arroyo":23.5,"jerry jeudy":27.4,"tank dell":26.9,"brandon aiyuk":28.5,"jordan james":22.5,"cade klubnik":23.0,"marlin klein":24.0,"mason taylor":22.4,"isaac teslaa":24.6,"kirk cousins":38.1,"marcus mariota":32.9,"darren waller":34.0,"keon coleman":23.4,"jauan jennings":29.2,"matt hibner":24.5,"evan engram":32.1,"greg dulcich":26.5,"mike gesicki":31.0,"keenan allen":34.4,"kimani vidal":25.1,"troy franklin":23.6,"dj giddens":23.1,"tanner koziol":22.7,"kevin coleman":23.0,"brenen thompson":23.2,"calvin ridley":31.8,"tory horton":23.8,"elic ayomanor":23.3,"skyler bell":24.2,"jack bech":23.8,"chris brazzell":23.0,"anthony richardson":24.3,"bryce lance":24.1,"erick all":26.0,"justin fields":27.6,"justin joly":22.2,"kaleb johnson":23.1,"kendre miller":24.3,"kyle williams":23.9,"demario douglas":25.8,"devin singletary":29.1,"samaje perine":31.0,"rashod bateman":26.8,"jaylen wright":23.5,"ollie gordon":22.7,"najee harris":28.5,"tyrone tracy":26.8,"jalen royals":23.6,"darnell washington":25.1,"eli heidenreich":23.2,"isiah pacheco":27.6,"james conner":31.4,"tyreek hill":32.6,"cole kmet":27.5,"cole payton":23.9,"garrett nussmeier":24.6,"jack endries":22.5,"jalen milroe":23.8,"malik benson":23.9,"mitchell evans":23.5,"taylen green":23.9,"tez johnson":24.3,"zavion thomas":22.6,"jalon daniels":23.9,"roman wilson":25.3,"emari demercado":27.7,"drew lock":29.9,"sean tucker":24.9,"tahj brooks":24.4,"sione vaki":25.1};
+  function ppAgeForPlayerId(playerId, dict) {
+    const key = ppKeyForPlayerId(playerId, dict);
+    return key == null ? null : PP_PLAYER_AGES[key];
+  }
+  // Value-weighted roster age: the age of the players who actually carry
+  // the roster, not of the 30th man on the taxi squad.
+  function ppRosterAge(roster, dict) {
+    let wsum = 0, w = 0;
+    (roster.players || []).forEach(id => {
+      if (!id || id === '0') return;
+      const v = ppValueForPlayerId(id, dict);
+      const age = ppAgeForPlayerId(id, dict);
+      if (v == null || age == null || v <= 0) return;
+      wsum += v * age; w += v;
+    });
+    return w > 0 ? wsum / w : null;
+  }
+
+  // ---- Simulation plumbing --------------------------------------------
+  // Box-Muller, with the second deviate kept rather than thrown away --
+  // this runs a few million times per sync.
+  let ppSpareNormal = null;
+  function ppRandNormal() {
+    if (ppSpareNormal !== null) { const v = ppSpareNormal; ppSpareNormal = null; return v; }
+    let u = 0, v = 0, sq = 0;
+    do {
+      u = Math.random() * 2 - 1; v = Math.random() * 2 - 1; sq = u * u + v * v;
+    } while (sq === 0 || sq >= 1);
+    const f = Math.sqrt(-2 * Math.log(sq) / sq);
+    ppSpareNormal = v * f;
+    return u * f;
+  }
+
+  const PP_SIM_RUNS = 1500;
+
+  // The league's own draft-order rule, applied to one finished (or
+  // simulated-to-finish) season. Teams out of the playoffs draft first,
+  // ordered by potential points from the bottom up; teams in the playoffs
+  // draft after them, worst record first. This is deliberately the same
+  // rule the Tanking Tracker's Proj Slot column uses -- one rule, so the
+  // projected slot there and the value here can never contradict.
+  //
+  // `teams` is [{ id, wins, pf, ppts }], and the returned array is
+  // slot-ordered: index 0 holds the 1.01.
+  function ppDraftOrderFor(teams, playoffTeams) {
+    const standings = teams.slice().sort((a, b) => b.wins - a.wins || b.pf - a.pf);
+    const inPlayoffs = new Set(standings.slice(0, playoffTeams).map(t => t.id));
+    const missed = teams.filter(t => !inPlayoffs.has(t.id)).sort((a, b) => a.ppts - b.ppts || a.pf - b.pf);
+    const made = teams.filter(t => inPlayoffs.has(t.id)).sort((a, b) => a.wins - b.wins || a.pf - b.pf);
+    return missed.concat(made);
+  }
+
+  // ---- This season, simulated out -------------------------------------
+  // Each team's weekly score is drawn from its own real weekly scores so
+  // far -- its mean and its spread, both of which say something a record
+  // does not. A team is shrunk toward the league's own average spread
+  // while it has only a few weeks on the board, so one blowup in week 2
+  // does not become a personality.
+  //
+  // Potential points (which is what orders the lottery) are carried along
+  // with the score rather than drawn separately: a team's best-possible
+  // lineup and what it actually started move together, and that ratio is
+  // stable per roster, so a drawn score of X implies potential points of
+  // X * that team's own ratio.
+  async function ppSimulateSeason(entry) {
+    const league = entry.league, rosters = entry.allRosters || [];
+    const teamCount = rosters.length;
+    if (!teamCount || !league) return null;
+    const leagueId = league.league_id;
+    const playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
+    const regularWeeks = Math.max(1, playoffStart - 1);
+    const playoffTeams = Math.min(teamCount, (league.settings && league.settings.playoff_teams) || 6);
+
+    const weeks = [];
+    for (let w = 1; w <= regularWeeks; w++) {
+      weeks.push(await sleeperGetWeekMatchups(leagueId, w).catch(() => []));
+    }
+
+    // A week counts as played once somebody in it has actually scored.
+    const played = weeks.map(ms => Array.isArray(ms) && ms.some(m => (Number(m.points) || 0) > 0));
+
+    const scoresById = {};
+    rosters.forEach(r => { scoresById[r.roster_id] = []; });
+    weeks.forEach((ms, i) => {
+      if (!played[i] || !Array.isArray(ms)) return;
+      ms.forEach(m => {
+        if (scoresById[m.roster_id]) scoresById[m.roster_id].push(Number(m.points) || 0);
+      });
+    });
+
+    const allScores = Object.values(scoresById).flat();
+    if (!allScores.length) return null;
+    const leagueMean = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+    const leagueVar = allScores.reduce((a, b) => a + (b - leagueMean) * (b - leagueMean), 0) / Math.max(1, allScores.length - 1);
+    const leagueSd = Math.sqrt(Math.max(1, leagueVar));
+
+    const model = rosters.map(r => {
+      const st = r.settings || {};
+      const mine = scoresById[r.roster_id] || [];
+      const n = mine.length;
+      const mean = n ? mine.reduce((a, b) => a + b, 0) / n : leagueMean;
+      let sd = leagueSd;
+      if (n >= 3) {
+        const v = mine.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (n - 1);
+        // Shrink toward the league's own spread -- weight on this team's
+        // own number grows with the weeks behind it.
+        const wgt = Math.min(1, (n - 2) / 8);
+        sd = Math.sqrt(Math.max(1, wgt * v + (1 - wgt) * leagueVar));
+      }
+      // Same shrink on the mean: four weeks is not a true talent level.
+      const meanWeight = Math.min(1, n / 8);
+      const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
+      const ppts = (st.ppts || 0) + (st.ppts_decimal || 0) / 100;
+      return {
+        id: r.roster_id,
+        mean: meanWeight * mean + (1 - meanWeight) * leagueMean,
+        sd,
+        weeksPlayed: n,
+        wins: (st.wins || 0) + (st.ties || 0) * 0.5,
+        pf, ppts,
+        ratio: pf > 0 ? Math.min(1.8, Math.max(1, ppts / pf)) : 1.25,
+      };
+    });
+    const byId = {};
+    model.forEach(m => { byId[m.id] = m; });
+
+    // The real remaining schedule, straight off Sleeper -- it publishes
+    // the pairings for a week long before it is played.
+    const remaining = [];
+    for (let i = 0; i < regularWeeks; i++) {
+      if (played[i]) continue;
+      const ms = weeks[i];
+      if (!Array.isArray(ms) || !ms.length) continue;
+      const byMatchup = {};
+      ms.forEach(m => {
+        if (m.matchup_id == null) return;
+        (byMatchup[m.matchup_id] = byMatchup[m.matchup_id] || []).push(m.roster_id);
+      });
+      const pairs = Object.values(byMatchup).filter(p => p.length === 2);
+      if (pairs.length) remaining.push(pairs);
+    }
+
+    // slotCounts[rosterId][slotIndex] -- how often that team's own pick
+    // came out at that slot across every simulated finish.
+    const slotCounts = {};
+    model.forEach(m => { slotCounts[m.id] = new Array(teamCount).fill(0); });
+
+    const scratch = model.map(m => ({ id: m.id, wins: 0, pf: 0, ppts: 0 }));
+    // Matchups name roster ids; the simulation works on array positions.
+    // Resolved once here rather than searched for inside the hot loop.
+    const idxOf = {};
+    scratch.forEach((t, i) => { idxOf[t.id] = i; });
+    const remainingIdx = remaining.map(pairs => pairs.map(([a, b]) => [idxOf[a], idxOf[b]]));
+    const drawn = new Array(scratch.length).fill(0);
+    for (let sim = 0; sim < PP_SIM_RUNS; sim++) {
+      for (let i = 0; i < scratch.length; i++) {
+        const m = model[i], t = scratch[i];
+        t.wins = m.wins; t.pf = m.pf; t.ppts = m.ppts;
+      }
+      for (let w = 0; w < remainingIdx.length; w++) {
+        for (let i = 0; i < scratch.length; i++) {
+          const m = model[i];
+          const score = Math.max(0, m.mean + m.sd * ppRandNormal());
+          drawn[i] = score;
+          scratch[i].pf += score;
+          scratch[i].ppts += score * m.ratio;
+        }
+        const pairs = remainingIdx[w];
+        for (let j = 0; j < pairs.length; j++) {
+          const ia = pairs[j][0], ib = pairs[j][1];
+          if (ia == null || ib == null) continue;
+          const sa = drawn[ia], sb = drawn[ib];
+          if (sa > sb) scratch[ia].wins += 1;
+          else if (sb > sa) scratch[ib].wins += 1;
+          else { scratch[ia].wins += 0.5; scratch[ib].wins += 0.5; }
+        }
+      }
+      const order = ppDraftOrderFor(scratch, playoffTeams);
+      for (let i = 0; i < order.length; i++) slotCounts[order[i].id][i]++;
+    }
+
+    const slotProb = {};
+    Object.keys(slotCounts).forEach(id => {
+      slotProb[id] = slotCounts[id].map(c => c / PP_SIM_RUNS);
+    });
+    const weeksLeft = remaining.length;
+    return { slotProb, teamCount, playoffTeams, regularWeeks, weeksLeft, model: byId, leagueMean };
+  }
+
+  // ---- Later drafts ----------------------------------------------------
+  // A pick two or three drafts out is not this season's finish pushed
+  // forward: whatever happens this year, the team that owns a stacked
+  // young roster will still be good, and the team carrying five thirty-
+  // year-olds will not. So instead of the week-by-week simulation, those
+  // years are ranked on team strength -- dynasty value first, then how
+  // they are actually playing, then how old the value is -- and shaken
+  // with noise that grows for every draft further out, until a pick far
+  // enough away is barely more than "somebody's 1st".
+  function ppTeamStrengths(entry, dict) {
+    const rosters = entry.allRosters || [];
+    if (!rosters.length) return null;
+    const raw = rosters.map(r => {
+      const st = r.settings || {};
+      const games = (st.wins || 0) + (st.losses || 0) + (st.ties || 0);
+      const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
+      return {
+        id: r.roster_id,
+        value: ppRosterValue(r, dict) || 0,
+        winPct: games ? ((st.wins || 0) + (st.ties || 0) * 0.5) / games : 0.5,
+        ppg: games ? pf / games : 0,
+        age: ppRosterAge(r, dict),
+      };
+    });
+    const ages = raw.map(t => t.age).filter(a => a != null);
+    const meanAge = ages.length ? ages.reduce((a, b) => a + b, 0) / ages.length : 26;
+    const z = (vals) => {
+      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+      const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / Math.max(1, vals.length - 1)) || 1;
+      return vals.map(v => (v - mean) / sd);
+    };
+    const zv = z(raw.map(t => t.value));
+    const zw = z(raw.map(t => t.winPct));
+    const zp = z(raw.map(t => t.ppg));
+    const zy = z(raw.map(t => -(t.age == null ? meanAge : t.age)));
+    return raw.map((t, i) => Object.assign({}, t, {
+      // Dynasty value carries it, because that is what a team still owns
+      // next year. Record and scoring say whether the value is real this
+      // season; youth says whether it is still there two seasons from now.
+      strength: 0.50 * zv[i] + 0.20 * zw[i] + 0.15 * zp[i] + 0.15 * zy[i],
+    }));
+  }
+
+  function ppSimulateFutureYear(entry, dict, yearsOut) {
+    const strengths = ppTeamStrengths(entry, dict);
+    if (!strengths) return null;
+    const teamCount = strengths.length;
+    const playoffTeams = Math.min(teamCount,
+      (entry.league.settings && entry.league.settings.playoff_teams) || 6);
+    // One draft out, a team's strength still mostly holds. Every further
+    // year roughly doubles how much can change, and past three or four
+    // the noise swamps the signal, which is the right answer: nobody
+    // knows where a 2031 1st lands.
+    const sigma = 0.85 + 0.55 * (yearsOut - 1);
+    const slotCounts = {};
+    strengths.forEach(t => { slotCounts[t.id] = new Array(teamCount).fill(0); });
+    const scratch = strengths.map(t => ({ id: t.id, wins: 0, pf: 0, ppts: 0 }));
+    for (let sim = 0; sim < PP_SIM_RUNS; sim++) {
+      for (let i = 0; i < scratch.length; i++) {
+        const shaken = strengths[i].strength + sigma * ppRandNormal();
+        // Every ordering the draft-order rule uses moves with strength, so
+        // one shaken number stands in for the whole season: a team that
+        // comes out strong wins more, scores more, and picks later.
+        scratch[i].wins = shaken;
+        scratch[i].pf = shaken;
+        scratch[i].ppts = shaken;
+      }
+      const order = ppDraftOrderFor(scratch, playoffTeams);
+      for (let i = 0; i < order.length; i++) slotCounts[order[i].id][i]++;
+    }
+    const slotProb = {};
+    Object.keys(slotCounts).forEach(id => {
+      slotProb[id] = slotCounts[id].map(c => c / PP_SIM_RUNS);
+    });
+    return { slotProb, teamCount, playoffTeams, sigma };
+  }
+
+  // ---- The cache the render code reads --------------------------------
+  // Rendering is synchronous everywhere this is used, so the simulations
+  // are run once per league per sync and read back out of here. Before
+  // they finish (or for a league whose weeks Sleeper would not give up),
+  // every caller falls back to the flat round value, which is what the
+  // app did before this existed.
+  window.__ppPickModel = window.__ppPickModel || {};
+
+  function ppDistSummary(dist, round, teamCount) {
+    let ev = 0, cum = 0, p10 = null, p50 = null, p90 = null, pTop3 = 0;
+    for (let i = 0; i < dist.length; i++) {
+      const slot = i + 1;
+      ev += dist[i] * ppSlotValue(round, slot, teamCount);
+      if (slot <= 3) pTop3 += dist[i];
+      cum += dist[i];
+      if (p10 == null && cum >= 0.10) p10 = slot;
+      if (p50 == null && cum >= 0.50) p50 = slot;
+      if (p90 == null && cum >= 0.90) p90 = slot;
+    }
+    return {
+      ev, dist, round, teamCount,
+      p10: p10 || 1, median: p50 || 1, p90: p90 || teamCount,
+      pTop3, p101: dist[0] || 0,
+    };
+  }
+
+  // What one specific pick -- this league, this draft year, this round,
+  // originally this team's -- is worth right now, and how wide the range
+  // of where it lands still is.
+  function ppPickForecast(entry, season, round, fromRosterId) {
+    if (!entry || !entry.league) return null;
+    const model = window.__ppPickModel[entry.league.league_id];
+    if (!model) return null;
+    const currentSeason = Number(entry.league.season) || new Date().getFullYear();
+    // The season currently being played decides next year's draft, so that
+    // one is yearsOut 0 -- the simulated finish, not a guess.
+    const yearsOut = Number(season) - (currentSeason + 1);
+    const year = yearsOut <= 0 ? model.current : model.future[Math.min(3, yearsOut)];
+    if (!year || !year.slotProb) return null;
+    const dist = year.slotProb[fromRosterId];
+    if (!dist) return null;
+    const out = ppDistSummary(dist, round, year.teamCount);
+    out.basis = yearsOut <= 0 ? 'season' : 'strength';
+    out.weeksLeft = model.current ? model.current.weeksLeft : null;
+    out.yearsOut = Math.max(0, yearsOut);
+    return out;
+  }
+
+  // The one number the rest of the app asks for. Falls back to the flat
+  // round value whenever the model has nothing to say about this pick.
+  function ppPickValueFuture(entry, pick) {
+    if (!pick) return 0;
+    const f = entry ? ppPickForecast(entry, pick.season, pick.round, pick.fromRosterId) : null;
+    return f ? f.ev : ppPickValue(pick.round);
+  }
+  window.ppPickForecast = ppPickForecast;
+  window.ppPickValueFuture = ppPickValueFuture;
+  window.ppSlotValue = ppSlotValue;
+
+  // Run once per sync, for every dynasty league on the account. Kept off
+  // the render path entirely: the pages draw with the flat fallback on the
+  // first pass and are asked to redraw once the real numbers exist.
+  let ppPickModelRun = 0;
+  async function ppBuildPickModels(onDone) {
+    const run = ++ppPickModelRun;
+    let dict = null;
+    try { dict = await window.sleeperGetPlayerDict(); } catch (e) { return; }
+    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.league);
+    for (const entry of entries) {
+      if (run !== ppPickModelRun) return;
+      let current = null;
+      try { current = await ppSimulateSeason(entry); } catch (e) { current = null; }
+      const future = {};
+      for (let k = 1; k <= 3; k++) {
+        try { future[k] = ppSimulateFutureYear(entry, dict, k); } catch (e) { future[k] = null; }
+      }
+      window.__ppPickModel[entry.league.league_id] = { current, future };
+      // Yield between leagues so a sync never locks the page up.
+      await new Promise(r => setTimeout(r, 0));
+    }
+    if (run === ppPickModelRun && typeof onDone === 'function') onDone();
+  }
+  window.ppBuildPickModels = ppBuildPickModels;
 
   // ---- A pick that has already been used ------------------------------
   // PICK_ROUND_VALUES above is the right shape for a pick nobody has spent
@@ -21952,13 +22384,27 @@
 
   // What a pick in a trade is worth: the drafted player's real value once
   // the draft has happened, the round's placeholder until then.
-  function ppPickValueResolved(resolved, round, dict) {
+  //
+  // `entry` and `pick` are optional: given both, an unused pick is valued
+  // through the real forecast for that league and that team rather than
+  // the flat round value, which is the whole point of the model -- a 2027
+  // 1st out of the league's worst roster and one out of its best are not
+  // the same asset and should not price the same in a trade.
+  function ppPickValueResolved(resolved, round, dict, entry, pick) {
     if (resolved) {
       const v = ppValueForPlayerId(resolved.playerId, dict);
       if (v != null) return v;
       // Drafted, but too deep to be ranked -- a used pick that produced
       // nobody of value is worth nothing, not a full round's placeholder.
       return 0;
+    }
+    if (entry && pick && pick.season != null && window.ppPickValueFuture) {
+      return window.ppPickValueFuture(entry, {
+        season: Number(pick.season), round,
+        // Sleeper names the pick by the roster it ORIGINALLY belonged to,
+        // which is exactly what fixes its place in the draft order.
+        fromRosterId: pick.roster_id,
+      });
     }
     return ppPickValue(round);
   }
@@ -22079,7 +22525,7 @@
         const isDynastyLeague = sbLeagueIsDynasty(e.league);
         const values = allRosters.map(r => ({
           rosterId: r.roster_id,
-          value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(e, r.roster_id).reduce((s, p) => s + ppPickValue(p.round), 0) : 0),
+          value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(e, r.roster_id).reduce((s, p) => s + ppPickValueFuture(e, p), 0) : 0),
         }));
         const myValue = values.find(v => v.rosterId === e.roster.roster_id);
         if (!myValue) return;
@@ -25317,15 +25763,69 @@
   // placeholder round values as the rest of the app (PICK_ROUND_VALUES) --
   // not tied to any one league's real traded-pick ownership, since the
   // calculator is a standalone what-if tool.
+  // Which league the trade is being judged in. Set from the league
+  // dropdown above the calculator; picks are priced as that league's real
+  // picks from a real team once it is.
+  let tcLeagueEntry = null;
+
+  // What a round in a given draft year is worth on average, across every
+  // team in every league on the account. Used when no league is picked:
+  // "a 2027 1st" has no owner, so the honest answer is what one is worth
+  // on average, not what the best or worst one is worth.
+  function tcAveragePickValue(season, round) {
+    if (!window.ppPickValueFuture) return PICK_ROUND_VALUES[round] || 0;
+    const entries = Object.values(window.sleeperLeagueData || {})
+      .filter(e => e.league && (e.allRosters || []).length);
+    let sum = 0, n = 0;
+    entries.forEach(e => {
+      e.allRosters.forEach(r => {
+        const f = window.ppPickForecast && window.ppPickForecast(e, season, round, r.roster_id);
+        if (f) { sum += f.ev; n++; }
+      });
+    });
+    return n ? sum / n : (PICK_ROUND_VALUES[round] || 0);
+  }
+
+  const TC_ROUND_LABELS = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+
+  function tcOwnerLabel(entry, rosterId) {
+    const roster = (entry.allRosters || []).find(r => r.roster_id === rosterId);
+    const user = roster ? (entry.users || []).find(u => u.user_id === roster.owner_id) : null;
+    return user ? (user.display_name || user.username || 'Unknown') : `Roster ${rosterId}`;
+  }
+
+  // With a league picked, every team's own pick is its own asset: a 2027
+  // 1st is not one thing in a league, it is twelve different things, and
+  // the whole point of the model is that they are not worth the same.
   function tcPickPool() {
     const { season } = pmCurrentSeasonWeek();
-    const roundLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
     const picks = [];
-    [season + 1, season + 2].forEach(y => {
+    const years = [season + 1, season + 2];
+    const entry = tcLeagueEntry;
+    if (entry && (entry.allRosters || []).length && window.ppPickForecast) {
+      years.forEach(y => {
+        [1, 2, 3, 4].forEach(round => {
+          entry.allRosters.forEach(r => {
+            const f = window.ppPickForecast(entry, y, round, r.roster_id);
+            if (!f) return;
+            const owner = tcOwnerLabel(entry, r.roster_id);
+            picks.push({
+              id: `pick_${y}_${round}_${r.roster_id}`, kind: 'pick',
+              name: `${y} ${TC_ROUND_LABELS[round]} · ${owner}`,
+              pos: null, team: null, value: f.ev, roundLabel: TC_ROUND_LABELS[round],
+              season: y, round, fromRosterId: r.roster_id,
+            });
+          });
+        });
+      });
+      if (picks.length) return picks;
+    }
+    years.forEach(y => {
       [1, 2, 3, 4].forEach(round => {
         picks.push({
-          id: `pick_${y}_${round}`, kind: 'pick', name: `${y} ${roundLabels[round]}`,
-          pos: null, team: null, value: PICK_ROUND_VALUES[round] || 0, roundLabel: roundLabels[round],
+          id: `pick_${y}_${round}`, kind: 'pick', name: `${y} ${TC_ROUND_LABELS[round]}`,
+          pos: null, team: null, value: tcAveragePickValue(y, round),
+          roundLabel: TC_ROUND_LABELS[round], season: y, round, fromRosterId: null,
         });
       });
     });
@@ -25354,7 +25854,7 @@
   // rather than looked up against tcPickPool()'s fixed 2-future-years
   // list -- a trade card can carry a pick further out than that (a 2029
   // 1st, say), and this way it still resolves.
-  const TC_PICK_ROUND_LABEL = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+  const TC_PICK_ROUND_LABEL = TC_ROUND_LABELS;
   function tcPickAssetFromText(text) {
     // Trade History's real pick labels (tradePickAssetHtml) append the
     // original owner in parens for a pick that's already changed hands once
@@ -25365,9 +25865,12 @@
     if (!m) return null;
     const year = Number(m[1]), round = Number(m[2]);
     const roundLabel = TC_PICK_ROUND_LABEL[round] || `${round}th`;
+    // A pick label off a trade card names its year and round but not the
+    // team it came from, so it is priced as an average one of those.
     return {
       id: `pick_${year}_${round}`, kind: 'pick', name: `${year} ${roundLabel}`,
-      pos: null, team: null, value: PICK_ROUND_VALUES[round] || 0, roundLabel,
+      pos: null, team: null, value: tcAveragePickValue(year, round),
+      roundLabel, season: year, round, fromRosterId: null,
     };
   }
 
@@ -25607,6 +26110,23 @@
     return `${teams} Teams · ${isSF ? 'Superflex' : '1QB'} · ${recLabel}`;
   }
 
+  // Re-price every pick already sitting in the trade against whatever
+  // league is selected now. A pick that names a team keeps that team; a
+  // generic one becomes this league's average.
+  function tcRepricePicks() {
+    ['a', 'b'].forEach(side => {
+      tcState[side] = tcState[side].map(asset => {
+        if (asset.kind !== 'pick' || asset.season == null) return asset;
+        if (tcLeagueEntry && asset.fromRosterId != null && window.ppPickForecast) {
+          const f = window.ppPickForecast(tcLeagueEntry, asset.season, asset.round, asset.fromRosterId);
+          if (f) return Object.assign({}, asset, { value: f.ev });
+        }
+        return Object.assign({}, asset, { value: tcAveragePickValue(asset.season, asset.round) });
+      });
+    });
+    tcRender();
+  }
+
   function tcSetupLeagueDropdown() {
     const select = document.getElementById('tcLeagueSelect');
     const menu = document.getElementById('tcLeagueMenu');
@@ -25626,6 +26146,11 @@
           opt.addEventListener('click', () => {
             const entry = entries.find(en => en.league.league_id === opt.dataset.tcLeague);
             if (!entry) return;
+            // The league is not only a scoring format any more -- it is
+            // whose picks these are. Anything already on the board that was
+            // priced as a generic pick is re-priced as this league's.
+            tcLeagueEntry = entry;
+            tcRepricePicks();
             label.textContent = entry.league.name;
             if (chip) chip.textContent = tcFormatLeagueChip(entry.league);
             // TE premium and reception settings are real Sleeper league
@@ -25763,6 +26288,55 @@
       return `<span class="tt-slot${cls}">${round || 1}.${String(slot).padStart(2, '0')}</span>`;
     }
 
+    // ---- The pick-value model, drawn ----------------------------------
+    // Everything below reads window.ppPickForecast, which is filled in once
+    // per sync by the simulation. Before it lands there is nothing honest
+    // to draw, so these render as an em dash rather than as a guess.
+    function ttForecast(entry, season, round, rosterId) {
+      return window.ppPickForecast ? window.ppPickForecast(entry, season, round, rosterId) : null;
+    }
+
+    // One bar per draft slot, height = how often the pick landed there
+    // across the simulated seasons. Scaled to the most likely slot rather
+    // than to 1, so a genuinely uncertain pick still reads as a shape
+    // instead of as a flat line.
+    function distCell(f, order) {
+      if (!f) return '<span class="tt-blank">&mdash;</span>';
+      const nonPlayoffSlots = order ? order.total - order.playoffTeams : Math.max(1, f.teamCount - 6);
+      const peak = Math.max.apply(null, f.dist) || 1;
+      const bars = f.dist.map((prob, i) => {
+        const slot = i + 1;
+        const h = Math.round((prob / peak) * 17);
+        const cls = prob <= 0.001 ? ' is-empty'
+          : (slot <= 3 ? ' is-top' : (slot <= nonPlayoffSlots ? ' is-lottery' : ''));
+        return `<span class="tt-dist-bar${cls}" style="height:${Math.max(1, h)}px"></span>`;
+      }).join('');
+      const title = `Simulated ${f.basis === 'season' ? 'to the end of this season' : 'from team strength, ' + f.yearsOut + ' draft' + (f.yearsOut === 1 ? '' : 's') + ' out'}`
+        + ` -- most likely ${f.median}, 10th-90th percentile ${f.p10}-${f.p90}`;
+      const range = f.p10 === f.p90 ? String(f.p10) : `${f.p10}–${f.p90}`;
+      return `<span class="tt-dist" title="${sbFieldEsc(title)}">` +
+        `<span class="tt-dist-track">${bars}</span>` +
+        `<span class="tt-range">${range} of ${f.teamCount}</span></span>`;
+    }
+
+    function oddsCell(prob) {
+      if (prob == null) return '<span class="tt-blank">&mdash;</span>';
+      const pct = prob * 100;
+      const text = pct >= 99.5 ? '100%' : (pct < 1 && pct > 0 ? '<1%' : Math.round(pct) + '%');
+      return `<span class="tt-odds${prob >= 0.15 ? ' is-live' : ''}">${text}</span>`;
+    }
+
+    // The headline the whole model exists to produce. The sub-label says
+    // which kind of answer it is: a season simulated to its end, or a
+    // strength read on a draft nobody has played toward yet.
+    function pickValueCell(f) {
+      if (!f) return '<span class="tt-blank">&mdash;</span>';
+      return `<span class="tt-pickval">${f.ev.toFixed(2)}` +
+        `<span class="tt-pickval-sub">${f.basis === 'season'
+          ? (f.weeksLeft ? f.weeksLeft + ' WK LEFT' : 'SEASON SET')
+          : '+' + f.yearsOut + 'YR'}</span></span>`;
+    }
+
     function teamCell(entry, roster) {
       const user = (entry.users || []).find(u => u.user_id === roster.owner_id);
       const userName = user ? (user.display_name || user.username || 'Unknown') : 'Unknown';
@@ -25804,8 +26378,8 @@
     async function renderRealTankingTracker() {
       const entries = ttEntries();
       if (!entries.length) {
-        raceBody.innerHTML = '<tr><td colspan="6" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
-        picksBody.innerHTML = '<tr><td colspan="9" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
+        raceBody.innerHTML = '<tr><td colspan="9" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
+        picksBody.innerHTML = '<tr><td colspan="11" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
         return;
       }
 
@@ -25822,6 +26396,9 @@
 
       raceBody.innerHTML = raceRows.map(({ entry, order, gap, slot }) => {
         const r = entry.roster;
+        // Your own next 1st -- the pick this whole race is about.
+        const nextSeason = (Number(entry.league.season) || new Date().getFullYear()) + 1;
+        const fc = ttForecast(entry, nextSeason, 1, r.roster_id);
         return `<tr data-league-name="${sbFieldEsc(entry.league.name)}">` +
           `<td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(entry.league.name)}</span>` +
             `${entry.isCoOwned ? '<span class="rb-co-badge">CO</span>' : ''}</td>` +
@@ -25829,6 +26406,9 @@
           `<td>${num(pfOf(r))}</td>` +
           `<td>${num(pptsOf(r))}</td>` +
           `<td>${slotCell(slot, order)}</td>` +
+          `<td>${distCell(fc, order)}</td>` +
+          `<td>${oddsCell(fc ? fc.p101 : null)}</td>` +
+          `<td>${pickValueCell(fc)}</td>` +
           `<td class="rb-po-col">${gapCell(gap)}</td>` +
         `</tr>`;
       }).join('');
@@ -25850,7 +26430,7 @@
       });
 
       if (!picks.length) {
-        picksBody.innerHTML = '<tr><td colspan="9" class="rb-empty">You do not hold anyone else&rsquo;s picks right now.</td></tr>';
+        picksBody.innerHTML = '<tr><td colspan="11" class="rb-empty">You do not hold anyone else&rsquo;s picks right now.</td></tr>';
         return;
       }
 
@@ -25858,8 +26438,15 @@
       // into 2028. Sorting by projected slot first read as one scrambled
       // list, because a 2028 4th from a tanking team outranked a 2027 1st.
       // Within a round the best projected pick still comes first.
+      // Within a round, the most valuable pick first -- which is what the
+      // model now actually knows, rather than today's frozen slot.
+      const evOf = (p) => {
+        const f = ttForecast(p.entry, p.pick.season, p.pick.round, p.pick.fromRosterId);
+        return f ? f.ev : null;
+      };
       picks.sort((a, b) => Number(a.pick.season) - Number(b.pick.season)
         || a.pick.round - b.pick.round
+        || ((evOf(b) == null ? -1 : evOf(b)) - (evOf(a) == null ? -1 : evOf(a)))
         || (a.slot == null ? 99 : a.slot) - (b.slot == null ? 99 : b.slot)
         || a.entry.league.name.localeCompare(b.entry.league.name));
 
@@ -25867,6 +26454,7 @@
 
       picksBody.innerHTML = picks.map((p, i) => {
         const roundLabel = `${p.pick.season} ${p.pick.round}${p.pick.round === 1 ? 'st' : p.pick.round === 2 ? 'nd' : p.pick.round === 3 ? 'rd' : 'th'}`;
+        const fc = ttForecast(p.entry, p.pick.season, p.pick.round, p.pick.fromRosterId);
         return `<tr data-league-name="${sbFieldEsc(p.entry.league.name)}">` +
           `<td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(p.entry.league.name)}</span></td>` +
           `<td><span class="tt-pick">${sbFieldEsc(roundLabel)}</span></td>` +
@@ -25876,7 +26464,9 @@
           `<td>${rankCell(p.entry.allRosters || [], pfOf, p.pick.fromRosterId)}</td>` +
           `<td>${rankCell(p.entry.allRosters || [], pptsOf, p.pick.fromRosterId)}</td>` +
           `<td class="rb-po-col">${slotCell(p.slot, p.order, p.pick.round)}</td>` +
-          `<td class="tt-blank">&mdash;</td>` +
+          `<td>${distCell(fc, p.order)}</td>` +
+          `<td>${oddsCell(fc ? fc.pTop3 : null)}</td>` +
+          `<td>${pickValueCell(fc)}</td>` +
         `</tr>`;
       }).join('');
     }
