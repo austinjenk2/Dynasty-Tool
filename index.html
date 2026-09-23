@@ -1254,6 +1254,44 @@
      win prob = standing at the 37, i.e. the opponent's 37). */
   .sb-exp-league-title { font-family: 'Source Serif 4', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
   .sb-exp-body { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+
+  /* An open matchup and its panel are one block, not a card and a
+     separate sheet that happens to sit under it. The panel spans the
+     whole grid, so in the two-column Scoreboard a card in the right
+     column used to leave its panel below and to the left, with the
+     league name repeated inside it just to say which matchup you had
+     opened. Instead the open card widens to the full grid too, so it
+     sits directly on top of its own panel and stays the only heading:
+     the borders join, the gap between them collapses, and the accent
+     runs around both. */
+  #sbGrid .sb-card.is-open {
+    grid-column: 1 / -1;
+    margin-bottom: -10px;
+    border-color: var(--navy);
+    box-shadow: inset 0 0 0 1px var(--navy);
+  }
+  .sb-card.is-open {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .sb-card.is-open + .sb-expand {
+    margin-top: 0;
+    border-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+  #sbGrid .sb-card.is-open + .sb-expand {
+    border-color: var(--navy);
+    box-shadow: inset -1px -1px 0 0 var(--navy), inset 1px 0 0 0 var(--navy);
+  }
+  /* Opening is a move, not a jump -- the panel grows out from under the
+     card it belongs to rather than appearing whole. */
+  .sb-expand { animation: sbExpandOpen 0.16s ease-out; transform-origin: top center; }
+  @keyframes sbExpandOpen {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .sb-expand { animation: none; } }
   .field-panel {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -2858,6 +2896,26 @@
   .tt-gap.is-chasing { color: var(--red); }
   .tt-gap.is-holding { color: var(--green); }
   .tt-gap.is-level { color: var(--gold); }
+  /* Where a pick can still land, drawn rather than described. One bar per
+     slot, its height the chance of landing there, colored by what that
+     slot is worth -- a tall green block on the left is a pick that is
+     almost certainly a top-three, a low flat spread is a pick nobody can
+     call yet. The number under it is the 10th-to-90th percentile range,
+     which is the honest version of a single "projected slot". */
+  .tt-dist { display: inline-flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+  .tt-dist-track { display: flex; align-items: flex-end; gap: 1px; height: 18px; }
+  .tt-dist-bar { width: 4px; border-radius: 1px; background: var(--muted); opacity: 0.30; min-height: 1px; }
+  .tt-dist-bar.is-top { background: var(--green); opacity: 0.85; }
+  .tt-dist-bar.is-lottery { background: var(--gold); opacity: 0.7; }
+  .tt-dist-bar.is-empty { opacity: 0.12; }
+  .tt-range { font-size: 10.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.2px; }
+  .tt-odds { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .tt-odds.is-live { color: var(--green); }
+  .tt-pickval { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .tt-pickval-sub { display: block; font-size: 9.5px; font-weight: 700; color: var(--faint); letter-spacing: 0.3px; }
+  .tt-pickval.is-floored { color: var(--muted); }
+  .tt-pickval.is-floored .tt-pickval-sub { color: var(--gold); }
+
   .tt-slot {
     display: inline-block;
     min-width: 34px;
@@ -5234,17 +5292,11 @@
 
         <template id="sbLineupTemplate">
           <div class="sb-expand">
-            <div class="sb-exp-header">
-              <div class="sb-exp-logo"></div>
-              <div class="sb-exp-title">
-                <div class="sb-exp-name"></div>
-                <div class="sb-exp-meta"></div>
-              </div>
-              <div class="sb-exp-right">
-                <div class="sb-exp-score"></div>
-                <div class="sb-badge"></div>
-              </div>
-            </div>
+            <!-- No logo/name/badge in here: the open card sitting directly
+                 above is this panel's heading, and repeating it read as
+                 two headers for the one matchup. Only the scoreline, which
+                 the card does not already say, stays. -->
+            <div class="sb-exp-scoreline"><span class="sb-exp-score-item sb-exp-score"></span></div>
             <div class="sb-lineups-cols">
               <div class="sb-lineup-col">
                 <div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>
@@ -11465,7 +11517,7 @@
     <div class="page-title" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
       <div>
         <h1>Results</h1>
-        <p>Every league's season in one grid &mdash; finish, PF rank, playoffs, weekly results, and bracket rounds. Net is entered in Settings.</p>
+        <p>Every league's season in one grid &mdash; finish, PF rank, points, playoffs, weekly results, and bracket rounds. Records and points update as soon as a week's games go final on Monday night. Net settles after a season ends, so it reads $0 until then.</p>
       </div>
       <span class="week-dropdown" id="rbYearDropdown">
         <span class="week-select" id="rbYearSelect"><span id="rbYearLabel">Year</span> <span>&#9662;</span></span>
@@ -11477,7 +11529,7 @@
   <div data-view="calculator">
     <div class="page-title">
       <h1>Trade Calc</h1>
-      <p>Build a trade and see who wins it, using real dynasty player values.</p>
+      <p>Build a trade and see who wins it, using real dynasty player values. Pick a league and every draft pick is priced as that league's own pick from that team &mdash; where it is actually projected to land, and how wide that range still is &mdash; instead of one flat number per round.</p>
     </div>
 
     <div class="tc-toolbar">
@@ -11486,7 +11538,7 @@
         <button type="button" class="sb-view-toggle-btn" data-tc-source="dynasty">Dynasty Values</button>
       </div>
       <div class="sort-dropdown" id="tcLeagueDropdown">
-        <div class="sort-select" id="tcLeagueSelect"><span id="tcLeagueSelectLabel">Match League Settings&hellip;</span> <span>&#9662;</span></div>
+        <div class="sort-select" id="tcLeagueSelect" title="Sets the scoring format AND prices every pick as that league's real pick from a real team"><span id="tcLeagueSelectLabel">Match League &amp; Picks&hellip;</span> <span>&#9662;</span></div>
         <div class="sort-menu" id="tcLeagueMenu" hidden></div>
       </div>
       <div class="chip" id="tcFormatChip">12 Teams &middot; 1QB &middot; Full PPR</div>
@@ -11566,7 +11618,7 @@
     <div class="tt-section">
       <div class="tt-head">
         <h2>Race To The 1.01</h2>
-        <p class="tt-sub">Draft order runs off potential points &mdash; max points for, Sleeper's best-possible-lineup total &mdash; lowest first. A <b class="tt-pos-ex">positive</b> number is how much max PF you would have to shed to take the 1.01. A <b class="tt-neg-ex">negative</b> one means you already hold it, and that is your cushion before the next team takes it off you.</p>
+        <p class="tt-sub">Draft order runs off potential points &mdash; max points for, Sleeper's best-possible-lineup total &mdash; lowest first. A <b class="tt-pos-ex">positive</b> number is how much max PF you would have to shed to take the 1.01. A <b class="tt-neg-ex">negative</b> one means you already hold it, and that is your cushion before the next team takes it off you. <b>Where It Lands</b> and <b>1.01 %</b> come from simulating every remaining week off your own scoring through your real schedule, so they tighten as the season runs out.</p>
       </div>
       <div class="rb-table-wrap">
         <table class="rb-table">
@@ -11577,6 +11629,9 @@
               <th>PF</th>
               <th>Max PF</th>
               <th>Proj Slot</th>
+              <th>Where It Lands</th>
+              <th>1.01 %</th>
+              <th>Value</th>
               <th class="rb-po-col">Pts From 1.01</th>
             </tr>
           </thead>
@@ -11588,7 +11643,7 @@
     <div class="tt-section">
       <div class="tt-head">
         <h2>Future Pick Outlook</h2>
-        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today: teams out of the playoff picture are ordered by max PF (lowest picks first), teams in it by record with points for as the tiebreak. Points for and max points for are shown as their rank in that league, 1 being the most. <span class="tt-blank">Playoff % is not worked out yet &mdash; the column is there for it.</span></p>
+        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today. <b>Where It Lands</b> is where it can still land once the rest of the season is actually played out &mdash; one bar per slot, and the 10th-to-90th percentile range under it. <b>Value</b> is what that whole range is worth in Base 1s &mdash; the same unit the player rankings use, where a 1st in a vacuum is exactly 1.00 &mdash; instead of every 1st being called a base 1st. Points for and max points for are shown as their rank in that league, 1 being the most.</p>
       </div>
       <div class="rb-table-wrap">
         <table class="rb-table">
@@ -11602,7 +11657,9 @@
               <th>PF Rank</th>
               <th>Max PF Rank</th>
               <th class="rb-po-col">Proj Slot</th>
-              <th>Playoff %</th>
+              <th>Where It Lands</th>
+              <th>Top 3 %</th>
+              <th>Value</th>
             </tr>
           </thead>
           <tbody id="ttPicksBody"></tbody>
@@ -12142,6 +12199,9 @@
   // view is which page this render paints, used only to put the page you
   // are on at the front of the queue. A wrong or missing name costs a few
   // milliseconds of ordering, never correctness.
+  // Exposed so the render queue's behaviour can be exercised directly
+  // rather than inferred from which pages happen to look stale.
+  window.__deskQ = (key, view, fn) => deskQueueRender(key, view, fn);
   function deskQueueRender(key, view, fn) {
     deskRenderQueue.set(key, { fn, view });
     if (!deskRenderScheduled) {
@@ -12190,12 +12250,31 @@
     for (const key of keys) {
       const entry = deskRenderQueue.get(key);
       if (!entry) continue;
+      // Only the page actually on screen is repainted. The rest stay
+      // queued until you navigate to them, which runs them immediately
+      // (deskFlushView, below, on both the tab click and goToSection).
+      //
+      // They used to all run anyway, a slice at a time. With every page
+      // registered that is most of a second of repainting per sync -- the
+      // Scoreboard alone is a quarter of it across eighteen leagues -- and
+      // nearly all of it was for pages nobody was looking at, every minute,
+      // forever. A page you never open now costs nothing, and one you do
+      // open is rendered fresh at the moment you open it rather than from
+      // whenever the queue happened to reach it.
+      if (entry.view !== active) continue;
       deskRunRender(key, entry);
       // At least one per slice, however slow it is -- otherwise a single
       // render heavier than the whole budget would never get to run.
       if (performance.now() - started > DESK_RENDER_BUDGET_MS) break;
     }
-    if (deskRenderQueue.size) {
+    // Only reschedule while there is still work for the page on screen --
+    // anything left is waiting on navigation, and spinning the idle
+    // callback over it would never drain and never stop.
+    let pendingForActive = false;
+    for (const entry of deskRenderQueue.values()) {
+      if (entry.view === active) { pendingForActive = true; break; }
+    }
+    if (pendingForActive) {
       deskRenderScheduled = true;
       deskScheduleDrain();
     }
@@ -13069,7 +13148,7 @@
     });
     (t.draft_picks || []).forEach(pick => {
       const resolved = pickSelections ? (pickSelections.get(pick) || null) : null;
-      const v = ppPickValueResolved(resolved, pick.round, dict) || 0;
+      const v = ppPickValueResolved(resolved, pick.round, dict, entry, pick) || 0;
       if (pick.owner_id != null) {
         side(pick.owner_id).got += v;
         const named = resolved && dict && dict[resolved.playerId];
@@ -13757,7 +13836,7 @@
       });
       (t.draft_picks || []).forEach(pick => {
         const r = picks.get(pick) || null;
-        const v = ppPickValueResolved(r, pick.round, dict) || 0;
+        const v = ppPickValueResolved(r, pick.round, dict, entry, pick) || 0;
         if (pick.owner_id != null) {
           S(pick.owner_id).html.push(tradePickAssetHtml(pick, entry, r, dict));
           S(pick.owner_id).got += v;
@@ -14092,7 +14171,7 @@
         });
         (t.draft_picks || []).forEach(pick => {
           const resolved = pickSelections.get(pick) || null;
-          const value = ppPickValueResolved(resolved, pick.round, dict);
+          const value = ppPickValueResolved(resolved, pick.round, dict, entry, pick);
           // Searching a name has to find the trades he came in THROUGH A
           // PICK as well as the ones he was named in -- otherwise a player
           // drafted with a traded pick showed a ledger entry and no cards
@@ -14974,6 +15053,17 @@
     return { rank, of: allRosters.length };
   }
 
+  // Exposed for the pick-value model, which lives in another module and
+  // needs every roster's optimal-lineup projection as its read on team
+  // strength -- the same number Contending Rank is built from.
+  //
+  // Deliberately different names: these are top-level `function`
+  // declarations, so they are already window properties, and assigning a
+  // wrapper over the same name replaces the function with one that calls
+  // itself. (Same reason window.ppResolvePick is not window.ppResolveDraftedPick.)
+  window.sbTeamOptimalProjection = (playerIds, league) => sbOptimalLineupTotal(playerIds, league);
+  window.sbTeamContendingRanks = (entry) => sbLeagueContendingRanks(entry);
+
   function sbOrdinal(n) {
     const rem100 = n % 100;
     const suffix = (rem100 >= 11 && rem100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
@@ -15066,7 +15156,7 @@
       const isDynastyLeague = sbLeagueIsDynasty(entry.league);
       const values = allRosters.map(r => ({
         rosterId: r.roster_id,
-        value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(entry, r.roster_id).reduce((s, p) => s + ppPickValue(p.round), 0) : 0),
+        value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(entry, r.roster_id).reduce((s, p) => s + window.ppPickValueFuture(entry, p), 0) : 0),
       }));
       const myValue = values.find(v => v.rosterId === entry.roster.roster_id);
       if (!myValue) { cell.textContent = '—'; return; }
@@ -16338,7 +16428,6 @@
         `<span class="sb-exp-score-item">${ctx.myOrig.toFixed(1)} vs ${ctx.oppOrig.toFixed(1)} <i>started at</i></span>`
       : `<span class="sb-exp-score-item">${card.querySelector('.sb-card-score').textContent}</span>`;
     panel.innerHTML =
-      `<div class="sb-exp-league-title">${sbFieldEsc(entry.league.name)}</div>` +
       `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
       '<div class="sb-exp-body">' +
         '<div class="sb-lineups-cols">' +
@@ -16669,17 +16758,7 @@
       }
 
       const panel = sbLineupTemplate.content.cloneNode(true);
-      const cardLogo = card.querySelector('.sb-card-logo');
-      const panelLogo = panel.querySelector('.sb-exp-logo');
-      panelLogo.style.background = cardLogo.style.background;
-      panelLogo.textContent = cardLogo.textContent;
-      panel.querySelector('.sb-exp-name').textContent = card.querySelector('.sb-card-name').textContent;
-      panel.querySelector('.sb-exp-meta').innerHTML = card.querySelector('.sb-card-meta').innerHTML;
       panel.querySelector('.sb-exp-score').innerHTML = card.querySelector('.sb-card-score').innerHTML;
-      const badge = card.querySelector('.sb-badge');
-      panel.querySelector('.sb-exp-header .sb-badge').className = badge.className;
-      panel.querySelector('.sb-exp-header .sb-badge').textContent = badge.textContent;
-
       card.after(panel);
       card.classList.add('is-open');
     });
@@ -18285,6 +18364,19 @@
         q('contending', 'dashboard', () => window.renderContendingRanks && window.renderContendingRanks());
         q('rosterTypes', 'dashboard', () => window.renderRosterTypeCategories && window.renderRosterTypeCategories());
         q('rosterValue', 'dashboard', () => window.renderRosterValueRanks && window.renderRosterValueRanks());
+        // Pick values: every league's rest-of-season is simulated once per
+        // sync, off the render path entirely. Until it lands, everything
+        // that prices a pick falls back to the flat round value; when it
+        // does, the pages that show a pick value are asked to redraw with
+        // the real numbers.
+        if (window.ppBuildPickModels) {
+          window.ppBuildPickModels(() => {
+            if (window.renderRealTankingTracker) window.renderRealTankingTracker();
+            if (window.renderRealDashboard) window.renderRealDashboard();
+            if (window.renderRosterValueRanks) window.renderRosterValueRanks();
+            if (window.renderContendingRanks) window.renderContendingRanks();
+          });
+        }
         if (window.updateModeToggleBtn) window.updateModeToggleBtn();
         if (leagueCountChip) {
           const mode = getSiteMode();
@@ -18510,7 +18602,7 @@
         return '<div class="ld-pick-row">' +
           `<span class="ld-pick-when">${p.season} &middot; ${roundLabels[p.round]}</span>` +
           (originalOwnerName ? `<span class="ld-pick-owner">(${sbFieldEsc(originalOwnerName)})</span>` : '') +
-          `<span class="ld-pick-val">${ppPickValue(p.round).toFixed(2)}<br><i>VAL</i></span>` +
+          `<span class="ld-pick-val">${window.ppPickValueFuture(entry, p).toFixed(2)}<br><i>VAL</i></span>` +
         '</div>';
       }).join('') || '<div class="ld-pick-row"><span class="ld-pick-when" style="color:var(--faint)">No picks owned</span></div>';
 
@@ -18698,7 +18790,7 @@
       if (ldValueEl) {
         if (getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league)) {
           const totalValue = ppRosterValue(activeRoster, dict) +
-            ppPicksOwnedBy(entry, activeRoster.roster_id).reduce((sum, p) => sum + ppPickValue(p.round), 0);
+            ppPicksOwnedBy(entry, activeRoster.roster_id).reduce((sum, p) => sum + window.ppPickValueFuture(entry, p), 0);
           ldValueEl.textContent = totalValue.toFixed(2);
         } else {
           ldValueEl.textContent = '—';
@@ -19091,11 +19183,15 @@
       if (!myRoster || !allRosters.length) return null;
 
       const s = myRoster.settings || {};
-      const wins = s.wins || 0, losses = s.losses || 0, ties = s.ties || 0;
-      const record = `${wins}-${losses}${ties ? '-' + ties : ''}`;
+      // Sleeper's own wins/losses (and season points) only move when it
+      // rolls the week over, which is hours after Monday night's last
+      // whistle. The weekly matchup rows below already know the real
+      // result the moment the games are final, so the record and the PF
+      // rank are derived from those, and Sleeper's counts are only used
+      // while they are the ones further along.
+      const sleeperWins = s.wins || 0, sleeperLosses = s.losses || 0, sleeperTies = s.ties || 0;
 
       const pfOf = r => { const rs = r.settings || {}; return (rs.fpts || 0) + (rs.fpts_decimal || 0) / 100; };
-      const pfRank = ldRankOf(allRosters, pfOf, myRoster.roster_id);
 
       // "Pts From 1.01": real Sleeper potential points (ppts -- your best
       // possible lineup score, sometimes called "max points for"), shown as
@@ -19149,6 +19245,13 @@
       // built on beating the median ten times is a different season from one
       // that scraped six wins while scoring below it.
       const weekMedianResults = [];
+      // Which weeks are real, finished results rather than a live
+      // projection -- only these count toward the derived record.
+      const weekSettled = [];
+      // Every roster's season points, summed from the same settled weeks,
+      // so the PF rank moves with Monday night rather than with Sleeper's
+      // week rollover.
+      const seasonPtsByRoster = {};
       // Points for and against, week high and week low. Every one of these
       // is already sitting in the same weekly rows the record is built from
       // -- the page was computing a PF RANK while never showing the points
@@ -19166,9 +19269,22 @@
           const winPct = oppLiveProj != null ? sbWinProbability(myLiveProj, oppLiveProj,
             sbMatchupSigma(mine, opp, null, league, currentWeekEspnGameData, week)) : null;
           weekResults.push(winPct == null ? null : (winPct >= 90 ? 'W' : (winPct <= 10 ? 'L' : null)));
+          // A week still being played is never a settled result, however
+          // lopsided it looks -- and its median cell stays empty so the
+          // weekly arrays keep lining up week for week.
+          weekSettled.push(false);
+          weekMedianResults.push(null);
           continue;
         }
-        weekResults.push(notPlayed ? null : (row.win ? 'W' : 'L'));
+        weekResults.push(notPlayed || row.win == null
+          ? null
+          : (row.myScore === row.oppScore ? 'T' : (row.win ? 'W' : 'L')));
+        weekSettled.push(!notPlayed && !!row && row.win != null);
+        if (!notPlayed && weekMatchups) {
+          weekMatchups.forEach(m => {
+            seasonPtsByRoster[m.roster_id] = (seasonPtsByRoster[m.roster_id] || 0) + (Number(m.points) || 0);
+          });
+        }
         if (!notPlayed && row) {
           const mine = Number(row.myScore) || 0;
           pfSum += mine;
@@ -19187,13 +19303,44 @@
         }
       }
 
+      // Every settled week, counted the way this league actually counts
+      // them: the head-to-head result, plus the median result on top of it
+      // where the league plays a median (Sleeper folds that second result
+      // into the same wins/losses column). Used in place of Sleeper's own
+      // counts as soon as it is further along -- which is Monday night,
+      // the moment the last game goes final.
+      let derivedW = 0, derivedL = 0, derivedT = 0;
+      weekResults.forEach((res, i) => {
+        if (!weekSettled[i]) return;
+        if (res === 'W') derivedW++; else if (res === 'L') derivedL++; else if (res === 'T') derivedT++;
+        if (!hasMedian) return;
+        const med = weekMedianResults[i];
+        if (med === 'W') derivedW++; else if (med === 'L') derivedL++; else if (med === 'T') derivedT++;
+      });
+      const sleeperPlayed = sleeperWins + sleeperLosses + sleeperTies;
+      const useDerivedRecord = (derivedW + derivedL + derivedT) > sleeperPlayed;
+      const wins = useDerivedRecord ? derivedW : sleeperWins;
+      const losses = useDerivedRecord ? derivedL : sleeperLosses;
+      const ties = useDerivedRecord ? derivedT : sleeperTies;
+      const record = `${wins}-${losses}${ties ? '-' + ties : ''}`;
+
+      // Same idea for the points: rank on the settled weekly scores while
+      // Sleeper's season totals are still a week behind, and hand back to
+      // Sleeper's own numbers the moment they catch up.
+      const sleeperPf = pfOf(myRoster);
+      const derivedPf = seasonPtsByRoster[myRoster.roster_id] || 0;
+      const useDerivedPts = derivedPf > sleeperPf + 0.01;
+      const pfRank = useDerivedPts
+        ? ldRankOf(allRosters, r => seasonPtsByRoster[r.roster_id] || 0, myRoster.roster_id)
+        : ldRankOf(allRosters, pfOf, myRoster.roster_id);
+
       const bracketResults = await rbBracketRoundResults(league.league_id, myRoster.roster_id);
 
       return {
         league, entry,
         wins, losses, ties, record,
         pfRank, finishRank, seasonDecided, madePlayoffs, ptsFromMin,
-        totalPf: pfOf(myRoster),
+        totalPf: useDerivedPts ? derivedPf : sleeperPf,
         pf: pfSum, pa: paSum, weeksPlayed,
         avgPf: weeksPlayed ? pfSum / weeksPlayed : null,
         weekHigh, weekLow,
@@ -19204,10 +19351,11 @@
           return { w, l, t, played: w + l + t };
         })(),
         wc: bracketResults.WC || null, sf: bracketResults.SF || null, chip: bracketResults.CHIP || null,
-        // No games played yet this season -- whatever's entered in
-        // Settings is a target/plan, not a real result, so show $0
-        // instead of implying money has already been won or lost.
-        net: (wins + losses + ties) === 0 ? 0 : rbGetNet(league.league_id, league.season),
+        // Net is what a league actually paid out or cost once it is over
+        // -- it isn't known while the season is still being played, and a
+        // running guess at it was wrong every week it was shown. Held at
+        // $0 until there is a real result to settle against.
+        net: 0,
       };
     }
 
@@ -19226,7 +19374,7 @@
       return `${m.w}-${m.l}${m.t ? '-' + m.t : ''}`;
     }
 
-    function rbRowHtml(row, maxRegWeeks) {
+    function rbRowHtml(row, maxRegWeeks, showMedian) {
       const finishHtml = row.finishRank != null ? ldOrdinal(row.finishRank) : '&mdash;';
       const playoffHtml = !row.seasonDecided
         ? '<span class="rb-playoff-tbd">TBD</span>'
@@ -19254,9 +19402,9 @@
       return `<tr data-league-id="${sbFieldEsc(row.league.league_id)}" data-league-name="${sbFieldEsc(row.league.name)}">
         <td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(row.league.name)}</span>${coBadge}</td>
         <td>${row.record}</td>
-        <td class="rb-median-cell${row.hasMedian ? ' rb-median-live' : ''}" title="${row.hasMedian
+        ${showMedian ? `<td class="rb-median-cell${row.hasMedian ? ' rb-median-live' : ''}" title="${row.hasMedian
           ? 'This league plays a median, so these results are already counted in the record'
-          : 'How you would have done against the league median each week -- not counted in this league'}">${rbMedianText(row)}</td>
+          : 'This league does not play a median'}">${row.hasMedian ? rbMedianText(row) : '&mdash;'}</td>` : ''}
         <td>${finishHtml}</td>
         <td>${ldOrdinal(row.pfRank)}</td>
         <td class="rb-num">${rbPts(row.pf)}</td>
@@ -19274,7 +19422,7 @@
       </tr>`;
     }
 
-    function rbTotalRowHtml(rows, maxRegWeeks, label) {
+    function rbTotalRowHtml(rows, maxRegWeeks, label, showMedian) {
       const totalWins = rows.reduce((s, r) => s + r.wins, 0);
       const totalLosses = rows.reduce((s, r) => s + r.losses, 0);
       const totalTies = rows.reduce((s, r) => s + r.ties, 0);
@@ -19291,9 +19439,10 @@
         ? Math.round(rows.reduce((s, r) => s + r.ptsFromMin, 0) / rows.length)
         : 0;
 
-      const netRows = rows.filter(r => r.net != null);
-      const totalNet = netRows.length ? netRows.reduce((s, r) => s + r.net, 0) : null;
-      const netCls = totalNet == null ? '' : ldrecSignClass(totalNet);
+      // Held at $0 per league (see rbComputeLeagueRow), so the total is
+      // $0 too until seasons start settling.
+      const totalNet = rows.reduce((s, r) => s + (r.net || 0), 0);
+      const netCls = ldrecSignClass(totalNet);
 
       const weeklyRecordOf = (res) => {
         let w = 0, l = 0;
@@ -19326,8 +19475,10 @@
       const bestWeek = highs.length ? Math.max(...highs) : null;
       const worstWeek = lows.length ? Math.min(...lows) : null;
 
+      // Only the leagues that actually play a median have a median record
+      // to total -- the rest have no second result to add.
       const medTotals = rows.reduce((a, r) => {
-        const m = r.medianRecord;
+        const m = r.hasMedian ? r.medianRecord : null;
         if (m) { a.w += m.w; a.l += m.l; a.t += m.t; }
         return a;
       }, { w: 0, l: 0, t: 0 });
@@ -19337,7 +19488,7 @@
       return `<tr class="rb-total-row">
         <td class="rb-league-cell"><span class="rb-league-name">${label || 'Overall Record'}</span></td>
         <td>${totalRecord}</td>
-        <td class="rb-median-cell">${medianTotal}</td>
+        ${showMedian ? `<td class="rb-median-cell">${medianTotal}</td>` : ''}
         <td>${avgFinish}</td>
         <td>${avgPfRank}</td>
         <td class="rb-num">${rbPts(sumPf)}</td>
@@ -19363,7 +19514,7 @@
     const RB_SORT_KEYS = {
       league: r => r.league.name.toLowerCase(),
       rec: r => (r.wins + r.losses + r.ties) ? r.wins / (r.wins + r.losses + r.ties) : 0,
-      median: r => (r.medianRecord && r.medianRecord.played) ? r.medianRecord.w / r.medianRecord.played : -1,
+      median: r => (r.hasMedian && r.medianRecord && r.medianRecord.played) ? r.medianRecord.w / r.medianRecord.played : -1,
       pfpts: r => r.pf == null ? -Infinity : r.pf,
       papts: r => r.pa == null ? -Infinity : r.pa,
       avg: r => r.avgPf == null ? -Infinity : r.avgPf,
@@ -19422,6 +19573,10 @@
     }
 
     function rbTableHtml(rows, totalLabel) {
+      // vs Median is only a real column for leagues that play one. Where
+      // none of the leagues on screen do, the column is dropped entirely
+      // rather than carrying a hypothetical nobody asked for.
+      const showMedian = rows.some(r => r.hasMedian);
       let weekHeadHtml = '';
       for (let i = 1; i <= rbMaxRegWeeks; i++) weekHeadHtml += `<th>W${i}</th>`;
       const sortArrow = (key) => key === rbSortKey ? (rbSortDir === 'desc' ? ' &#9660;' : ' &#9650;') : '';
@@ -19429,14 +19584,14 @@
       return `<div class="rb-table-wrap"><table class="rb-table">
         <thead><tr>
           ${th('league', 'League')}
-          ${th('rec', 'Rec')}${th('median', 'vs Median')}${th('finish', 'Finish')}${th('pf', 'PF Rank')}
+          ${th('rec', 'Rec')}${showMedian ? th('median', 'vs Median') : ''}${th('finish', 'Finish')}${th('pf', 'PF Rank')}
           ${th('pfpts', 'PF')}${th('papts', 'PA')}${th('avg', 'Avg')}${th('high', 'High')}${th('low', 'Low')}
           ${th('pts', 'Pts From 1.01')}${th('po', 'PO')}${th('net', 'Net')}
           ${weekHeadHtml}
           <th class="rb-po-col">WC</th><th>SF</th><th>Chip</th>
         </tr></thead>
-        <tbody>${rows.map(r => rbRowHtml(r, rbMaxRegWeeks)).join('')}</tbody>
-        <tfoot>${rbTotalRowHtml(rows, rbMaxRegWeeks, totalLabel)}</tfoot>
+        <tbody>${rows.map(r => rbRowHtml(r, rbMaxRegWeeks, showMedian)).join('')}</tbody>
+        <tfoot>${rbTotalRowHtml(rows, rbMaxRegWeeks, totalLabel, showMedian)}</tfoot>
       </table></div>`;
     }
 
@@ -20421,7 +20576,7 @@
       const dict = window.__sleeperPlayerDict;
       const useRealValue = getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league) && dict;
       const realValueOf = r => ppRosterValue(r, dict) +
-        ppPicksOwnedBy(entry, r.roster_id).reduce((sum, p) => sum + ppPickValue(p.round), 0);
+        ppPicksOwnedBy(entry, r.roster_id).reduce((sum, p) => sum + window.ppPickValueFuture(entry, p), 0);
       const valueOf = useRealValue ? realValueOf : pfOf;
 
       // Positional Value Rank: each roster's total real dynasty value at one
@@ -21449,7 +21604,7 @@
   // (Team Strength's x-axis, Portfolio Health's Roster Value track, the
   // League Detail VAL rank, etc). Keyed by a normalized player name since
   // this list has no Sleeper player_id to join on.
-  const PP_PLAYER_VALUES = {"josh allen":3,"jahmyr gibbs":3,"bijan robinson":3,"malik nabers":2.94,"jaxon smith-njigba":2.88,"jamarr chase":2.82,"puka nacua":2.76,"caleb williams":2.7,"drake maye":2.64,"ashton jeanty":2.58,"jayden daniels":2.5,"lamar jackson":2.4,"jeremiyah love":2.3,"brock bowers":2.2,"amon-ra st brown":2,"trey mcbride":1.96,"justin jefferson":1.92,"drake london":1.89,"joe burrow":1.85,"ceedee lamb":1.81,"jalen hurts":1.77,"trevor lawrence":1.73,"patrick mahomes":1.7,"colston loveland":1.66,"tetairoa mcmillan":1.62,"jaxson dart":1.58,"justin herbert":1.55,"omarion hampton":1.5,"garrett wilson":1.48,"chris olave":1.46,"nico collins":1.44,"jonathan taylor":1.42,"james cook":1.39,"kenneth walker":1.37,"devon achane":1.35,"george pickens":1.33,"zay flowers":1.31,"brock purdy":1.29,"ladd mcconkey":1.25,"tyler warren":1.23,"emeka egbuka":1.21,"luther burden":1.18,"jordyn tyson":1.16,"jordan love":1.14,"breece hall":1.12,"chase brown":1.1,"carnell tate":1.07,"makai lemon":1.05,"christian mccaffrey":1.03,"bo nix":1,"quinshon judkins":0.98,"devonta smith":0.96,"saquon barkley":0.94,"jaylen waddle":0.92,"parker washington":0.9,"jameson williams":0.88,"tee higgins":0.86,"fernando mendoza":0.83,"dak prescott":0.81,"jared goff":0.79,"treveyon henderson":0.77,"sam laporta":0.75,"tucker kraft":0.74,"bucky irving":0.73,"cam skattebo":0.72,"rashee rice":0.72,"matthew golden":0.71,"kc concepcion":0.7,"jadarian price":0.69,"harold fannin":0.68,"tyler shough":0.67,"javonte williams":0.66,"kyren williams":0.65,"derrick henry":0.65,"dandre swift":0.64,"christian watson":0.63,"rome odunze":0.62,"brian thomas":0.61,"aj brown":0.6,"baker mayfield":0.59,"kyler murray":0.58,"sam darnold":0.58,"bryce young":0.57,"cj stroud":0.56,"daniel jones":0.55,"bhayshul tuten":0.54,"travis etienne":0.53,"kyle pitts":0.52,"marvin harrison":0.52,"josh downs":0.5,"kenyon sadiq":0.49,"dalton kincaid":0.48,"david montgomery":0.47,"matthew stafford":0.46,"mike evans":0.44,"dj moore":0.43,"isaiah likely":0.42,"jalen coker":0.41,"dk metcalf":0.4,"malik willis":0.39,"cam ward":0.38,"jordan addison":0.37,"denzel boston":0.35,"terry mclaurin":0.34,"george kittle":0.33,"ty simpson":0.32,"jonathon brooks":0.31,"alec pierce":0.3,"xavier worthy":0.29,"michael wilson":0.29,"omar cooper":0.28,"rj harvey":0.27,"jacory croskey-merritt":0.26,"chuba hubbard":0.26,"davante adams":0.25,"chris godwin":0.24,"dezhaun stribling":0.23,"rhamondre stevenson":0.23,"kyle monangai":0.22,"jaylen warren":0.21,"josh jacobs":0.21,"travis hunter":0.2,"jonah coleman":0.2,"michael pittman":0.2,"quentin johnston":0.2,"jayden reed":0.19,"rico dowdle":0.19,"blake corum":0.19,"stefon diggs":0.19,"michael penix":0.19,"eli raridon":0.19,"terrance ferguson":0.18,"caleb douglas":0.18,"jakobi lane":0.18,"brenton strange":0.18,"jake ferguson":0.18,"dallas goedert":0.18,"geno smith":0.18,"jk dobbins":0.17,"emmett johnson":0.17,"marshawn lloyd":0.17,"pat bryant":0.17,"wandale robinson":0.17,"germie bernard":0.17,"juwan johnson":0.17,"eli stowers":0.16,"kenny gainwell":0.16,"rachaad white":0.16,"oronde gadsden":0.16,"deebo samuel":0.16,"courtland sutton":0.16,"jakobi meyers":0.15,"chig okonkwo":0.15,"travis kelce":0.15,"tank bigsby":0.15,"jordan mason":0.15,"tyjae spears":0.14,"khalil shakir":0.14,"antonio williams":0.14,"chris bell":0.14,"shedeur sanders":0.14,"mark andrews":0.14,"dalton schultz":0.13,"romeo doubs":0.13,"tua tagovailoa":0.13,"mac jones":0.13,"michael mayer":0.13,"zach charbonnet":0.13,"mike washington":0.13,"keaton mitchell":0.12,"kaelon black":0.12,"aaron rodgers":0.12,"carson beck":0.12,"jalen mcmillan":0.12,"tre harris":0.12,"nicholas singleton":0.12,"woody marks":0.11,"aj barner":0.11,"oscar delp":0.11,"ricky pearsall":0.11,"jayden higgins":0.11,"aaron jones":0.11,"tony pollard":0.1,"jacoby brissett":0.1,"zachariah branch":0.1,"elijah sarratt":0.1,"drew allar":0.1,"chris rodriguez":0.09,"kaytron allen":0.09,"dylan sampson":0.09,"tyler allgeier":0.09,"braelon allen":0.09,"malik washington":0.09,"dontayvion wicks":0.08,"rashid shaheed":0.08,"ted hurst":0.08,"max klare":0.08,"brian robinson":0.08,"ray davis":0.07,"adam randall":0.07,"demond claiborne":0.07,"cyrus allen":0.07,"adonai mitchell":0.07,"tj hockenson":0.07,"hunter henry":0.06,"pat freiermuth":0.06,"malachi fields":0.06,"jaylin noel":0.06,"kayshon boutte":0.06,"david njoku":0.06,"cade otton":0.05,"gunnar helm":0.05,"greg dulcich":0.05,"mike gesicki":0.05,"kalif raymond":0.05,"jordan james":0.05,"keenan allen":0.05,"tre tucker":0.05,"ryan flournoy":0.05,"jj mccarthy":0.04,"deshaun watson":0.04,"jalen nailor":0.04,"elijah arroyo":0.04,"jerry jeudy":0.04,"tank dell":0.04,"brandon aiyuk":0.04,"mason taylor":0.04,"seth mcgowan":0.04,"cade klubnik":0.04,"alvin kamara":0.04,"marlin klein":0.04,"evan engram":0.04,"devaughn vele":0.04,"jauan jennings":0.03,"george holani":0.03,"isaac teslaa":0.03,"kirk cousins":0.03,"matt hibner":0.03,"darren waller":0.03,"keon coleman":0.03,"kimani vidal":0.03,"troy franklin":0.03,"dj giddens":0.03,"tanner koziol":0.03,"kevin coleman":0.03,"brenen thompson":0.03,"calvin ridley":0.03,"tory horton":0.03,"elic ayomanor":0.03,"skyler bell":0.03,"jack bech":0.03,"chris brazzell":0.03,"najee harris":0.03,"tyrone tracy":0.03,"anthony richardson":0.03,"bryce lance":0.03,"erick all":0.02,"jake tonges":0.02,"justin fields":0.02,"justin joly":0.02,"kaleb johnson":0.02,"kendre miller":0.02,"kyle williams":0.02,"marcus mariota":0.02,"charlie kolar":0.02,"demario douglas":0.02,"devin singletary":0.02,"samaje perine":0.02,"rashod bateman":0.02,"jaylen wright":0.02,"ollie gordon":0.02,"colby parkinson":0.02,"jalen royals":0.02,"darnell washington":0.02,"eli heidenreich":0.02,"isiah pacheco":0.02,"james conner":0.02,"tyreek hill":0.02,"cj daniels":0.02,"cole kmet":0.02,"cole payton":0.02,"garrett nussmeier":0.02,"jack endries":0.02,"jalen milroe":0.02,"malik benson":0.02,"mitchell evans":0.01,"sam roush":0.01,"taylen green":0.01,"tez johnson":0.01,"zavion thomas":0.01,"cooper kupp":0.01,"jalon daniels":0.01,"roman wilson":0.01,"spencer rattler":0.01,"emari demercado":0.01,"drew lock":0.01,"sean tucker":0.01,"tahj brooks":0.01,"sione vaki":0.01};
+  const PP_PLAYER_VALUES = {"josh allen":3,"jaxon smith-njigba":3,"jahmyr gibbs":3,"bijan robinson":3,"jamarr chase":2.91,"malik nabers":2.83,"puka nacua":2.74,"ashton jeanty":2.65,"caleb williams":2.5,"drake maye":2.43,"jeremiyah love":2.37,"brock bowers":2.3,"amon-ra st brown":2.23,"trey mcbride":2.17,"lamar jackson":2.1,"justin jefferson":2,"ceedee lamb":1.94,"patrick mahomes":1.87,"drake london":1.81,"joe burrow":1.74,"jalen hurts":1.67,"tetairoa mcmillan":1.61,"jaxson dart":1.55,"colston loveland":1.5,"chris olave":1.5,"jonathan taylor":1.5,"kenneth walker":1.5,"trevor lawrence":1.5,"brock purdy":1.5,"justin herbert":1.5,"jayden daniels":1.5,"omarion hampton":1.45,"james cook":1.4,"garrett wilson":1.38,"devon achane":1.36,"nico collins":1.33,"george pickens":1.31,"zay flowers":1.29,"ladd mcconkey":1.25,"devonta smith":1.23,"jordyn tyson":1.21,"parker washington":1.18,"tyler warren":1.16,"jordan love":1.14,"emeka egbuka":1.12,"carnell tate":1.1,"breece hall":1.07,"chase brown":1.05,"christian mccaffrey":1.03,"luther burden":1,"bo nix":0.98,"makai lemon":0.95,"jaylen waddle":0.93,"tee higgins":0.91,"bucky irving":0.89,"fernando mendoza":0.86,"dak prescott":0.84,"jared goff":0.82,"quinshon judkins":0.8,"treveyon henderson":0.77,"sam laporta":0.75,"dalton kincaid":0.74,"tucker kraft":0.73,"matthew golden":0.72,"christian watson":0.72,"tyler shough":0.71,"jameson williams":0.7,"kc concepcion":0.69,"javonte williams":0.68,"saquon barkley":0.67,"jadarian price":0.67,"kyren williams":0.66,"derrick henry":0.65,"cam skattebo":0.64,"dandre swift":0.63,"bryce young":0.62,"brian thomas":0.62,"bhayshul tuten":0.61,"harold fannin":0.6,"jalen coker":0.59,"rome odunze":0.58,"aj brown":0.57,"denzel boston":0.57,"baker mayfield":0.56,"kyler murray":0.55,"sam darnold":0.54,"cj stroud":0.53,"rashee rice":0.52,"kenyon sadiq":0.52,"daniel jones":0.5,"matthew stafford":0.49,"josh downs":0.47,"isaiah likely":0.46,"cam ward":0.45,"jordan addison":0.44,"mike evans":0.42,"malik willis":0.41,"dk metcalf":0.4,"george kittle":0.39,"chuba hubbard":0.37,"kyle pitts":0.36,"dj moore":0.35,"ty simpson":0.33,"marvin harrison":0.32,"david montgomery":0.31,"travis etienne":0.3,"michael wilson":0.29,"alec pierce":0.28,"omar cooper":0.27,"terry mclaurin":0.27,"davante adams":0.26,"kyle monangai":0.25,"jaylen warren":0.24,"josh jacobs":0.23,"jonah coleman":0.22,"jonathon brooks":0.21,"rj harvey":0.21,"terrance ferguson":0.2,"germie bernard":0.2,"antonio williams":0.2,"travis hunter":0.19,"dezhaun stribling":0.19,"caleb douglas":0.19,"blake corum":0.19,"rhamondre stevenson":0.19,"michael penix":0.19,"stefon diggs":0.18,"oronde gadsden":0.18,"xavier worthy":0.18,"eli raridon":0.18,"brenton strange":0.18,"jake ferguson":0.18,"emmett johnson":0.17,"chris godwin":0.17,"jacory croskey-merritt":0.17,"pat bryant":0.17,"jakobi lane":0.17,"quentin johnston":0.17,"michael pittman":0.16,"geno smith":0.16,"juwan johnson":0.16,"deebo samuel":0.16,"eli stowers":0.16,"travis kelce":0.16,"chig okonkwo":0.15,"rico dowdle":0.15,"rachaad white":0.15,"kaelon black":0.15,"dallas goedert":0.15,"jk dobbins":0.14,"jayden reed":0.14,"khalil shakir":0.14,"chris bell":0.14,"dalton schultz":0.14,"mark andrews":0.14,"shedeur sanders":0.14,"mac jones":0.14,"woody marks":0.13,"dontayvion wicks":0.13,"adonai mitchell":0.13,"wandale robinson":0.13,"courtland sutton":0.13,"jakobi meyers":0.13,"romeo doubs":0.13,"michael mayer":0.13,"mike washington":0.12,"zach charbonnet":0.12,"tua tagovailoa":0.12,"keaton mitchell":0.12,"aaron jones":0.12,"marshawn lloyd":0.12,"kenny gainwell":0.12,"tank bigsby":0.12,"tyjae spears":0.11,"nicholas singleton":0.11,"jalen mcmillan":0.11,"carson beck":0.11,"jacoby brissett":0.11,"aaron rodgers":0.11,"ricky pearsall":0.11,"ted hurst":0.11,"jayden higgins":0.1,"oscar delp":0.1,"jordan mason":0.1,"aj barner":0.1,"tre harris":0.1,"zachariah branch":0.1,"drew allar":0.09,"kaytron allen":0.09,"tony pollard":0.09,"tyler allgeier":0.09,"braelon allen":0.09,"brian robinson":0.09,"ray davis":0.08,"elijah sarratt":0.08,"tre tucker":0.08,"malik washington":0.08,"dylan sampson":0.08,"pat freiermuth":0.08,"deshaun watson":0.07,"max klare":0.07,"adam randall":0.07,"demond claiborne":0.07,"chris rodriguez":0.07,"rashid shaheed":0.07,"tj hockenson":0.06,"hunter henry":0.06,"gunnar helm":0.06,"cyrus allen":0.06,"devaughn vele":0.06,"malachi fields":0.06,"jaylin noel":0.05,"kayshon boutte":0.05,"cade otton":0.05,"seth mcgowan":0.05,"kalif raymond":0.05,"ryan flournoy":0.05,"jalen nailor":0.05,"jj mccarthy":0.05,"alvin kamara":0.04,"elijah arroyo":0.04,"jerry jeudy":0.04,"tank dell":0.04,"brandon aiyuk":0.04,"jordan james":0.04,"cade klubnik":0.04,"marlin klein":0.04,"mason taylor":0.04,"isaac teslaa":0.04,"kirk cousins":0.03,"marcus mariota":0.03,"darren waller":0.03,"keon coleman":0.03,"jauan jennings":0.03,"matt hibner":0.03,"evan engram":0.03,"greg dulcich":0.03,"mike gesicki":0.03,"keenan allen":0.03,"kimani vidal":0.03,"troy franklin":0.03,"dj giddens":0.03,"tanner koziol":0.03,"kevin coleman":0.03,"brenen thompson":0.03,"calvin ridley":0.03,"tory horton":0.03,"elic ayomanor":0.03,"skyler bell":0.03,"jack bech":0.03,"chris brazzell":0.02,"anthony richardson":0.02,"bryce lance":0.02,"erick all":0.02,"justin fields":0.02,"justin joly":0.02,"kaleb johnson":0.02,"kendre miller":0.02,"kyle williams":0.02,"demario douglas":0.02,"devin singletary":0.02,"samaje perine":0.02,"rashod bateman":0.02,"jaylen wright":0.02,"ollie gordon":0.02,"najee harris":0.02,"tyrone tracy":0.02,"jalen royals":0.02,"darnell washington":0.02,"eli heidenreich":0.02,"isiah pacheco":0.02,"james conner":0.02,"tyreek hill":0.02,"cole kmet":0.02,"cole payton":0.02,"garrett nussmeier":0.02,"jack endries":0.02,"jalen milroe":0.02,"malik benson":0.01,"mitchell evans":0.01,"taylen green":0.01,"tez johnson":0.01,"zavion thomas":0.01,"jalon daniels":0.01,"roman wilson":0.01,"emari demercado":0.01,"drew lock":0.01,"sean tucker":0.01,"tahj brooks":0.01,"sione vaki":0.01};
 
   function ppNormalizeName(name) {
     return String(name || '').toLowerCase().replace(/[.',]/g, '').replace(/\s+/g, ' ').trim();
@@ -21601,14 +21756,600 @@
     }, 0);
   }
 
-  // Placeholder draft-pick values until a real pick-value source exists --
-  // rough "how much is a future rookie pick worth" shape (1sts worth a lot
-  // more than 2nds, tailing off fast), not tied to any real market data.
-  // Anything beyond round 4 (or a round Sleeper doesn't report) is 0.
-  const PICK_ROUND_VALUES = { 1: 1.0, 2: 0.3, 3: 0.1, 4: 0.05 };
+  // A whole round as one number, kept only as the last fallback: what a
+  // pick is worth before anything is known about whose pick it is. A base
+  // 1st is 1.00 by definition (see PP_SLOT_CURVE below); the other rounds
+  // are that same curve averaged across their twelve slots, so the
+  // fallback and the real model cannot disagree about what a round is
+  // worth on average. Anything beyond round 4 is 0.
+  // Rounds 1 and 2 are the base picks the whole scale is defined against.
+  // Round 3 is held at 0.10 rather than the 0.119 the curve averages over
+  // its twelve slots: a 3rd you cannot place is a lottery ticket two or
+  // three years out, and it is not worth what the average of a 3rd in a
+  // draft you can see is worth. Round 4 matches the curve.
+  const PICK_ROUND_VALUES = { 1: 1.0, 2: 0.30, 3: 0.10, 4: 0.05 };
   function ppPickValue(round) {
     return PICK_ROUND_VALUES[round] || 0;
   }
+
+  // =====================================================================
+  // What a future rookie pick is actually worth
+  // =====================================================================
+  //
+  // Calling every 1st a base 1st is wrong in both directions at once: a
+  // base 1st is a pick equally likely to land anywhere in the round, and
+  // hardly any real pick is that. The 1.01 is worth two of them; the pick
+  // of a team that just missed the playoffs is worth half of one.
+  // What a pick is worth is the value of the slot it lands in, and where
+  // it lands is not known -- it is a distribution, and the distribution
+  // tightens as the season runs out.
+  //
+  // So a pick is valued as an expectation over that distribution:
+  //
+  //   value = SUM over slots s of  P(pick lands at s) * value of slot s
+  //
+  // P(lands at s) comes from simulating the rest of the season week by
+  // week off each team's own real scoring, through the league's real
+  // remaining schedule, and running the league's own draft-order rule on
+  // each simulated finish. Nothing about the slot is assumed.
+
+  // ---- The slot curve -------------------------------------------------
+  // What the pick at a given slot is worth, in Base 1s.
+  //
+  // A Base 1 (Jakob Sanderson's term, and the unit every player value in
+  // these rankings is already denominated in) is a 1st in a vacuum: a pick
+  // equally likely to land anywhere from 1.01 to 1.12. It is worth 1.00 by
+  // definition, which is the whole reason a player and a pick can be put
+  // on the two sides of a trade and compared at all. So the curve has to
+  // satisfy one hard constraint -- the twelve round-1 slots must average
+  // exactly 1.00 -- and nothing else about it matters if it does not.
+  //
+  // A base 2nd is 0.30 on the same footing, so that is the second hard
+  // constraint: the twelve round-2 slots must average 0.30, which is what
+  // puts a late 2nd properly below a base one rather than beside it.
+  //
+  // Fitted (calibration/pickcurve.cjs) to Austin's own slot ladder, which
+  // is what a real 1st is worth at each landing spot. That ladder as
+  // written averages 1.10 rather than 1.00, so it is scaled to the unit
+  // before fitting; everything below is in true Base 1s. One continuous
+  // curve runs the whole draft, so a 2.01 (0.46) is correctly worth less
+  // than a 1.12 (0.50) -- and it hits both round means on the nose while
+  // staying within about 4% of every rung of the ladder. Rounds 3 and 4
+  // fall out at 0.12 and 0.05, which nothing forced and which land beside
+  // the 0.1/0.05 this app had been carrying by feel.
+  //
+  // Anchored on a 12-team draft; other league sizes map on by where the
+  // slot falls through the round, so a 10-team 1.10 is worth about what a
+  // 12-team 1.12 is and not what a 12-team 1.10 is. A base 1st comes out
+  // between 0.98 and 1.04 across 8- through 16-team leagues, so the unit
+  // holds whatever the league size.
+  const PP_SLOT_CURVE = { a: 2.02, b: 0.242, c: 0.73 };
+  function ppSlotValue(round, slot, teams) {
+    const r = Number(round) || 1;
+    const n = Math.max(1, Number(teams) || 12);
+    const s = Math.min(n, Math.max(1, Number(slot) || 1));
+    if (r < 1 || r > 4) return 0;
+    const equivalent = (r - 1) * 12 + (s - 1) * (12 / n) + 1;
+    const { a, b, c } = PP_SLOT_CURVE;
+    return a * Math.exp(-b * Math.pow(equivalent - 1, c));
+  }
+
+  // ---- Player ages ----------------------------------------------------
+  // From the same Pure Potential export as the values. Only used to tell a
+  // good roster that stays good from a good roster that is about to fall
+  // over, which is what decides a pick two drafts out.
+  const PP_PLAYER_AGES = {"josh allen":30.3,"jaxon smith-njigba":24.6,"jahmyr gibbs":24.5,"bijan robinson":24.6,"jamarr chase":26.6,"malik nabers":23.2,"puka nacua":25.3,"ashton jeanty":22.8,"caleb williams":24.8,"drake maye":24.1,"jeremiyah love":21.3,"brock bowers":23.8,"amon-ra st brown":26.9,"trey mcbride":26.8,"lamar jackson":29.7,"justin jefferson":27.3,"ceedee lamb":27.5,"patrick mahomes":31.0,"drake london":25.2,"joe burrow":29.8,"jalen hurts":28.1,"tetairoa mcmillan":23.5,"jaxson dart":23.4,"colston loveland":22.5,"chris olave":26.2,"jonathan taylor":27.7,"kenneth walker":25.9,"trevor lawrence":27.0,"brock purdy":26.7,"justin herbert":28.5,"jayden daniels":25.8,"omarion hampton":23.5,"james cook":27.0,"garrett wilson":26.2,"devon achane":24.9,"nico collins":27.5,"george pickens":25.6,"zay flowers":26.0,"ladd mcconkey":24.9,"devonta smith":27.9,"jordyn tyson":22.1,"parker washington":24.5,"tyler warren":24.3,"jordan love":27.9,"emeka egbuka":23.9,"carnell tate":21.7,"breece hall":25.3,"chase brown":26.5,"christian mccaffrey":30.3,"luther burden":22.8,"bo nix":26.6,"makai lemon":22.3,"jaylen waddle":27.8,"tee higgins":27.7,"bucky irving":24.1,"fernando mendoza":23.0,"dak prescott":33.2,"jared goff":31.9,"quinshon judkins":22.9,"treveyon henderson":23.9,"sam laporta":25.7,"dalton kincaid":26.9,"tucker kraft":25.9,"matthew golden":23.1,"christian watson":27.4,"tyler shough":27.0,"jameson williams":25.5,"kc concepcion":22.0,"javonte williams":26.4,"saquon barkley":29.6,"jadarian price":23.0,"kyren williams":26.1,"derrick henry":32.7,"cam skattebo":24.6,"dandre swift":27.7,"bryce young":25.2,"brian thomas":24.0,"bhayshul tuten":23.6,"harold fannin":22.2,"jalen coker":24.9,"rome odunze":24.3,"aj brown":29.2,"denzel boston":22.8,"baker mayfield":31.4,"kyler murray":29.1,"sam darnold":29.3,"cj stroud":25.0,"rashee rice":26.4,"kenyon sadiq":21.6,"daniel jones":29.3,"matthew stafford":38.6,"josh downs":25.1,"isaiah likely":26.4,"cam ward":24.3,"jordan addison":24.7,"mike evans":33.1,"malik willis":27.3,"dk metcalf":28.8,"george kittle":33.0,"chuba hubbard":27.3,"kyle pitts":26.0,"dj moore":29.4,"ty simpson":23.8,"marvin harrison":24.1,"david montgomery":29.3,"travis etienne":27.7,"michael wilson":26.6,"alec pierce":26.4,"omar cooper":22.8,"terry mclaurin":31.0,"davante adams":33.7,"kyle monangai":24.3,"jaylen warren":27.9,"josh jacobs":28.6,"jonah coleman":23.1,"jonathon brooks":23.2,"rj harvey":25.6,"terrance ferguson":23.5,"germie bernard":22.8,"antonio williams":22.2,"travis hunter":23.4,"dezhaun stribling":23.8,"caleb douglas":23.0,"blake corum":25.8,"rhamondre stevenson":28.6,"michael penix":26.4,"stefon diggs":32.8,"oronde gadsden":23.2,"xavier worthy":23.4,"eli raridon":22.6,"brenton strange":25.7,"jake ferguson":27.7,"emmett johnson":23.0,"chris godwin":30.6,"jacory croskey-merritt":25.4,"pat bryant":23.8,"jakobi lane":22.4,"quentin johnston":25.0,"michael pittman":29.0,"geno smith":36.0,"juwan johnson":30.0,"deebo samuel":30.7,"eli stowers":23.4,"travis kelce":37.0,"chig okonkwo":27.0,"rico dowdle":28.3,"rachaad white":27.7,"kaelon black":24.9,"dallas goedert":31.7,"jk dobbins":27.8,"jayden reed":26.4,"khalil shakir":26.6,"chris bell":22.3,"dalton schultz":30.2,"mark andrews":31.0,"shedeur sanders":24.6,"mac jones":28.0,"woody marks":25.7,"dontayvion wicks":25.3,"adonai mitchell":24.0,"wandale robinson":25.7,"courtland sutton":31.0,"jakobi meyers":29.9,"romeo doubs":26.4,"michael mayer":25.2,"mike washington":23.2,"zach charbonnet":25.7,"tua tagovailoa":28.6,"keaton mitchell":24.7,"aaron jones":31.8,"marshawn lloyd":25.7,"kenny gainwell":27.5,"tank bigsby":24.1,"tyjae spears":25.3,"nicholas singleton":22.7,"jalen mcmillan":24.8,"carson beck":23.8,"jacoby brissett":33.8,"aaron rodgers":42.8,"ricky pearsall":26.0,"ted hurst":22.2,"jayden higgins":23.8,"oscar delp":23.1,"jordan mason":27.3,"aj barner":24.4,"tre harris":24.6,"zachariah branch":22.5,"drew allar":22.5,"kaytron allen":23.7,"tony pollard":29.4,"tyler allgeier":26.4,"braelon allen":22.7,"brian robinson":27.5,"ray davis":26.9,"elijah sarratt":23.3,"tre tucker":25.5,"malik washington":25.7,"dylan sampson":22.0,"pat freiermuth":27.9,"deshaun watson":31.0,"max klare":23.2,"adam randall":22.2,"demond claiborne":23.0,"chris rodriguez":27.0,"rashid shaheed":28.1,"tj hockenson":29.2,"hunter henry":31.8,"gunnar helm":24.0,"cyrus allen":23.6,"devaughn vele":28.8,"malachi fields":23.1,"jaylin noel":24.1,"kayshon boutte":24.4,"cade otton":27.4,"seth mcgowan":24.9,"kalif raymond":32.1,"ryan flournoy":26.9,"jalen nailor":27.6,"jj mccarthy":23.7,"alvin kamara":31.2,"elijah arroyo":23.5,"jerry jeudy":27.4,"tank dell":26.9,"brandon aiyuk":28.5,"jordan james":22.5,"cade klubnik":23.0,"marlin klein":24.0,"mason taylor":22.4,"isaac teslaa":24.6,"kirk cousins":38.1,"marcus mariota":32.9,"darren waller":34.0,"keon coleman":23.4,"jauan jennings":29.2,"matt hibner":24.5,"evan engram":32.1,"greg dulcich":26.5,"mike gesicki":31.0,"keenan allen":34.4,"kimani vidal":25.1,"troy franklin":23.6,"dj giddens":23.1,"tanner koziol":22.7,"kevin coleman":23.0,"brenen thompson":23.2,"calvin ridley":31.8,"tory horton":23.8,"elic ayomanor":23.3,"skyler bell":24.2,"jack bech":23.8,"chris brazzell":23.0,"anthony richardson":24.3,"bryce lance":24.1,"erick all":26.0,"justin fields":27.6,"justin joly":22.2,"kaleb johnson":23.1,"kendre miller":24.3,"kyle williams":23.9,"demario douglas":25.8,"devin singletary":29.1,"samaje perine":31.0,"rashod bateman":26.8,"jaylen wright":23.5,"ollie gordon":22.7,"najee harris":28.5,"tyrone tracy":26.8,"jalen royals":23.6,"darnell washington":25.1,"eli heidenreich":23.2,"isiah pacheco":27.6,"james conner":31.4,"tyreek hill":32.6,"cole kmet":27.5,"cole payton":23.9,"garrett nussmeier":24.6,"jack endries":22.5,"jalen milroe":23.8,"malik benson":23.9,"mitchell evans":23.5,"taylen green":23.9,"tez johnson":24.3,"zavion thomas":22.6,"jalon daniels":23.9,"roman wilson":25.3,"emari demercado":27.7,"drew lock":29.9,"sean tucker":24.9,"tahj brooks":24.4,"sione vaki":25.1};
+  function ppAgeForPlayerId(playerId, dict) {
+    const key = ppKeyForPlayerId(playerId, dict);
+    return key == null ? null : PP_PLAYER_AGES[key];
+  }
+  // Value-weighted roster age: the age of the players who actually carry
+  // the roster, not of the 30th man on the taxi squad.
+  function ppRosterAge(roster, dict) {
+    let wsum = 0, w = 0;
+    (roster.players || []).forEach(id => {
+      if (!id || id === '0') return;
+      const v = ppValueForPlayerId(id, dict);
+      const age = ppAgeForPlayerId(id, dict);
+      if (v == null || age == null || v <= 0) return;
+      wsum += v * age; w += v;
+    });
+    return w > 0 ? wsum / w : null;
+  }
+
+  // ---- Simulation plumbing --------------------------------------------
+  // Box-Muller, with the second deviate kept rather than thrown away --
+  // this runs a few million times per sync.
+  let ppSpareNormal = null;
+  function ppRandNormal() {
+    if (ppSpareNormal !== null) { const v = ppSpareNormal; ppSpareNormal = null; return v; }
+    let u = 0, v = 0, sq = 0;
+    do {
+      u = Math.random() * 2 - 1; v = Math.random() * 2 - 1; sq = u * u + v * v;
+    } while (sq === 0 || sq >= 1);
+    const f = Math.sqrt(-2 * Math.log(sq) / sq);
+    ppSpareNormal = v * f;
+    return u * f;
+  }
+
+  const PP_SIM_RUNS = 1500;
+  // How many weeks of real results it takes for what a team has scored to
+  // carry as much weight as what its roster projects to score. Six is
+  // about half a regular season, so the two are level around week 6 and
+  // the roster still has real pull as late as week 10.
+  const PP_STRENGTH_WEEKS = 6;
+  // How much a roster's dynasty value moves its projected weekly scoring,
+  // per standard deviation of value in its league. Small on purpose: value
+  // is about a team's room to improve, not about how good it is now, and
+  // the lineup projection is the real read on that. At 4% a full standard
+  // deviation of extra value is worth about four points a week going
+  // forward. Its effect on where a pick lands is small and structurally
+  // has to be: the draft order runs on season-long points, most of which
+  // are already banked by midseason, so a nudge applied to the weeks that
+  // are left can only move so much. Measured between the extremes of
+  // roster value in a league it is worth about 0.015 of a base 1st, and
+  // pushing the multiplier past here barely moves that -- it saturates.
+  const PP_VALUE_PULL = 0.035;
+  // How fast a team's true level drifts away from what it has shown, per
+  // remaining week, as a share of its weekly variance. Rosters change.
+  const PP_DRIFT_PER_WEEK = 0.035;
+  // Nobody's pick is a sure thing. Even a team that has been the best in
+  // the league all year is not locked into the last slot -- it can lose
+  // three in a row, its stars can get hurt, it can fall out of the race
+  // entirely -- so no pick is ever worth less than this share of a base
+  // one. A 1st bottoms out around 0.70, a 2nd around 0.21. This is the
+  // backstop, not the mechanism: the simulation's own uncertainty should
+  // be doing most of this work, and if a lot of picks are sitting exactly
+  // on the floor, that is the signal the simulation is too confident.
+  const PP_PICK_FLOOR = 0.70;
+  // Pulled this far back toward a base pick of the same round. Every model
+  // is more sure of itself than it should be, and the far ends of this one
+  // are where that shows up worst, so both tails give a little ground to
+  // the round's own base value.
+  const PP_BASE_SHRINK = 0.10;
+  // How many drafts past the next one the model will forecast. 0 means
+  // only the draft the current season is deciding; everything further out
+  // falls back to the flat round value, because the strength read that
+  // would carry it is not trustworthy enough yet.
+  const PP_FORECAST_YEARS_OUT = 0;
+
+  // The league's own draft-order rule, applied to one finished (or
+  // simulated-to-finish) season. Teams out of the playoffs draft first,
+  // ordered by potential points from the bottom up; teams in the playoffs
+  // draft after them, worst record first. This is deliberately the same
+  // rule the Tanking Tracker's Proj Slot column uses -- one rule, so the
+  // projected slot there and the value here can never contradict.
+  //
+  // `teams` is [{ id, wins, pf, ppts }], and the returned array is
+  // slot-ordered: index 0 holds the 1.01.
+  function ppDraftOrderFor(teams, playoffTeams) {
+    const standings = teams.slice().sort((a, b) => b.wins - a.wins || b.pf - a.pf);
+    const inPlayoffs = new Set(standings.slice(0, playoffTeams).map(t => t.id));
+    const missed = teams.filter(t => !inPlayoffs.has(t.id)).sort((a, b) => a.ppts - b.ppts || a.pf - b.pf);
+    const made = teams.filter(t => inPlayoffs.has(t.id)).sort((a, b) => a.wins - b.wins || a.pf - b.pf);
+    return missed.concat(made);
+  }
+
+  // ---- This season, simulated out -------------------------------------
+  // Each team's weekly score is drawn from its own real weekly scores so
+  // far -- its mean and its spread, both of which say something a record
+  // does not. A team is shrunk toward the league's own average spread
+  // while it has only a few weeks on the board, so one blowup in week 2
+  // does not become a personality.
+  //
+  // Potential points (which is what orders the lottery) are carried along
+  // with the score rather than drawn separately: a team's best-possible
+  // lineup and what it actually started move together, and that ratio is
+  // stable per roster, so a drawn score of X implies potential points of
+  // X * that team's own ratio.
+  async function ppSimulateSeason(entry, dict) {
+    const league = entry.league, rosters = entry.allRosters || [];
+    const teamCount = rosters.length;
+    if (!teamCount || !league) return null;
+    const leagueId = league.league_id;
+    const playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
+    const regularWeeks = Math.max(1, playoffStart - 1);
+    const playoffTeams = Math.min(teamCount, (league.settings && league.settings.playoff_teams) || 6);
+
+    const weeks = [];
+    for (let w = 1; w <= regularWeeks; w++) {
+      weeks.push(await sleeperGetWeekMatchups(leagueId, w).catch(() => []));
+    }
+
+    // A week counts as played once somebody in it has actually scored.
+    const played = weeks.map(ms => Array.isArray(ms) && ms.some(m => (Number(m.points) || 0) > 0));
+
+    const scoresById = {};
+    rosters.forEach(r => { scoresById[r.roster_id] = []; });
+    weeks.forEach((ms, i) => {
+      if (!played[i] || !Array.isArray(ms)) return;
+      ms.forEach(m => {
+        if (scoresById[m.roster_id]) scoresById[m.roster_id].push(Number(m.points) || 0);
+      });
+    });
+
+    const allScores = Object.values(scoresById).flat();
+    if (!allScores.length) return null;
+
+    const leagueMean = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+    const leagueVar = allScores.reduce((a, b) => a + (b - leagueMean) * (b - leagueMean), 0) / Math.max(1, allScores.length - 1);
+    const leagueSd = Math.sqrt(Math.max(1, leagueVar));
+
+    // ---- Team strength ------------------------------------------------
+    // What a team has scored is not the same as how good it is. Eight
+    // weeks of results carry a lot of schedule and a lot of luck, and a
+    // roster that has been quietly the best in the league while losing
+    // coin flips is not a bottom-three team going forward -- but the
+    // draft order treats it like one until the scoring catches up.
+    //
+    // So the rest of the season is projected off both: what the team has
+    // actually scored, and what its roster projects to score. The second
+    // is the optimal-lineup projection Contending Rank is already built
+    // from, rescaled from "best possible lineup" onto the same footing as
+    // real started scores (nobody starts their optimal lineup, and the
+    // league-wide ratio between the two is what says by how much).
+    const strengthById = {};
+    if (window.sbTeamOptimalProjection) {
+      let optSum = 0, optCount = 0;
+      rosters.forEach(r => {
+        const opt = window.sbTeamOptimalProjection(r.players, league);
+        if (opt != null && opt > 0) { strengthById[r.roster_id] = opt; optSum += opt; optCount++; }
+      });
+      if (optCount === rosters.length && optSum > 0) {
+        const optMean = optSum / optCount;
+        const realism = leagueMean / optMean;
+        rosters.forEach(r => { strengthById[r.roster_id] *= realism; });
+        // Roster value on top of it, and deliberately a much smaller
+        // weight than the lineup projection. What it adds is optionality:
+        // a deep, valuable roster sitting mid-table has somewhere to go --
+        // it can turn depth into a starter, and its young players can
+        // simply become good -- where a thin roster at the same record
+        // mostly cannot. So value nudges the projection the way a team's
+        // room to improve does, without pretending to be the read on how
+        // good the team is today. That is Contending Rank's job.
+        if (dict) {
+          const values = rosters.map(r => ppRosterValue(r, dict) || 0);
+          const vMean = values.reduce((a, b) => a + b, 0) / values.length;
+          const vSd = Math.sqrt(values.reduce((a, b) => a + (b - vMean) * (b - vMean), 0)
+            / Math.max(1, values.length - 1));
+          if (vSd > 0) {
+            rosters.forEach((r, i) => {
+              const z = Math.max(-2.5, Math.min(2.5, (values[i] - vMean) / vSd));
+              strengthById[r.roster_id] *= (1 + PP_VALUE_PULL * z);
+            });
+          }
+        }
+      } else {
+        // A partial read is worse than none: rescaling against a mean
+        // built from some of the league would bend every team toward it.
+        Object.keys(strengthById).forEach(k => { delete strengthById[k]; });
+      }
+    }
+
+    const model = rosters.map(r => {
+      const st = r.settings || {};
+      const mine = scoresById[r.roster_id] || [];
+      const n = mine.length;
+      const mean = n ? mine.reduce((a, b) => a + b, 0) / n : leagueMean;
+      let sd = leagueSd;
+      if (n >= 3) {
+        const v = mine.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (n - 1);
+        // Shrink toward the league's own spread -- weight on this team's
+        // own number grows with the weeks behind it.
+        const wgt = Math.min(1, (n - 2) / 8);
+        sd = Math.sqrt(Math.max(1, wgt * v + (1 - wgt) * leagueVar));
+      }
+      // Same shrink on the mean: four weeks is not a true talent level.
+      const meanWeight = Math.min(1, n / 8);
+      const scored = meanWeight * mean + (1 - meanWeight) * leagueMean;
+      // ...and then weighed against what the roster itself projects to
+      // score. Early on the roster is nearly all of the answer, because
+      // three weeks of results are barely evidence; by the back half the
+      // season has said enough and the results carry it. The crossover is
+      // deliberately gradual -- this is the difference between a pick's
+      // value drifting as a team's real quality shows, and it snapping
+      // around every Sunday.
+      const strength = strengthById[r.roster_id];
+      const scoredWeight = strength == null ? 1 : n / (n + PP_STRENGTH_WEEKS);
+      const projectedMean = strength == null ? scored : scoredWeight * scored + (1 - scoredWeight) * strength;
+      const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
+      const ppts = (st.ppts || 0) + (st.ppts_decimal || 0) / 100;
+      // How wrong the projected level itself could be. Without this the
+      // simulation treats a team's weekly mean as a known fact and only
+      // rolls the dice on each week around it -- and over five or six
+      // weeks that averages out to almost nothing, so the finish comes
+      // out near-certain and the best team's pick collapses onto the
+      // exact value of the last slot. That is the model claiming it knows
+      // who wins the league, which it does not.
+      //
+      // Two parts. The first is ordinary standard error: nine weeks of
+      // scores pin down a team's level to about sd/3, not exactly. The
+      // second is that the level itself moves -- trades, waivers,
+      // injuries, a rookie arriving -- and there is more room for that to
+      // happen the more weeks are left to play.
+      const tau = sd * Math.sqrt(1 / Math.max(1, n) + PP_DRIFT_PER_WEEK * Math.max(0, regularWeeks - n));
+      return {
+        id: r.roster_id,
+        mean: projectedMean,
+        sd, tau,
+        weeksPlayed: n,
+        wins: (st.wins || 0) + (st.ties || 0) * 0.5,
+        pf, ppts,
+        ratio: pf > 0 ? Math.min(1.8, Math.max(1, ppts / pf)) : 1.25,
+      };
+    });
+    const byId = {};
+    model.forEach(m => { byId[m.id] = m; });
+
+    // The real remaining schedule, straight off Sleeper -- it publishes
+    // the pairings for a week long before it is played.
+    const remaining = [];
+    for (let i = 0; i < regularWeeks; i++) {
+      if (played[i]) continue;
+      const ms = weeks[i];
+      if (!Array.isArray(ms) || !ms.length) continue;
+      const byMatchup = {};
+      ms.forEach(m => {
+        if (m.matchup_id == null) return;
+        (byMatchup[m.matchup_id] = byMatchup[m.matchup_id] || []).push(m.roster_id);
+      });
+      const pairs = Object.values(byMatchup).filter(p => p.length === 2);
+      if (pairs.length) remaining.push(pairs);
+    }
+
+    // slotCounts[rosterId][slotIndex] -- how often that team's own pick
+    // came out at that slot across every simulated finish.
+    const slotCounts = {};
+    model.forEach(m => { slotCounts[m.id] = new Array(teamCount).fill(0); });
+
+    const scratch = model.map(m => ({ id: m.id, wins: 0, pf: 0, ppts: 0 }));
+    // Matchups name roster ids; the simulation works on array positions.
+    // Resolved once here rather than searched for inside the hot loop.
+    const idxOf = {};
+    scratch.forEach((t, i) => { idxOf[t.id] = i; });
+    const remainingIdx = remaining.map(pairs => pairs.map(([a, b]) => [idxOf[a], idxOf[b]]));
+    const drawn = new Array(scratch.length).fill(0);
+    const seasonMean = new Array(scratch.length).fill(0);
+    for (let sim = 0; sim < PP_SIM_RUNS; sim++) {
+      for (let i = 0; i < scratch.length; i++) {
+        const m = model[i], t = scratch[i];
+        t.wins = m.wins; t.pf = m.pf; t.ppts = m.ppts;
+      }
+      // One draw per team per SEASON, not per week: this is "what this
+      // team turns out to actually be", so it has to hold all the way
+      // through the run. A fresh draw each week would average straight
+      // back out and change nothing.
+      for (let i = 0; i < scratch.length; i++) {
+        seasonMean[i] = model[i].mean + model[i].tau * ppRandNormal();
+      }
+      for (let w = 0; w < remainingIdx.length; w++) {
+        for (let i = 0; i < scratch.length; i++) {
+          const m = model[i];
+          const score = Math.max(0, seasonMean[i] + m.sd * ppRandNormal());
+          drawn[i] = score;
+          scratch[i].pf += score;
+          scratch[i].ppts += score * m.ratio;
+        }
+        const pairs = remainingIdx[w];
+        for (let j = 0; j < pairs.length; j++) {
+          const ia = pairs[j][0], ib = pairs[j][1];
+          if (ia == null || ib == null) continue;
+          const sa = drawn[ia], sb = drawn[ib];
+          if (sa > sb) scratch[ia].wins += 1;
+          else if (sb > sa) scratch[ib].wins += 1;
+          else { scratch[ia].wins += 0.5; scratch[ib].wins += 0.5; }
+        }
+      }
+      const order = ppDraftOrderFor(scratch, playoffTeams);
+      for (let i = 0; i < order.length; i++) slotCounts[order[i].id][i]++;
+    }
+
+    const slotProb = {};
+    Object.keys(slotCounts).forEach(id => {
+      slotProb[id] = slotCounts[id].map(c => c / PP_SIM_RUNS);
+    });
+    const weeksLeft = remaining.length;
+    return { slotProb, teamCount, playoffTeams, regularWeeks, weeksLeft, model: byId, leagueMean };
+  }
+
+  // ---- Later drafts ----------------------------------------------------
+  // A pick two or three drafts out is not this season's finish pushed
+  // forward: whatever happens this year, the team that owns a stacked
+  // young roster will still be good, and the team carrying five thirty-
+  // year-olds will not. So instead of the week-by-week simulation, those
+  // years are ranked on team strength -- dynasty value first, then how
+  // they are actually playing, then how old the value is -- and shaken
+  // with noise that grows for every draft further out, until a pick far
+  // enough away is barely more than "somebody's 1st".
+  function ppTeamStrengths(entry, dict) {
+    const rosters = entry.allRosters || [];
+    if (!rosters.length) return null;
+    const raw = rosters.map(r => {
+      const st = r.settings || {};
+      const games = (st.wins || 0) + (st.losses || 0) + (st.ties || 0);
+      const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
+      return {
+        id: r.roster_id,
+        value: ppRosterValue(r, dict) || 0,
+        winPct: games ? ((st.wins || 0) + (st.ties || 0) * 0.5) / games : 0.5,
+        ppg: games ? pf / games : 0,
+        age: ppRosterAge(r, dict),
+      };
+    });
+    const ages = raw.map(t => t.age).filter(a => a != null);
+    const meanAge = ages.length ? ages.reduce((a, b) => a + b, 0) / ages.length : 26;
+    const z = (vals) => {
+      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+      const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / Math.max(1, vals.length - 1)) || 1;
+      return vals.map(v => (v - mean) / sd);
+    };
+    const zv = z(raw.map(t => t.value));
+    const zw = z(raw.map(t => t.winPct));
+    const zp = z(raw.map(t => t.ppg));
+    const zy = z(raw.map(t => -(t.age == null ? meanAge : t.age)));
+    return raw.map((t, i) => Object.assign({}, t, {
+      // Dynasty value carries it, because that is what a team still owns
+      // next year. Record and scoring say whether the value is real this
+      // season; youth says whether it is still there two seasons from now.
+      strength: 0.50 * zv[i] + 0.20 * zw[i] + 0.15 * zp[i] + 0.15 * zy[i],
+    }));
+  }
+
+  function ppSimulateFutureYear(entry, dict, yearsOut) {
+    const strengths = ppTeamStrengths(entry, dict);
+    if (!strengths) return null;
+    const teamCount = strengths.length;
+    const playoffTeams = Math.min(teamCount,
+      (entry.league.settings && entry.league.settings.playoff_teams) || 6);
+    // One draft out, a team's strength still mostly holds. Every further
+    // year roughly doubles how much can change, and past three or four
+    // the noise swamps the signal, which is the right answer: nobody
+    // knows where a 2031 1st lands.
+    const sigma = 0.85 + 0.55 * (yearsOut - 1);
+    const slotCounts = {};
+    strengths.forEach(t => { slotCounts[t.id] = new Array(teamCount).fill(0); });
+    const scratch = strengths.map(t => ({ id: t.id, wins: 0, pf: 0, ppts: 0 }));
+    for (let sim = 0; sim < PP_SIM_RUNS; sim++) {
+      for (let i = 0; i < scratch.length; i++) {
+        const shaken = strengths[i].strength + sigma * ppRandNormal();
+        // Every ordering the draft-order rule uses moves with strength, so
+        // one shaken number stands in for the whole season: a team that
+        // comes out strong wins more, scores more, and picks later.
+        scratch[i].wins = shaken;
+        scratch[i].pf = shaken;
+        scratch[i].ppts = shaken;
+      }
+      const order = ppDraftOrderFor(scratch, playoffTeams);
+      for (let i = 0; i < order.length; i++) slotCounts[order[i].id][i]++;
+    }
+    const slotProb = {};
+    Object.keys(slotCounts).forEach(id => {
+      slotProb[id] = slotCounts[id].map(c => c / PP_SIM_RUNS);
+    });
+    return { slotProb, teamCount, playoffTeams, sigma };
+  }
+
+  // ---- The cache the render code reads --------------------------------
+  // Rendering is synchronous everywhere this is used, so the simulations
+  // are run once per league per sync and read back out of here. Before
+  // they finish (or for a league whose weeks Sleeper would not give up),
+  // every caller falls back to the flat round value, which is what the
+  // app did before this existed.
+  window.__ppPickModel = window.__ppPickModel || {};
+
+  function ppDistSummary(dist, round, teamCount) {
+    let ev = 0, cum = 0, p10 = null, p50 = null, p90 = null, pTop3 = 0;
+    for (let i = 0; i < dist.length; i++) {
+      const slot = i + 1;
+      ev += dist[i] * ppSlotValue(round, slot, teamCount);
+      if (slot <= 3) pTop3 += dist[i];
+      cum += dist[i];
+      if (p10 == null && cum >= 0.10) p10 = slot;
+      if (p50 == null && cum >= 0.50) p50 = slot;
+      if (p90 == null && cum >= 0.90) p90 = slot;
+    }
+    // The raw expectation is what the simulation believes. What comes out
+    // of here is that, held to what is actually knowable in September: a
+    // little ground given to the round's base value at both ends, and a
+    // floor under it, because no real pick is a certainty.
+    const base = PICK_ROUND_VALUES[round] || 0;
+    const shrunk = (1 - PP_BASE_SHRINK) * ev + PP_BASE_SHRINK * base;
+    const floored = Math.max(shrunk, base * PP_PICK_FLOOR);
+    return {
+      ev: floored, rawEv: ev, onFloor: floored > shrunk + 1e-9,
+      dist, round, teamCount,
+      p10: p10 || 1, median: p50 || 1, p90: p90 || teamCount,
+      pTop3, p101: dist[0] || 0,
+    };
+  }
+
+  // What one specific pick -- this league, this draft year, this round,
+  // originally this team's -- is worth right now, and how wide the range
+  // of where it lands still is.
+  function ppPickForecast(entry, season, round, fromRosterId) {
+    if (!entry || !entry.league) return null;
+    const model = window.__ppPickModel[entry.league.league_id];
+    if (!model) return null;
+    const currentSeason = Number(entry.league.season) || new Date().getFullYear();
+    // The season currently being played decides next year's draft, so that
+    // one is yearsOut 0 -- the simulated finish, not a guess.
+    const yearsOut = Number(season) - (currentSeason + 1);
+    if (yearsOut > PP_FORECAST_YEARS_OUT) return null;
+    const year = yearsOut <= 0 ? model.current : model.future[Math.min(3, yearsOut)];
+    if (!year || !year.slotProb) return null;
+    const dist = year.slotProb[fromRosterId];
+    if (!dist) return null;
+    const out = ppDistSummary(dist, round, year.teamCount);
+    out.basis = yearsOut <= 0 ? 'season' : 'strength';
+    out.weeksLeft = model.current ? model.current.weeksLeft : null;
+    out.yearsOut = Math.max(0, yearsOut);
+    return out;
+  }
+
+  // The one number the rest of the app asks for. Falls back to the flat
+  // round value whenever the model has nothing to say about this pick.
+  function ppPickValueFuture(entry, pick) {
+    if (!pick) return 0;
+    const f = entry ? ppPickForecast(entry, pick.season, pick.round, pick.fromRosterId) : null;
+    return f ? f.ev : ppPickValue(pick.round);
+  }
+  window.ppPickForecast = ppPickForecast;
+  window.ppPickValueFuture = ppPickValueFuture;
+  window.ppSlotValue = ppSlotValue;
+
+  // Run once per sync, for every dynasty league on the account. Kept off
+  // the render path entirely: the pages draw with the flat fallback on the
+  // first pass and are asked to redraw once the real numbers exist.
+  let ppPickModelRun = 0;
+  // Everything the simulation actually reads. The sync that drives this
+  // runs every minute, but a league's rosters and scores change a handful
+  // of times a week -- so a league whose inputs are identical to the last
+  // build is skipped entirely rather than re-simulated into the same
+  // answer. Most syncs now do no work here at all.
+  function ppLeagueSignature(entry) {
+    const rosters = entry.allRosters || [];
+    let sig = `${entry.week}|${rosters.length}`;
+    for (let i = 0; i < rosters.length; i++) {
+      const st = rosters[i].settings || {};
+      sig += `|${st.wins}-${st.losses}-${st.ties}-${st.fpts}-${st.fpts_decimal}-${st.ppts}-${st.ppts_decimal}`
+        + `-${(rosters[i].players || []).length}`;
+    }
+    return sig;
+  }
+  async function ppBuildPickModels(onDone) {
+    const run = ++ppPickModelRun;
+    let dict = null;
+    try { dict = await window.sleeperGetPlayerDict(); } catch (e) { return; }
+    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.league);
+    let built = 0;
+    for (const entry of entries) {
+      if (run !== ppPickModelRun) return;
+      const signature = ppLeagueSignature(entry);
+      const cached = window.__ppPickModel[entry.league.league_id];
+      if (cached && cached.signature === signature) continue;
+      built++;
+      let current = null;
+      try {
+        current = await ppSimulateSeason(entry, dict);
+      } catch (err) {
+        // Falling back to the flat round value is the right behaviour, but
+        // doing it silently hid a real bug once already.
+        console.warn('Pick model: season simulation failed for', entry.league.name, err);
+        current = null;
+      }
+      const future = {};
+      for (let k = 1; k <= PP_FORECAST_YEARS_OUT; k++) {
+        try { future[k] = ppSimulateFutureYear(entry, dict, k); } catch (e) { future[k] = null; }
+      }
+      window.__ppPickModel[entry.league.league_id] = { current, future, signature };
+      // Yield between leagues so a sync never locks the page up.
+      await new Promise(r => setTimeout(r, 0));
+    }
+    // Nothing rebuilt means nothing on screen can have changed either, so
+    // the pages that would redraw off this are left alone.
+    if (run === ppPickModelRun && built > 0 && typeof onDone === 'function') onDone();
+  }
+  window.ppBuildPickModels = ppBuildPickModels;
 
   // ---- A pick that has already been used ------------------------------
   // PICK_ROUND_VALUES above is the right shape for a pick nobody has spent
@@ -21868,13 +22609,27 @@
 
   // What a pick in a trade is worth: the drafted player's real value once
   // the draft has happened, the round's placeholder until then.
-  function ppPickValueResolved(resolved, round, dict) {
+  //
+  // `entry` and `pick` are optional: given both, an unused pick is valued
+  // through the real forecast for that league and that team rather than
+  // the flat round value, which is the whole point of the model -- a 2027
+  // 1st out of the league's worst roster and one out of its best are not
+  // the same asset and should not price the same in a trade.
+  function ppPickValueResolved(resolved, round, dict, entry, pick) {
     if (resolved) {
       const v = ppValueForPlayerId(resolved.playerId, dict);
       if (v != null) return v;
       // Drafted, but too deep to be ranked -- a used pick that produced
       // nobody of value is worth nothing, not a full round's placeholder.
       return 0;
+    }
+    if (entry && pick && pick.season != null && window.ppPickValueFuture) {
+      return window.ppPickValueFuture(entry, {
+        season: Number(pick.season), round,
+        // Sleeper names the pick by the roster it ORIGINALLY belonged to,
+        // which is exactly what fixes its place in the draft order.
+        fromRosterId: pick.roster_id,
+      });
     }
     return ppPickValue(round);
   }
@@ -21888,7 +22643,11 @@
     if (!allRosters.length) return [];
     const tradedPicks = entry.tradedPicks || [];
     const currentSeason = Number(entry.league.season) || new Date().getFullYear();
-    const seasons = [currentSeason + 1, currentSeason + 2];
+    // Three draft classes out. Sleeper's traded_picks records carry them,
+    // rosters really do own them, and a 2029 1st is a real asset in a
+    // dynasty trade -- leaving it off the roster made every team that had
+    // traded for one look poorer than it was.
+    const seasons = [currentSeason + 1, currentSeason + 2, currentSeason + 3];
     const rounds = [1, 2, 3, 4];
     const ownerOfSlot = (originalRosterId, season, round) => {
       const tp = tradedPicks.find(p => Number(p.season) === season && p.round === round && p.roster_id === originalRosterId);
@@ -21995,7 +22754,7 @@
         const isDynastyLeague = sbLeagueIsDynasty(e.league);
         const values = allRosters.map(r => ({
           rosterId: r.roster_id,
-          value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(e, r.roster_id).reduce((s, p) => s + ppPickValue(p.round), 0) : 0),
+          value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(e, r.roster_id).reduce((s, p) => s + ppPickValueFuture(e, p), 0) : 0),
         }));
         const myValue = values.find(v => v.rosterId === e.roster.roster_id);
         if (!myValue) return;
@@ -25233,15 +25992,74 @@
   // placeholder round values as the rest of the app (PICK_ROUND_VALUES) --
   // not tied to any one league's real traded-pick ownership, since the
   // calculator is a standalone what-if tool.
+  // Which league the trade is being judged in. Set from the league
+  // dropdown above the calculator; picks are priced as that league's real
+  // picks from a real team once it is.
+  let tcLeagueEntry = null;
+
+  // What a round in a given draft year is worth on average, across every
+  // team in every league on the account. Used when no league is picked:
+  // "a 2027 1st" has no owner, so the honest answer is what one is worth
+  // on average, not what the best or worst one is worth.
+  function tcAveragePickValue(season, round) {
+    if (!window.ppPickValueFuture) return PICK_ROUND_VALUES[round] || 0;
+    const entries = Object.values(window.sleeperLeagueData || {})
+      .filter(e => e.league && (e.allRosters || []).length);
+    let sum = 0, n = 0;
+    entries.forEach(e => {
+      e.allRosters.forEach(r => {
+        const f = window.ppPickForecast && window.ppPickForecast(e, season, round, r.roster_id);
+        if (f) { sum += f.ev; n++; }
+      });
+    });
+    return n ? sum / n : (PICK_ROUND_VALUES[round] || 0);
+  }
+
+  const TC_ROUND_LABELS = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+
+  function tcOwnerLabel(entry, rosterId) {
+    const roster = (entry.allRosters || []).find(r => r.roster_id === rosterId);
+    const user = roster ? (entry.users || []).find(u => u.user_id === roster.owner_id) : null;
+    return user ? (user.display_name || user.username || 'Unknown') : `Roster ${rosterId}`;
+  }
+
+  // With a league picked, every team's own pick is its own asset: a 2027
+  // 1st is not one thing in a league, it is twelve different things, and
+  // the whole point of the model is that they are not worth the same.
   function tcPickPool() {
     const { season } = pmCurrentSeasonWeek();
-    const roundLabels = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
     const picks = [];
-    [season + 1, season + 2].forEach(y => {
+    const years = [season + 1, season + 2, season + 3];
+    const entry = tcLeagueEntry;
+    if (entry && (entry.allRosters || []).length && window.ppPickForecast) {
+      // Only the draft the current season is deciding gets split into a
+      // real pick per team; a year the model will not forecast stays one
+      // generic pick rather than twelve identical ones.
+      years.forEach(y => {
+        [1, 2, 3, 4].forEach(round => {
+          entry.allRosters.forEach(r => {
+            const f = window.ppPickForecast(entry, y, round, r.roster_id);
+            if (!f) return;
+            const owner = tcOwnerLabel(entry, r.roster_id);
+            picks.push({
+              id: `pick_${y}_${round}_${r.roster_id}`, kind: 'pick',
+              name: `${y} ${TC_ROUND_LABELS[round]} · ${owner}`,
+              pos: null, team: null, value: f.ev, roundLabel: TC_ROUND_LABELS[round],
+              season: y, round, fromRosterId: r.roster_id,
+            });
+          });
+        });
+      });
+    }
+    // Any year that produced no per-team picks above still needs its
+    // generic one, so the two lists are merged rather than swapped.
+    years.forEach(y => {
+      if (picks.some(pk => pk.season === y)) return;
       [1, 2, 3, 4].forEach(round => {
         picks.push({
-          id: `pick_${y}_${round}`, kind: 'pick', name: `${y} ${roundLabels[round]}`,
-          pos: null, team: null, value: PICK_ROUND_VALUES[round] || 0, roundLabel: roundLabels[round],
+          id: `pick_${y}_${round}`, kind: 'pick', name: `${y} ${TC_ROUND_LABELS[round]}`,
+          pos: null, team: null, value: tcAveragePickValue(y, round),
+          roundLabel: TC_ROUND_LABELS[round], season: y, round, fromRosterId: null,
         });
       });
     });
@@ -25270,7 +26088,7 @@
   // rather than looked up against tcPickPool()'s fixed 2-future-years
   // list -- a trade card can carry a pick further out than that (a 2029
   // 1st, say), and this way it still resolves.
-  const TC_PICK_ROUND_LABEL = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th' };
+  const TC_PICK_ROUND_LABEL = TC_ROUND_LABELS;
   function tcPickAssetFromText(text) {
     // Trade History's real pick labels (tradePickAssetHtml) append the
     // original owner in parens for a pick that's already changed hands once
@@ -25281,9 +26099,12 @@
     if (!m) return null;
     const year = Number(m[1]), round = Number(m[2]);
     const roundLabel = TC_PICK_ROUND_LABEL[round] || `${round}th`;
+    // A pick label off a trade card names its year and round but not the
+    // team it came from, so it is priced as an average one of those.
     return {
       id: `pick_${year}_${round}`, kind: 'pick', name: `${year} ${roundLabel}`,
-      pos: null, team: null, value: PICK_ROUND_VALUES[round] || 0, roundLabel,
+      pos: null, team: null, value: tcAveragePickValue(year, round),
+      roundLabel, season: year, round, fromRosterId: null,
     };
   }
 
@@ -25523,6 +26344,23 @@
     return `${teams} Teams · ${isSF ? 'Superflex' : '1QB'} · ${recLabel}`;
   }
 
+  // Re-price every pick already sitting in the trade against whatever
+  // league is selected now. A pick that names a team keeps that team; a
+  // generic one becomes this league's average.
+  function tcRepricePicks() {
+    ['a', 'b'].forEach(side => {
+      tcState[side] = tcState[side].map(asset => {
+        if (asset.kind !== 'pick' || asset.season == null) return asset;
+        if (tcLeagueEntry && asset.fromRosterId != null && window.ppPickForecast) {
+          const f = window.ppPickForecast(tcLeagueEntry, asset.season, asset.round, asset.fromRosterId);
+          if (f) return Object.assign({}, asset, { value: f.ev });
+        }
+        return Object.assign({}, asset, { value: tcAveragePickValue(asset.season, asset.round) });
+      });
+    });
+    tcRender();
+  }
+
   function tcSetupLeagueDropdown() {
     const select = document.getElementById('tcLeagueSelect');
     const menu = document.getElementById('tcLeagueMenu');
@@ -25542,6 +26380,11 @@
           opt.addEventListener('click', () => {
             const entry = entries.find(en => en.league.league_id === opt.dataset.tcLeague);
             if (!entry) return;
+            // The league is not only a scoring format any more -- it is
+            // whose picks these are. Anything already on the board that was
+            // priced as a generic pick is re-priced as this league's.
+            tcLeagueEntry = entry;
+            tcRepricePicks();
             label.textContent = entry.league.name;
             if (chip) chip.textContent = tcFormatLeagueChip(entry.league);
             // TE premium and reception settings are real Sleeper league
@@ -25679,6 +26522,65 @@
       return `<span class="tt-slot${cls}">${round || 1}.${String(slot).padStart(2, '0')}</span>`;
     }
 
+    // ---- The pick-value model, drawn ----------------------------------
+    // Everything below reads window.ppPickForecast, which is filled in once
+    // per sync by the simulation. Before it lands there is nothing honest
+    // to draw, so these render as an em dash rather than as a guess.
+    function ttForecast(entry, season, round, rosterId) {
+      return window.ppPickForecast ? window.ppPickForecast(entry, season, round, rosterId) : null;
+    }
+
+    // One bar per draft slot, height = how often the pick landed there
+    // across the simulated seasons. Scaled to the most likely slot rather
+    // than to 1, so a genuinely uncertain pick still reads as a shape
+    // instead of as a flat line.
+    function distCell(f, order) {
+      if (!f) return '<span class="tt-blank">&mdash;</span>';
+      const nonPlayoffSlots = order ? order.total - order.playoffTeams : Math.max(1, f.teamCount - 6);
+      const peak = Math.max.apply(null, f.dist) || 1;
+      const bars = f.dist.map((prob, i) => {
+        const slot = i + 1;
+        const h = Math.round((prob / peak) * 17);
+        const cls = prob <= 0.001 ? ' is-empty'
+          : (slot <= 3 ? ' is-top' : (slot <= nonPlayoffSlots ? ' is-lottery' : ''));
+        return `<span class="tt-dist-bar${cls}" style="height:${Math.max(1, h)}px"></span>`;
+      }).join('');
+      const title = `Simulated ${f.basis === 'season' ? 'to the end of this season' : 'from team strength, ' + f.yearsOut + ' draft' + (f.yearsOut === 1 ? '' : 's') + ' out'}`
+        + ` -- most likely ${f.median}, 10th-90th percentile ${f.p10}-${f.p90}`;
+      const range = f.p10 === f.p90 ? String(f.p10) : `${f.p10}–${f.p90}`;
+      return `<span class="tt-dist" title="${sbFieldEsc(title)}">` +
+        `<span class="tt-dist-track">${bars}</span>` +
+        `<span class="tt-range">${range} of ${f.teamCount}</span></span>`;
+    }
+
+    function oddsCell(prob) {
+      if (prob == null) return '<span class="tt-blank">&mdash;</span>';
+      const pct = prob * 100;
+      const text = pct >= 99.5 ? '100%' : (pct < 1 && pct > 0 ? '<1%' : Math.round(pct) + '%');
+      return `<span class="tt-odds${prob >= 0.15 ? ' is-live' : ''}">${text}</span>`;
+    }
+
+    // The headline the whole model exists to produce. The sub-label says
+    // which kind of answer it is: a season simulated to its end, or a
+    // strength read on a draft nobody has played toward yet.
+    function pickValueCell(f) {
+      if (!f) return '<span class="tt-blank">&mdash;</span>';
+      // A pick held up by the floor says so. The floor exists because no
+      // pick is a certainty, but it is a backstop, not a measurement --
+      // seeing which picks are on it is the only way to tell whether the
+      // simulation underneath is being too sure of itself.
+      const sub = f.onFloor
+        ? 'FLOOR'
+        : (f.basis === 'season'
+          ? (f.weeksLeft ? f.weeksLeft + ' WK LEFT' : 'SEASON SET')
+          : '+' + f.yearsOut + 'YR');
+      const title = f.onFloor
+        ? `The simulation says ${f.rawEv.toFixed(2)}, held up to the floor: no pick is ever worth less than 70% of a base one`
+        : '';
+      return `<span class="tt-pickval${f.onFloor ? ' is-floored' : ''}"${title ? ` title="${sbFieldEsc(title)}"` : ''}>${f.ev.toFixed(2)}` +
+        `<span class="tt-pickval-sub">${sub}</span></span>`;
+    }
+
     function teamCell(entry, roster) {
       const user = (entry.users || []).find(u => u.user_id === roster.owner_id);
       const userName = user ? (user.display_name || user.username || 'Unknown') : 'Unknown';
@@ -25720,8 +26622,8 @@
     async function renderRealTankingTracker() {
       const entries = ttEntries();
       if (!entries.length) {
-        raceBody.innerHTML = '<tr><td colspan="6" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
-        picksBody.innerHTML = '<tr><td colspan="9" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
+        raceBody.innerHTML = '<tr><td colspan="9" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
+        picksBody.innerHTML = '<tr><td colspan="11" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
         return;
       }
 
@@ -25738,6 +26640,9 @@
 
       raceBody.innerHTML = raceRows.map(({ entry, order, gap, slot }) => {
         const r = entry.roster;
+        // Your own next 1st -- the pick this whole race is about.
+        const nextSeason = (Number(entry.league.season) || new Date().getFullYear()) + 1;
+        const fc = ttForecast(entry, nextSeason, 1, r.roster_id);
         return `<tr data-league-name="${sbFieldEsc(entry.league.name)}">` +
           `<td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(entry.league.name)}</span>` +
             `${entry.isCoOwned ? '<span class="rb-co-badge">CO</span>' : ''}</td>` +
@@ -25745,6 +26650,9 @@
           `<td>${num(pfOf(r))}</td>` +
           `<td>${num(pptsOf(r))}</td>` +
           `<td>${slotCell(slot, order)}</td>` +
+          `<td>${distCell(fc, order)}</td>` +
+          `<td>${oddsCell(fc ? fc.p101 : null)}</td>` +
+          `<td>${pickValueCell(fc)}</td>` +
           `<td class="rb-po-col">${gapCell(gap)}</td>` +
         `</tr>`;
       }).join('');
@@ -25766,7 +26674,7 @@
       });
 
       if (!picks.length) {
-        picksBody.innerHTML = '<tr><td colspan="9" class="rb-empty">You do not hold anyone else&rsquo;s picks right now.</td></tr>';
+        picksBody.innerHTML = '<tr><td colspan="11" class="rb-empty">You do not hold anyone else&rsquo;s picks right now.</td></tr>';
         return;
       }
 
@@ -25774,8 +26682,15 @@
       // into 2028. Sorting by projected slot first read as one scrambled
       // list, because a 2028 4th from a tanking team outranked a 2027 1st.
       // Within a round the best projected pick still comes first.
+      // Within a round, the most valuable pick first -- which is what the
+      // model now actually knows, rather than today's frozen slot.
+      const evOf = (p) => {
+        const f = ttForecast(p.entry, p.pick.season, p.pick.round, p.pick.fromRosterId);
+        return f ? f.ev : null;
+      };
       picks.sort((a, b) => Number(a.pick.season) - Number(b.pick.season)
         || a.pick.round - b.pick.round
+        || ((evOf(b) == null ? -1 : evOf(b)) - (evOf(a) == null ? -1 : evOf(a)))
         || (a.slot == null ? 99 : a.slot) - (b.slot == null ? 99 : b.slot)
         || a.entry.league.name.localeCompare(b.entry.league.name));
 
@@ -25783,6 +26698,7 @@
 
       picksBody.innerHTML = picks.map((p, i) => {
         const roundLabel = `${p.pick.season} ${p.pick.round}${p.pick.round === 1 ? 'st' : p.pick.round === 2 ? 'nd' : p.pick.round === 3 ? 'rd' : 'th'}`;
+        const fc = ttForecast(p.entry, p.pick.season, p.pick.round, p.pick.fromRosterId);
         return `<tr data-league-name="${sbFieldEsc(p.entry.league.name)}">` +
           `<td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(p.entry.league.name)}</span></td>` +
           `<td><span class="tt-pick">${sbFieldEsc(roundLabel)}</span></td>` +
@@ -25792,7 +26708,9 @@
           `<td>${rankCell(p.entry.allRosters || [], pfOf, p.pick.fromRosterId)}</td>` +
           `<td>${rankCell(p.entry.allRosters || [], pptsOf, p.pick.fromRosterId)}</td>` +
           `<td class="rb-po-col">${slotCell(p.slot, p.order, p.pick.round)}</td>` +
-          `<td class="tt-blank">&mdash;</td>` +
+          `<td>${distCell(fc, p.order)}</td>` +
+          `<td>${oddsCell(fc ? fc.pTop3 : null)}</td>` +
+          `<td>${pickValueCell(fc)}</td>` +
         `</tr>`;
       }).join('');
     }
