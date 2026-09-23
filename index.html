@@ -12199,6 +12199,9 @@
   // view is which page this render paints, used only to put the page you
   // are on at the front of the queue. A wrong or missing name costs a few
   // milliseconds of ordering, never correctness.
+  // Exposed so the render queue's behaviour can be exercised directly
+  // rather than inferred from which pages happen to look stale.
+  window.__deskQ = (key, view, fn) => deskQueueRender(key, view, fn);
   function deskQueueRender(key, view, fn) {
     deskRenderQueue.set(key, { fn, view });
     if (!deskRenderScheduled) {
@@ -12247,12 +12250,31 @@
     for (const key of keys) {
       const entry = deskRenderQueue.get(key);
       if (!entry) continue;
+      // Only the page actually on screen is repainted. The rest stay
+      // queued until you navigate to them, which runs them immediately
+      // (deskFlushView, below, on both the tab click and goToSection).
+      //
+      // They used to all run anyway, a slice at a time. With every page
+      // registered that is most of a second of repainting per sync -- the
+      // Scoreboard alone is a quarter of it across eighteen leagues -- and
+      // nearly all of it was for pages nobody was looking at, every minute,
+      // forever. A page you never open now costs nothing, and one you do
+      // open is rendered fresh at the moment you open it rather than from
+      // whenever the queue happened to reach it.
+      if (entry.view !== active) continue;
       deskRunRender(key, entry);
       // At least one per slice, however slow it is -- otherwise a single
       // render heavier than the whole budget would never get to run.
       if (performance.now() - started > DESK_RENDER_BUDGET_MS) break;
     }
-    if (deskRenderQueue.size) {
+    // Only reschedule while there is still work for the page on screen --
+    // anything left is waiting on navigation, and spinning the idle
+    // callback over it would never drain and never stop.
+    let pendingForActive = false;
+    for (const entry of deskRenderQueue.values()) {
+      if (entry.view === active) { pendingForActive = true; break; }
+    }
+    if (pendingForActive) {
       deskRenderScheduled = true;
       deskScheduleDrain();
     }
@@ -21740,7 +21762,12 @@
   // are that same curve averaged across their twelve slots, so the
   // fallback and the real model cannot disagree about what a round is
   // worth on average. Anything beyond round 4 is 0.
-  const PICK_ROUND_VALUES = { 1: 1.0, 2: 0.30, 3: 0.12, 4: 0.05 };
+  // Rounds 1 and 2 are the base picks the whole scale is defined against.
+  // Round 3 is held at 0.10 rather than the 0.119 the curve averages over
+  // its twelve slots: a 3rd you cannot place is a lottery ticket two or
+  // three years out, and it is not worth what the average of a 3rd in a
+  // draft you can see is worth. Round 4 matches the curve.
+  const PICK_ROUND_VALUES = { 1: 1.0, 2: 0.30, 3: 0.10, 4: 0.05 };
   function ppPickValue(round) {
     return PICK_ROUND_VALUES[round] || 0;
   }
@@ -22274,13 +22301,33 @@
   // the render path entirely: the pages draw with the flat fallback on the
   // first pass and are asked to redraw once the real numbers exist.
   let ppPickModelRun = 0;
+  // Everything the simulation actually reads. The sync that drives this
+  // runs every minute, but a league's rosters and scores change a handful
+  // of times a week -- so a league whose inputs are identical to the last
+  // build is skipped entirely rather than re-simulated into the same
+  // answer. Most syncs now do no work here at all.
+  function ppLeagueSignature(entry) {
+    const rosters = entry.allRosters || [];
+    let sig = `${entry.week}|${rosters.length}`;
+    for (let i = 0; i < rosters.length; i++) {
+      const st = rosters[i].settings || {};
+      sig += `|${st.wins}-${st.losses}-${st.ties}-${st.fpts}-${st.fpts_decimal}-${st.ppts}-${st.ppts_decimal}`
+        + `-${(rosters[i].players || []).length}`;
+    }
+    return sig;
+  }
   async function ppBuildPickModels(onDone) {
     const run = ++ppPickModelRun;
     let dict = null;
     try { dict = await window.sleeperGetPlayerDict(); } catch (e) { return; }
     const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.league);
+    let built = 0;
     for (const entry of entries) {
       if (run !== ppPickModelRun) return;
+      const signature = ppLeagueSignature(entry);
+      const cached = window.__ppPickModel[entry.league.league_id];
+      if (cached && cached.signature === signature) continue;
+      built++;
       let current = null;
       try {
         current = await ppSimulateSeason(entry, dict);
@@ -22294,11 +22341,13 @@
       for (let k = 1; k <= PP_FORECAST_YEARS_OUT; k++) {
         try { future[k] = ppSimulateFutureYear(entry, dict, k); } catch (e) { future[k] = null; }
       }
-      window.__ppPickModel[entry.league.league_id] = { current, future };
+      window.__ppPickModel[entry.league.league_id] = { current, future, signature };
       // Yield between leagues so a sync never locks the page up.
       await new Promise(r => setTimeout(r, 0));
     }
-    if (run === ppPickModelRun && typeof onDone === 'function') onDone();
+    // Nothing rebuilt means nothing on screen can have changed either, so
+    // the pages that would redraw off this are left alone.
+    if (run === ppPickModelRun && built > 0 && typeof onDone === 'function') onDone();
   }
   window.ppBuildPickModels = ppBuildPickModels;
 
@@ -22594,7 +22643,11 @@
     if (!allRosters.length) return [];
     const tradedPicks = entry.tradedPicks || [];
     const currentSeason = Number(entry.league.season) || new Date().getFullYear();
-    const seasons = [currentSeason + 1, currentSeason + 2];
+    // Three draft classes out. Sleeper's traded_picks records carry them,
+    // rosters really do own them, and a 2029 1st is a real asset in a
+    // dynasty trade -- leaving it off the roster made every team that had
+    // traded for one look poorer than it was.
+    const seasons = [currentSeason + 1, currentSeason + 2, currentSeason + 3];
     const rounds = [1, 2, 3, 4];
     const ownerOfSlot = (originalRosterId, season, round) => {
       const tp = tradedPicks.find(p => Number(p.season) === season && p.round === round && p.roster_id === originalRosterId);
@@ -25976,7 +26029,7 @@
   function tcPickPool() {
     const { season } = pmCurrentSeasonWeek();
     const picks = [];
-    const years = [season + 1, season + 2];
+    const years = [season + 1, season + 2, season + 3];
     const entry = tcLeagueEntry;
     if (entry && (entry.allRosters || []).length && window.ppPickForecast) {
       // Only the draft the current season is deciding gets split into a
