@@ -2913,6 +2913,8 @@
   .tt-odds.is-live { color: var(--green); }
   .tt-pickval { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
   .tt-pickval-sub { display: block; font-size: 9.5px; font-weight: 700; color: var(--faint); letter-spacing: 0.3px; }
+  .tt-pickval.is-floored { color: var(--muted); }
+  .tt-pickval.is-floored .tt-pickval-sub { color: var(--gold); }
 
   .tt-slot {
     display: inline-block;
@@ -21849,6 +21851,35 @@
   // about half a regular season, so the two are level around week 6 and
   // the roster still has real pull as late as week 10.
   const PP_STRENGTH_WEEKS = 6;
+  // How much a roster's dynasty value moves its projected weekly scoring,
+  // per standard deviation of value in its league. Small on purpose: value
+  // is about a team's room to improve, not about how good it is now, and
+  // the lineup projection is the real read on that. At 4% a full standard
+  // deviation of extra value is worth about four points a week going
+  // forward. Its effect on where a pick lands is small and structurally
+  // has to be: the draft order runs on season-long points, most of which
+  // are already banked by midseason, so a nudge applied to the weeks that
+  // are left can only move so much. Measured between the extremes of
+  // roster value in a league it is worth about 0.015 of a base 1st, and
+  // pushing the multiplier past here barely moves that -- it saturates.
+  const PP_VALUE_PULL = 0.035;
+  // How fast a team's true level drifts away from what it has shown, per
+  // remaining week, as a share of its weekly variance. Rosters change.
+  const PP_DRIFT_PER_WEEK = 0.035;
+  // Nobody's pick is a sure thing. Even a team that has been the best in
+  // the league all year is not locked into the last slot -- it can lose
+  // three in a row, its stars can get hurt, it can fall out of the race
+  // entirely -- so no pick is ever worth less than this share of a base
+  // one. A 1st bottoms out around 0.70, a 2nd around 0.21. This is the
+  // backstop, not the mechanism: the simulation's own uncertainty should
+  // be doing most of this work, and if a lot of picks are sitting exactly
+  // on the floor, that is the signal the simulation is too confident.
+  const PP_PICK_FLOOR = 0.70;
+  // Pulled this far back toward a base pick of the same round. Every model
+  // is more sure of itself than it should be, and the far ends of this one
+  // are where that shows up worst, so both tails give a little ground to
+  // the round's own base value.
+  const PP_BASE_SHRINK = 0.10;
   // How many drafts past the next one the model will forecast. 0 means
   // only the draft the current season is deciding; everything further out
   // falls back to the flat round value, because the strength read that
@@ -21884,7 +21915,7 @@
   // lineup and what it actually started move together, and that ratio is
   // stable per roster, so a drawn score of X implies potential points of
   // X * that team's own ratio.
-  async function ppSimulateSeason(entry) {
+  async function ppSimulateSeason(entry, dict) {
     const league = entry.league, rosters = entry.allRosters || [];
     const teamCount = rosters.length;
     if (!teamCount || !league) return null;
@@ -21941,6 +21972,26 @@
         const optMean = optSum / optCount;
         const realism = leagueMean / optMean;
         rosters.forEach(r => { strengthById[r.roster_id] *= realism; });
+        // Roster value on top of it, and deliberately a much smaller
+        // weight than the lineup projection. What it adds is optionality:
+        // a deep, valuable roster sitting mid-table has somewhere to go --
+        // it can turn depth into a starter, and its young players can
+        // simply become good -- where a thin roster at the same record
+        // mostly cannot. So value nudges the projection the way a team's
+        // room to improve does, without pretending to be the read on how
+        // good the team is today. That is Contending Rank's job.
+        if (dict) {
+          const values = rosters.map(r => ppRosterValue(r, dict) || 0);
+          const vMean = values.reduce((a, b) => a + b, 0) / values.length;
+          const vSd = Math.sqrt(values.reduce((a, b) => a + (b - vMean) * (b - vMean), 0)
+            / Math.max(1, values.length - 1));
+          if (vSd > 0) {
+            rosters.forEach((r, i) => {
+              const z = Math.max(-2.5, Math.min(2.5, (values[i] - vMean) / vSd));
+              strengthById[r.roster_id] *= (1 + PP_VALUE_PULL * z);
+            });
+          }
+        }
       } else {
         // A partial read is worse than none: rescaling against a mean
         // built from some of the league would bend every team toward it.
@@ -21976,10 +22027,24 @@
       const projectedMean = strength == null ? scored : scoredWeight * scored + (1 - scoredWeight) * strength;
       const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
       const ppts = (st.ppts || 0) + (st.ppts_decimal || 0) / 100;
+      // How wrong the projected level itself could be. Without this the
+      // simulation treats a team's weekly mean as a known fact and only
+      // rolls the dice on each week around it -- and over five or six
+      // weeks that averages out to almost nothing, so the finish comes
+      // out near-certain and the best team's pick collapses onto the
+      // exact value of the last slot. That is the model claiming it knows
+      // who wins the league, which it does not.
+      //
+      // Two parts. The first is ordinary standard error: nine weeks of
+      // scores pin down a team's level to about sd/3, not exactly. The
+      // second is that the level itself moves -- trades, waivers,
+      // injuries, a rookie arriving -- and there is more room for that to
+      // happen the more weeks are left to play.
+      const tau = sd * Math.sqrt(1 / Math.max(1, n) + PP_DRIFT_PER_WEEK * Math.max(0, regularWeeks - n));
       return {
         id: r.roster_id,
         mean: projectedMean,
-        sd,
+        sd, tau,
         weeksPlayed: n,
         wins: (st.wins || 0) + (st.ties || 0) * 0.5,
         pf, ppts,
@@ -22017,15 +22082,23 @@
     scratch.forEach((t, i) => { idxOf[t.id] = i; });
     const remainingIdx = remaining.map(pairs => pairs.map(([a, b]) => [idxOf[a], idxOf[b]]));
     const drawn = new Array(scratch.length).fill(0);
+    const seasonMean = new Array(scratch.length).fill(0);
     for (let sim = 0; sim < PP_SIM_RUNS; sim++) {
       for (let i = 0; i < scratch.length; i++) {
         const m = model[i], t = scratch[i];
         t.wins = m.wins; t.pf = m.pf; t.ppts = m.ppts;
       }
+      // One draw per team per SEASON, not per week: this is "what this
+      // team turns out to actually be", so it has to hold all the way
+      // through the run. A fresh draw each week would average straight
+      // back out and change nothing.
+      for (let i = 0; i < scratch.length; i++) {
+        seasonMean[i] = model[i].mean + model[i].tau * ppRandNormal();
+      }
       for (let w = 0; w < remainingIdx.length; w++) {
         for (let i = 0; i < scratch.length; i++) {
           const m = model[i];
-          const score = Math.max(0, m.mean + m.sd * ppRandNormal());
+          const score = Math.max(0, seasonMean[i] + m.sd * ppRandNormal());
           drawn[i] = score;
           scratch[i].pf += score;
           scratch[i].ppts += score * m.ratio;
@@ -22148,8 +22221,16 @@
       if (p50 == null && cum >= 0.50) p50 = slot;
       if (p90 == null && cum >= 0.90) p90 = slot;
     }
+    // The raw expectation is what the simulation believes. What comes out
+    // of here is that, held to what is actually knowable in September: a
+    // little ground given to the round's base value at both ends, and a
+    // floor under it, because no real pick is a certainty.
+    const base = PICK_ROUND_VALUES[round] || 0;
+    const shrunk = (1 - PP_BASE_SHRINK) * ev + PP_BASE_SHRINK * base;
+    const floored = Math.max(shrunk, base * PP_PICK_FLOOR);
     return {
-      ev, dist, round, teamCount,
+      ev: floored, rawEv: ev, onFloor: floored > shrunk + 1e-9,
+      dist, round, teamCount,
       p10: p10 || 1, median: p50 || 1, p90: p90 || teamCount,
       pTop3, p101: dist[0] || 0,
     };
@@ -22202,7 +22283,7 @@
       if (run !== ppPickModelRun) return;
       let current = null;
       try {
-        current = await ppSimulateSeason(entry);
+        current = await ppSimulateSeason(entry, dict);
       } catch (err) {
         // Falling back to the flat round value is the right behaviour, but
         // doing it silently hid a real bug once already.
@@ -26431,10 +26512,20 @@
     // strength read on a draft nobody has played toward yet.
     function pickValueCell(f) {
       if (!f) return '<span class="tt-blank">&mdash;</span>';
-      return `<span class="tt-pickval">${f.ev.toFixed(2)}` +
-        `<span class="tt-pickval-sub">${f.basis === 'season'
+      // A pick held up by the floor says so. The floor exists because no
+      // pick is a certainty, but it is a backstop, not a measurement --
+      // seeing which picks are on it is the only way to tell whether the
+      // simulation underneath is being too sure of itself.
+      const sub = f.onFloor
+        ? 'FLOOR'
+        : (f.basis === 'season'
           ? (f.weeksLeft ? f.weeksLeft + ' WK LEFT' : 'SEASON SET')
-          : '+' + f.yearsOut + 'YR'}</span></span>`;
+          : '+' + f.yearsOut + 'YR');
+      const title = f.onFloor
+        ? `The simulation says ${f.rawEv.toFixed(2)}, held up to the floor: no pick is ever worth less than 70% of a base one`
+        : '';
+      return `<span class="tt-pickval${f.onFloor ? ' is-floored' : ''}"${title ? ` title="${sbFieldEsc(title)}"` : ''}>${f.ev.toFixed(2)}` +
+        `<span class="tt-pickval-sub">${sub}</span></span>`;
     }
 
     function teamCell(entry, roster) {
