@@ -1194,33 +1194,9 @@
   .gc-inj-status.gc-inj-q { color: var(--gold); }
   .gc-empty { font-size: 11.5px; color: var(--faint); padding: 14px 2px; text-align: center; }
 
-  /* Field View -- a grid of every league's live win-probability field at
-     once, reusing the same .field-panel markup/animation as the
-     Scoreboard's matchup expand so both views always agree. */
-  .sb-field-page-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-  }
-  @media (max-width: 900px) { .sb-field-page-grid { grid-template-columns: 1fr; } }
-  .sb-field-page-card {
-    /* Tracks the theme's own surface/border tokens (was a hardcoded cool
-       slate tint that stood out fine against the old cream theme but
-       clashed against any other palette -- e.g. sat blue against Vintage
-       Program's parchment instead of matching the field panel below it). */
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px;
-  }
-  .sb-field-page-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-  .sb-field-page-name { font-weight: 700; font-size: 14px; color: var(--ink); }
-  .sb-field-page-meta { font-size: 12px; color: var(--muted); }
-  /* A page full of these needs a shorter field than the single one shown
-     in a matchup's own expand, or scrolling through every league would be
-     unusable. */
-  .sb-field-page-card .field-turf { height: clamp(260px, 38vh, 400px); }
-  .sb-field-page-card .field-player-av { width: 28px; height: 28px; }
+  /* Field View is the same page as Standard View -- same matchup list on
+     the left, same reading pane on the right -- the pane just draws the
+     two teams on the win-probability field instead of the lineup tables. */
 
   .sb-stats {
     display: flex;
@@ -1240,12 +1216,79 @@
   .sb-stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: var(--muted); margin-top: 6px; }
   .sb-stat-divider { width: 1px; height: 34px; background: var(--border); }
 
+  /* Scoreboard is a list + reading pane, not one long page of matchups:
+     the cards live in a single scrollable column on the left (~62%) and
+     whichever matchup is open renders in the sticky pane on the right,
+     so there is always a matchup on screen and clicking another card
+     just swaps what the pane shows. */
+  .sb-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .sb-split-list { min-width: 0; max-height: calc(100vh - 40px); overflow-y: auto; padding-right: 4px; }
+  .sb-split-detail {
+    min-width: 0;
+    position: sticky;
+    top: 12px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+  }
+  .sb-detail-empty {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 28px 18px; text-align: center; font-size: 12.5px; color: var(--faint);
+  }
+  @media (max-width: 1100px) {
+    .sb-split { grid-template-columns: 1fr; }
+    #sbDetail .sb-lineups-cols { flex-direction: column; }
+    .sb-split-list, .sb-split-detail { max-height: none; overflow: visible; position: static; }
+  }
+
   .sb-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     gap: 10px;
   }
-  @media (max-width: 680px) { .sb-grid { grid-template-columns: 1fr; } }
+
+  /* Toolbar above the matchup list: find a player on the left, sort on
+     the right. */
+  .sb-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .sb-toolbar .sort-dropdown { margin-left: auto; }
+  .sb-player-search { position: relative; flex: 0 1 300px; min-width: 200px; display: flex; align-items: center; }
+  .sb-player-search-icon { position: absolute; left: 10px; font-size: 12px; opacity: 0.6; pointer-events: none; }
+  .sb-player-search input {
+    width: 100%; padding: 7px 28px 7px 30px;
+    font: inherit; font-size: 12.5px; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  }
+  .sb-player-search input:focus { outline: none; border-color: var(--muted); }
+  .sb-player-search-clear {
+    position: absolute; right: 6px; border: none; background: none; cursor: pointer;
+    color: var(--muted); font-size: 16px; line-height: 1; padding: 2px 4px;
+  }
+  .sb-player-search-menu {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    box-shadow: 0 8px 24px -8px rgba(0,0,0,0.35);
+    max-height: 280px; overflow-y: auto;
+  }
+  .sb-player-opt { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer; }
+  .sb-player-opt:hover, .sb-player-opt.is-active { background: var(--bg); }
+  .sb-player-opt img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+  .sb-player-opt-name { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .sb-player-opt-sub { font-size: 10.5px; color: var(--muted); margin-left: auto; flex-shrink: 0; }
+  .sb-player-opt-empty { padding: 10px; font-size: 12px; color: var(--faint); }
+  .sb-player-filter-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 700; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px;
+  }
+  .sb-player-filter-chip button { border: none; background: none; cursor: pointer; color: var(--muted); font-size: 14px; line-height: 1; padding: 0 2px; }
+  /* A matchup the player filter has ruled out. Has to beat .sb-card's own
+     display, so it is not just [hidden]. */
+  .sb-card.sb-card-filtered, .sb-group-header.sb-card-filtered { display: none !important; }
+  .sb-filter-empty { font-size: 12.5px; color: var(--faint); padding: 18px 2px; text-align: center; }
 
   /* Win-probability football field -- lives inside the matchup expand
      panel, right where the lineup tables leave blank space, and only
@@ -1265,14 +1308,8 @@
      the borders join, the gap between them collapses, and the accent
      runs around both. */
   #sbGrid .sb-card.is-open {
-    grid-column: 1 / -1;
-    margin-bottom: -10px;
     border-color: var(--navy);
     box-shadow: inset 0 0 0 1px var(--navy);
-  }
-  .sb-card.is-open {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
   }
   .sb-card.is-open + .sb-expand {
     margin-top: 0;
@@ -1300,6 +1337,30 @@
     flex: 1;
     min-width: 360px;
   }
+  /* The reading pane is half the page, so both lineups sit side by side
+     in it (you scroll the pane to see the rest of them) and the field --
+     when Field View is the one being drawn -- fills the pane's width. */
+  #sbDetail .sb-exp-body { flex-direction: column; gap: 16px; }
+  #sbDetail .field-panel { min-width: 0; width: 100%; }
+  /* Half a page is narrower than the old full-width expand, so the turf
+     comes down to match -- a field taller than it is wide reads wrong and
+     pushes the scoreline off screen. */
+  #sbDetail .field-turf { height: clamp(380px, 56vh, 620px); }
+  #sbDetail .field-player-av { width: 30px; height: 30px; }
+  #sbDetail .sb-lineups-cols { display: flex; flex-direction: row; gap: 14px; }
+  #sbDetail .sb-lineup-col { flex: 1 1 0; min-width: 0; }
+  #sbDetail .sb-exp-table { width: 100%; table-layout: fixed; }
+  /* Only the player column can give -- the three number columns keep
+     their width so the two lineups still line up with each other. */
+  #sbDetail .sb-exp-table thead th:first-child { width: auto; }
+  #sbDetail .sb-exp-table thead th:not(:first-child) { width: 34px; padding-left: 6px; }
+  #sbDetail .sb-exp-table tbody td:not(:first-child) { padding-left: 6px; }
+  #sbDetail .sb-exp-avatar { width: 30px; height: 30px; }
+  #sbDetail .sb-exp-pos { width: 24px; font-size: 10px; }
+  #sbDetail .sb-exp-player { gap: 5px; }
+  #sbDetail .sb-exp-pname { font-size: 13px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #sbDetail .sb-exp-psub { font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #sbDetail .sb-expand { margin-top: 0; }
   .field-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
   .field-panel-title { font-size: 11px; font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .field-panel-pct { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 700; color: var(--ink); flex-shrink: 0; }
@@ -1611,6 +1672,7 @@
 
   .sb-expand {
     grid-column: 1 / -1;
+    min-width: 0;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -1618,6 +1680,12 @@
     margin-top: -2px;
   }
   .sb-exp-header { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .sb-exp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .sb-exp-chip {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px;
+    color: var(--muted); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 20px; padding: 2px 8px;
+  }
   .sb-exp-logo {
     flex-shrink: 0;
     width: 44px;
@@ -3976,7 +4044,7 @@
   /* Phones proper: one column everywhere that is still two at tablet. */
   @media (max-width: 560px) {
     .content { padding: 0 12px 36px; }
-    .sb-grid, .sb-field-page-grid { grid-template-columns: 1fr; }
+    .sb-grid { grid-template-columns: 1fr; }
     .page-title h1 { font-size: 17px; }
 
     /* A matchup card has four things competing for one row: logo, league
@@ -5027,20 +5095,6 @@
         </span>
       </div>
 
-      <div data-sb-view="field" class="sb-view">
-        <div class="sort-dropdown" style="display:flex;justify-content:flex-end;margin-bottom:10px">
-          <div class="sort-select" id="sbFieldSortSelect"><span id="sbFieldSortSelectLabel">Best Field Position</span> <span>&#9662;</span></div>
-          <div class="sort-menu" id="sbFieldSortMenu" hidden style="left:auto;right:0">
-            <div class="sort-option" data-field-sort="league">League Order</div>
-            <div class="sort-option active" data-field-sort="best">Best Field Position</div>
-            <div class="sort-option" data-field-sort="worst">Worst Field Position</div>
-          </div>
-        </div>
-        <div class="sb-field-page-grid" id="sbFieldPageGrid">
-          <div class="ld-loading">Loading fields&hellip;</div>
-        </div>
-      </div>
-
       <div data-sb-view="scoreboard" class="sb-view is-active">
         <div class="rg-leagues-dropdown">
           <div class="rg-leagues-toggle" id="sbTankBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="sbTankCount">(18 of 18)</span></div>
@@ -5077,17 +5131,35 @@
           </div>
         </div>
 
-        <div class="sort-dropdown" style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <div class="sb-toolbar">
+          <div class="sb-player-search">
+            <span class="sb-player-search-icon">&#128269;</span>
+            <input type="text" id="sbPlayerSearch" autocomplete="off" placeholder="Find a player's matchups&hellip;">
+            <button type="button" class="sb-player-search-clear" id="sbPlayerSearchClear" hidden title="Clear">&times;</button>
+            <div class="sb-player-search-menu" id="sbPlayerSearchMenu" hidden></div>
+          </div>
+          <div class="sb-player-filter-chip" id="sbPlayerFilterChip" hidden></div>
+        <div class="sort-dropdown" style="display:flex;justify-content:flex-end">
           <div class="sort-select" id="sbSortSelect"><span id="sbSortSelectLabel">Win Category</span> <span>&#9662;</span></div>
           <div class="sort-menu" id="sbSortMenu" hidden style="left:auto;right:0">
             <div class="sort-option" data-sort="sleeper">Sleeper Order</div>
             <div class="sort-option" data-sort="az">A&ndash;Z</div>
-            <div class="sort-option" data-sort="winpct">Win Probability</div>
-            <div class="sort-option" data-sort="score">Highest Score</div>
+            <div class="sort-option" data-sort="winhigh">Highest Win %</div>
+            <div class="sort-option" data-sort="winlow">Lowest Win %</div>
+            <div class="sort-option" data-sort="closest">Closest Matchup</div>
+            <div class="sort-option" data-sort="live">Live Players</div>
+            <div class="sort-option" data-sort="left">Most Players Left</div>
+            <div class="sort-option" data-sort="playoffs">Playoff Odds</div>
+            <div class="sort-option" data-sort="record">Record</div>
+            <div class="sort-option" data-sort="livepts">Most Points Scored</div>
+            <div class="sort-option" data-sort="score">Highest Projected</div>
             <div class="sort-option active" data-sort="category">Win Category</div>
           </div>
         </div>
+        </div>
 
+        <div class="sb-split">
+        <div class="sb-split-list">
         <div class="sb-grid" id="sbGrid">
 
           <div class="sb-card">
@@ -5288,6 +5360,11 @@
             <div class="sb-chevron">&#9662;</div>
           </div>
 
+        </div>
+        </div>
+        <div class="sb-split-detail" id="sbDetail">
+          <div class="sb-detail-empty">Pick a matchup on the left to open it here.</div>
+        </div>
         </div>
 
         <template id="sbLineupTemplate">
@@ -15064,6 +15141,105 @@
     return n + suffix;
   }
 
+  // ---- Standings / points-for / playoff odds ------------------------
+  // Everything the Matchup Hub's reading-pane header and its sort
+  // criteria need about where a team actually sits in its league. All of
+  // it comes off Sleeper's own roster settings (wins/losses/ties and
+  // fpts), so it agrees with the league's real standings page.
+
+  function sbRosterFpts(r) {
+    const st = (r && r.settings) || {};
+    return (st.fpts || 0) + ((st.fpts_decimal || 0) / 100);
+  }
+  function sbRosterWins(r) {
+    const st = (r && r.settings) || {};
+    return (st.wins || 0) + (st.ties || 0) * 0.5;
+  }
+
+  // Sleeper's own standings order: wins first, points for as the
+  // tiebreaker. Returns { rank, of } for the connected user's roster.
+  function sbStandingsRank(entry) {
+    const allRosters = entry.allRosters || [];
+    if (!entry.roster || allRosters.length < 2) return null;
+    const sorted = [...allRosters].sort((a, b) =>
+      sbRosterWins(b) - sbRosterWins(a) || sbRosterFpts(b) - sbRosterFpts(a));
+    const rank = sorted.findIndex(r => r.roster_id === entry.roster.roster_id) + 1;
+    return rank > 0 ? { rank, of: allRosters.length } : null;
+  }
+
+  // Where this team's season points total ranks in the league.
+  function sbPointsForRank(entry) {
+    const allRosters = entry.allRosters || [];
+    if (!entry.roster || allRosters.length < 2) return null;
+    const sorted = [...allRosters].sort((a, b) => sbRosterFpts(b) - sbRosterFpts(a));
+    const rank = sorted.findIndex(r => r.roster_id === entry.roster.roster_id) + 1;
+    return rank > 0 ? { rank, of: allRosters.length } : null;
+  }
+
+  // A first-pass playoff-odds estimate, deliberately simple and meant to
+  // be replaced by a real simulation later. Each roster gets a projected
+  // final win total (what it has banked, plus the games left at a
+  // per-game win rate implied by how its scoring compares to the rest of
+  // the league), and the odds are how far that lands above or below the
+  // last playoff spot's projection. The spread narrows as the season runs
+  // out, so the same gap is worth more certainty in week 12 than week 3.
+  function sbPlayoffOdds(entry) {
+    const allRosters = entry.allRosters || [];
+    if (!entry.roster || allRosters.length < 2) return null;
+    const settings = entry.league.settings || {};
+    const spots = settings.playoff_teams || 6;
+    if (spots >= allRosters.length) return 99;
+    const lastRegularWeek = (settings.playoff_week_start || 15) - 1;
+    const played = allRosters.reduce((m, r) => {
+      const st = r.settings || {};
+      return Math.max(m, (st.wins || 0) + (st.losses || 0) + (st.ties || 0));
+    }, 0);
+    const remaining = Math.max(0, lastRegularWeek - played);
+
+    // Scoring strength, as a z-score of season points per game.
+    const perGame = allRosters.map(r => sbRosterFpts(r) / Math.max(1, played));
+    const mean = perGame.reduce((a, b) => a + b, 0) / perGame.length;
+    const variance = perGame.reduce((a, b) => a + (b - mean) ** 2, 0) / perGame.length;
+    const sd = Math.sqrt(variance) || 1;
+
+    const projected = allRosters.map((r, i) => {
+      // A team scoring a standard deviation above the league wins about
+      // 65% of its remaining games; one a deviation below, about 35%.
+      const z = played ? (perGame[i] - mean) / sd : 0;
+      const perGameWinRate = Math.max(0.1, Math.min(0.9, 0.5 + 0.15 * z));
+      return {
+        rosterId: r.roster_id,
+        wins: sbRosterWins(r) + remaining * perGameWinRate,
+      };
+    });
+    const sorted = [...projected].sort((a, b) => b.wins - a.wins);
+    const cutoff = sorted[spots - 1].wins;
+    const mine = projected.find(p => p.rosterId === entry.roster.roster_id);
+    if (!mine) return null;
+    // Wide early (a one-win edge means little in week 2), tight late.
+    const spread = Math.max(0.35, remaining * 0.32);
+    const odds = 100 / (1 + Math.exp(-(mine.wins - cutoff) / spread));
+    return Math.max(1, Math.min(99, Math.round(odds)));
+  }
+
+  // How many of a matchup's starters are on the field right now, and how
+  // many have not kicked off yet -- both sides counted together, since
+  // what is left to play in a matchup is what is left for either team.
+  function sbMatchupPlayClock(starterIdGroups, dict, espnGameData) {
+    let live = 0, left = 0;
+    if (!dict) return { live, left };
+    starterIdGroups.forEach(ids => {
+      (ids || []).forEach(id => {
+        const p = dict[id];
+        const team = p && p.team;
+        const info = team && espnGameData ? espnGameData[team] : null;
+        if (info && info.state === 'in') live++;
+        else if (!info || info.state === 'pre') left++;
+      });
+    });
+    return { live, left };
+  }
+
   // Same optimal-lineup-projection ranking as sbContendingRank, but for
   // every roster in the league at once (used by the League Standings
   // popup, which needs everyone's rank, not just the connected user's).
@@ -16324,10 +16500,10 @@
     });
   }
 
-  // Everything needed to render a league's win-probability field --
-  // shared by the Scoreboard's matchup expand (openRealSbExpand) and the
-  // standalone Field View page (renderSbFieldView) so both always show
-  // the exact same numbers/formations for a given league.
+  // Everything needed to render a league's win-probability field, for
+  // the reading pane's Field View (openRealSbExpand) -- the same context
+  // also feeds the lineup tables Standard View draws, so the two views
+  // can never disagree about a matchup's numbers.
   function sbBuildFieldContext(entry, override, dict, espnGameData) {
     const myMatchup = override ? override.myMatchup : entry.myMatchup;
     const oppMatchup = override ? override.oppMatchup : entry.oppMatchup;
@@ -16397,11 +16573,26 @@
     return { myMatchup, oppMatchup, projMap, week, hasData, winPct, myProj, oppProj, myPts, oppPts, myOrig, oppOrig, teams, fieldRosters, fieldKey, startPct };
   }
 
+  // The open matchup renders in the Scoreboard's right-hand reading pane
+  // rather than inline under its card, so the list of matchups stays
+  // scrollable on the left while a matchup is always on screen. Anywhere
+  // the pane is missing (older markup, other pages) this falls back to
+  // the original inline behavior.
+  function sbMountExpand(card, panel) {
+    const detail = document.getElementById('sbDetail');
+    if (detail && card.closest('#sbGrid')) {
+      detail.innerHTML = '';
+      detail.appendChild(panel);
+    } else {
+      card.after(panel);
+    }
+  }
+
   async function openRealSbExpand(card, entry, override) {
     const panel = document.createElement('div');
     panel.className = 'sb-expand';
     panel.innerHTML = '<div class="ld-loading">Loading lineups…</div>';
-    card.after(panel);
+    sbMountExpand(card, panel);
     card.classList.add('is-open');
 
     let dict;
@@ -16421,10 +16612,13 @@
         `<span class="sb-exp-score-item">${ctx.myPts.toFixed(1)} vs ${ctx.oppPts.toFixed(1)} <i>live</i></span>` +
         `<span class="sb-exp-score-item">${ctx.myOrig.toFixed(1)} vs ${ctx.oppOrig.toFixed(1)} <i>started at</i></span>`
       : `<span class="sb-exp-score-item">${card.querySelector('.sb-card-score').textContent}</span>`;
-    panel.innerHTML =
-      `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
-      '<div class="sb-exp-body">' +
-        '<div class="sb-lineups-cols">' +
+    // Standard draws the two lineups side by side; Field draws the same
+    // matchup as the two teams on the win-probability field. Nothing else
+    // about the page differs between the two.
+    const isFieldPane = window.__sbPaneView === 'field';
+    const bodyHtml = isFieldPane
+      ? sbFieldPanelHtml(startPct, teams)
+      : '<div class="sb-lineups-cols">' +
           '<div class="sb-lineup-col">' +
             '<div class="sb-lineup-label sb-lineup-label-you">YOUR LINEUP</div>' +
             '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th><th>ORIG</th></tr></thead>' +
@@ -16439,113 +16633,60 @@
             '<div class="sb-last-plays-head">SCORING PLAYS</div>' +
             '<div class="sb-last-plays sb-last-plays-opp"><div class="ld-loading" style="padding:6px 0">Loading recent plays…</div></div>' +
           '</div>' +
-        '</div>' +
-        sbFieldPanelHtml(startPct, teams) +
-      '</div>';
-    animateSbFieldPanel(panel, fieldKey, winPct, fieldRosters);
-    loadSbLastPlays(panel, fieldRosters.myIds, fieldRosters.oppIds, dict, entry.league, week);
-  }
-
-  // Field View -- every league's own win-probability field at once, on one
-  // page, instead of having to open each matchup individually. Reuses the
-  // exact same field markup/animation/formation logic as the single-league
-  // expand (via sbBuildFieldContext) so the two views can never disagree.
-  async function renderSbFieldView() {
-    const grid = document.getElementById('sbFieldPageGrid');
-    if (!grid) return;
-    const tankList = sbGetTankList();
-    const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && !tankList.has(e.league.name));
-    if (!entries.length) {
-      grid.innerHTML = '<div class="ld-loading">No leagues to show yet.</div>';
-      return;
-    }
-    let dict;
-    try {
-      dict = await window.sleeperGetPlayerDict();
-    } catch (err) {
-      grid.innerHTML = '<div class="ld-loading">Could not load player data from Sleeper.</div>';
-      return;
-    }
-    const override = window.__sleeperScoreboardOverride || null;
-    const fvWeek = override ? override.week : (entries[0] && entries[0].week);
-    const espnGameData = (window.sleeperGetEspnGameData && entries[0])
-      ? await window.sleeperGetEspnGameData(fvWeek, entries[0].league.season).catch(() => null)
+        '</div>';
+    // The pane is its own panel now rather than a sheet hanging off the
+    // card, so it carries its own heading: whose league this is, the
+    // record, the opponent, and where the team actually sits in that
+    // league (standings place and points-for place).
+    const cardLogoEl = card.querySelector('.sb-card-logo');
+    const logoHtml = cardLogoEl
+      ? `<div class="sb-exp-logo" style="${cardLogoEl.getAttribute('style') || ''}">${cardLogoEl.innerHTML}</div>`
+      : '';
+    const rosterSettings = entry.roster && entry.roster.settings;
+    const recordText = rosterSettings
+      ? `${rosterSettings.wins || 0}-${rosterSettings.losses || 0}${rosterSettings.ties ? `-${rosterSettings.ties}` : ''}`
       : null;
-
-    // Build each league's field context up front (once) so it can be used
-    // both for the card markup below and for sorting by field position,
-    // instead of recomputing it a second time per card.
-    const built = entries.map(entry => {
-      const ov = override ? override.byLeague[entry.league.league_id] : null;
-      const ctx = sbBuildFieldContext(entry, ov, dict, espnGameData);
-      const oppUser = ov ? ov.oppUser : entry.oppUser;
-      const oppName = oppUser ? (oppUser.display_name || oppUser.username || 'Opponent') : (entry.myMatchup ? 'TBD' : 'No matchup yet');
-      return { entry, ctx, oppName };
-    });
-
-    grid.innerHTML = built.map(({ entry, ctx, oppName }) =>
-      `<div class="sb-field-page-card" data-sleeper-league-id="${entry.league.league_id}" data-winpct="${ctx.winPct != null ? ctx.winPct : -1}">` +
-        '<div class="sb-field-page-head">' +
-          `<div class="sb-field-page-name">${entry.league.name}</div>` +
-          `<div class="sb-field-page-meta">vs ${oppName}</div>` +
+    const standing = sbStandingsRank(entry);
+    const pfRank = sbPointsForRank(entry);
+    const headerOppUser = override ? override.oppUser : entry.oppUser;
+    const oppLabel = (headerOppUser && (headerOppUser.display_name || headerOppUser.username))
+      || (myMatchup ? 'TBD' : 'No matchup yet');
+    const metaBits = [
+      recordText ? `<span class="sb-exp-chip">${recordText}</span>` : '',
+      standing ? `<span class="sb-exp-chip">${sbOrdinal(standing.rank)} of ${standing.of}</span>` : '',
+      pfRank ? `<span class="sb-exp-chip">PF ${sbOrdinal(pfRank.rank)}</span>` : '',
+    ].filter(Boolean).join('');
+    panel.innerHTML =
+      '<div class="sb-exp-header">' +
+        logoHtml +
+        '<div class="sb-exp-title">' +
+          `<div class="sb-exp-name">${sbFieldEsc(entry.league.name)}</div>` +
+          `<div class="sb-exp-meta">vs ${sbFieldEsc(oppLabel)}</div>` +
+          (metaBits ? `<div class="sb-exp-chips">${metaBits}</div>` : '') +
         '</div>' +
-        '<div class="sb-field-page-body"></div>' +
-      '</div>'
-    ).join('');
-
-    built.forEach(({ entry, ctx }) => {
-      const cardEl = grid.querySelector(`.sb-field-page-card[data-sleeper-league-id="${entry.league.league_id}"]`);
-      if (!cardEl) return;
-      const bodyEl = cardEl.querySelector('.sb-field-page-body');
-      bodyEl.innerHTML = sbFieldPanelHtml(ctx.startPct, ctx.teams);
-      animateSbFieldPanel(bodyEl, ctx.fieldKey, ctx.winPct, ctx.fieldRosters);
-    });
-
-    applySbFieldSort();
-  }
-  window.renderSbFieldView = renderSbFieldView;
-
-  // Persists across re-renders (every renderSbFieldView rebuild) same as
-  // the Standard View's own sort criterion does.
-  let sbFieldSortCriterion = 'best';
-  function applySbFieldSort() {
-    const grid = document.getElementById('sbFieldPageGrid');
-    if (!grid) return;
-    const cards = Array.from(grid.querySelectorAll('.sb-field-page-card'));
-    if (sbFieldSortCriterion === 'league') return; // already in league order
-    // No matchup/projections yet (-1) always sinks to the bottom, whichever
-    // direction "best"/"worst" field position is sorted in.
-    cards.sort((a, b) => {
-      const wpA = Number(a.dataset.winpct), wpB = Number(b.dataset.winpct);
-      if (wpA < 0 && wpB < 0) return 0;
-      if (wpA < 0) return 1;
-      if (wpB < 0) return -1;
-      return sbFieldSortCriterion === 'best' ? wpB - wpA : wpA - wpB;
-    });
-    cards.forEach(card => grid.appendChild(card));
+      '</div>' +
+      `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
+      `<div class="sb-exp-body">${bodyHtml}</div>`;
+    if (isFieldPane) {
+      animateSbFieldPanel(panel, fieldKey, winPct, fieldRosters);
+    } else {
+      loadSbLastPlays(panel, fieldRosters.myIds, fieldRosters.oppIds, dict, entry.league, week);
+    }
   }
 
-  (function initSbFieldSort() {
-    const selectEl = document.getElementById('sbFieldSortSelect');
-    const menuEl = document.getElementById('sbFieldSortMenu');
-    const labelEl = document.getElementById('sbFieldSortSelectLabel');
-    if (!selectEl || !menuEl) return;
-    selectEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-      menuEl.hidden = !menuEl.hidden;
-    });
-    menuEl.querySelectorAll('.sort-option').forEach(option => {
-      option.addEventListener('click', () => {
-        sbFieldSortCriterion = option.dataset.fieldSort;
-        menuEl.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
-        option.classList.add('active');
-        if (labelEl) labelEl.textContent = option.textContent;
-        menuEl.hidden = true;
-        applySbFieldSort();
-      });
-    });
-    document.addEventListener('click', () => { menuEl.hidden = true; });
-  })();
+  // Re-draw whatever matchup is currently open -- used when the
+  // Standard/Field toggle flips what the reading pane should be showing.
+  function sbReopenOpenMatchup() {
+    const card = document.querySelector('#sbGrid .sb-card.is-open');
+    if (!card) return;
+    const leagueId = card.dataset.sleeperLeagueId;
+    const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+    if (!entry || !window.sleeperGetPlayerDict) return;
+    const override = window.__sleeperScoreboardOverride ? window.__sleeperScoreboardOverride.byLeague[leagueId] : null;
+    openRealSbExpand(card, entry, override);
+  }
+  window.sbReopenOpenMatchup = sbReopenOpenMatchup;
+
 
   // Player detail popup -- click any headshot on a win-probability field
   // (Field View or a single matchup's own expand, since both render the
@@ -16707,18 +16848,20 @@
     const toggleEl = document.getElementById('sbViewToggle');
     if (!toggleEl) return;
     const SB_VIEW_KEY = 'dynastyToolSbView';
+    // Standard and Field are the same page now: the matchup list and the
+    // reading pane never change, only what the pane draws for the open
+    // matchup -- lineup tables (standard) or the two teams on the
+    // win-probability field.
     function applyView(view) {
-      document.querySelectorAll('.sb-view').forEach(el => {
-        el.classList.toggle('is-active', el.dataset.sbView === view);
-      });
+      window.__sbPaneView = view === 'field' ? 'field' : 'scoreboard';
       toggleEl.querySelectorAll('.sb-view-toggle-btn').forEach(btn => {
         btn.classList.toggle('is-active', btn.dataset.sbv === view);
       });
-      if (view === 'field') renderSbFieldView();
+      if (window.sbReopenOpenMatchup) window.sbReopenOpenMatchup();
     }
     let savedView = 'scoreboard';
     try { savedView = localStorage.getItem(SB_VIEW_KEY) || 'scoreboard'; } catch (e) {}
-    if (savedView === 'field') applyView('field');
+    applyView(savedView);
     toggleEl.addEventListener('click', (e) => {
       const btn = e.target.closest('.sb-view-toggle-btn');
       if (!btn) return;
@@ -16737,8 +16880,14 @@
       if (e.target.closest('.sb-expand')) return;
       const card = e.target.closest('.sb-card');
       if (!card) return;
-      const openExpand = card.nextElementSibling;
-      const alreadyOpen = openExpand && openExpand.classList.contains('sb-expand');
+      // With the reading pane there is always a matchup open, so clicking
+      // the one already showing is a no-op instead of closing it. Without
+      // the pane (narrow/legacy markup) the old toggle still applies.
+      const detailPane = document.getElementById('sbDetail');
+      const alreadyOpen = detailPane
+        ? card.classList.contains('is-open')
+        : (card.nextElementSibling && card.nextElementSibling.classList.contains('sb-expand'));
+      if (alreadyOpen && detailPane) return;
       document.querySelectorAll('.sb-expand').forEach(el => el.remove());
       document.querySelectorAll('.sb-card.is-open').forEach(el => el.classList.remove('is-open'));
       if (alreadyOpen) return;
@@ -16751,9 +16900,9 @@
         return;
       }
 
-      const panel = sbLineupTemplate.content.cloneNode(true);
-      panel.querySelector('.sb-exp-score').innerHTML = card.querySelector('.sb-card-score').innerHTML;
-      card.after(panel);
+      const frag = sbLineupTemplate.content.cloneNode(true);
+      frag.querySelector('.sb-exp-score').innerHTML = card.querySelector('.sb-card-score').innerHTML;
+      sbMountExpand(card, frag.querySelector('.sb-expand'));
       card.classList.add('is-open');
     });
   }
@@ -23003,8 +23152,18 @@
     // overall top-N list, so every position group gets its own spotlight.
     const byPos = { QB: [], RB: [], WR: [], TE: [] };
     rows.forEach(r => byPos[r.pos].push(r));
+    // Ties on exposure % break on dynasty value (PP_PLAYER_VALUES, the
+    // same source the filter above and Trade Calc use) -- the more
+    // valuable player shows first. Anyone unvalued sorts last, and only
+    // then do we fall back to name for a stable order.
+    const expValue = (r) => {
+      const v = ppValueForPlayerId(r.id, dict);
+      return v != null && !isNaN(v) ? v : -1;
+    };
     const top = ['QB', 'RB', 'WR', 'TE'].flatMap(pos =>
-      byPos[pos].sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name)).slice(0, 4));
+      byPos[pos].sort((a, b) =>
+        b.pct - a.pct || expValue(b) - expValue(a) || a.name.localeCompare(b.name)
+      ).slice(0, 4));
 
     section.hidden = false;
     if (!top.length) {
@@ -24865,6 +25024,9 @@
     // it survives any rebuild instead of fighting it.
     const openCardEl = sbGrid.querySelector('.sb-card.is-open');
     const requestedOpenId = window.__sbPendingOpenLeagueId || null;
+    // With the reading pane there should always be a matchup showing, so
+    // a first render with nothing open falls back to the top card once
+    // the sort below has decided what "top" means.
     const openLeagueId = requestedOpenId || (openCardEl ? openCardEl.dataset.sleeperLeagueId : null);
 
     const override = window.__sleeperScoreboardOverride || null;
@@ -24886,6 +25048,11 @@
     if (myGen !== sbRenderGen) return;
 
     let totalPts = 0, oppTotalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0, currentlyWinningCount = 0;
+    // Which players are in each league's matchup (both sides, starters
+    // and bench), so the player search below can narrow the list to the
+    // matchups a given player actually appears in. Rebuilt with the grid.
+    sbCardPlayerIndex = {};
+    const sbDict = window.__sleeperPlayerDict;
     sbGrid.innerHTML = entries.map((entry, i) => {
       const ov = override ? override.byLeague[entry.league.league_id] : null;
       const myMatchup = ov ? ov.myMatchup : entry.myMatchup;
@@ -24961,7 +25128,29 @@
         ? `<div class="sb-live-score">${myPts.toFixed(1)} vs ${oppPts.toFixed(1)} live</div>`
         : '';
 
-      return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}" data-order="${i}" data-name="${entry.league.name}" data-winpct="${winPctForSort}" data-score="${hasData ? headlineMine : -1}"${sbWinTintStyle(winPctForSort)}>
+      // Everything the sort menu can order this card by, plus the player
+      // index the search box filters on. Computed once here rather than
+      // re-derived per sort, since the grid is rebuilt every poll anyway.
+      const sortEspnGameData = override
+        ? (override.espnGameData || null)
+        : (entry.week === sbWeek ? sbEspnGameData : null);
+      const sortWeek = override ? override.week : entry.week;
+      const myStarterIds = sbEffectiveStarters(myMatchup, entry.league, projMap, sortEspnGameData, sortWeek);
+      const oppStarterIds = sbEffectiveStarters(oppMatchup, entry.league, projMap, sortEspnGameData, sortWeek);
+      const playClock = sbMatchupPlayClock([myStarterIds, oppStarterIds], sbDict, sortEspnGameData);
+      const playoffOdds = sbPlayoffOdds(entry);
+      const myWins = entry.roster ? sbRosterWins(entry.roster) : -1;
+      const closeness = winPctForSort >= 0 ? Math.abs(winPctForSort - 50) : 999;
+
+      const idsInMatchup = new Set();
+      [myMatchup, oppMatchup].forEach(m => {
+        if (!m) return;
+        (m.players || []).forEach(id => { if (id && id !== '0') idsInMatchup.add(id); });
+      });
+      [myStarterIds, oppStarterIds].forEach(ids => (ids || []).forEach(id => { if (id && id !== '0') idsInMatchup.add(id); }));
+      sbCardPlayerIndex[entry.league.league_id] = idsInMatchup;
+
+      return `<div class="sb-card" data-sleeper-league-id="${entry.league.league_id}" data-order="${i}" data-name="${entry.league.name}" data-winpct="${winPctForSort}" data-score="${hasData ? headlineMine : -1}" data-livepts="${myMatchup ? myPts : -1}" data-close="${closeness}" data-liveplayers="${playClock.live}" data-leftplayers="${playClock.left}" data-playoff="${playoffOdds != null ? playoffOdds : -1}" data-wins="${myWins}"${sbWinTintStyle(winPctForSort)}>
           <div class="sb-card-logo" style="background:${color}">${sbLeagueLogoImgHtml(entry.league)}</div>
           <div class="sb-card-main">
             <div class="sb-card-name">${entry.league.name}${recordText ? `<span class="sb-card-record">${recordText}</span>` : ''}</div>
@@ -25007,7 +25196,16 @@
 
     applySbSort();
 
-    if (openLeagueId) {
+    // Whatever was open, unless the player filter has just ruled it off
+    // the list -- then the pane follows the filter to the top match.
+    const visibleCards = Array.from(sbGrid.querySelectorAll('.sb-card:not(.sb-card-filtered)'));
+    const firstCard = document.getElementById('sbDetail') ? visibleCards[0] : null;
+    const openStillVisible = openLeagueId &&
+      visibleCards.some(c => c.dataset.sleeperLeagueId === openLeagueId);
+    const effectiveOpenId = (openStillVisible ? openLeagueId : null)
+      || (firstCard ? firstCard.dataset.sleeperLeagueId : openLeagueId);
+    if (effectiveOpenId) {
+      const openLeagueId = effectiveOpenId;
       const newCard = sbGrid.querySelector(`.sb-card[data-sleeper-league-id="${openLeagueId}"]`);
       const reopenEntry = window.sleeperLeagueData && window.sleeperLeagueData[openLeagueId];
       if (newCard && reopenEntry) {
@@ -25024,14 +25222,6 @@
       }
     }
 
-    // Keep Field View's numbers moving in real time too when it's the tab
-    // actually being watched -- the 60s poll that rebuilds this grid is
-    // the same one that would otherwise leave it stale until switched away
-    // and back.
-    const fieldViewEl = document.querySelector('.sb-view[data-sb-view="field"]');
-    if (fieldViewEl && fieldViewEl.classList.contains('is-active') && window.renderSbFieldView) {
-      window.renderSbFieldView();
-    }
   }
   window.renderRealScoreboard = renderRealScoreboard;
 
@@ -25040,6 +25230,10 @@
   // to Sleeper order on every sync.
   let sbSortCriterion = 'category';
   let sbSortDir = 1;
+  // leagueId -> Set of every player id in that league's matchup (both
+  // sides). Rebuilt by renderRealScoreboard; read by the player search.
+  let sbCardPlayerIndex = {};
+  let sbPlayerFilter = null; // { id, name }
 
   function applySbSort() {
     const sbGrid = document.getElementById('sbGrid');
@@ -25082,12 +25276,41 @@
     cards.sort((a, b) => {
       const orderA = Number(a.dataset.order), orderB = Number(b.dataset.order);
       let primary;
+      // A card with nothing to sort on (-1 win%, no projections, no
+      // playoff odds yet) always sinks to the bottom rather than riding
+      // along at whatever a missing value happens to compare as.
+      const sink = (v, missing) => (Number(v) === missing ? -Infinity : Number(v));
       switch (sbSortCriterion) {
         case 'az':
           primary = a.dataset.name.localeCompare(b.dataset.name);
           break;
+        case 'winhigh':
         case 'winpct':
-          primary = Number(b.dataset.winpct) - Number(a.dataset.winpct);
+          primary = sink(b.dataset.winpct, -1) - sink(a.dataset.winpct, -1);
+          break;
+        case 'winlow':
+          // Lowest first, but a card with no projection still sinks.
+          primary = (Number(a.dataset.winpct) < 0 ? 1 : 0) - (Number(b.dataset.winpct) < 0 ? 1 : 0)
+            || Number(a.dataset.winpct) - Number(b.dataset.winpct);
+          break;
+        case 'closest':
+          // Distance from a coin flip -- 50% first, blowouts last.
+          primary = Number(a.dataset.close) - Number(b.dataset.close);
+          break;
+        case 'live':
+          primary = Number(b.dataset.liveplayers) - Number(a.dataset.liveplayers);
+          break;
+        case 'left':
+          primary = Number(b.dataset.leftplayers) - Number(a.dataset.leftplayers);
+          break;
+        case 'playoffs':
+          primary = sink(b.dataset.playoff, -1) - sink(a.dataset.playoff, -1);
+          break;
+        case 'record':
+          primary = sink(b.dataset.wins, -1) - sink(a.dataset.wins, -1);
+          break;
+        case 'livepts':
+          primary = sink(b.dataset.livepts, -1) - sink(a.dataset.livepts, -1);
           break;
         case 'score':
           primary = Number(b.dataset.score) - Number(a.dataset.score);
@@ -25099,7 +25322,148 @@
       return (primary * sbSortDir) || (orderA - orderB);
     });
     cards.forEach(card => sbGrid.appendChild(card));
+    applySbPlayerFilter();
   }
+
+  // Narrows the matchup list to the leagues the searched-for player is
+  // actually in (either side of the matchup). Re-applied after every
+  // sort and every 60s rebuild, so the filter survives both.
+  function applySbPlayerFilter() {
+    const sbGrid = document.getElementById('sbGrid');
+    if (!sbGrid) return;
+    const chip = document.getElementById('sbPlayerFilterChip');
+    const existingEmpty = sbGrid.parentNode && sbGrid.parentNode.querySelector('.sb-filter-empty');
+    if (existingEmpty) existingEmpty.remove();
+
+    if (chip) {
+      chip.hidden = !sbPlayerFilter;
+      if (sbPlayerFilter) {
+        chip.innerHTML = `<span>Only ${sbFieldEsc(sbPlayerFilter.name)}'s matchups</span><button type="button" id="sbPlayerFilterClear" title="Clear">&times;</button>`;
+        const clearBtn = document.getElementById('sbPlayerFilterClear');
+        if (clearBtn) clearBtn.addEventListener('click', () => setSbPlayerFilter(null));
+      }
+    }
+
+    const cards = Array.from(sbGrid.querySelectorAll('.sb-card'));
+    if (!sbPlayerFilter) {
+      cards.forEach(card => card.classList.remove('sb-card-filtered'));
+      sbGrid.querySelectorAll('.sb-group-header').forEach(h => h.classList.remove('sb-card-filtered'));
+      return;
+    }
+    // Group headers would otherwise sit above an empty section, so they
+    // step aside for as long as a filter is on.
+    sbGrid.querySelectorAll('.sb-group-header').forEach(h => h.classList.add('sb-card-filtered'));
+    let visible = 0;
+    cards.forEach(card => {
+      const ids = sbCardPlayerIndex[card.dataset.sleeperLeagueId];
+      const match = !!ids && ids.has(sbPlayerFilter.id);
+      card.classList.toggle('sb-card-filtered', !match);
+      if (match) visible++;
+    });
+    if (!visible && sbGrid.parentNode) {
+      const empty = document.createElement('div');
+      empty.className = 'sb-filter-empty';
+      empty.textContent = `${sbPlayerFilter.name} isn't in any of this week's matchups.`;
+      sbGrid.parentNode.appendChild(empty);
+    }
+    // Keep the reading pane on a matchup that is still on screen.
+    const openCard = sbGrid.querySelector('.sb-card.is-open');
+    if (!openCard || openCard.classList.contains('sb-card-filtered')) {
+      const firstVisible = cards.find(c => !c.classList.contains('sb-card-filtered'));
+      if (firstVisible) {
+        cards.forEach(c => c.classList.remove('is-open'));
+        firstVisible.classList.add('is-open');
+        if (window.sbReopenOpenMatchup) window.sbReopenOpenMatchup();
+      }
+    }
+  }
+
+  function setSbPlayerFilter(filter) {
+    sbPlayerFilter = filter;
+    const input = document.getElementById('sbPlayerSearch');
+    const clearBtn = document.getElementById('sbPlayerSearchClear');
+    const menu = document.getElementById('sbPlayerSearchMenu');
+    if (input) input.value = filter ? filter.name : '';
+    if (clearBtn) clearBtn.hidden = !filter;
+    if (menu) { menu.hidden = true; menu.innerHTML = ''; }
+    applySbPlayerFilter();
+  }
+
+  // Type-ahead over only the players actually in this week's matchups --
+  // searching the whole 11k-name Sleeper dictionary would mostly offer
+  // players who cannot narrow anything.
+  (function initSbPlayerSearch() {
+    const input = document.getElementById('sbPlayerSearch');
+    const menu = document.getElementById('sbPlayerSearchMenu');
+    const clearBtn = document.getElementById('sbPlayerSearchClear');
+    if (!input || !menu) return;
+
+    function candidates(query) {
+      const dict = window.__sleeperPlayerDict;
+      if (!dict) return [];
+      const q = query.trim().toLowerCase();
+      if (q.length < 2) return [];
+      const seen = new Set();
+      const out = [];
+      Object.values(sbCardPlayerIndex).forEach(ids => {
+        ids.forEach(id => {
+          if (seen.has(id)) return;
+          seen.add(id);
+          const p = dict[id];
+          if (!p) return;
+          const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+          if (!name || !name.toLowerCase().includes(q)) return;
+          out.push({ id, name, team: p.team || 'FA', pos: p.position || '' });
+        });
+      });
+      // Name-start matches first, then alphabetical.
+      out.sort((a, b) => {
+        const aStart = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+        const bStart = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+        return aStart - bStart || a.name.localeCompare(b.name);
+      });
+      return out.slice(0, 12);
+    }
+
+    function renderMenu(query) {
+      const list = candidates(query);
+      if (!query.trim() || query.trim().length < 2) { menu.hidden = true; menu.innerHTML = ''; return; }
+      if (!list.length) {
+        menu.innerHTML = '<div class="sb-player-opt-empty">No player in this week\'s matchups by that name.</div>';
+        menu.hidden = false;
+        return;
+      }
+      menu.innerHTML = list.map(p =>
+        `<div class="sb-player-opt" data-player-id="${p.id}" data-player-name="${sbFieldEsc(p.name)}">` +
+          `<img src="${sbHeadshotUrl(p.id)}" alt="" loading="lazy" onerror="this.remove()">` +
+          `<span class="sb-player-opt-name">${sbFieldEsc(p.name)}</span>` +
+          `<span class="sb-player-opt-sub">${sbFieldEsc([p.pos, p.team].filter(Boolean).join(' &middot; '))}</span>` +
+        '</div>'
+      ).join('');
+      menu.hidden = false;
+    }
+
+    input.addEventListener('input', () => {
+      if (clearBtn) clearBtn.hidden = !input.value;
+      renderMenu(input.value);
+    });
+    input.addEventListener('focus', () => { if (input.value) renderMenu(input.value); });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { menu.hidden = true; input.blur(); return; }
+      if (e.key !== 'Enter') return;
+      const first = menu.querySelector('.sb-player-opt');
+      if (first) first.click();
+    });
+    menu.addEventListener('click', (e) => {
+      const opt = e.target.closest('.sb-player-opt');
+      if (!opt) return;
+      setSbPlayerFilter({ id: opt.dataset.playerId, name: opt.dataset.playerName });
+    });
+    if (clearBtn) clearBtn.addEventListener('click', () => setSbPlayerFilter(null));
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.sb-player-search')) menu.hidden = true;
+    });
+  })();
 
   const sbSortSelect = document.getElementById('sbSortSelect');
   const sbSortMenu = document.getElementById('sbSortMenu');
