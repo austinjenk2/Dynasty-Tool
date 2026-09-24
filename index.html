@@ -1240,12 +1240,39 @@
   .sb-stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: var(--muted); margin-top: 6px; }
   .sb-stat-divider { width: 1px; height: 34px; background: var(--border); }
 
+  /* Scoreboard is a list + reading pane, not one long page of matchups:
+     the cards live in a single scrollable column on the left (~62%) and
+     whichever matchup is open renders in the sticky pane on the right,
+     so there is always a matchup on screen and clicking another card
+     just swaps what the pane shows. */
+  .sb-split {
+    display: grid;
+    grid-template-columns: minmax(0, 62fr) minmax(0, 38fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .sb-split-list { min-width: 0; max-height: calc(100vh - 40px); overflow-y: auto; padding-right: 4px; }
+  .sb-split-detail {
+    min-width: 0;
+    position: sticky;
+    top: 12px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+  }
+  .sb-detail-empty {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 28px 18px; text-align: center; font-size: 12.5px; color: var(--faint);
+  }
+  @media (max-width: 1100px) {
+    .sb-split { grid-template-columns: 1fr; }
+    .sb-split-list, .sb-split-detail { max-height: none; overflow: visible; position: static; }
+  }
+
   .sb-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     gap: 10px;
   }
-  @media (max-width: 680px) { .sb-grid { grid-template-columns: 1fr; } }
 
   /* Win-probability football field -- lives inside the matchup expand
      panel, right where the lineup tables leave blank space, and only
@@ -1265,14 +1292,8 @@
      the borders join, the gap between them collapses, and the accent
      runs around both. */
   #sbGrid .sb-card.is-open {
-    grid-column: 1 / -1;
-    margin-bottom: -10px;
     border-color: var(--navy);
     box-shadow: inset 0 0 0 1px var(--navy);
-  }
-  .sb-card.is-open {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
   }
   .sb-card.is-open + .sb-expand {
     margin-top: 0;
@@ -1300,6 +1321,13 @@
     flex: 1;
     min-width: 360px;
   }
+  /* In the narrow reading pane the field and the lineups stack instead of
+     forcing a horizontal scrollbar. */
+  #sbDetail .sb-exp-body { flex-direction: column; gap: 16px; }
+  #sbDetail .field-panel { min-width: 0; width: 100%; }
+  #sbDetail .sb-lineups-cols { flex-direction: column; gap: 18px; }
+  #sbDetail .sb-exp-table { width: 100%; }
+  #sbDetail .sb-expand { margin-top: 0; }
   .field-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
   .field-panel-title { font-size: 11px; font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .field-panel-pct { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 700; color: var(--ink); flex-shrink: 0; }
@@ -1611,6 +1639,7 @@
 
   .sb-expand {
     grid-column: 1 / -1;
+    min-width: 0;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -5088,6 +5117,8 @@
           </div>
         </div>
 
+        <div class="sb-split">
+        <div class="sb-split-list">
         <div class="sb-grid" id="sbGrid">
 
           <div class="sb-card">
@@ -5288,6 +5319,11 @@
             <div class="sb-chevron">&#9662;</div>
           </div>
 
+        </div>
+        </div>
+        <div class="sb-split-detail" id="sbDetail">
+          <div class="sb-detail-empty">Pick a matchup on the left to open it here.</div>
+        </div>
         </div>
 
         <template id="sbLineupTemplate">
@@ -16397,11 +16433,26 @@
     return { myMatchup, oppMatchup, projMap, week, hasData, winPct, myProj, oppProj, myPts, oppPts, myOrig, oppOrig, teams, fieldRosters, fieldKey, startPct };
   }
 
+  // The open matchup renders in the Scoreboard's right-hand reading pane
+  // rather than inline under its card, so the list of matchups stays
+  // scrollable on the left while a matchup is always on screen. Anywhere
+  // the pane is missing (older markup, other pages) this falls back to
+  // the original inline behavior.
+  function sbMountExpand(card, panel) {
+    const detail = document.getElementById('sbDetail');
+    if (detail && card.closest('#sbGrid')) {
+      detail.innerHTML = '';
+      detail.appendChild(panel);
+    } else {
+      card.after(panel);
+    }
+  }
+
   async function openRealSbExpand(card, entry, override) {
     const panel = document.createElement('div');
     panel.className = 'sb-expand';
     panel.innerHTML = '<div class="ld-loading">Loading lineups…</div>';
-    card.after(panel);
+    sbMountExpand(card, panel);
     card.classList.add('is-open');
 
     let dict;
@@ -16737,8 +16788,14 @@
       if (e.target.closest('.sb-expand')) return;
       const card = e.target.closest('.sb-card');
       if (!card) return;
-      const openExpand = card.nextElementSibling;
-      const alreadyOpen = openExpand && openExpand.classList.contains('sb-expand');
+      // With the reading pane there is always a matchup open, so clicking
+      // the one already showing is a no-op instead of closing it. Without
+      // the pane (narrow/legacy markup) the old toggle still applies.
+      const detailPane = document.getElementById('sbDetail');
+      const alreadyOpen = detailPane
+        ? card.classList.contains('is-open')
+        : (card.nextElementSibling && card.nextElementSibling.classList.contains('sb-expand'));
+      if (alreadyOpen && detailPane) return;
       document.querySelectorAll('.sb-expand').forEach(el => el.remove());
       document.querySelectorAll('.sb-card.is-open').forEach(el => el.classList.remove('is-open'));
       if (alreadyOpen) return;
@@ -16751,9 +16808,9 @@
         return;
       }
 
-      const panel = sbLineupTemplate.content.cloneNode(true);
-      panel.querySelector('.sb-exp-score').innerHTML = card.querySelector('.sb-card-score').innerHTML;
-      card.after(panel);
+      const frag = sbLineupTemplate.content.cloneNode(true);
+      frag.querySelector('.sb-exp-score').innerHTML = card.querySelector('.sb-card-score').innerHTML;
+      sbMountExpand(card, frag.querySelector('.sb-expand'));
       card.classList.add('is-open');
     });
   }
@@ -23003,8 +23060,18 @@
     // overall top-N list, so every position group gets its own spotlight.
     const byPos = { QB: [], RB: [], WR: [], TE: [] };
     rows.forEach(r => byPos[r.pos].push(r));
+    // Ties on exposure % break on dynasty value (PP_PLAYER_VALUES, the
+    // same source the filter above and Trade Calc use) -- the more
+    // valuable player shows first. Anyone unvalued sorts last, and only
+    // then do we fall back to name for a stable order.
+    const expValue = (r) => {
+      const v = ppValueForPlayerId(r.id, dict);
+      return v != null && !isNaN(v) ? v : -1;
+    };
     const top = ['QB', 'RB', 'WR', 'TE'].flatMap(pos =>
-      byPos[pos].sort((a, b) => b.pct - a.pct || a.name.localeCompare(b.name)).slice(0, 4));
+      byPos[pos].sort((a, b) =>
+        b.pct - a.pct || expValue(b) - expValue(a) || a.name.localeCompare(b.name)
+      ).slice(0, 4));
 
     section.hidden = false;
     if (!top.length) {
@@ -24865,6 +24932,9 @@
     // it survives any rebuild instead of fighting it.
     const openCardEl = sbGrid.querySelector('.sb-card.is-open');
     const requestedOpenId = window.__sbPendingOpenLeagueId || null;
+    // With the reading pane there should always be a matchup showing, so
+    // a first render with nothing open falls back to the top card once
+    // the sort below has decided what "top" means.
     const openLeagueId = requestedOpenId || (openCardEl ? openCardEl.dataset.sleeperLeagueId : null);
 
     const override = window.__sleeperScoreboardOverride || null;
@@ -25007,7 +25077,10 @@
 
     applySbSort();
 
-    if (openLeagueId) {
+    const firstCard = document.getElementById('sbDetail') ? sbGrid.querySelector('.sb-card[data-sleeper-league-id]') : null;
+    const effectiveOpenId = openLeagueId || (firstCard ? firstCard.dataset.sleeperLeagueId : null);
+    if (effectiveOpenId) {
+      const openLeagueId = effectiveOpenId;
       const newCard = sbGrid.querySelector(`.sb-card[data-sleeper-league-id="${openLeagueId}"]`);
       const reopenEntry = window.sleeperLeagueData && window.sleeperLeagueData[openLeagueId];
       if (newCard && reopenEntry) {
