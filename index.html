@@ -899,9 +899,9 @@
   }
   .sb-subtabs { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
   .sb-subtabs-left { display: flex; align-items: center; gap: 22px; }
-  #sbWeekDropdown .week-select, #rgWeekDropdown .week-select { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-  #sbWeekDropdown .week-select span, #rgWeekDropdown .week-select span { font-size: 16px; }
-  #sbWeekDropdown .week-select > span:last-child, #rgWeekDropdown .week-select > span:last-child { font-size: 11px; }
+  /* Only spacing here -- the control's own look is defined once, on
+     .week-select, and is deliberately not re-specified per page. */
+  #sbWeekDropdown .week-select, #rgWeekDropdown .week-select { margin-bottom: 8px; }
   .sb-view { display: none; }
   .sb-view.is-active { display: block; }
 
@@ -917,10 +917,10 @@
 
   /* GameCast -- a broadcast-style game center: one horizontal rail of
      every real NFL game this week (live first, then upcoming by kickoff,
-     then finals), a hero panel for whichever game is selected (score,
-     linescore, situation, field graphic, last play), and a three-column
-     body underneath: your fantasy stats, the live play-by-play, and the
-     injury report.
+     then finals), a hero panel for whichever game is selected (the score
+     hard left, the field graphic taking the rest of the width), and a
+     three-column body underneath: your fantasy stats, the live
+     play-by-play, and your leagues with a starter in the game.
 
      Every color here is a theme token, never a hardcoded navy -- the
      reference design was dark, but this view has to look right in every
@@ -1014,19 +1014,14 @@
   .gc-hero-topright { display: flex; align-items: center; gap: 10px; }
   .gc-ballspot { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 0.3px; }
   .gc-redzone { color: var(--red); font-size: 10.5px; font-weight: 800; letter-spacing: 0.6px; }
-  /* Three across: the injury report sits where the score used to, the
-     score moves to the middle where the eye lands first, and the field
-     stays right. */
-  .gc-hero-grid { display: grid; grid-template-columns: minmax(0, 0.58fr) minmax(0, 1fr) minmax(0, 1.75fr); gap: 18px; align-items: center; }
-  @media (max-width: 1080px) { .gc-hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .gc-hero-field { grid-column: 1 / -1; } }
-  @media (max-width: 760px) { .gc-hero-grid { grid-template-columns: 1fr; } .gc-hero-field { grid-column: auto; } }
+  /* Two across, and between them they take the whole hero: the score sits
+     hard left where the eye lands first, the field takes the rest. The
+     injury report used to hold the left column and pushed both of these
+     into the right two-thirds of the row -- with it gone, nothing is
+     inset and no width goes unused. */
+  .gc-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 22px; align-items: center; }
+  @media (max-width: 760px) { .gc-hero-grid { grid-template-columns: 1fr; } }
   .gc-hero-center { align-self: center; }
-
-  /* Kept deliberately short so the whole hero still fits one screen --
-     it scrolls internally rather than stretching the row. */
-  .gc-hero-injury { align-self: stretch; border-right: 1px solid var(--border-soft); padding-right: 16px; }
-  @media (max-width: 1080px) { .gc-hero-injury { border-right: none; padding-right: 0; } }
-  .gc-hero-injury-scroll { max-height: 190px; overflow-y: auto; margin-top: 8px; }
 
   .gc-hero-score { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
   .gc-hero-team { display: flex; align-items: center; gap: 9px; }
@@ -1185,13 +1180,6 @@
   .gc-lg-against { color: var(--red); font-weight: 700; }
   .gc-lg-sep { display: inline-block; width: 6px; }
 
-  .gc-inj-row { display: flex; align-items: center; gap: 9px; padding: 6px 2px; border-bottom: 1px solid var(--border-soft); }
-  .gc-inj-row:last-child { border-bottom: none; }
-  .gc-inj-pos { font-size: 9.5px; font-weight: 800; color: var(--faint); width: 26px; flex-shrink: 0; }
-  .gc-inj-name { flex: 1; min-width: 0; font-size: 12px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .gc-inj-status { font-size: 9.5px; font-weight: 800; letter-spacing: 0.3px; flex-shrink: 0; color: var(--faint); }
-  .gc-inj-status.gc-inj-out { color: var(--red); }
-  .gc-inj-status.gc-inj-q { color: var(--gold); }
   .gc-empty { font-size: 11.5px; color: var(--faint); padding: 14px 2px; text-align: center; }
 
   /* Field View is the same page as Standard View -- same matchup list on
@@ -1662,6 +1650,18 @@
     text-overflow: ellipsis;
   }
   .ldmu-side .sb-card-record { margin-left: 0; font-size: 12px; }
+  .ldmu-odds-tag {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--faint);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 4px;
+    white-space: nowrap;
+  }
+  .ldmu-odds-tag.is-good { color: var(--green); }
+  .ldmu-odds-tag.is-bad { color: var(--red); }
   .ldmu-side .ldmu-score {
     margin-left: auto;
     padding-left: 12px;
@@ -2642,26 +2642,48 @@
   .sortable-head:hover { color: var(--ink); }
   .sortable-head.active { color: var(--green); }
   .week-dropdown { position: relative; display: inline-block; }
+  /* ---- The week / year / team dropdown, one definition -------------
+     There are six of these across the app and they had drifted into four
+     different looks: 16px bold caps on the Scoreboard, 9.5px on the
+     Leagues header, a lowercase "Week" on the Dashboard, and the Team and
+     Year pickers inheriting whatever their row happened to set. Same
+     control, same job, so it gets one size, one weight and one color
+     wherever it appears, and page-level overrides are gone rather than
+     layered on top.
+
+     Three parts, and each has its own job: a small-caps LEAD naming what
+     is being picked, the VALUE itself (the one thing anybody actually
+     reads, so it is the largest), and a CARET. */
   .week-select {
     cursor: pointer;
     display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .week-select:hover { color: var(--ink); }
-  .week-select span { font-size: 9.5px; }
-  /* The chevron and the surrounding "WEEK" label are deliberately small
-     caps, but the week number is the one thing in the control anybody
-     actually reads -- at 9.5px it was smaller than the word next to it.
-     Tagged rather than matched positionally so the Team/Year dropdowns
-     that share .week-select keep their own sizing. */
-  .week-select .week-num {
-    font-size: 15px;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 11px;
     font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+  }
+  .week-select .week-lead {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  /* Never uppercased -- this also holds team names and years, not just a
+     week number. */
+  .week-select .week-num {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0;
     color: var(--ink);
     line-height: 1;
   }
-  #scheduleWeekLabel { font-size: 16px; }
+  .week-select .week-caret { font-size: 10px; color: var(--faint); }
+  .week-select:hover .week-lead,
+  .week-select:hover .week-num,
+  .week-select:hover .week-caret { color: var(--red); }
   .week-menu {
     position: absolute;
     top: calc(100% + 6px);
@@ -2801,6 +2823,8 @@
     border-radius: 20px;
     padding: 4px 9px;
   }
+  .ld-tag b.ld-odds-good { color: var(--green); }
+  .ld-tag b.ld-odds-bad { color: var(--red); }
   .ld-tag b { color: var(--ink); }
 
   /* League Detail page header -- the league itself (logo/name/settings),
@@ -3106,19 +3130,6 @@
   .tt-gap.is-chasing { color: var(--red); }
   .tt-gap.is-holding { color: var(--green); }
   .tt-gap.is-level { color: var(--gold); }
-  /* Where a pick can still land, drawn rather than described. One bar per
-     slot, its height the chance of landing there, colored by what that
-     slot is worth -- a tall green block on the left is a pick that is
-     almost certainly a top-three, a low flat spread is a pick nobody can
-     call yet. The number under it is the 10th-to-90th percentile range,
-     which is the honest version of a single "projected slot". */
-  .tt-dist { display: inline-flex; flex-direction: column; gap: 3px; align-items: flex-start; }
-  .tt-dist-track { display: flex; align-items: flex-end; gap: 1px; height: 18px; }
-  .tt-dist-bar { width: 4px; border-radius: 1px; background: var(--muted); opacity: 0.30; min-height: 1px; }
-  .tt-dist-bar.is-top { background: var(--green); opacity: 0.85; }
-  .tt-dist-bar.is-lottery { background: var(--gold); opacity: 0.7; }
-  .tt-dist-bar.is-empty { opacity: 0.12; }
-  .tt-range { font-size: 10.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.2px; }
   .tt-odds { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
   .tt-odds.is-live { color: var(--green); }
   .tt-pickval { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
@@ -4341,7 +4352,7 @@
           <div class="schedule-head">
             <h2>Weekly Schedule</h2>
             <div class="week-dropdown" id="scheduleWeekDropdown">
-              <div class="week-select" id="scheduleWeekSelect">Week <span class="week-num" id="scheduleWeekLabel">1</span> <span>&#9662;</span></div>
+              <div class="week-select" id="scheduleWeekSelect"><span class="week-lead">Week</span> <span class="week-num" id="scheduleWeekLabel">1</span> <span class="week-caret">&#9662;</span></div>
               <div class="week-menu" id="scheduleWeekMenu" hidden></div>
             </div>
           </div>
@@ -4502,7 +4513,7 @@
     <div class="league-head-row">
       <span>LEAGUE</span>
       <span class="week-dropdown" id="weekDropdown">
-        <span class="week-select" id="weekSelect">MATCHUP PROJECTIONS &middot; WEEK <span class="week-num" id="weekSelectLabel">1</span> <span>&#9662;</span></span>
+        <span class="week-select" id="weekSelect"><span class="week-lead">Matchup Projections &middot; Week</span> <span class="week-num" id="weekSelectLabel">1</span> <span class="week-caret">&#9662;</span></span>
         <span class="week-menu" id="weekMenu" hidden></span>
       </span>
       <span class="sortable-head" data-sort="roster">ROSTER TYPE</span>
@@ -5115,11 +5126,11 @@
         </div>
         <div class="ldrec-season-filters">
           <span class="week-dropdown" id="ldrecTeamDropdown">
-            <span class="week-select" id="ldrecTeamSelect"><span id="ldrecTeamLabel">Team</span> <span>&#9662;</span></span>
+            <span class="week-select" id="ldrecTeamSelect"><span class="week-lead">Team</span> <span class="week-num" id="ldrecTeamLabel">All</span> <span class="week-caret">&#9662;</span></span>
             <span class="week-menu" id="ldrecTeamMenu" hidden></span>
           </span>
           <span class="week-dropdown" id="ldrecYearDropdown">
-            <span class="week-select" id="ldrecYearSelect"><span id="ldrecYearLabel">Year</span> <span>&#9662;</span></span>
+            <span class="week-select" id="ldrecYearSelect"><span class="week-lead">Year</span> <span class="week-num" id="ldrecYearLabel">All</span> <span class="week-caret">&#9662;</span></span>
             <span class="week-menu" id="ldrecYearMenu" hidden></span>
           </span>
         </div>
@@ -5197,7 +5208,7 @@
         <span class="ldwv-banner-note">Not just yours &mdash; every real matchup in this league, this week.</span>
       </div>
       <span class="week-dropdown" id="ldmuWeekDropdown">
-        <span class="week-select" id="ldmuWeekSelect">WEEK <span class="week-num" id="ldmuWeekLabel">1</span> <span>&#9662;</span></span>
+        <span class="week-select" id="ldmuWeekSelect"><span class="week-lead">Week</span> <span class="week-num" id="ldmuWeekLabel">1</span> <span class="week-caret">&#9662;</span></span>
         <span class="week-menu" id="ldmuWeekMenu" hidden></span>
       </span>
     </div>
@@ -5247,7 +5258,7 @@
           </div>
         </div>
         <span class="week-dropdown" id="sbWeekDropdown">
-          <span class="week-select" id="sbWeekSelect">WEEK <span class="week-num" id="sbWeekLabel">1</span> <span>&#9662;</span></span>
+          <span class="week-select" id="sbWeekSelect"><span class="week-lead">Week</span> <span class="week-num" id="sbWeekLabel">1</span> <span class="week-caret">&#9662;</span></span>
           <span class="week-menu" id="sbWeekMenu" hidden></span>
         </span>
       </div>
@@ -5804,7 +5815,7 @@
           <div class="rg-header-top">
             <h2>Week <span class="sb-week-num">1</span> Weekly Sweats</h2>
             <span class="week-dropdown" id="rgWeekDropdown">
-              <span class="week-select" id="rgWeekSelect">WEEK <span class="week-num" id="rgWeekLabel">1</span> <span>&#9662;</span></span>
+              <span class="week-select" id="rgWeekSelect"><span class="week-lead">Week</span> <span class="week-num" id="rgWeekLabel">1</span> <span class="week-caret">&#9662;</span></span>
               <span class="week-menu" id="rgWeekMenu" hidden></span>
             </span>
           </div>
@@ -11754,7 +11765,7 @@
         <p>Every league's season in one grid &mdash; finish, PF rank, points, playoffs, weekly results, and bracket rounds. Records and points update as soon as a week's games go final on Monday night. Net settles after a season ends, so it reads $0 until then.</p>
       </div>
       <span class="week-dropdown" id="rbYearDropdown">
-        <span class="week-select" id="rbYearSelect"><span id="rbYearLabel">Year</span> <span>&#9662;</span></span>
+        <span class="week-select" id="rbYearSelect"><span class="week-lead">Year</span> <span class="week-num" id="rbYearLabel">2026</span> <span class="week-caret">&#9662;</span></span>
         <span class="week-menu" id="rbYearMenu" hidden></span>
       </span>
     </div>
@@ -11852,7 +11863,7 @@
     <div class="tt-section">
       <div class="tt-head">
         <h2>Race To The 1.01</h2>
-        <p class="tt-sub">Draft order runs off potential points &mdash; max points for, Sleeper's best-possible-lineup total &mdash; lowest first. A <b class="tt-pos-ex">positive</b> number is how much max PF you would have to shed to take the 1.01. A <b class="tt-neg-ex">negative</b> one means you already hold it, and that is your cushion before the next team takes it off you. <b>Where It Lands</b> and <b>1.01 %</b> come from simulating every remaining week off your own scoring through your real schedule, so they tighten as the season runs out.</p>
+        <p class="tt-sub">Draft order runs off potential points &mdash; max points for, Sleeper's best-possible-lineup total &mdash; lowest first. A <b class="tt-pos-ex">positive</b> number is how much max PF you would have to shed to take the 1.01. A <b class="tt-neg-ex">negative</b> one means you already hold it, and that is your cushion before the next team takes it off you. <b>Playoff %</b>, <b>1.01 %</b> and <b>Top 3 %</b> all come out of the same simulation &mdash; 1,500 seasons played through your real remaining schedule, every future week assuming both managers start their best possible lineup &mdash; so they tighten as the season runs out and can never disagree with each other.</p>
       </div>
       <div class="rb-table-wrap">
         <table class="rb-table">
@@ -11863,8 +11874,9 @@
               <th>PF</th>
               <th>Max PF</th>
               <th>Proj Slot</th>
-              <th>Where It Lands</th>
+              <th>Playoff %</th>
               <th>1.01 %</th>
+              <th>Top 3 %</th>
               <th>Value</th>
               <th class="rb-po-col">Pts From 1.01</th>
             </tr>
@@ -11877,7 +11889,7 @@
     <div class="tt-section">
       <div class="tt-head">
         <h2>Future Pick Outlook</h2>
-        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today. <b>Where It Lands</b> is where it can still land once the rest of the season is actually played out &mdash; one bar per slot, and the 10th-to-90th percentile range under it. <b>Value</b> is what that whole range is worth in Base 1s &mdash; the same unit the player rankings use, where a 1st in a vacuum is exactly 1.00 &mdash; instead of every 1st being called a base 1st. Points for and max points for are shown as their rank in that league, 1 being the most.</p>
+        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today. <b>Playoff %</b> is how often that team makes the field &mdash; the higher it is, the later their pick lands &mdash; and <b>1.01 %</b> and <b>Top 3 %</b> are how often it lands at the very top. <b>Value</b> is what that whole range is worth in Base 1s &mdash; the same unit the player rankings use, where a 1st in a vacuum is exactly 1.00 &mdash; instead of every 1st being called a base 1st. Points for and max points for are shown as their rank in that league, 1 being the most.</p>
       </div>
       <div class="rb-table-wrap">
         <table class="rb-table">
@@ -11891,7 +11903,8 @@
               <th>PF Rank</th>
               <th>Max PF Rank</th>
               <th class="rb-po-col">Proj Slot</th>
-              <th>Where It Lands</th>
+              <th>Playoff %</th>
+              <th>1.01 %</th>
               <th>Top 3 %</th>
               <th>Value</th>
             </tr>
@@ -15333,14 +15346,32 @@
     return rank > 0 ? { rank, of: allRosters.length } : null;
   }
 
-  // A first-pass playoff-odds estimate, deliberately simple and meant to
-  // be replaced by a real simulation later. Each roster gets a projected
-  // final win total (what it has banked, plus the games left at a
-  // per-game win rate implied by how its scoring compares to the rest of
-  // the league), and the odds are how far that lands above or below the
-  // last playoff spot's projection. The spread narrows as the season runs
-  // out, so the same gap is worth more certainty in week 12 than week 3.
+  // Playoff odds for one roster, as a whole percent.
+  //
+  // The real answer is the season simulation the pick model runs: 1,500
+  // seasons played out through the league's actual remaining schedule,
+  // counting how often this team finished inside the playoff field. That
+  // is filled in once per sync, so before it lands (and for a league
+  // whose weeks Sleeper would not hand over) this falls back to the
+  // closed-form estimate below, which is what the app used before the
+  // simulation existed.
   function sbPlayoffOdds(entry) {
+    if (window.ppTeamOdds && entry && entry.roster) {
+      const odds = window.ppTeamOdds(entry, entry.roster.roster_id);
+      if (odds && odds.playoff != null) {
+        return Math.max(1, Math.min(99, Math.round(odds.playoff * 100)));
+      }
+    }
+    return sbPlayoffOddsEstimate(entry);
+  }
+
+  // The fallback: each roster gets a projected final win total (what it
+  // has banked, plus the games left at a per-game win rate implied by how
+  // its scoring compares to the rest of the league), and the odds are how
+  // far that lands above or below the last playoff spot's projection. The
+  // spread narrows as the season runs out, so the same gap is worth more
+  // certainty in week 12 than week 3.
+  function sbPlayoffOddsEstimate(entry) {
     const allRosters = entry.allRosters || [];
     if (!entry.roster || allRosters.length < 2) return null;
     const settings = entry.league.settings || {};
@@ -20493,6 +20524,21 @@
       return rec ? `<span class="sb-card-record">${rec}</span>` : '';
     }
 
+    // Playoff odds for one side of a matchup, from the season simulation.
+    // Shown next to the record because it is the same kind of fact -- how
+    // this team's year is going -- and because a matchup between two teams
+    // on the bubble reads completely differently from one between a lock
+    // and a team already out.
+    function ldmuOddsHtml(roster) {
+      if (!roster || !ldmuEntry || !window.ppTeamOdds) return '';
+      const odds = window.ppTeamOdds(ldmuEntry, roster.roster_id);
+      if (!odds || odds.playoff == null) return '';
+      const pct = Math.round(odds.playoff * 100);
+      const cls = odds.playoff >= 0.65 ? ' is-good' : (odds.playoff <= 0.20 ? ' is-bad' : '');
+      const bye = odds.byeSlots ? `, first-round bye ${Math.round((odds.bye || 0) * 100)}%` : '';
+      return `<span class="ldmu-odds-tag${cls}" title="Makes the playoffs in ${pct}% of simulated seasons${bye}">${pct}% PO</span>`;
+    }
+
     function ldmuRowHtml(r, i) {
       const name1 = sbFieldEsc((r.u1 && (r.u1.display_name || r.u1.username)) || 'Team A');
       const name2 = sbFieldEsc((r.u2 && (r.u2.display_name || r.u2.username)) || 'Team B');
@@ -20525,6 +20571,7 @@
         `<div class="ldmu-side${lead(which)}">` +
           `<span class="ldmu-name">${name}</span>` +
           ldmuRecordHtml(roster) +
+          ldmuOddsHtml(roster) +
           `<span class="ldmu-score">${scoreFor(which)}</span>` +
         `</div>`;
       const oddsHtml = ctx.winPct != null
@@ -21280,6 +21327,34 @@
       return { label: 'REBUILD', cls: 'rebuild' };
     }
 
+    // ---- Playoff / bye odds, as they appear on a standings row --------
+    // A percent, or an em dash while the simulation that produces it has
+    // not finished for this league. Deliberately never a zero: "0%" and
+    // "not computed yet" are different answers and must not look alike.
+    function oddsPctText(prob) {
+      if (prob == null) return '—';
+      const pct = prob * 100;
+      if (pct >= 99.5) return '100%';
+      if (pct > 0 && pct < 1) return '<1%';
+      return Math.round(pct) + '%';
+    }
+    function oddsCls(prob) {
+      if (prob == null) return '';
+      if (prob >= 0.65) return ' class="ld-odds-good"';
+      if (prob <= 0.20) return ' class="ld-odds-bad"';
+      return '';
+    }
+    function oddsTitle(odds, which) {
+      if (!odds) return 'Still simulating this league';
+      const runs = '1,500 simulated seasons';
+      if (which === 'bye') {
+        return `First-round bye (top ${odds.byeSlots} of ${odds.playoffTeams} seeds) in ` +
+          `${oddsPctText(odds.bye)} of ${runs}`;
+      }
+      const seed = odds.seed != null ? `, average finish ${odds.seed.toFixed(1)}` : '';
+      return `Made the ${odds.playoffTeams}-team field in ${oddsPctText(odds.playoff)} of ${runs}${seed}`;
+    }
+
     function sbBuildLeagueStandingsHtml(entry, activeRosterId, sortBy) {
       const allRosters = entry.allRosters || [];
       const pfOf = r => {
@@ -21351,7 +21426,12 @@
         const posRanks = posRanksOf(r);
         const weeklyPts = weeklyPtsByRoster[r.roster_id] != null ? weeklyPtsByRoster[r.roster_id] : -Infinity;
         const type = sbStandingsRosterType(conRank, valRank, half);
-        return { rosterId: r.roster_id, ownerId: r.owner_id, customAvatar, accountAvatar, name, subName, wins, losses, ties, conRank, valRank, posRanks, weeklyPts, type };
+        // Playoff and first-round-bye odds for THIS manager, out of the
+        // same season simulation the pick model runs -- so every team in
+        // the league gets the number, not just yours. Null until the
+        // simulation has landed for this league.
+        const odds = window.ppTeamOdds ? window.ppTeamOdds(entry, r.roster_id) : null;
+        return { rosterId: r.roster_id, ownerId: r.owner_id, customAvatar, accountAvatar, name, subName, wins, losses, ties, conRank, valRank, posRanks, weeklyPts, type, odds };
       });
       if (sortBy === 'val') {
         rows.sort((a, b) => (a.valRank || 999) - (b.valRank || 999) || (b.weeklyPts - a.weeklyPts));
@@ -21398,7 +21478,10 @@
             `<span class="ld-tag">WR <b>${row.posRanks.WR != null ? ldOrdinal(row.posRanks.WR) : '—'}</b></span>` +
             `<span class="ld-tag">TE <b>${row.posRanks.TE != null ? ldOrdinal(row.posRanks.TE) : '—'}</b></span>` +
             '<span class="ld-tag">PICKS <b>—</b></span>' +
-            '<span class="ld-tag">PLAYOFF <b>—</b></span>' +
+            `<span class="ld-tag" title="${sbFieldEsc(oddsTitle(row.odds, 'playoff'))}">PLAYOFF <b${oddsCls(row.odds && row.odds.playoff)}>${oddsPctText(row.odds && row.odds.playoff)}</b></span>` +
+            (row.odds && row.odds.byeSlots
+              ? `<span class="ld-tag" title="${sbFieldEsc(oddsTitle(row.odds, 'bye'))}">BYE <b${oddsCls(row.odds.bye)}>${oddsPctText(row.odds.bye)}</b></span>`
+              : '') +
           '</div>' +
           (isActive ? '<div class="ld-header-icons"><span class="ld-icon ld-icon-photo" title="Export as image">&#128247;</span></div>' : '') +
         '</div>';
@@ -22595,6 +22678,24 @@
   }
 
   const PP_SIM_RUNS = 1500;
+  // Every week still to be played is simulated as if both managers start
+  // their best possible lineup.
+  //
+  // This is a deliberate choice, not an oversight. The alternative is to
+  // carry each team's own historical start-vs-optimal gap forward, which
+  // amounts to predicting that a manager who left points on the bench in
+  // week 3 will do it again in week 12 -- and that is really a prediction
+  // about the waiver claims, trades and bye-week planning nobody has made
+  // yet, which is not knowable. Assuming everyone plays their roster
+  // properly is the neutral assumption: it treats every manager the same
+  // and lets the rosters, not past lineup mistakes, decide the rest.
+  //
+  // Two things follow from it, and both are applied below: the projected
+  // weekly mean is lifted back out of "what teams actually start" into
+  // "best possible lineup" space, and a simulated week's potential points
+  // equal its points, because a team that started its best lineup left
+  // nothing on the bench by definition.
+  const PP_ASSUME_OPTIMAL_LINEUPS = true;
   // How many weeks of real results it takes for what a team has scored to
   // carry as much weight as what its roster projects to score. Six is
   // about half a regular season, so the two are level around week 6 and
@@ -22645,11 +22746,32 @@
   // `teams` is [{ id, wins, pf, ppts }], and the returned array is
   // slot-ordered: index 0 holds the 1.01.
   function ppDraftOrderFor(teams, playoffTeams) {
+    return ppSeasonOutcome(teams, playoffTeams).order;
+  }
+
+  // The finish of one simulated season: the seeded standings, who made the
+  // playoffs, and the resulting draft order. The standings sort is done
+  // once and both answers read off it -- the draft order and the playoff
+  // field can never disagree about who finished where.
+  function ppSeasonOutcome(teams, playoffTeams) {
     const standings = teams.slice().sort((a, b) => b.wins - a.wins || b.pf - a.pf);
     const inPlayoffs = new Set(standings.slice(0, playoffTeams).map(t => t.id));
     const missed = teams.filter(t => !inPlayoffs.has(t.id)).sort((a, b) => a.ppts - b.ppts || a.pf - b.pf);
     const made = teams.filter(t => inPlayoffs.has(t.id)).sort((a, b) => a.wins - b.wins || a.pf - b.pf);
-    return missed.concat(made);
+    return { standings, inPlayoffs, order: missed.concat(made) };
+  }
+
+  // How many of the playoff seeds get a first-round bye. A bracket is
+  // built on the next power of two at or above the field size, and the
+  // byes are the empty slots -- 6 teams into an 8-slot bracket is two
+  // byes, 4 into 4 is none. This is how Sleeper builds its bracket, so it
+  // matches what the league will actually play.
+  function ppByeCountFor(playoffTeams) {
+    const n = Math.max(0, Number(playoffTeams) || 0);
+    if (n < 3) return 0;
+    let bracket = 1;
+    while (bracket < n) bracket *= 2;
+    return bracket - n;
   }
 
   // ---- This season, simulated out -------------------------------------
@@ -22711,6 +22833,12 @@
     // real started scores (nobody starts their optimal lineup, and the
     // league-wide ratio between the two is what says by how much).
     const strengthById = {};
+    // League-wide "started points / best-possible points". Used twice: to
+    // put the optimal projection on the same footing as real started
+    // scores for the blend below, and then to undo that at the end, so
+    // the weeks still to be played are projected at best-possible-lineup
+    // level (see PP_ASSUME_OPTIMAL_LINEUPS).
+    let realismFactor = null;
     if (window.sbTeamOptimalProjection) {
       let optSum = 0, optCount = 0;
       rosters.forEach(r => {
@@ -22720,6 +22848,7 @@
       if (optCount === rosters.length && optSum > 0) {
         const optMean = optSum / optCount;
         const realism = leagueMean / optMean;
+        realismFactor = realism > 0 ? realism : null;
         rosters.forEach(r => { strengthById[r.roster_id] *= realism; });
         // Roster value on top of it, and deliberately a much smaller
         // weight than the lineup projection. What it adds is optionality:
@@ -22773,7 +22902,16 @@
       // around every Sunday.
       const strength = strengthById[r.roster_id];
       const scoredWeight = strength == null ? 1 : n / (n + PP_STRENGTH_WEEKS);
-      const projectedMean = strength == null ? scored : scoredWeight * scored + (1 - scoredWeight) * strength;
+      let projectedMean = strength == null ? scored : scoredWeight * scored + (1 - scoredWeight) * strength;
+      // The blend above lives in "what teams actually start" space,
+      // because that is the only space the two halves of it share. The
+      // weeks being simulated are played on the assumption that everyone
+      // starts their best lineup, so the mean is divided back out by the
+      // same league-wide ratio that put the optimal projection into that
+      // space to begin with. Applied to every team identically, so it
+      // does not reshuffle anybody -- it moves the whole league onto the
+      // scale the simulated weeks are actually played at.
+      if (PP_ASSUME_OPTIMAL_LINEUPS && realismFactor) projectedMean /= realismFactor;
       const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
       const ppts = (st.ppts || 0) + (st.ppts_decimal || 0) / 100;
       // How wrong the projected level itself could be. Without this the
@@ -22797,7 +22935,14 @@
         weeksPlayed: n,
         wins: (st.wins || 0) + (st.ties || 0) * 0.5,
         pf, ppts,
-        ratio: pf > 0 ? Math.min(1.8, Math.max(1, ppts / pf)) : 1.25,
+        // How a week's points become potential points. Under the optimal
+        // lineup assumption a simulated week's best-possible total IS what
+        // the team scored, so the ratio is exactly 1. Without it, each
+        // team carries its own historical started-to-potential gap
+        // forward.
+        ratio: PP_ASSUME_OPTIMAL_LINEUPS
+          ? 1
+          : (pf > 0 ? Math.min(1.8, Math.max(1, ppts / pf)) : 1.25),
       };
     });
     const byId = {};
@@ -22823,6 +22968,16 @@
     // came out at that slot across every simulated finish.
     const slotCounts = {};
     model.forEach(m => { slotCounts[m.id] = new Array(teamCount).fill(0); });
+
+    // Playoff and bye odds come free with the draft-order work: the same
+    // sorted standings that decide where a pick lands also decide who made
+    // the field and who earned a bye, so they are counted in the same
+    // pass rather than simulated separately. One simulation, one answer --
+    // the pick model and the playoff odds can never tell different
+    // stories about the same season.
+    const byeSlots = ppByeCountFor(playoffTeams);
+    const playoffCounts = {}, byeCounts = {}, seedSum = {};
+    model.forEach(m => { playoffCounts[m.id] = 0; byeCounts[m.id] = 0; seedSum[m.id] = 0; });
 
     const scratch = model.map(m => ({ id: m.id, wins: 0, pf: 0, ppts: 0 }));
     // Matchups name roster ids; the simulation works on array positions.
@@ -22862,16 +23017,33 @@
           else { scratch[ia].wins += 0.5; scratch[ib].wins += 0.5; }
         }
       }
-      const order = ppDraftOrderFor(scratch, playoffTeams);
+      const outcome = ppSeasonOutcome(scratch, playoffTeams);
+      const order = outcome.order;
       for (let i = 0; i < order.length; i++) slotCounts[order[i].id][i]++;
+      const standings = outcome.standings;
+      for (let i = 0; i < standings.length; i++) {
+        const id = standings[i].id;
+        seedSum[id] += i + 1;
+        if (i < playoffTeams) playoffCounts[id]++;
+        if (i < byeSlots) byeCounts[id]++;
+      }
     }
 
     const slotProb = {};
     Object.keys(slotCounts).forEach(id => {
       slotProb[id] = slotCounts[id].map(c => c / PP_SIM_RUNS);
     });
+    const playoffProb = {}, byeProb = {}, avgSeed = {};
+    Object.keys(playoffCounts).forEach(id => {
+      playoffProb[id] = playoffCounts[id] / PP_SIM_RUNS;
+      byeProb[id] = byeCounts[id] / PP_SIM_RUNS;
+      avgSeed[id] = seedSum[id] / PP_SIM_RUNS;
+    });
     const weeksLeft = remaining.length;
-    return { slotProb, teamCount, playoffTeams, regularWeeks, weeksLeft, model: byId, leagueMean };
+    return {
+      slotProb, teamCount, playoffTeams, byeSlots, regularWeeks, weeksLeft,
+      model: byId, leagueMean, playoffProb, byeProb, avgSeed,
+    };
   }
 
   // ---- Later drafts ----------------------------------------------------
@@ -23016,6 +23188,32 @@
     return f ? f.ev : ppPickValue(pick.round);
   }
   window.ppPickForecast = ppPickForecast;
+
+  // ---- Playoff / bye odds for any team --------------------------------
+  // The same simulation the pick model runs, read from the other end.
+  // Returns null until it has landed for this league, which every caller
+  // treats as "no answer yet" rather than as a zero.
+  //
+  //   playoff : share of simulated seasons this team made the field
+  //   bye     : share where it finished high enough for a first-round bye
+  //   seed    : its average finishing seed across those seasons
+  function ppTeamOdds(entry, rosterId) {
+    if (!entry || !entry.league || rosterId == null) return null;
+    const model = window.__ppPickModel[entry.league.league_id];
+    const cur = model && model.current;
+    if (!cur || !cur.playoffProb) return null;
+    const playoff = cur.playoffProb[rosterId];
+    if (playoff == null) return null;
+    return {
+      playoff,
+      bye: cur.byeProb[rosterId] != null ? cur.byeProb[rosterId] : null,
+      seed: cur.avgSeed[rosterId] != null ? cur.avgSeed[rosterId] : null,
+      byeSlots: cur.byeSlots,
+      playoffTeams: cur.playoffTeams,
+      weeksLeft: cur.weeksLeft,
+    };
+  }
+  window.ppTeamOdds = ppTeamOdds;
   window.ppPickValueFuture = ppPickValueFuture;
   window.ppSlotValue = ppSlotValue;
 
@@ -24262,8 +24460,8 @@
   // -- that badge is the whole point: it tells you at a glance which
   // games actually matter to your week. Selecting a card opens a hero
   // panel (score, linescore, situation, field graphic, last play) over a
-  // three-column body: your fantasy stats, live play-by-play, and the
-  // injury report. ----
+  // three-column body: your fantasy stats, live play-by-play, and your
+  // leagues with a starter in the game. ----
 
   // GameCast scores every player on the shared house line (defined once as
   // SB_HOUSE_SCORING, and used by the Rooting Guide too, so the two pages
@@ -24285,7 +24483,6 @@
 
   window.__gcSelectedEventId = window.__gcSelectedEventId || null;
   window.__gcStatsTeam = window.__gcStatsTeam || null;   // 'away' | 'home'
-  window.__gcInjuryTeam = window.__gcInjuryTeam || null; // 'away' | 'home'
   window.__gcExpandedPlayer = window.__gcExpandedPlayer || null;
   window.__gcHeroData = window.__gcHeroData || null;
 
@@ -24698,13 +24895,6 @@
           </span>
         </div>
         <div class="gc-hero-grid">
-          <div class="gc-hero-injury">
-            <div class="gc-panel-head">
-              <span class="gc-panel-title">Injury Report</span>
-              ${gcTeamSwitchHtml(g, window.__gcInjuryTeam || 'away', 'gc-inj-team')}
-            </div>
-            <div class="gc-hero-injury-scroll" id="gcInjBody">${gcInjuryHtml(g, window.__gcInjuryTeam || 'away', dict || {})}</div>
-          </div>
           <div class="gc-hero-center">
             <div class="gc-hero-score">
               ${side(g.away, 'away')}
@@ -24966,38 +25156,6 @@
     }).join('');
   }
 
-  // ---- Injury column ---------------------------------------------------
-  const GC_INJ_ORDER = { OUT: 0, IR: 0, PUP: 1, DOUBTFUL: 2, QUESTIONABLE: 3 };
-  function gcInjuryHtml(game, whichTeam, dict) {
-    const abbr = whichTeam === 'home' ? game.home.abbr : game.away.abbr;
-    const rows = Object.keys(dict)
-      .filter(id => {
-        const p = dict[id];
-        return p && p.team === abbr && (p.injury_status || (p.status && p.status !== 'Active'));
-      })
-      .map(id => {
-        const p = dict[id];
-        const raw = String(p.injury_status || p.status || '').toUpperCase();
-        return { id, p, raw };
-      })
-      .sort((a, b) => {
-        const ra = GC_INJ_ORDER[a.raw] != null ? GC_INJ_ORDER[a.raw] : 9;
-        const rb = GC_INJ_ORDER[b.raw] != null ? GC_INJ_ORDER[b.raw] : 9;
-        return ra - rb;
-      });
-    if (!rows.length) return '<div class="gc-empty">No reported injuries.</div>';
-    return rows.map(r => {
-      const name = r.p.full_name || [r.p.first_name, r.p.last_name].filter(Boolean).join(' ');
-      const cls = (r.raw === 'OUT' || r.raw === 'IR') ? ' gc-inj-out' : ((r.raw === 'QUESTIONABLE' || r.raw === 'DOUBTFUL') ? ' gc-inj-q' : '');
-      const label = r.raw === 'QUESTIONABLE' ? 'Q' : (r.raw === 'DOUBTFUL' ? 'D' : r.raw);
-      return `<div class="gc-inj-row">
-        <span class="gc-inj-pos">${sbFieldEsc(r.p.position || '')}</span>
-        <span class="gc-inj-name">${sbFieldEsc(name)}</span>
-        <span class="gc-inj-status${cls}">${sbFieldEsc(label)}</span>
-      </div>`;
-    }).join('');
-  }
-
   // ---- League breakdown column ----------------------------------------
   // Every one of your leagues with a starter in THIS game and nobody
   // else's -- your side against your opponent's -- so you can see exactly
@@ -25102,7 +25260,6 @@
       const live = sorted.find(g => g.state === 'in');
       window.__gcSelectedEventId = (live || sorted[0] || {}).eventId || null;
       window.__gcStatsTeam = null;
-      window.__gcInjuryTeam = null;
     }
 
     gcRenderRail(sorted, dict);
@@ -25138,7 +25295,6 @@
     window.__gcHeroData = { game, dict, statsMap, projMap };
 
     if (!window.__gcStatsTeam) window.__gcStatsTeam = 'away';
-    if (!window.__gcInjuryTeam) window.__gcInjuryTeam = 'away';
 
     if (cols) {
       cols.innerHTML = `
@@ -25195,7 +25351,6 @@
         window.__gcSelectedEventId = card.dataset.gcEvent;
         // A new game means the old team/player selections are meaningless.
         window.__gcStatsTeam = null;
-        window.__gcInjuryTeam = null;
         window.__gcExpandedPlayer = null;
         renderRealGameCast();
       });
@@ -25211,8 +25366,7 @@
     if (rightBtn) rightBtn.addEventListener('click', () => scrollRail(1));
     window.addEventListener('resize', gcUpdateRailArrows);
 
-    // The injury panel now lives in the hero and the stats/leagues panels
-    // in the body, so one delegated handler is bound to both containers.
+    // One delegated handler bound to both the hero and the body containers.
     const onPanelClick = (e) => {
       const statsBtn = e.target.closest('[data-gc-stats-team]');
       if (statsBtn) {
@@ -25220,15 +25374,6 @@
         window.__gcExpandedPlayer = null;
         statsBtn.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === statsBtn));
         gcRefreshStatsBody();
-        return;
-      }
-      const injBtn = e.target.closest('[data-gc-inj-team]');
-      if (injBtn) {
-        window.__gcInjuryTeam = injBtn.dataset.gcInjTeam;
-        injBtn.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === injBtn));
-        const cur = window.__gcHeroData;
-        const body = document.getElementById('gcInjBody');
-        if (cur && body) body.innerHTML = gcInjuryHtml(cur.game, window.__gcInjuryTeam, cur.dict);
         return;
       }
       const lgRow = e.target.closest('.gc-lg-row');
@@ -27446,27 +27591,21 @@
       return window.ppPickForecast ? window.ppPickForecast(entry, season, round, rosterId) : null;
     }
 
-    // One bar per draft slot, height = how often the pick landed there
-    // across the simulated seasons. Scaled to the most likely slot rather
-    // than to 1, so a genuinely uncertain pick still reads as a shape
-    // instead of as a flat line.
-    function distCell(f, order) {
-      if (!f) return '<span class="tt-blank">&mdash;</span>';
-      const nonPlayoffSlots = order ? order.total - order.playoffTeams : Math.max(1, f.teamCount - 6);
-      const peak = Math.max.apply(null, f.dist) || 1;
-      const bars = f.dist.map((prob, i) => {
-        const slot = i + 1;
-        const h = Math.round((prob / peak) * 17);
-        const cls = prob <= 0.001 ? ' is-empty'
-          : (slot <= 3 ? ' is-top' : (slot <= nonPlayoffSlots ? ' is-lottery' : ''));
-        return `<span class="tt-dist-bar${cls}" style="height:${Math.max(1, h)}px"></span>`;
-      }).join('');
-      const title = `Simulated ${f.basis === 'season' ? 'to the end of this season' : 'from team strength, ' + f.yearsOut + ' draft' + (f.yearsOut === 1 ? '' : 's') + ' out'}`
-        + ` -- most likely ${f.median}, 10th-90th percentile ${f.p10}-${f.p90}`;
-      const range = f.p10 === f.p90 ? String(f.p10) : `${f.p10}–${f.p90}`;
-      return `<span class="tt-dist" title="${sbFieldEsc(title)}">` +
-        `<span class="tt-dist-track">${bars}</span>` +
-        `<span class="tt-range">${range} of ${f.teamCount}</span></span>`;
+    // How often the team this pick comes from made the playoff field,
+    // across the same simulated seasons the slot distribution comes from.
+    // It is the single most useful thing to know about somebody else's
+    // pick: a team that makes the playoffs picks at the back of the
+    // round, so a low number here is what makes a pick valuable.
+    function playoffCell(entry, rosterId) {
+      const odds = window.ppTeamOdds ? window.ppTeamOdds(entry, rosterId) : null;
+      if (!odds || odds.playoff == null) return '<span class="tt-blank">&mdash;</span>';
+      const pct = odds.playoff * 100;
+      const text = pct >= 99.5 ? '100%' : (pct < 1 && pct > 0 ? '<1%' : Math.round(pct) + '%');
+      const bye = odds.bye != null && odds.byeSlots
+        ? ` -- first-round bye in ${Math.round(odds.bye * 100)}%`
+        : '';
+      const title = `Made the playoffs in ${text} of simulated seasons${bye}`;
+      return `<span class="tt-odds${odds.playoff >= 0.5 ? ' is-live' : ''}" title="${sbFieldEsc(title)}">${text}</span>`;
     }
 
     function oddsCell(prob) {
@@ -27566,8 +27705,9 @@
           `<td>${num(pfOf(r))}</td>` +
           `<td>${num(pptsOf(r))}</td>` +
           `<td>${slotCell(slot, order)}</td>` +
-          `<td>${distCell(fc, order)}</td>` +
+          `<td>${playoffCell(entry, r.roster_id)}</td>` +
           `<td>${oddsCell(fc ? fc.p101 : null)}</td>` +
+          `<td>${oddsCell(fc ? fc.pTop3 : null)}</td>` +
           `<td>${pickValueCell(fc)}</td>` +
           `<td class="rb-po-col">${gapCell(gap)}</td>` +
         `</tr>`;
@@ -27624,7 +27764,8 @@
           `<td>${rankCell(p.entry.allRosters || [], pfOf, p.pick.fromRosterId)}</td>` +
           `<td>${rankCell(p.entry.allRosters || [], pptsOf, p.pick.fromRosterId)}</td>` +
           `<td class="rb-po-col">${slotCell(p.slot, p.order, p.pick.round)}</td>` +
-          `<td>${distCell(fc, p.order)}</td>` +
+          `<td>${playoffCell(p.entry, p.pick.fromRosterId)}</td>` +
+          `<td>${oddsCell(fc ? fc.p101 : null)}</td>` +
           `<td>${oddsCell(fc ? fc.pTop3 : null)}</td>` +
           `<td>${pickValueCell(fc)}</td>` +
         `</tr>`;
