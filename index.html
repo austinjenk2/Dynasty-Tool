@@ -1646,6 +1646,137 @@
   .sb-card-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sb-card-record { font-weight: 700; font-size: 13.5px; color: var(--muted); margin-left: 7px; }
   .sb-card-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  /* League Matchups rows. The old row crammed both managers onto one line
+     as "A vs B" with a combined score pair on the right, which meant you
+     could not tell at a glance which score belonged to which manager --
+     and with records added it would have been four numbers on one line.
+     One line per manager instead, each carrying its own record and its
+     own projection, with the favored side called out. */
+  .ldmu-teams { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .ldmu-side { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+  .ldmu-name {
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ldmu-side .sb-card-record { margin-left: 0; font-size: 12px; }
+  .ldmu-side .ldmu-score {
+    margin-left: auto;
+    padding-left: 12px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .ldmu-side.is-leading .ldmu-name { color: var(--ink); }
+  .ldmu-side.is-leading .ldmu-score { color: var(--navy); }
+  .ldmu-odds {
+    flex-shrink: 0;
+    width: 74px;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .ldmu-odds-pct { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--ink); }
+  .ldmu-odds-label { font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
+  .ldmu-odds-none { font-size: 11px; color: var(--faint); }
+  /* Manager records on the two lineup columns inside an open matchup. */
+  .sb-lineup-label .sb-lineup-rec { font-weight: 700; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+
+  /* ---- Season schedule -------------------------------------------- */
+  .ldsch-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .ldsch-sum-cell { padding: 10px 16px; display: flex; flex-direction: column; }
+  .ldsch-sum-cell + .ldsch-sum-cell { border-left: 1px solid var(--border); }
+  .ldsch-sum-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
+  .ldsch-sum-value { font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+  .ldsch-wrap { overflow-x: auto; }
+  .ldsch-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ldsch-table th {
+    text-align: left;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--faint);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .ldsch-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .ldsch-table tr:last-child td { border-bottom: none; }
+  /* Opponent absorbs the slack; everything else is as wide as it needs to
+     be, so the numbers sit together instead of drifting apart across a
+     wide modal. */
+  .ldsch-table th:nth-child(1), .ldsch-table td:nth-child(1),
+  .ldsch-table th:nth-child(4), .ldsch-table td:nth-child(4),
+  .ldsch-table th:nth-child(5), .ldsch-table td:nth-child(5),
+  .ldsch-table th:nth-child(6), .ldsch-table td:nth-child(6) { width: 1%; }
+  .ldsch-table th:nth-child(3), .ldsch-table td:nth-child(3) { width: 150px; }
+  .ldsch-table .ldsch-num { text-align: right; font-family: 'Source Serif 4', serif; font-weight: 700; }
+  /* The row for the week being played right now, so it is findable in an
+     18-row table without having to remember what week it is. */
+  .ldsch-table tr.is-live td { background: rgba(232, 161, 60, 0.10); }
+  .ldsch-table tr.is-playoff-start td { border-top: 2px solid var(--border); }
+  .ldsch-week { font-weight: 700; color: var(--muted); }
+  .ldsch-opp { font-weight: 700; color: var(--ink); }
+  .ldsch-opp-rec { font-weight: 700; color: var(--muted); margin-left: 6px; font-size: 12px; }
+  .ldsch-bye { color: var(--faint); font-weight: 700; }
+  .ldsch-blank { color: var(--faint); }
+  .ldsch-result {
+    display: inline-block;
+    min-width: 19px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: #fff;
+  }
+  .ldsch-result.is-w { background: var(--green); }
+  .ldsch-result.is-l { background: var(--red); }
+  .ldsch-result.is-t { background: var(--muted); }
+  .ldsch-tag {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--faint);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 4px;
+    margin-left: 6px;
+  }
+  .ldsch-odds-bar {
+    display: inline-block;
+    width: 46px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--border);
+    margin-left: 8px;
+    position: relative;
+    overflow: hidden;
+    vertical-align: middle;
+  }
+  .ldsch-odds-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--navy); }
+  /* The Schedule opener sits at the far left of the per-roster stat strip.
+     It is the one cell in that strip that does something when clicked, so
+     it gets a pointer and a hover rather than reading as another stat. */
+  .ld-stat-cell-action { cursor: pointer; flex: 0 0 auto; }
+  .ld-stat-cell-action:hover { background: var(--surface-2, rgba(29, 53, 87, 0.04)); }
+  .ld-stat-cell-action .ld-stat-value { display: flex; align-items: center; gap: 5px; }
+  .ld-stat-cell-action .ld-stat-chev { font-size: 11px; color: var(--faint); }
   .sb-card-meta .sb-delta { color: var(--green); }
   .sb-card-score { text-align: right; flex-shrink: 0; }
   .sb-score-mine { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--navy); }
@@ -2519,6 +2650,17 @@
   }
   .week-select:hover { color: var(--ink); }
   .week-select span { font-size: 9.5px; }
+  /* The chevron and the surrounding "WEEK" label are deliberately small
+     caps, but the week number is the one thing in the control anybody
+     actually reads -- at 9.5px it was smaller than the word next to it.
+     Tagged rather than matched positionally so the Team/Year dropdowns
+     that share .week-select keep their own sizing. */
+  .week-select .week-num {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1;
+  }
   #scheduleWeekLabel { font-size: 16px; }
   .week-menu {
     position: absolute;
@@ -4199,7 +4341,7 @@
           <div class="schedule-head">
             <h2>Weekly Schedule</h2>
             <div class="week-dropdown" id="scheduleWeekDropdown">
-              <div class="week-select" id="scheduleWeekSelect">Week <span id="scheduleWeekLabel">1</span> <span>&#9662;</span></div>
+              <div class="week-select" id="scheduleWeekSelect">Week <span class="week-num" id="scheduleWeekLabel">1</span> <span>&#9662;</span></div>
               <div class="week-menu" id="scheduleWeekMenu" hidden></div>
             </div>
           </div>
@@ -4360,7 +4502,7 @@
     <div class="league-head-row">
       <span>LEAGUE</span>
       <span class="week-dropdown" id="weekDropdown">
-        <span class="week-select" id="weekSelect">MATCHUP PROJECTIONS &middot; WEEK <span id="weekSelectLabel">1</span> <span>&#9662;</span></span>
+        <span class="week-select" id="weekSelect">MATCHUP PROJECTIONS &middot; WEEK <span class="week-num" id="weekSelectLabel">1</span> <span>&#9662;</span></span>
         <span class="week-menu" id="weekMenu" hidden></span>
       </span>
       <span class="sortable-head" data-sort="roster">ROSTER TYPE</span>
@@ -4853,6 +4995,11 @@
 
       <div id="ldRosterExpand">
       <div class="ld-stats" id="ldStats">
+        <div class="ld-stat-cell ld-stat-cell-action" id="ldSchedBtn" title="Every matchup this team plays this season">
+          <div class="ld-stat-label">SCHEDULE</div>
+          <div class="ld-stat-value">Full Year <span class="ld-stat-chev">&#9656;</span></div>
+        </div>
+        <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell">
           <div class="ld-stat-label">VALUE</div>
           <div class="ld-stat-value" id="ldValue">&mdash;</div>
@@ -4986,6 +5133,16 @@
     </div>
   </div>
 
+  <div class="ldrec-overlay" id="ldschOverlay" hidden></div>
+  <div class="ldrec-modal" id="ldschModal" hidden>
+    <div class="ldrec-head">
+      <div class="ldrec-title">Schedule <span class="ldrec-title-sub" id="ldschTitleTeam">Team</span></div>
+      <div class="ldrec-close" id="ldschClose">&#10005;</div>
+    </div>
+    <div class="ldsch-summary" id="ldschSummary"></div>
+    <div class="ldsch-wrap" id="ldschBody"><div class="exp-loading">Loading schedule...</div></div>
+  </div>
+
   <div class="ldrec-overlay" id="ldwvOverlay" hidden></div>
   <div class="ldrec-modal ldwv-modal" id="ldwvModal" hidden>
     <div class="ldrec-head">
@@ -5040,7 +5197,7 @@
         <span class="ldwv-banner-note">Not just yours &mdash; every real matchup in this league, this week.</span>
       </div>
       <span class="week-dropdown" id="ldmuWeekDropdown">
-        <span class="week-select" id="ldmuWeekSelect">WEEK <span id="ldmuWeekLabel">1</span> <span>&#9662;</span></span>
+        <span class="week-select" id="ldmuWeekSelect">WEEK <span class="week-num" id="ldmuWeekLabel">1</span> <span>&#9662;</span></span>
         <span class="week-menu" id="ldmuWeekMenu" hidden></span>
       </span>
     </div>
@@ -5090,7 +5247,7 @@
           </div>
         </div>
         <span class="week-dropdown" id="sbWeekDropdown">
-          <span class="week-select" id="sbWeekSelect">WEEK <span id="sbWeekLabel">1</span> <span>&#9662;</span></span>
+          <span class="week-select" id="sbWeekSelect">WEEK <span class="week-num" id="sbWeekLabel">1</span> <span>&#9662;</span></span>
           <span class="week-menu" id="sbWeekMenu" hidden></span>
         </span>
       </div>
@@ -5647,7 +5804,7 @@
           <div class="rg-header-top">
             <h2>Week <span class="sb-week-num">1</span> Weekly Sweats</h2>
             <span class="week-dropdown" id="rgWeekDropdown">
-              <span class="week-select" id="rgWeekSelect">WEEK <span id="rgWeekLabel">1</span> <span>&#9662;</span></span>
+              <span class="week-select" id="rgWeekSelect">WEEK <span class="week-num" id="rgWeekLabel">1</span> <span>&#9662;</span></span>
               <span class="week-menu" id="rgWeekMenu" hidden></span>
             </span>
           </div>
@@ -18605,6 +18762,40 @@
       }));
     }
 
+    // ---- Travis Hunter -------------------------------------------------
+    // Sleeper carries Hunter as a DB, because that is one of the two
+    // positions he genuinely plays. Every position-aware surface in this
+    // app (rosters, exposures, lineups, rankings, the trade calculator)
+    // filters to QB/RB/WR/TE, so as a DB he does not merely render oddly
+    // -- he vanishes from the app completely, on every team that rosters
+    // him, while still occupying a real roster spot in fantasy.
+    //
+    // He is the only player this is true of, so it is fixed here rather
+    // than by widening the position filters: the dictionary is rewritten
+    // once, at the single point every caller reads it from, so there is
+    // no surface left that could disagree about what he is. Matched on
+    // name rather than on a hardcoded Sleeper id so it survives an id
+    // change, and it is a no-op the day Sleeper lists him as a WR itself.
+    const PLAYER_POSITION_FIXES = [
+      { first: 'Travis', last: 'Hunter', position: 'WR' },
+    ];
+    function applyPlayerPositionFixes(dict) {
+      if (!dict) return dict;
+      PLAYER_POSITION_FIXES.forEach(fix => {
+        Object.keys(dict).forEach(id => {
+          const p = dict[id];
+          if (!p || p.first_name !== fix.first || p.last_name !== fix.last) return;
+          if (p.position === fix.position) return;
+          p.position = fix.position;
+          // fantasy_positions is what the lineup-slot code reads to decide
+          // whether he is eligible for a WR/FLEX spot, so it has to agree.
+          const fps = Array.isArray(p.fantasy_positions) ? p.fantasy_positions.slice() : [];
+          p.fantasy_positions = [fix.position].concat(fps.filter(x => x !== fix.position));
+        });
+      });
+      return dict;
+    }
+
     function getPlayerDict() {
       if (window.__sleeperPlayerDict) return Promise.resolve(window.__sleeperPlayerDict);
       if (playerDictPromise) return playerDictPromise;
@@ -18619,13 +18810,15 @@
         try {
           const hit = await playerDbGet();
           if (hit && hit.dict && Date.now() - (hit.at || 0) < PLAYER_CACHE_TTL) {
-            window.__sleeperPlayerDict = hit.dict;
-            return hit.dict;
+            // Applied on the way out of the cache too: a dictionary cached
+            // before this fix existed is still the unfixed one on disk.
+            window.__sleeperPlayerDict = applyPlayerPositionFixes(hit.dict);
+            return window.__sleeperPlayerDict;
           }
         } catch (e) {
           // No usable cache (private mode, blocked storage) -- fetch it.
         }
-        const dict = await sleeperFetch('/players/nfl');
+        const dict = applyPlayerPositionFixes(await sleeperFetch('/players/nfl'));
         window.__sleeperPlayerDict = dict;
         // Don't make the first render wait on the write.
         playerDbPut(dict).catch(() => {});
@@ -20284,20 +20477,66 @@
     let ldmuDict = null;
     let ldmuRows = [];
 
+    // A manager's record, straight off their roster's Sleeper settings.
+    // Ties are only shown when there are any -- "5-2" reads better than
+    // "5-2-0" in the vast majority of leagues that never tie.
+    function ldmuRecord(roster) {
+      const st = (roster && roster.settings) || null;
+      if (!st) return '';
+      const w = st.wins || 0, l = st.losses || 0, t = st.ties || 0;
+      if (!w && !l && !t) return '0-0';
+      return `${w}-${l}${t ? '-' + t : ''}`;
+    }
+
+    function ldmuRecordHtml(roster) {
+      const rec = ldmuRecord(roster);
+      return rec ? `<span class="sb-card-record">${rec}</span>` : '';
+    }
+
     function ldmuRowHtml(r, i) {
       const name1 = sbFieldEsc((r.u1 && (r.u1.display_name || r.u1.username)) || 'Team A');
       const name2 = sbFieldEsc((r.u2 && (r.u2.display_name || r.u2.username)) || 'Team B');
       const ctx = r.ctx;
-      const scoreHtml = ctx.hasData
-        ? `<span class="sb-score-mine">${ctx.myProj.toFixed(1)}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${ctx.oppProj.toFixed(1)}</span>`
-        : '<span class="sb-score-vs">No projections yet</span>';
-      const metaText = ctx.winPct != null ? `${ctx.winPct}% / ${100 - ctx.winPct}% win probability` : `${(ctx.myPts || 0).toFixed(1)} vs ${(ctx.oppPts || 0).toFixed(1)} live`;
+      // One side is marked as leading so the eye lands on the favorite
+      // without having to compare the two numbers. Projections decide it
+      // while a week is still ahead; once points are on the board the live
+      // score is the better read, so that takes over.
+      //
+      // ctx only carries live points when it has projections to build a
+      // matchup from, so a week with real scores but no projection feed
+      // (an old week, or a failed projections fetch) came through as two
+      // blank scores. The raw points on the matchup itself are always
+      // there, so they are the floor under this -- a week that has been
+      // played always shows what it was played to.
+      const rawMine = Number(ctx.myMatchup && ctx.myMatchup.points) || 0;
+      const rawOpp = Number(ctx.oppMatchup && ctx.oppMatchup.points) || 0;
+      const myPts = (ctx.myPts || 0) || rawMine;
+      const oppPts = (ctx.oppPts || 0) || rawOpp;
+      const live = myPts > 0 || oppPts > 0;
+      const cmp = live ? [myPts, oppPts]
+        : (ctx.hasData ? [ctx.myProj, ctx.oppProj] : [null, null]);
+      const lead = i => (cmp[0] == null || cmp[0] === cmp[1]) ? '' : (cmp[i] > cmp[1 - i] ? ' is-leading' : '');
+      const scoreFor = which => {
+        if (live) return (which === 0 ? myPts : oppPts).toFixed(1);
+        if (ctx.hasData) return (which === 0 ? ctx.myProj : ctx.oppProj).toFixed(1);
+        return '';
+      };
+      const sideHtml = (which, name, roster) =>
+        `<div class="ldmu-side${lead(which)}">` +
+          `<span class="ldmu-name">${name}</span>` +
+          ldmuRecordHtml(roster) +
+          `<span class="ldmu-score">${scoreFor(which)}</span>` +
+        `</div>`;
+      const oddsHtml = ctx.winPct != null
+        ? `<span class="ldmu-odds-pct">${ctx.winPct}%</span>` +
+          `<span class="ldmu-odds-label">${live ? 'WIN PROB' : 'PROJ WIN'}</span>`
+        : '<span class="ldmu-odds-none">No proj</span>';
       return `<div class="sb-card ldmu-row" data-ldmu-idx="${i}">
-          <div class="sb-card-main">
-            <div class="sb-card-name">${name1} <span style="color:var(--faint);font-weight:500">vs</span> ${name2}</div>
-            <div class="sb-card-meta">${metaText}</div>
+          <div class="ldmu-teams">
+            ${sideHtml(0, name1, r.r1)}
+            ${sideHtml(1, name2, r.r2)}
           </div>
-          <div class="sb-card-score">${scoreHtml}</div>
+          <div class="ldmu-odds" title="${ctx.winPct != null ? sbFieldEsc(name1 + ' ' + ctx.winPct + '% / ' + name2 + ' ' + (100 - ctx.winPct) + '%') : ''}">${oddsHtml}</div>
           <div class="sb-chevron">&#9662;</div>
         </div>`;
     }
@@ -20323,12 +20562,12 @@
         '<div class="sb-exp-body">' +
           '<div class="sb-lineups-cols">' +
             '<div class="sb-lineup-col">' +
-              `<div class="sb-lineup-label sb-lineup-label-you">${sbFieldEsc(teams.myName)}</div>` +
+              `<div class="sb-lineup-label sb-lineup-label-you">${sbFieldEsc(teams.myName)}<span class="sb-lineup-rec">${ldmuRecord(r.r1)}</span></div>` +
               '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th><th>ORIG</th></tr></thead>' +
               `<tbody>${sbLineupRowsHtml(myMatchup, ldmuDict, projMap, r.league, week, r.espnGameData)}</tbody></table>` +
             '</div>' +
             '<div class="sb-lineup-col">' +
-              `<div class="sb-lineup-label sb-lineup-label-opp">${sbFieldEsc(teams.oppName)}</div>` +
+              `<div class="sb-lineup-label sb-lineup-label-opp">${sbFieldEsc(teams.oppName)}<span class="sb-lineup-rec">${ldmuRecord(r.r2)}</span></div>` +
               '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th><th>ORIG</th></tr></thead>' +
               `<tbody>${sbLineupRowsHtml(oppMatchup, ldmuDict, projMap, r.league, week, r.espnGameData)}</tbody></table>` +
             '</div>' +
@@ -20382,7 +20621,7 @@
         // { week, projections } -- reuse it directly so live/proj/win%
         // read exactly like every other page that shows them.
         const ctx = sbBuildFieldContext(syntheticEntry, { week, projections: projMap, oppUser: u2, myMatchup: m1, oppMatchup: m2, espnGameData }, ldmuDict, espnGameData);
-        return { ctx, u1, u2, league: entry.league, espnGameData };
+        return { ctx, u1, u2, r1, r2, league: entry.league, espnGameData };
       });
 
       listEl.innerHTML = ldmuRows.map((r, i) => ldmuRowHtml(r, i)).join('');
@@ -20448,6 +20687,331 @@
     if (ldmuCloseEl) ldmuCloseEl.addEventListener('click', ldmuClose);
     const ldmuOverlayEl = document.getElementById('ldmuOverlay');
     if (ldmuOverlayEl) ldmuOverlayEl.addEventListener('click', ldmuClose);
+
+    // ---- Season schedule ------------------------------------------------
+    // One roster's whole year: who they play each week, what the matchup
+    // projects to, and how the ones already played came out.
+    //
+    // Three different kinds of answer share the win-probability column,
+    // and the table says which is which rather than blending them:
+    //
+    //  * A week already final has no projection worth showing -- the
+    //    result IS the answer, so the column shows what the matchup was
+    //    projected at only where that is still meaningful (the live week).
+    //  * The live week uses the real lineup-level projection, the same
+    //    sbMatchupWinPct every other page in the app shows, so the number
+    //    here can never disagree with the one on the Scoreboard.
+    //  * A future week cannot use that. Nobody has set a lineup, and
+    //    Sleeper's weekly projections that far out are close to a season
+    //    average, so a "lineup projection" for week 14 would be a
+    //    confident-looking number built on nothing. Those weeks get a
+    //    team-strength read instead: each side's own weekly scoring so
+    //    far, as a mean and a spread, and the probability that one draw
+    //    beats the other. Tagged EST in the table so it is never mistaken
+    //    for the lineup projection above it.
+    let ldschRosterId = null;
+    let ldschEntry = null;
+
+    // Each team's weekly scoring, from the weeks actually played. The
+    // spread is shrunk toward the league's own spread while a team has
+    // only a few weeks on the board, for the same reason the pick model
+    // does it: one blowup in week 2 should not become a personality.
+    function ldschScoringModel(weeks, played, rosters) {
+      const scoresById = {};
+      rosters.forEach(r => { scoresById[r.roster_id] = []; });
+      weeks.forEach((ms, i) => {
+        if (!played[i] || !Array.isArray(ms)) return;
+        ms.forEach(m => {
+          if (scoresById[m.roster_id]) scoresById[m.roster_id].push(Number(m.points) || 0);
+        });
+      });
+      const all = Object.values(scoresById).flat();
+      if (!all.length) return null;
+      const lgMean = all.reduce((a, b) => a + b, 0) / all.length;
+      const lgVar = all.reduce((a, b) => a + (b - lgMean) * (b - lgMean), 0) / Math.max(1, all.length - 1);
+      const model = {};
+      rosters.forEach(r => {
+        const mine = scoresById[r.roster_id] || [];
+        const n = mine.length;
+        const mean = n ? mine.reduce((a, b) => a + b, 0) / n : lgMean;
+        let variance = lgVar;
+        if (n >= 3) {
+          const v = mine.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (n - 1);
+          const wgt = Math.min(1, (n - 2) / 8);
+          variance = wgt * v + (1 - wgt) * lgVar;
+        }
+        // Same shrink on the mean -- four weeks is not a true talent level.
+        const meanWeight = Math.min(1, n / 8);
+        model[r.roster_id] = {
+          mean: meanWeight * mean + (1 - meanWeight) * lgMean,
+          sd: Math.sqrt(Math.max(1, variance)),
+          n,
+        };
+      });
+      return model;
+    }
+
+    // P(a beats b) for two independent normal scores. Abramowitz & Stegun
+    // 7.1.26 for the error function -- accurate to ~1e-7, which is far
+    // finer than a number rounded to a whole percent needs.
+    function ldschNormalWinPct(a, b) {
+      if (!a || !b) return null;
+      const sd = Math.sqrt(a.sd * a.sd + b.sd * b.sd);
+      if (!(sd > 0)) return null;
+      const z = (a.mean - b.mean) / (sd * Math.SQRT2);
+      const sign = z < 0 ? -1 : 1;
+      const x = Math.abs(z);
+      const t = 1 / (1 + 0.3275911 * x);
+      const erf = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+      return Math.round(50 * (1 + sign * erf));
+    }
+
+    function ldschOddsCell(pct, kind) {
+      if (pct == null) return '<span class="ldsch-blank">&mdash;</span>';
+      const tag = kind ? `<span class="ldsch-tag">${kind}</span>` : '';
+      return `<span class="ldsch-num">${pct}%</span>` +
+        `<span class="ldsch-odds-bar"><span class="ldsch-odds-fill" style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>` +
+        tag;
+    }
+
+    async function ldschLoad() {
+      const bodyEl = document.getElementById('ldschBody');
+      const sumEl = document.getElementById('ldschSummary');
+      const entry = ldschEntry;
+      const rosterId = ldschRosterId;
+      if (!bodyEl || !entry || rosterId == null) return;
+
+      const league = entry.league;
+      const rosters = entry.allRosters || [];
+      const me = rosters.find(r => r.roster_id === rosterId);
+      const playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
+      // Through the playoff rounds, not just the regular season -- the
+      // bracket weeks are part of the year this team plays.
+      const lastWeek = Math.min(18, playoffStart + 2);
+      const liveWeek = entry.week || 1;
+
+      // Matchups for every week. sleeperGetWeekMatchups caches per league
+      // and week in memory, so most of these are already warm from the
+      // rest of the page and this costs nothing.
+      const weekNums = [];
+      for (let w = 1; w <= lastWeek; w++) weekNums.push(w);
+      const weeks = await Promise.all(weekNums.map(w =>
+        sleeperGetWeekMatchups(league.league_id, w).catch(() => [])));
+      const played = weeks.map(ms => Array.isArray(ms) && ms.some(m => (Number(m.points) || 0) > 0));
+
+      const model = ldschScoringModel(weeks, played, rosters);
+
+      // The live week's real lineup projection, on the same footing as the
+      // Scoreboard's. Only this one week gets a projections fetch: it is
+      // the only week where a lineup-level number means anything.
+      let liveProjMap = null, liveEspn = null;
+      const liveIdx = liveWeek - 1;
+      if (weeks[liveIdx]) {
+        if (window.sleeperGetWeekProjections) {
+          try { liveProjMap = await window.sleeperGetWeekProjections(league.season, liveWeek); } catch (e) {}
+        }
+        if (window.sleeperGetEspnGameData) {
+          liveEspn = await window.sleeperGetEspnGameData(liveWeek, league.season).catch(() => null);
+        }
+      }
+
+      const userFor = roster => {
+        if (!roster) return null;
+        return (entry.users || []).find(u => u.user_id === roster.owner_id) || null;
+      };
+      const nameFor = roster => {
+        const u = userFor(roster);
+        return (u && (u.display_name || u.username)) || 'Unknown';
+      };
+
+      let projRemaining = 0;
+      const rows = [];
+
+      for (let i = 0; i < weeks.length; i++) {
+        const week = i + 1;
+        const ms = weeks[i];
+        const mine = Array.isArray(ms) ? ms.find(m => m.roster_id === rosterId) : null;
+        const isPlayoffWeek = week >= playoffStart;
+
+        // No pairing published: either the week does not exist yet or this
+        // roster is on a bye (odd team counts, or a playoff bracket this
+        // team is not in).
+        if (!mine || mine.matchup_id == null) {
+          if (!Array.isArray(ms) || !ms.length) continue;
+          rows.push({ week, isPlayoffWeek, bye: true });
+          continue;
+        }
+        const opp = ms.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== rosterId);
+        // A matchup id with nobody on the other side of it. Sleeper does
+        // this for a league with an odd number of teams, and briefly for a
+        // playoff round whose bracket is only half filled in. There is no
+        // opponent, no result and no probability to show, so showing this
+        // team's own points beside a 0.0 would invent a blowout win that
+        // never happened -- it reads as a bye, which is what it is.
+        if (!opp) {
+          rows.push({ week, isPlayoffWeek, bye: true });
+          continue;
+        }
+        const oppRoster = rosters.find(r => r.roster_id === opp.roster_id) || null;
+
+        const myPts = Number(mine.points) || 0;
+        const oppPts = Number(opp.points) || 0;
+        const isFinal = played[i] && week < liveWeek;
+        const isLive = week === liveWeek && played[i];
+
+        let result = null;
+        if (isFinal) result = myPts > oppPts ? 'W' : (myPts < oppPts ? 'L' : 'T');
+
+        // Win probability, by the three rules described above.
+        let pct = null, pctKind = '';
+        if (week === liveWeek && liveProjMap) {
+          const ctx = sbBuildFieldContext(
+            { league, roster: me, users: entry.users, myMatchup: mine, oppMatchup: opp, oppUser: userFor(oppRoster), week },
+            { week, projections: liveProjMap, oppUser: userFor(oppRoster), myMatchup: mine, oppMatchup: opp, espnGameData: liveEspn },
+            ldmuDict, liveEspn
+          );
+          if (ctx.winPct != null) { pct = ctx.winPct; pctKind = isLive ? 'LIVE' : 'PROJ'; }
+        }
+        if (pct == null && week >= liveWeek && model) {
+          pct = ldschNormalWinPct(model[rosterId], model[opp.roster_id]);
+          if (pct != null) pctKind = 'EST';
+        }
+        if (pct != null && week >= liveWeek && !isPlayoffWeek) projRemaining += pct / 100;
+
+        rows.push({
+          week, isPlayoffWeek, opp, oppRoster,
+          oppName: nameFor(oppRoster),
+          oppRecord: ldmuRecord(oppRoster),
+          myPts, oppPts, isFinal, isLive, result, pct, pctKind,
+        });
+      }
+
+      if (!rows.length) {
+        bodyEl.innerHTML = '<div class="exp-loading">No schedule published for this league yet.</div>';
+        if (sumEl) sumEl.innerHTML = '';
+        return;
+      }
+
+      const scoreCell = (a, b, show) => show
+        ? `<span class="ldsch-num">${a.toFixed(1)}</span> <span class="ldsch-blank">-</span> <span class="ldsch-num">${b.toFixed(1)}</span>`
+        : '<span class="ldsch-blank">&mdash;</span>';
+
+      const bodyHtml = rows.map(r => {
+        const cls = (r.isLive ? ' is-live' : '') +
+          (r.isPlayoffWeek && r.week === playoffStart ? ' is-playoff-start' : '');
+        if (r.bye) {
+          return `<tr class="${cls.trim()}"><td class="ldsch-week">Wk ${r.week}</td>` +
+            `<td class="ldsch-bye">BYE${r.isPlayoffWeek ? '<span class="ldsch-tag">PLAYOFFS</span>' : ''}</td>` +
+            '<td></td><td></td><td></td><td></td></tr>';
+        }
+        const oppHtml = `<span class="ldsch-opp">${sbFieldEsc(r.oppName)}</span>` +
+          (r.oppRecord ? `<span class="ldsch-opp-rec">${r.oppRecord}</span>` : '') +
+          (r.isPlayoffWeek ? '<span class="ldsch-tag">PLAYOFFS</span>' : '');
+        const resultHtml = r.result
+          ? `<span class="ldsch-result is-${r.result.toLowerCase()}">${r.result}</span>`
+          : '<span class="ldsch-blank">&mdash;</span>';
+        return `<tr class="${cls.trim()}">` +
+          `<td class="ldsch-week">Wk ${r.week}</td>` +
+          `<td>${oppHtml}</td>` +
+          `<td>${ldschOddsCell(r.pct, r.pctKind)}</td>` +
+          `<td>${scoreCell(r.myPts, r.oppPts, r.isLive)}</td>` +
+          `<td>${scoreCell(r.myPts, r.oppPts, r.isFinal)}</td>` +
+          `<td>${resultHtml}</td>` +
+        '</tr>';
+      }).join('');
+
+      bodyEl.innerHTML =
+        '<table class="ldsch-table"><thead><tr>' +
+          '<th>WEEK</th><th>OPPONENT</th><th>WIN PROJ.</th><th>LIVE</th><th>FINAL</th><th>RESULT</th>' +
+        '</tr></thead><tbody>' + bodyHtml + '</tbody></table>';
+
+      if (sumEl) {
+        // Record and points come off the roster's own Sleeper settings
+        // rather than being re-totalled from the rows above. The rows and
+        // Sleeper can legitimately disagree for a week -- a stat correction
+        // Sleeper has applied to the standings but not to the matchup, a
+        // week scored by median -- and a summary that contradicts the
+        // standings two inches above it is worse than one that is a week
+        // behind the table under it.
+        const st = (me && me.settings) || {};
+        const w = st.wins || 0, l = st.losses || 0, t = st.ties || 0;
+        const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
+        const pa = (st.fpts_against || 0) + (st.fpts_against_decimal || 0) / 100;
+        const gamesLeft = rows.filter(r => !r.bye && !r.isFinal && !r.isPlayoffWeek).length;
+        const cell = (label, value) =>
+          `<div class="ldsch-sum-cell"><div class="ldsch-sum-label">${label}</div>` +
+          `<div class="ldsch-sum-value">${value}</div></div>`;
+        sumEl.innerHTML =
+          cell('RECORD', `${w}-${l}${t ? '-' + t : ''}`) +
+          cell('POINTS FOR', pf.toFixed(1)) +
+          cell('POINTS AGAINST', pa.toFixed(1)) +
+          // Expected wins from here, summing each remaining week's own win
+          // probability -- which is what those percentages add up to, and
+          // a more honest "where does this finish" than a record alone.
+          (gamesLeft
+            ? cell('PROJ. FINAL', `${(w + projRemaining).toFixed(1)}-${(l + gamesLeft - projRemaining).toFixed(1)}`)
+            : cell('GAMES LEFT', '0'));
+      }
+    }
+
+    async function ldschOpen() {
+      const standingsListEl = document.getElementById('ldStandingsList');
+      const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
+      const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+      if (!entry) return;
+
+      // Whichever manager's roster the page is currently expanded on --
+      // the same row the stat strip this button lives in belongs to. With
+      // no row active (a one-team view) that is your own roster.
+      const activeRow = standingsListEl
+        ? standingsListEl.querySelector('.league-standings-row.is-active')
+        : null;
+      const rosterId = activeRow && activeRow.dataset.rosterId != null && activeRow.dataset.rosterId !== ''
+        ? Number(activeRow.dataset.rosterId)
+        : (entry.roster ? entry.roster.roster_id : null);
+      if (rosterId == null) return;
+
+      ldschEntry = entry;
+      ldschRosterId = rosterId;
+
+      const roster = (entry.allRosters || []).find(r => r.roster_id === rosterId);
+      const user = roster ? (entry.users || []).find(u => u.user_id === roster.owner_id) : null;
+      const titleEl = document.getElementById('ldschTitleTeam');
+      if (titleEl) {
+        const who = (user && (user.display_name || user.username)) || 'Team';
+        titleEl.textContent = `${who} · ${entry.league.name} · ${entry.league.season}`;
+      }
+
+      const overlay = document.getElementById('ldschOverlay');
+      const modal = document.getElementById('ldschModal');
+      if (overlay) overlay.hidden = false;
+      if (modal) modal.hidden = false;
+      const bodyEl = document.getElementById('ldschBody');
+      if (bodyEl) bodyEl.innerHTML = '<div class="exp-loading">Loading schedule...</div>';
+      const sumEl = document.getElementById('ldschSummary');
+      if (sumEl) sumEl.innerHTML = '';
+
+      // The lineup projection path needs the player dictionary, and this
+      // modal can be the first thing opened on the page.
+      if (!ldmuDict && window.sleeperGetPlayerDict) {
+        try { ldmuDict = await window.sleeperGetPlayerDict(); } catch (err) {}
+      }
+      await ldschLoad();
+    }
+
+    function ldschClose() {
+      const overlay = document.getElementById('ldschOverlay');
+      const modal = document.getElementById('ldschModal');
+      if (overlay) overlay.hidden = true;
+      if (modal) modal.hidden = true;
+    }
+
+    const ldSchedBtnEl = document.getElementById('ldSchedBtn');
+    if (ldSchedBtnEl) ldSchedBtnEl.addEventListener('click', ldschOpen);
+    const ldschCloseEl = document.getElementById('ldschClose');
+    if (ldschCloseEl) ldschCloseEl.addEventListener('click', ldschClose);
+    const ldschOverlayEl = document.getElementById('ldschOverlay');
+    if (ldschOverlayEl) ldschOverlayEl.addEventListener('click', ldschClose);
     const ldmuWeekDropdownEl = document.getElementById('ldmuWeekDropdown');
     if (ldmuWeekDropdownEl) {
       const select = ldmuWeekDropdownEl.querySelector('.week-select');
@@ -20927,6 +21491,7 @@
     }
 
     window.sleeperGetPlayerDict = getPlayerDict;
+    window.sleeperApplyPlayerPositionFixes = applyPlayerPositionFixes;
     window.sleeperFetch = sleeperFetch;
     window.sleeperReloadData = loadSleeperData;
     window.sleeperGetWeekProjections = getWeekProjections;
@@ -25973,7 +26538,8 @@
     if (window.__sleeperPlayerDict) return window.__sleeperPlayerDict;
     if (!window.sleeperFetch) return null;
     try {
-      const dict = await window.sleeperFetch('/players/nfl');
+      let dict = await window.sleeperFetch('/players/nfl');
+      if (window.sleeperApplyPlayerPositionFixes) dict = window.sleeperApplyPlayerPositionFixes(dict);
       window.__sleeperPlayerDict = dict;
       return dict;
     } catch (e) {
