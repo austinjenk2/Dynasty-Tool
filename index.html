@@ -7,21 +7,34 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Source+Serif+4:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
 <style>
   :root {
-    /* Cream Classic -- the original light palette. */
-    --bg: #faf8f4;
-    --surface: #ffffff;
-    --border: #e5e1d8;
-    --border-soft: #eeeae0;
-    --ink: #14141a;
-    --muted: #6b6b74;
-    --faint: #9a988f;
-    --red: #c8102e;
-    --navy: #1a3a6b;
-    --green: #2f8a4e;
-    --green-bg: #eaf4ec;
-    --gold: #a3760a;
-    --blue: #2f6fa3;
-    --red-bg: #f7e7e7;
+    /* Retro Sports Card -- warm cardstock and navy ink, the direction this
+       project picked at the start and now runs on everywhere. Only the
+       colours changed: every size, weight, radius and layout is the one
+       the Cream Classic palette had.
+
+       --ink is a deep navy rather than near-black, which is what makes the
+       whole page read as printed cardstock instead of as a white app with
+       a beige background. --navy stays a step brighter so it still works
+       as an accent against the text around it. */
+    --bg: #f2e9d5;
+    --surface: #fff9ea;
+    --border: #d5c7a8;
+    --border-soft: #e4d9c0;
+    --ink: #1d3557;
+    --muted: #4a5f7f;
+    /* Deliberately darker than the cream palette's --faint (#9a988f, which
+       sat at about 2.6:1 on its own background). This clears 3.3:1, which
+       is better but still under WCAG's 4.5 for small text -- the same
+       compromise the previous palette made, carried forward knowingly
+       rather than by accident. */
+    --faint: #6f7f96;
+    --red: #c8322d;
+    --navy: #2a5a8f;
+    --green: #2f7d4f;
+    --green-bg: #e6f0e4;
+    --gold: #b07a12;
+    --blue: #31648f;
+    --red-bg: #f7e6dd;
     --ticker-h: 48px;
   }
   * { box-sizing: border-box; }
@@ -3149,12 +3162,12 @@
   .ldrec-table td { font-size: 12.5px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); color: var(--ink); white-space: nowrap; }
   .ldrec-table tr:last-child td { border-bottom: none; }
   .ldrec-wl { font-weight: 800; }
-  .ldrec-table td.ldrec-wl-w { color: #22c55e; }
-  .ldrec-table td.ldrec-wl-l { color: #ef4444; }
-  .ldrec-pos { color: #22c55e; }
-  .ldrec-neg { color: #ef4444; }
-  .ldrec-table td.ldrec-pos { color: #22c55e; }
-  .ldrec-table td.ldrec-neg { color: #ef4444; }
+  .ldrec-table td.ldrec-wl-w { color: var(--green); }
+  .ldrec-table td.ldrec-wl-l { color: var(--red); }
+  .ldrec-pos { color: var(--green); }
+  .ldrec-neg { color: var(--red); }
+  .ldrec-table td.ldrec-pos { color: var(--green); }
+  .ldrec-table td.ldrec-neg { color: var(--red); }
   .ldrec-empty { text-align: center; color: var(--faint); font-size: 13px; padding: 30px 0; }
 
   /* Record Book: one row per league in a single grid, not a stack of
@@ -3167,15 +3180,15 @@
   .rb-table td.rb-league-cell { position: sticky; left: 0; background: var(--surface); }
   .rb-league-name { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 13px; color: var(--ink); }
   .rb-co-badge { display: inline-block; margin-left: 5px; font-size: 8.5px; font-weight: 800; color: var(--faint); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; vertical-align: 1px; }
-  .rb-playoff-yes { color: #22c55e; font-weight: 800; }
-  .rb-playoff-no { color: #ef4444; font-weight: 800; }
+  .rb-playoff-yes { color: var(--green); font-weight: 800; }
+  .rb-playoff-no { color: var(--red); font-weight: 800; }
   .rb-playoff-tbd { color: var(--faint); }
   /* A live probability, shown where the tick/cross will eventually go.
      Deliberately lighter-weight than the settled tick so a season that is
      merely likely never reads as a season already won. */
   .rb-playoff-odds { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
-  .rb-playoff-odds.is-good { color: #22c55e; }
-  .rb-playoff-odds.is-bad { color: #ef4444; }
+  .rb-playoff-odds.is-good { color: var(--green); }
+  .rb-playoff-odds.is-bad { color: var(--red); }
   .rb-wl-chip { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 20px; border-radius: 4px; font-size: 10.5px; font-weight: 800; color: #fff; }
   .rb-wl-chip.rb-wl-w { background: #22c55e; }
   .rb-wl-chip.rb-wl-l { background: #ef4444; }
@@ -3466,17 +3479,16 @@
     padding: 24px;
   }
   /* ---- The first-run chooser: a pair of ticket stubs -----------------
-     Deliberately not the Cream Classic palette the rest of the app runs
-     on. This is the front door and it is allowed its own voice: the
-     Retro Sports Card direction the project picked at the start --
-     warm cardstock, heavy navy rules, hard offset shadows and a
-     condensed display face. The screens behind it stay as they are. */
-  .mode-chooser { background: #f2e9d5; flex-direction: column; }
+     The front door of the Retro Sports Card identity the whole app now
+     runs on: warm cardstock, heavy navy rules, hard offset shadows and a
+     condensed display face. Its colours are the shared tokens, so it
+     never drifts from the screens behind it. */
+  .mode-chooser { background: var(--bg); flex-direction: column; }
   .mc-eyebrow {
     font-family: 'Anton', sans-serif;
     font-size: 13px;
     letter-spacing: 3px;
-    color: #1d3557;
+    color: var(--ink);
     opacity: 0.65;
   }
   .mc-title {
@@ -3484,12 +3496,12 @@
     font-family: 'Anton', sans-serif;
     font-size: 62px;
     letter-spacing: 0.5px;
-    color: #1d3557;
+    color: var(--ink);
     text-transform: uppercase;
     line-height: 1;
     text-align: center;
   }
-  .mc-sub { margin: 0 0 40px; font-size: 16px; font-weight: 700; color: #4a5f7f; text-align: center; }
+  .mc-sub { margin: 0 0 40px; font-size: 16px; font-weight: 700; color: var(--muted); text-align: center; }
   .mc-stubs { display: flex; gap: 34px; align-items: stretch; flex-wrap: wrap; justify-content: center; }
   .mc-stub {
     cursor: pointer;
@@ -3498,32 +3510,32 @@
     width: 440px;
     max-width: 100%;
     padding: 0;
-    background: #fff9ea;
-    border: 3px solid #1d3557;
+    background: var(--surface);
+    border: 3px solid var(--ink);
     border-radius: 18px;
     overflow: hidden;
-    box-shadow: 7px 7px 0 0 #1d3557;
+    box-shadow: 7px 7px 0 0 var(--ink);
     display: flex;
     flex-direction: column;
     transition: transform 0.12s, box-shadow 0.12s;
   }
-  .mc-stub:hover { transform: translate(-2px, -2px); box-shadow: 10px 10px 0 0 #1d3557; }
-  .mc-stub:active { transform: translate(2px, 2px); box-shadow: 4px 4px 0 0 #1d3557; }
+  .mc-stub:hover { transform: translate(-2px, -2px); box-shadow: 10px 10px 0 0 var(--ink); }
+  .mc-stub:active { transform: translate(2px, 2px); box-shadow: 4px 4px 0 0 var(--ink); }
   /* The colour band across the top of each stub -- navy for dynasty, red
      for redraft. No text: it is the card's colour, not a label. */
   .mc-band { display: block; height: 20px; }
-  .mc-band-dynasty { background: #1d3557; }
-  .mc-band-redraft { background: #c8322d; }
+  .mc-band-dynasty { background: var(--ink); }
+  .mc-band-redraft { background: var(--red); }
   .mc-body { padding: 30px 26px 24px; display: flex; flex-direction: column; flex-grow: 1; }
   .mc-name {
     font-family: 'Anton', sans-serif;
     font-size: 58px;
     line-height: 0.95;
     letter-spacing: 0.5px;
-    color: #1d3557;
+    color: var(--ink);
     text-transform: uppercase;
   }
-  .mc-desc { margin-top: 12px; font-size: 15px; font-weight: 600; line-height: 1.5; color: #4a5f7f; }
+  .mc-desc { margin-top: 12px; font-size: 15px; font-weight: 600; line-height: 1.5; color: var(--muted); }
   .mc-spacer { flex-grow: 1; }
   .mc-stats { display: flex; gap: 10px; margin-top: 24px; align-items: stretch; }
   .mc-stat {
@@ -3531,34 +3543,34 @@
     flex-basis: 0;
     min-width: 0;
     padding: 10px 12px;
-    background: #f2e9d5;
-    border: 2px solid #1d3557;
+    background: var(--bg);
+    border: 2px solid var(--ink);
     border-radius: 9px;
     display: flex;
     flex-direction: column;
   }
-  .mc-stat-value { font-family: 'Anton', sans-serif; font-size: 25px; line-height: 1.1; color: #1d3557; }
-  .mc-stat-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.8px; color: #4a5f7f; }
-  .mc-stat-note { font-size: 9.5px; font-weight: 600; letter-spacing: 0.4px; color: #4a5f7f; }
+  .mc-stat-value { font-family: 'Anton', sans-serif; font-size: 25px; line-height: 1.1; color: var(--ink); }
+  .mc-stat-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.8px; color: var(--muted); }
+  .mc-stat-note { font-size: 9.5px; font-weight: 600; letter-spacing: 0.4px; color: var(--muted); }
   .mc-enter {
-    border-top: 3px dashed #c9bda2;
+    border-top: 3px dashed var(--border);
     padding: 15px 26px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #fff9ea;
+    background: var(--surface);
   }
-  .mc-enter-label { font-family: 'Anton', sans-serif; font-size: 17px; letter-spacing: 1.6px; color: #c8322d; }
+  .mc-enter-label { font-family: 'Anton', sans-serif; font-size: 17px; letter-spacing: 1.6px; color: var(--red); }
   .mc-all { margin-top: 34px; }
   .mc-all a {
     font-size: 14px;
     font-weight: 700;
-    color: #1d3557;
+    color: var(--ink);
     text-decoration: none;
-    border-bottom: 2px solid #c9bda2;
+    border-bottom: 2px solid var(--border);
     padding-bottom: 2px;
   }
-  .mc-all a:hover { color: #c8322d; border-bottom-color: #c8322d; }
+  .mc-all a:hover { color: var(--red); border-bottom-color: var(--red); }
   @media (max-width: 980px) {
     .mc-title { font-size: 44px; }
     .mc-name { font-size: 44px; }
@@ -20224,10 +20236,23 @@
     }
 
     function rbTotalRowHtml(rows, maxRegWeeks, label, showMedian) {
-      const totalWins = rows.reduce((s, r) => s + r.wins, 0);
-      const totalLosses = rows.reduce((s, r) => s + r.losses, 0);
-      const totalTies = rows.reduce((s, r) => s + r.ties, 0);
-      const totalRecord = `${totalWins}-${totalLosses}${totalTies ? '-' + totalTies : ''}`;
+      // A league's OWN row shows its real record, median included -- in a
+      // median league a 2-2 through two weeks is genuinely 2-2, and that is
+      // the number its commissioner would read out.
+      //
+      // Totalling across leagues is a different question. A median league
+      // produces two results a week where every other league produces one,
+      // so counted at face value it carries twice the weight of the league
+      // beside it in the same column. Halving both of its results fixes
+      // that: one league, one week, one unit of record -- which is also
+      // why this row can land on a half.
+      const rbWeight = (r) => (r.hasMedian ? 0.5 : 1);
+      const totalWins = rows.reduce((s, r) => s + r.wins * rbWeight(r), 0);
+      const totalLosses = rows.reduce((s, r) => s + r.losses * rbWeight(r), 0);
+      const totalTies = rows.reduce((s, r) => s + r.ties * rbWeight(r), 0);
+      const rbHalf = (n) => (Math.abs(n - Math.round(n)) < 1e-9 ? String(Math.round(n)) : n.toFixed(1));
+      const totalRecord = `${rbHalf(totalWins)}-${rbHalf(totalLosses)}`
+        + (totalTies ? '-' + rbHalf(totalTies) : '');
 
       const finishRanked = rows.filter(r => r.finishRank != null);
       const avgFinish = finishRanked.length
@@ -24361,7 +24386,7 @@
     // wrong, so the card says what it left out and what those teams did.
     const recordSubEl = document.querySelector('.record-row .record-card .record-sub');
     if (recordSubEl) {
-      const medianNote = medianLeagues ? ' Head-to-head only \u2014 median results are counted on Results.' : '';
+      const medianNote = medianLeagues ? ' Matchups only \u2014 median results are not counted here.' : '';
       recordSubEl.textContent = (tankLeagueCount
         ? `Every league's record added together, excluding ${tankLeagueCount} tanking `
           + `(${tankWins}-${tankLosses}${tankTies ? '-' + tankTies : ''} there)`
@@ -24754,7 +24779,21 @@
         const excluded = dyn.length - counted.length;
         set('mcDynLeagues', String(dyn.length));
         set('mcDynRecord', recordOf(counted.length ? counted : dyn));
-        set('mcDynRecordNote', excluded ? 'EXCL. TANKERS' : '');
+        // Two things can be left out of this number, and the box only has
+        // room to name one. Tankers win the line, since that is the one a
+        // person is most likely to be surprised by; the median exclusion
+        // takes the line when there are no tankers, and the full sentence
+        // is on the card either way.
+        const anyMedian = dyn.some(e => e.league.settings && e.league.settings.league_average_match);
+        set('mcDynRecordNote', excluded ? 'EXCL. TANKERS' : (anyMedian ? 'MATCHUPS ONLY' : ''));
+        const recBox = document.getElementById('mcDynRecord');
+        const recCell = recBox && recBox.parentNode;
+        if (recCell) {
+          const parts = ["Every dynasty league's record added together"];
+          if (excluded) parts.push(`${excluded} tanking ${excluded === 1 ? 'league' : 'leagues'} left out`);
+          if (anyMedian) parts.push('matchups only, median results not counted');
+          recCell.setAttribute('title', parts.join(' \u2014 '));
+        }
 
         // The upcoming rookie class only -- next season's 1sts, averaged
         // per league, which is the "1st" figure the Dashboard's Draft
@@ -24773,6 +24812,12 @@
       if (red.length) {
         set('mcRedLeagues', String(red.length));
         set('mcRedRecord', recordOf(red));
+        const redMedian = red.some(e => e.league.settings && e.league.settings.league_average_match);
+        const redRec = document.getElementById('mcRedRecord');
+        if (redRec && redRec.parentNode) {
+          redRec.parentNode.setAttribute('title', "Every redraft league's record added together"
+            + (redMedian ? ' \u2014 matchups only, median results not counted' : ''));
+        }
         // How many of those teams would make the field if the season ended
         // now -- the same standings rule the pick model and Results use.
         let inSpot = 0, known = 0;
