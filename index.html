@@ -899,9 +899,9 @@
   }
   .sb-subtabs { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
   .sb-subtabs-left { display: flex; align-items: center; gap: 22px; }
-  #sbWeekDropdown .week-select, #rgWeekDropdown .week-select { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-  #sbWeekDropdown .week-select span, #rgWeekDropdown .week-select span { font-size: 16px; }
-  #sbWeekDropdown .week-select > span:last-child, #rgWeekDropdown .week-select > span:last-child { font-size: 11px; }
+  /* Only spacing here -- the control's own look is defined once, on
+     .week-select, and is deliberately not re-specified per page. */
+  #sbWeekDropdown .week-select, #rgWeekDropdown .week-select { margin-bottom: 8px; }
   .sb-view { display: none; }
   .sb-view.is-active { display: block; }
 
@@ -917,10 +917,10 @@
 
   /* GameCast -- a broadcast-style game center: one horizontal rail of
      every real NFL game this week (live first, then upcoming by kickoff,
-     then finals), a hero panel for whichever game is selected (score,
-     linescore, situation, field graphic, last play), and a three-column
-     body underneath: your fantasy stats, the live play-by-play, and the
-     injury report.
+     then finals), a hero panel for whichever game is selected (the score
+     hard left, the field graphic taking the rest of the width), and a
+     three-column body underneath: your fantasy stats, the live
+     play-by-play, and your leagues with a starter in the game.
 
      Every color here is a theme token, never a hardcoded navy -- the
      reference design was dark, but this view has to look right in every
@@ -1014,19 +1014,14 @@
   .gc-hero-topright { display: flex; align-items: center; gap: 10px; }
   .gc-ballspot { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: 0.3px; }
   .gc-redzone { color: var(--red); font-size: 10.5px; font-weight: 800; letter-spacing: 0.6px; }
-  /* Three across: the injury report sits where the score used to, the
-     score moves to the middle where the eye lands first, and the field
-     stays right. */
-  .gc-hero-grid { display: grid; grid-template-columns: minmax(0, 0.58fr) minmax(0, 1fr) minmax(0, 1.75fr); gap: 18px; align-items: center; }
-  @media (max-width: 1080px) { .gc-hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .gc-hero-field { grid-column: 1 / -1; } }
-  @media (max-width: 760px) { .gc-hero-grid { grid-template-columns: 1fr; } .gc-hero-field { grid-column: auto; } }
+  /* Two across, and between them they take the whole hero: the score sits
+     hard left where the eye lands first, the field takes the rest. The
+     injury report used to hold the left column and pushed both of these
+     into the right two-thirds of the row -- with it gone, nothing is
+     inset and no width goes unused. */
+  .gc-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 22px; align-items: center; }
+  @media (max-width: 760px) { .gc-hero-grid { grid-template-columns: 1fr; } }
   .gc-hero-center { align-self: center; }
-
-  /* Kept deliberately short so the whole hero still fits one screen --
-     it scrolls internally rather than stretching the row. */
-  .gc-hero-injury { align-self: stretch; border-right: 1px solid var(--border-soft); padding-right: 16px; }
-  @media (max-width: 1080px) { .gc-hero-injury { border-right: none; padding-right: 0; } }
-  .gc-hero-injury-scroll { max-height: 190px; overflow-y: auto; margin-top: 8px; }
 
   .gc-hero-score { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
   .gc-hero-team { display: flex; align-items: center; gap: 9px; }
@@ -1051,6 +1046,16 @@
   /* Broadcast-style field: a flat pitch tilted back in 3D so the yard
      lines converge the way they do on a TV overlay. The ball spot and
      first-down marker are driven by real ESPN situation data. */
+  /* rotateX(34deg) under a 620px perspective tips the near (bottom) edge
+     of the field toward the viewer, which renders it about 8.4% wider
+     than its layout box -- measured at 4.2% past each side. Nothing in
+     the layout knew about that, so the right edge ran off the panel.
+     The overhang is reserved here as padding, weighted to the right so
+     the whole graphic also sits a little further left than it did. The
+     caption shares this box, so the two team abbreviations shift with
+     the field rather than drifting out of line with it. */
+  .gc-hero-field { padding-left: 3%; padding-right: 5.5%; }
+  @media (max-width: 760px) { .gc-hero-field { padding-left: 4%; padding-right: 4%; } }
   .gc-field-stage { perspective: 620px; }
   .gc-field {
     position: relative; height: 172px; border-radius: 4px; overflow: hidden;
@@ -1185,13 +1190,6 @@
   .gc-lg-against { color: var(--red); font-weight: 700; }
   .gc-lg-sep { display: inline-block; width: 6px; }
 
-  .gc-inj-row { display: flex; align-items: center; gap: 9px; padding: 6px 2px; border-bottom: 1px solid var(--border-soft); }
-  .gc-inj-row:last-child { border-bottom: none; }
-  .gc-inj-pos { font-size: 9.5px; font-weight: 800; color: var(--faint); width: 26px; flex-shrink: 0; }
-  .gc-inj-name { flex: 1; min-width: 0; font-size: 12px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .gc-inj-status { font-size: 9.5px; font-weight: 800; letter-spacing: 0.3px; flex-shrink: 0; color: var(--faint); }
-  .gc-inj-status.gc-inj-out { color: var(--red); }
-  .gc-inj-status.gc-inj-q { color: var(--gold); }
   .gc-empty { font-size: 11.5px; color: var(--faint); padding: 14px 2px; text-align: center; }
 
   /* Field View is the same page as Standard View -- same matchup list on
@@ -1646,6 +1644,149 @@
   .sb-card-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sb-card-record { font-weight: 700; font-size: 13.5px; color: var(--muted); margin-left: 7px; }
   .sb-card-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  /* League Matchups rows. The old row crammed both managers onto one line
+     as "A vs B" with a combined score pair on the right, which meant you
+     could not tell at a glance which score belonged to which manager --
+     and with records added it would have been four numbers on one line.
+     One line per manager instead, each carrying its own record and its
+     own projection, with the favored side called out. */
+  .ldmu-teams { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .ldmu-side { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+  .ldmu-name {
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ldmu-side .sb-card-record { margin-left: 0; font-size: 12px; }
+  .ldmu-odds-tag {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--faint);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 4px;
+    white-space: nowrap;
+  }
+  .ldmu-odds-tag.is-good { color: var(--green); }
+  .ldmu-odds-tag.is-bad { color: var(--red); }
+  .ldmu-side .ldmu-score {
+    margin-left: auto;
+    padding-left: 12px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .ldmu-side.is-leading .ldmu-name { color: var(--ink); }
+  .ldmu-side.is-leading .ldmu-score { color: var(--navy); }
+  .ldmu-odds {
+    flex-shrink: 0;
+    width: 74px;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .ldmu-odds-pct { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--ink); }
+  .ldmu-odds-label { font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
+  .ldmu-odds-none { font-size: 11px; color: var(--faint); }
+  /* Manager records on the two lineup columns inside an open matchup. */
+  .sb-lineup-label .sb-lineup-rec { font-weight: 700; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+
+  /* ---- Season schedule -------------------------------------------- */
+  .ldsch-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .ldsch-sum-cell { padding: 10px 16px; display: flex; flex-direction: column; }
+  .ldsch-sum-cell + .ldsch-sum-cell { border-left: 1px solid var(--border); }
+  .ldsch-sum-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
+  .ldsch-sum-value { font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+  .ldsch-wrap { overflow-x: auto; }
+  .ldsch-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ldsch-table th {
+    text-align: left;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--faint);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .ldsch-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .ldsch-table tr:last-child td { border-bottom: none; }
+  /* Opponent absorbs the slack; everything else is as wide as it needs to
+     be, so the numbers sit together instead of drifting apart across a
+     wide modal. */
+  .ldsch-table th:nth-child(1), .ldsch-table td:nth-child(1),
+  .ldsch-table th:nth-child(4), .ldsch-table td:nth-child(4),
+  .ldsch-table th:nth-child(5), .ldsch-table td:nth-child(5),
+  .ldsch-table th:nth-child(6), .ldsch-table td:nth-child(6) { width: 1%; }
+  .ldsch-table th:nth-child(3), .ldsch-table td:nth-child(3) { width: 150px; }
+  .ldsch-table .ldsch-num { text-align: right; font-family: 'Source Serif 4', serif; font-weight: 700; }
+  /* The row for the week being played right now, so it is findable in an
+     18-row table without having to remember what week it is. */
+  .ldsch-table tr.is-live td { background: rgba(232, 161, 60, 0.10); }
+  .ldsch-table tr.is-playoff-start td { border-top: 2px solid var(--border); }
+  .ldsch-week { font-weight: 700; color: var(--muted); }
+  .ldsch-opp { font-weight: 700; color: var(--ink); }
+  .ldsch-opp-rec { font-weight: 700; color: var(--muted); margin-left: 6px; font-size: 12px; }
+  .ldsch-bye { color: var(--faint); font-weight: 700; }
+  .ldsch-blank { color: var(--faint); }
+  .ldsch-result {
+    display: inline-block;
+    min-width: 19px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: #fff;
+  }
+  .ldsch-result.is-w { background: var(--green); }
+  .ldsch-result.is-l { background: var(--red); }
+  .ldsch-result.is-t { background: var(--muted); }
+  .ldsch-tag {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--faint);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 4px;
+    margin-left: 6px;
+  }
+  .ldsch-odds-bar {
+    display: inline-block;
+    width: 46px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--border);
+    margin-left: 8px;
+    position: relative;
+    overflow: hidden;
+    vertical-align: middle;
+  }
+  .ldsch-odds-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--navy); }
+  /* The Schedule opener sits at the far left of the per-roster stat strip.
+     It is the one cell in that strip that does something when clicked, so
+     it gets a pointer and a hover rather than reading as another stat. */
+  .ld-stat-cell-action { cursor: pointer; flex: 0 0 auto; }
+  .ld-stat-cell-action:hover { background: var(--surface-2, rgba(29, 53, 87, 0.04)); }
+  .ld-stat-cell-action .ld-stat-value { display: flex; align-items: center; gap: 5px; }
+  .ld-stat-cell-action .ld-stat-chev { font-size: 11px; color: var(--faint); }
   .sb-card-meta .sb-delta { color: var(--green); }
   .sb-card-score { text-align: right; flex-shrink: 0; }
   .sb-score-mine { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--navy); }
@@ -2511,15 +2652,48 @@
   .sortable-head:hover { color: var(--ink); }
   .sortable-head.active { color: var(--green); }
   .week-dropdown { position: relative; display: inline-block; }
+  /* ---- The week / year / team dropdown, one definition -------------
+     There are six of these across the app and they had drifted into four
+     different looks: 16px bold caps on the Scoreboard, 9.5px on the
+     Leagues header, a lowercase "Week" on the Dashboard, and the Team and
+     Year pickers inheriting whatever their row happened to set. Same
+     control, same job, so it gets one size, one weight and one color
+     wherever it appears, and page-level overrides are gone rather than
+     layered on top.
+
+     Three parts, and each has its own job: a small-caps LEAD naming what
+     is being picked, the VALUE itself (the one thing anybody actually
+     reads, so it is the largest), and a CARET. */
   .week-select {
     cursor: pointer;
     display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--muted);
   }
-  .week-select:hover { color: var(--ink); }
-  .week-select span { font-size: 9.5px; }
-  #scheduleWeekLabel { font-size: 16px; }
+  .week-select .week-lead {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  /* Never uppercased -- this also holds team names and years, not just a
+     week number. */
+  .week-select .week-num {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .week-select .week-caret { font-size: 10px; color: var(--faint); }
+  .week-select:hover .week-lead,
+  .week-select:hover .week-num,
+  .week-select:hover .week-caret { color: var(--red); }
   .week-menu {
     position: absolute;
     top: calc(100% + 6px);
@@ -2659,6 +2833,8 @@
     border-radius: 20px;
     padding: 4px 9px;
   }
+  .ld-tag b.ld-odds-good { color: var(--green); }
+  .ld-tag b.ld-odds-bad { color: var(--red); }
   .ld-tag b { color: var(--ink); }
 
   /* League Detail page header -- the league itself (logo/name/settings),
@@ -2924,6 +3100,12 @@
   .rb-playoff-yes { color: #22c55e; font-weight: 800; }
   .rb-playoff-no { color: #ef4444; font-weight: 800; }
   .rb-playoff-tbd { color: var(--faint); }
+  /* A live probability, shown where the tick/cross will eventually go.
+     Deliberately lighter-weight than the settled tick so a season that is
+     merely likely never reads as a season already won. */
+  .rb-playoff-odds { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .rb-playoff-odds.is-good { color: #22c55e; }
+  .rb-playoff-odds.is-bad { color: #ef4444; }
   .rb-wl-chip { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 20px; border-radius: 4px; font-size: 10.5px; font-weight: 800; color: #fff; }
   .rb-wl-chip.rb-wl-w { background: #22c55e; }
   .rb-wl-chip.rb-wl-l { background: #ef4444; }
@@ -2964,19 +3146,6 @@
   .tt-gap.is-chasing { color: var(--red); }
   .tt-gap.is-holding { color: var(--green); }
   .tt-gap.is-level { color: var(--gold); }
-  /* Where a pick can still land, drawn rather than described. One bar per
-     slot, its height the chance of landing there, colored by what that
-     slot is worth -- a tall green block on the left is a pick that is
-     almost certainly a top-three, a low flat spread is a pick nobody can
-     call yet. The number under it is the 10th-to-90th percentile range,
-     which is the honest version of a single "projected slot". */
-  .tt-dist { display: inline-flex; flex-direction: column; gap: 3px; align-items: flex-start; }
-  .tt-dist-track { display: flex; align-items: flex-end; gap: 1px; height: 18px; }
-  .tt-dist-bar { width: 4px; border-radius: 1px; background: var(--muted); opacity: 0.30; min-height: 1px; }
-  .tt-dist-bar.is-top { background: var(--green); opacity: 0.85; }
-  .tt-dist-bar.is-lottery { background: var(--gold); opacity: 0.7; }
-  .tt-dist-bar.is-empty { opacity: 0.12; }
-  .tt-range { font-size: 10.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.2px; }
   .tt-odds { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
   .tt-odds.is-live { color: var(--green); }
   .tt-pickval { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
@@ -4199,7 +4368,7 @@
           <div class="schedule-head">
             <h2>Weekly Schedule</h2>
             <div class="week-dropdown" id="scheduleWeekDropdown">
-              <div class="week-select" id="scheduleWeekSelect">Week <span id="scheduleWeekLabel">1</span> <span>&#9662;</span></div>
+              <div class="week-select" id="scheduleWeekSelect"><span class="week-lead">Week</span> <span class="week-num" id="scheduleWeekLabel">1</span> <span class="week-caret">&#9662;</span></div>
               <div class="week-menu" id="scheduleWeekMenu" hidden></div>
             </div>
           </div>
@@ -4360,7 +4529,7 @@
     <div class="league-head-row">
       <span>LEAGUE</span>
       <span class="week-dropdown" id="weekDropdown">
-        <span class="week-select" id="weekSelect">MATCHUP PROJECTIONS &middot; WEEK <span id="weekSelectLabel">1</span> <span>&#9662;</span></span>
+        <span class="week-select" id="weekSelect"><span class="week-lead">Matchup Projections &middot; Week</span> <span class="week-num" id="weekSelectLabel">1</span> <span class="week-caret">&#9662;</span></span>
         <span class="week-menu" id="weekMenu" hidden></span>
       </span>
       <span class="sortable-head" data-sort="roster">ROSTER TYPE</span>
@@ -4853,6 +5022,11 @@
 
       <div id="ldRosterExpand">
       <div class="ld-stats" id="ldStats">
+        <div class="ld-stat-cell ld-stat-cell-action" id="ldSchedBtn" title="Every matchup this team plays this season">
+          <div class="ld-stat-label">SCHEDULE</div>
+          <div class="ld-stat-value">Full Year <span class="ld-stat-chev">&#9656;</span></div>
+        </div>
+        <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell">
           <div class="ld-stat-label">VALUE</div>
           <div class="ld-stat-value" id="ldValue">&mdash;</div>
@@ -4968,11 +5142,11 @@
         </div>
         <div class="ldrec-season-filters">
           <span class="week-dropdown" id="ldrecTeamDropdown">
-            <span class="week-select" id="ldrecTeamSelect"><span id="ldrecTeamLabel">Team</span> <span>&#9662;</span></span>
+            <span class="week-select" id="ldrecTeamSelect"><span class="week-lead">Team</span> <span class="week-num" id="ldrecTeamLabel">All</span> <span class="week-caret">&#9662;</span></span>
             <span class="week-menu" id="ldrecTeamMenu" hidden></span>
           </span>
           <span class="week-dropdown" id="ldrecYearDropdown">
-            <span class="week-select" id="ldrecYearSelect"><span id="ldrecYearLabel">Year</span> <span>&#9662;</span></span>
+            <span class="week-select" id="ldrecYearSelect"><span class="week-lead">Year</span> <span class="week-num" id="ldrecYearLabel">All</span> <span class="week-caret">&#9662;</span></span>
             <span class="week-menu" id="ldrecYearMenu" hidden></span>
           </span>
         </div>
@@ -4984,6 +5158,16 @@
     <div class="ldrec-panel" data-ldrec-panel="drafts" hidden>
       <div class="ldrec-draft-list" id="ldrecDraftsList"><div class="ldrec-empty">Loading...</div></div>
     </div>
+  </div>
+
+  <div class="ldrec-overlay" id="ldschOverlay" hidden></div>
+  <div class="ldrec-modal" id="ldschModal" hidden>
+    <div class="ldrec-head">
+      <div class="ldrec-title">Schedule <span class="ldrec-title-sub" id="ldschTitleTeam">Team</span></div>
+      <div class="ldrec-close" id="ldschClose">&#10005;</div>
+    </div>
+    <div class="ldsch-summary" id="ldschSummary"></div>
+    <div class="ldsch-wrap" id="ldschBody"><div class="exp-loading">Loading schedule...</div></div>
   </div>
 
   <div class="ldrec-overlay" id="ldwvOverlay" hidden></div>
@@ -5040,7 +5224,7 @@
         <span class="ldwv-banner-note">Not just yours &mdash; every real matchup in this league, this week.</span>
       </div>
       <span class="week-dropdown" id="ldmuWeekDropdown">
-        <span class="week-select" id="ldmuWeekSelect">WEEK <span id="ldmuWeekLabel">1</span> <span>&#9662;</span></span>
+        <span class="week-select" id="ldmuWeekSelect"><span class="week-lead">Week</span> <span class="week-num" id="ldmuWeekLabel">1</span> <span class="week-caret">&#9662;</span></span>
         <span class="week-menu" id="ldmuWeekMenu" hidden></span>
       </span>
     </div>
@@ -5090,7 +5274,7 @@
           </div>
         </div>
         <span class="week-dropdown" id="sbWeekDropdown">
-          <span class="week-select" id="sbWeekSelect">WEEK <span id="sbWeekLabel">1</span> <span>&#9662;</span></span>
+          <span class="week-select" id="sbWeekSelect"><span class="week-lead">Week</span> <span class="week-num" id="sbWeekLabel">1</span> <span class="week-caret">&#9662;</span></span>
           <span class="week-menu" id="sbWeekMenu" hidden></span>
         </span>
       </div>
@@ -5647,7 +5831,7 @@
           <div class="rg-header-top">
             <h2>Week <span class="sb-week-num">1</span> Weekly Sweats</h2>
             <span class="week-dropdown" id="rgWeekDropdown">
-              <span class="week-select" id="rgWeekSelect">WEEK <span id="rgWeekLabel">1</span> <span>&#9662;</span></span>
+              <span class="week-select" id="rgWeekSelect"><span class="week-lead">Week</span> <span class="week-num" id="rgWeekLabel">1</span> <span class="week-caret">&#9662;</span></span>
               <span class="week-menu" id="rgWeekMenu" hidden></span>
             </span>
           </div>
@@ -11597,7 +11781,7 @@
         <p>Every league's season in one grid &mdash; finish, PF rank, points, playoffs, weekly results, and bracket rounds. Records and points update as soon as a week's games go final on Monday night. Net settles after a season ends, so it reads $0 until then.</p>
       </div>
       <span class="week-dropdown" id="rbYearDropdown">
-        <span class="week-select" id="rbYearSelect"><span id="rbYearLabel">Year</span> <span>&#9662;</span></span>
+        <span class="week-select" id="rbYearSelect"><span class="week-lead">Year</span> <span class="week-num" id="rbYearLabel">2026</span> <span class="week-caret">&#9662;</span></span>
         <span class="week-menu" id="rbYearMenu" hidden></span>
       </span>
     </div>
@@ -11695,23 +11879,11 @@
     <div class="tt-section">
       <div class="tt-head">
         <h2>Race To The 1.01</h2>
-        <p class="tt-sub">Draft order runs off potential points &mdash; max points for, Sleeper's best-possible-lineup total &mdash; lowest first. A <b class="tt-pos-ex">positive</b> number is how much max PF you would have to shed to take the 1.01. A <b class="tt-neg-ex">negative</b> one means you already hold it, and that is your cushion before the next team takes it off you. <b>Where It Lands</b> and <b>1.01 %</b> come from simulating every remaining week off your own scoring through your real schedule, so they tighten as the season runs out.</p>
+        <p class="tt-sub">Draft order runs off potential points &mdash; max points for, Sleeper's best-possible-lineup total &mdash; lowest first. A <b class="tt-pos-ex">positive</b> number is how much max PF you would have to shed to take the 1.01. A <b class="tt-neg-ex">negative</b> one means you already hold it, and that is your cushion before the next team takes it off you. <b>Playoff %</b>, <b>1.01 %</b> and <b>Top 3 %</b> all come out of the same simulation &mdash; 1,500 seasons played through your real remaining schedule, every future week assuming both managers start their best possible lineup &mdash; so they tighten as the season runs out and can never disagree with each other.</p>
       </div>
       <div class="rb-table-wrap">
         <table class="rb-table">
-          <thead>
-            <tr>
-              <th class="rb-th-league">League</th>
-              <th>Record</th>
-              <th>PF</th>
-              <th>Max PF</th>
-              <th>Proj Slot</th>
-              <th>Where It Lands</th>
-              <th>1.01 %</th>
-              <th>Value</th>
-              <th class="rb-po-col">Pts From 1.01</th>
-            </tr>
-          </thead>
+          <thead id="ttRaceHead"></thead>
           <tbody id="ttRaceBody"></tbody>
         </table>
       </div>
@@ -11720,25 +11892,11 @@
     <div class="tt-section">
       <div class="tt-head">
         <h2>Future Pick Outlook</h2>
-        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today. <b>Where It Lands</b> is where it can still land once the rest of the season is actually played out &mdash; one bar per slot, and the 10th-to-90th percentile range under it. <b>Value</b> is what that whole range is worth in Base 1s &mdash; the same unit the player rankings use, where a 1st in a vacuum is exactly 1.00 &mdash; instead of every 1st being called a base 1st. Points for and max points for are shown as their rank in that league, 1 being the most.</p>
+        <p class="tt-sub">Every pick you own that started on somebody else's roster, and how that team is tracking. <b>Proj Slot</b> is where their pick would land if the season ended today. <b>Playoff %</b> is how often that team makes the field &mdash; the higher it is, the later their pick lands &mdash; and <b>1.01 %</b> and <b>Top 3 %</b> are how often it lands at the very top. <b>Value</b> is what that whole range is worth in Base 1s &mdash; the same unit the player rankings use, where a 1st in a vacuum is exactly 1.00 &mdash; instead of every 1st being called a base 1st. Points for and max points for are shown as their rank in that league, 1 being the most.</p>
       </div>
       <div class="rb-table-wrap">
         <table class="rb-table">
-          <thead>
-            <tr>
-              <th class="rb-th-league">League</th>
-              <th>Pick</th>
-              <th class="tt-th-team">From</th>
-              <th>Record</th>
-              <th>Last Wk</th>
-              <th>PF Rank</th>
-              <th>Max PF Rank</th>
-              <th class="rb-po-col">Proj Slot</th>
-              <th>Where It Lands</th>
-              <th>Top 3 %</th>
-              <th>Value</th>
-            </tr>
-          </thead>
+          <thead id="ttPicksHead"></thead>
           <tbody id="ttPicksBody"></tbody>
         </table>
       </div>
@@ -15176,14 +15334,32 @@
     return rank > 0 ? { rank, of: allRosters.length } : null;
   }
 
-  // A first-pass playoff-odds estimate, deliberately simple and meant to
-  // be replaced by a real simulation later. Each roster gets a projected
-  // final win total (what it has banked, plus the games left at a
-  // per-game win rate implied by how its scoring compares to the rest of
-  // the league), and the odds are how far that lands above or below the
-  // last playoff spot's projection. The spread narrows as the season runs
-  // out, so the same gap is worth more certainty in week 12 than week 3.
+  // Playoff odds for one roster, as a whole percent.
+  //
+  // The real answer is the season simulation the pick model runs: 1,500
+  // seasons played out through the league's actual remaining schedule,
+  // counting how often this team finished inside the playoff field. That
+  // is filled in once per sync, so before it lands (and for a league
+  // whose weeks Sleeper would not hand over) this falls back to the
+  // closed-form estimate below, which is what the app used before the
+  // simulation existed.
   function sbPlayoffOdds(entry) {
+    if (window.ppTeamOdds && entry && entry.roster) {
+      const odds = window.ppTeamOdds(entry, entry.roster.roster_id);
+      if (odds && odds.playoff != null) {
+        return Math.max(1, Math.min(99, Math.round(odds.playoff * 100)));
+      }
+    }
+    return sbPlayoffOddsEstimate(entry);
+  }
+
+  // The fallback: each roster gets a projected final win total (what it
+  // has banked, plus the games left at a per-game win rate implied by how
+  // its scoring compares to the rest of the league), and the odds are how
+  // far that lands above or below the last playoff spot's projection. The
+  // spread narrows as the season runs out, so the same gap is worth more
+  // certainty in week 12 than week 3.
+  function sbPlayoffOddsEstimate(entry) {
     const allRosters = entry.allRosters || [];
     if (!entry.roster || allRosters.length < 2) return null;
     const settings = entry.league.settings || {};
@@ -18605,6 +18781,40 @@
       }));
     }
 
+    // ---- Travis Hunter -------------------------------------------------
+    // Sleeper carries Hunter as a DB, because that is one of the two
+    // positions he genuinely plays. Every position-aware surface in this
+    // app (rosters, exposures, lineups, rankings, the trade calculator)
+    // filters to QB/RB/WR/TE, so as a DB he does not merely render oddly
+    // -- he vanishes from the app completely, on every team that rosters
+    // him, while still occupying a real roster spot in fantasy.
+    //
+    // He is the only player this is true of, so it is fixed here rather
+    // than by widening the position filters: the dictionary is rewritten
+    // once, at the single point every caller reads it from, so there is
+    // no surface left that could disagree about what he is. Matched on
+    // name rather than on a hardcoded Sleeper id so it survives an id
+    // change, and it is a no-op the day Sleeper lists him as a WR itself.
+    const PLAYER_POSITION_FIXES = [
+      { first: 'Travis', last: 'Hunter', position: 'WR' },
+    ];
+    function applyPlayerPositionFixes(dict) {
+      if (!dict) return dict;
+      PLAYER_POSITION_FIXES.forEach(fix => {
+        Object.keys(dict).forEach(id => {
+          const p = dict[id];
+          if (!p || p.first_name !== fix.first || p.last_name !== fix.last) return;
+          if (p.position === fix.position) return;
+          p.position = fix.position;
+          // fantasy_positions is what the lineup-slot code reads to decide
+          // whether he is eligible for a WR/FLEX spot, so it has to agree.
+          const fps = Array.isArray(p.fantasy_positions) ? p.fantasy_positions.slice() : [];
+          p.fantasy_positions = [fix.position].concat(fps.filter(x => x !== fix.position));
+        });
+      });
+      return dict;
+    }
+
     function getPlayerDict() {
       if (window.__sleeperPlayerDict) return Promise.resolve(window.__sleeperPlayerDict);
       if (playerDictPromise) return playerDictPromise;
@@ -18619,13 +18829,15 @@
         try {
           const hit = await playerDbGet();
           if (hit && hit.dict && Date.now() - (hit.at || 0) < PLAYER_CACHE_TTL) {
-            window.__sleeperPlayerDict = hit.dict;
-            return hit.dict;
+            // Applied on the way out of the cache too: a dictionary cached
+            // before this fix existed is still the unfixed one on disk.
+            window.__sleeperPlayerDict = applyPlayerPositionFixes(hit.dict);
+            return window.__sleeperPlayerDict;
           }
         } catch (e) {
           // No usable cache (private mode, blocked storage) -- fetch it.
         }
-        const dict = await sleeperFetch('/players/nfl');
+        const dict = applyPlayerPositionFixes(await sleeperFetch('/players/nfl'));
         window.__sleeperPlayerDict = dict;
         // Don't make the first render wait on the write.
         playerDbPut(dict).catch(() => {});
@@ -19497,6 +19709,9 @@
         league, entry,
         wins, losses, ties, record,
         pfRank, finishRank, seasonDecided, madePlayoffs, ptsFromMin,
+        // Live playoff/bye odds from the season simulation, for the weeks
+        // before the season has actually decided either one.
+        odds: window.ppTeamOdds ? window.ppTeamOdds(entry, myRoster.roster_id) : null,
         totalPf: useDerivedPts ? derivedPf : sleeperPf,
         pf: pfSum, pa: paSum, weeksPlayed,
         avgPf: weeksPlayed ? pfSum / weeksPlayed : null,
@@ -19531,11 +19746,48 @@
       return `${m.w}-${m.l}${m.t ? '-' + m.t : ''}`;
     }
 
+    // A live probability for the PO / Bye columns. Never rounds a real
+    // chance to "0%" or a real doubt to "100%" -- those read as settled,
+    // and nothing here is settled until the season says so.
+    function rbOddsText(prob) {
+      const pct = prob * 100;
+      if (pct >= 99.5) return '>99%';
+      if (pct > 0 && pct < 1) return '<1%';
+      return Math.round(pct) + '%';
+    }
+    function rbOddsCls(prob) {
+      if (prob >= 0.75) return ' is-good';
+      if (prob <= 0.15) return ' is-bad';
+      return '';
+    }
+
     function rbRowHtml(row, maxRegWeeks, showMedian) {
       const finishHtml = row.finishRank != null ? ldOrdinal(row.finishRank) : '&mdash;';
-      const playoffHtml = !row.seasonDecided
-        ? '<span class="rb-playoff-tbd">TBD</span>'
-        : (row.madePlayoffs ? '<span class="rb-playoff-yes">&#10003;</span>' : '<span class="rb-playoff-no">&#10007;</span>');
+      // Until the season decides it, "TBD" was the whole answer -- true,
+      // but useless for most of the year. The simulation has a real number
+      // for every one of those weeks, so it goes here instead, and the
+      // tick or cross takes over the moment the season is actually
+      // settled. A pending league with no simulation yet still reads TBD.
+      const playoffHtml = row.seasonDecided
+        ? (row.madePlayoffs ? '<span class="rb-playoff-yes">&#10003;</span>' : '<span class="rb-playoff-no">&#10007;</span>')
+        : (row.odds && row.odds.playoff != null
+          ? `<span class="rb-playoff-odds${rbOddsCls(row.odds.playoff)}" title="Makes the ${row.odds.playoffTeams}-team field in this share of 1,500 simulated seasons">${rbOddsText(row.odds.playoff)}</span>`
+          : '<span class="rb-playoff-tbd">TBD</span>');
+      // Same treatment for the first-round bye. A league whose bracket has
+      // no byes at all (a 4-team field seeds straight into a 4-slot
+      // bracket) shows a dash rather than a misleading 0%.
+      const byeHtml = (() => {
+        if (row.odds && row.odds.byeSlots === 0) return '<span class="rb-playoff-tbd">&mdash;</span>';
+        if (row.seasonDecided) {
+          if (row.finishRank == null || !row.odds || !row.odds.byeSlots) return '<span class="rb-playoff-tbd">&mdash;</span>';
+          return row.finishRank <= row.odds.byeSlots
+            ? '<span class="rb-playoff-yes">&#10003;</span>'
+            : '<span class="rb-playoff-no">&#10007;</span>';
+        }
+        return row.odds && row.odds.bye != null
+          ? `<span class="rb-playoff-odds${rbOddsCls(row.odds.bye)}" title="Finishes in the top ${row.odds.byeSlots} seeds, and so earns a first-round bye, in this share of 1,500 simulated seasons">${rbOddsText(row.odds.bye)}</span>`
+          : '<span class="rb-playoff-tbd">TBD</span>';
+      })();
       const netCls = row.net == null ? '' : ldrecSignClass(row.net);
       const coBadge = row.entry.isCoOwned ? '<span class="rb-co-badge" title="Co-managed">M</span>' : '';
 
@@ -19571,6 +19823,7 @@
         <td class="rb-num rb-num-low">${rbPts(row.weekLow)}</td>
         <td>${row.ptsFromMin > 0 ? '+' + Math.round(row.ptsFromMin) : '+0'}</td>
         <td>${playoffHtml}</td>
+        <td>${byeHtml}</td>
         <td class="${netCls}">${rbNetDisplay(row.net)}</td>
         ${weekCellsHtml}
         <td class="rb-po-col">${rbWlChipHtml(row.wc)}</td>
@@ -19655,6 +19908,7 @@
         <td class="rb-num rb-num-low">${rbPts(worstWeek)}</td>
         <td>${avgPtsFromMin > 0 ? '+' + avgPtsFromMin : '+0'}</td>
         <td>&mdash;</td>
+        <td>&mdash;</td>
         <td class="${netCls}">${rbNetDisplay(totalNet)}</td>
         ${weekCellsHtml}
         <td class="rb-po-col">${roundRecordOf('wc')}</td>
@@ -19680,7 +19934,21 @@
       finish: r => r.finishRank == null ? Infinity : r.finishRank,
       pf: r => r.pfRank,
       pts: r => r.ptsFromMin,
-      po: r => r.madePlayoffs ? 2 : (r.seasonDecided ? 1 : 0),
+      // A decided season outranks any live probability -- a team that is
+      // already in sorts above one that is 99% to get there -- so settled
+      // outcomes sit at 2 and -1 and the live odds fill the 0..1 band
+      // between them.
+      po: r => r.seasonDecided
+        ? (r.madePlayoffs ? 2 : -1)
+        : (r.odds && r.odds.playoff != null ? r.odds.playoff : 0),
+      bye: r => {
+        if (r.odds && r.odds.byeSlots === 0) return -2;
+        if (r.seasonDecided) {
+          if (r.finishRank == null || !r.odds || !r.odds.byeSlots) return -2;
+          return r.finishRank <= r.odds.byeSlots ? 2 : -1;
+        }
+        return r.odds && r.odds.bye != null ? r.odds.bye : 0;
+      },
       net: r => r.net == null ? -Infinity : r.net,
     };
     let rbRows = [];
@@ -19743,7 +20011,7 @@
           ${th('league', 'League')}
           ${th('rec', 'Rec')}${showMedian ? th('median', 'vs Median') : ''}${th('finish', 'Finish')}${th('pf', 'PF Rank')}
           ${th('pfpts', 'PF')}${th('papts', 'PA')}${th('avg', 'Avg')}${th('high', 'High')}${th('low', 'Low')}
-          ${th('pts', 'Pts From 1.01')}${th('po', 'PO')}${th('net', 'Net')}
+          ${th('pts', 'Pts From 1.01')}${th('po', 'PO')}${th('bye', 'Bye')}${th('net', 'Net')}
           ${weekHeadHtml}
           <th class="rb-po-col">WC</th><th>SF</th><th>Chip</th>
         </tr></thead>
@@ -20284,20 +20552,82 @@
     let ldmuDict = null;
     let ldmuRows = [];
 
+    // A manager's record, straight off their roster's Sleeper settings.
+    // Ties are only shown when there are any -- "5-2" reads better than
+    // "5-2-0" in the vast majority of leagues that never tie.
+    function ldmuRecord(roster) {
+      const st = (roster && roster.settings) || null;
+      if (!st) return '';
+      const w = st.wins || 0, l = st.losses || 0, t = st.ties || 0;
+      if (!w && !l && !t) return '0-0';
+      return `${w}-${l}${t ? '-' + t : ''}`;
+    }
+
+    function ldmuRecordHtml(roster) {
+      const rec = ldmuRecord(roster);
+      return rec ? `<span class="sb-card-record">${rec}</span>` : '';
+    }
+
+    // Playoff odds for one side of a matchup, from the season simulation.
+    // Shown next to the record because it is the same kind of fact -- how
+    // this team's year is going -- and because a matchup between two teams
+    // on the bubble reads completely differently from one between a lock
+    // and a team already out.
+    function ldmuOddsHtml(roster) {
+      if (!roster || !ldmuEntry || !window.ppTeamOdds) return '';
+      const odds = window.ppTeamOdds(ldmuEntry, roster.roster_id);
+      if (!odds || odds.playoff == null) return '';
+      const pct = Math.round(odds.playoff * 100);
+      const cls = odds.playoff >= 0.65 ? ' is-good' : (odds.playoff <= 0.20 ? ' is-bad' : '');
+      const bye = odds.byeSlots ? `, first-round bye ${Math.round((odds.bye || 0) * 100)}%` : '';
+      return `<span class="ldmu-odds-tag${cls}" title="Makes the playoffs in ${pct}% of simulated seasons${bye}">${pct}% PO</span>`;
+    }
+
     function ldmuRowHtml(r, i) {
       const name1 = sbFieldEsc((r.u1 && (r.u1.display_name || r.u1.username)) || 'Team A');
       const name2 = sbFieldEsc((r.u2 && (r.u2.display_name || r.u2.username)) || 'Team B');
       const ctx = r.ctx;
-      const scoreHtml = ctx.hasData
-        ? `<span class="sb-score-mine">${ctx.myProj.toFixed(1)}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${ctx.oppProj.toFixed(1)}</span>`
-        : '<span class="sb-score-vs">No projections yet</span>';
-      const metaText = ctx.winPct != null ? `${ctx.winPct}% / ${100 - ctx.winPct}% win probability` : `${(ctx.myPts || 0).toFixed(1)} vs ${(ctx.oppPts || 0).toFixed(1)} live`;
+      // One side is marked as leading so the eye lands on the favorite
+      // without having to compare the two numbers. Projections decide it
+      // while a week is still ahead; once points are on the board the live
+      // score is the better read, so that takes over.
+      //
+      // ctx only carries live points when it has projections to build a
+      // matchup from, so a week with real scores but no projection feed
+      // (an old week, or a failed projections fetch) came through as two
+      // blank scores. The raw points on the matchup itself are always
+      // there, so they are the floor under this -- a week that has been
+      // played always shows what it was played to.
+      const rawMine = Number(ctx.myMatchup && ctx.myMatchup.points) || 0;
+      const rawOpp = Number(ctx.oppMatchup && ctx.oppMatchup.points) || 0;
+      const myPts = (ctx.myPts || 0) || rawMine;
+      const oppPts = (ctx.oppPts || 0) || rawOpp;
+      const live = myPts > 0 || oppPts > 0;
+      const cmp = live ? [myPts, oppPts]
+        : (ctx.hasData ? [ctx.myProj, ctx.oppProj] : [null, null]);
+      const lead = i => (cmp[0] == null || cmp[0] === cmp[1]) ? '' : (cmp[i] > cmp[1 - i] ? ' is-leading' : '');
+      const scoreFor = which => {
+        if (live) return (which === 0 ? myPts : oppPts).toFixed(1);
+        if (ctx.hasData) return (which === 0 ? ctx.myProj : ctx.oppProj).toFixed(1);
+        return '';
+      };
+      const sideHtml = (which, name, roster) =>
+        `<div class="ldmu-side${lead(which)}">` +
+          `<span class="ldmu-name">${name}</span>` +
+          ldmuRecordHtml(roster) +
+          ldmuOddsHtml(roster) +
+          `<span class="ldmu-score">${scoreFor(which)}</span>` +
+        `</div>`;
+      const oddsHtml = ctx.winPct != null
+        ? `<span class="ldmu-odds-pct">${ctx.winPct}%</span>` +
+          `<span class="ldmu-odds-label">${live ? 'WIN PROB' : 'PROJ WIN'}</span>`
+        : '<span class="ldmu-odds-none">No proj</span>';
       return `<div class="sb-card ldmu-row" data-ldmu-idx="${i}">
-          <div class="sb-card-main">
-            <div class="sb-card-name">${name1} <span style="color:var(--faint);font-weight:500">vs</span> ${name2}</div>
-            <div class="sb-card-meta">${metaText}</div>
+          <div class="ldmu-teams">
+            ${sideHtml(0, name1, r.r1)}
+            ${sideHtml(1, name2, r.r2)}
           </div>
-          <div class="sb-card-score">${scoreHtml}</div>
+          <div class="ldmu-odds" title="${ctx.winPct != null ? sbFieldEsc(name1 + ' ' + ctx.winPct + '% / ' + name2 + ' ' + (100 - ctx.winPct) + '%') : ''}">${oddsHtml}</div>
           <div class="sb-chevron">&#9662;</div>
         </div>`;
     }
@@ -20323,12 +20653,12 @@
         '<div class="sb-exp-body">' +
           '<div class="sb-lineups-cols">' +
             '<div class="sb-lineup-col">' +
-              `<div class="sb-lineup-label sb-lineup-label-you">${sbFieldEsc(teams.myName)}</div>` +
+              `<div class="sb-lineup-label sb-lineup-label-you">${sbFieldEsc(teams.myName)}<span class="sb-lineup-rec">${ldmuRecord(r.r1)}</span></div>` +
               '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th><th>ORIG</th></tr></thead>' +
               `<tbody>${sbLineupRowsHtml(myMatchup, ldmuDict, projMap, r.league, week, r.espnGameData)}</tbody></table>` +
             '</div>' +
             '<div class="sb-lineup-col">' +
-              `<div class="sb-lineup-label sb-lineup-label-opp">${sbFieldEsc(teams.oppName)}</div>` +
+              `<div class="sb-lineup-label sb-lineup-label-opp">${sbFieldEsc(teams.oppName)}<span class="sb-lineup-rec">${ldmuRecord(r.r2)}</span></div>` +
               '<table class="sb-exp-table"><thead><tr><th>PLAYER</th><th>PTS</th><th>PROJ</th><th>ORIG</th></tr></thead>' +
               `<tbody>${sbLineupRowsHtml(oppMatchup, ldmuDict, projMap, r.league, week, r.espnGameData)}</tbody></table>` +
             '</div>' +
@@ -20382,7 +20712,7 @@
         // { week, projections } -- reuse it directly so live/proj/win%
         // read exactly like every other page that shows them.
         const ctx = sbBuildFieldContext(syntheticEntry, { week, projections: projMap, oppUser: u2, myMatchup: m1, oppMatchup: m2, espnGameData }, ldmuDict, espnGameData);
-        return { ctx, u1, u2, league: entry.league, espnGameData };
+        return { ctx, u1, u2, r1, r2, league: entry.league, espnGameData };
       });
 
       listEl.innerHTML = ldmuRows.map((r, i) => ldmuRowHtml(r, i)).join('');
@@ -20448,6 +20778,331 @@
     if (ldmuCloseEl) ldmuCloseEl.addEventListener('click', ldmuClose);
     const ldmuOverlayEl = document.getElementById('ldmuOverlay');
     if (ldmuOverlayEl) ldmuOverlayEl.addEventListener('click', ldmuClose);
+
+    // ---- Season schedule ------------------------------------------------
+    // One roster's whole year: who they play each week, what the matchup
+    // projects to, and how the ones already played came out.
+    //
+    // Three different kinds of answer share the win-probability column,
+    // and the table says which is which rather than blending them:
+    //
+    //  * A week already final has no projection worth showing -- the
+    //    result IS the answer, so the column shows what the matchup was
+    //    projected at only where that is still meaningful (the live week).
+    //  * The live week uses the real lineup-level projection, the same
+    //    sbMatchupWinPct every other page in the app shows, so the number
+    //    here can never disagree with the one on the Scoreboard.
+    //  * A future week cannot use that. Nobody has set a lineup, and
+    //    Sleeper's weekly projections that far out are close to a season
+    //    average, so a "lineup projection" for week 14 would be a
+    //    confident-looking number built on nothing. Those weeks get a
+    //    team-strength read instead: each side's own weekly scoring so
+    //    far, as a mean and a spread, and the probability that one draw
+    //    beats the other. Tagged EST in the table so it is never mistaken
+    //    for the lineup projection above it.
+    let ldschRosterId = null;
+    let ldschEntry = null;
+
+    // Each team's weekly scoring, from the weeks actually played. The
+    // spread is shrunk toward the league's own spread while a team has
+    // only a few weeks on the board, for the same reason the pick model
+    // does it: one blowup in week 2 should not become a personality.
+    function ldschScoringModel(weeks, played, rosters) {
+      const scoresById = {};
+      rosters.forEach(r => { scoresById[r.roster_id] = []; });
+      weeks.forEach((ms, i) => {
+        if (!played[i] || !Array.isArray(ms)) return;
+        ms.forEach(m => {
+          if (scoresById[m.roster_id]) scoresById[m.roster_id].push(Number(m.points) || 0);
+        });
+      });
+      const all = Object.values(scoresById).flat();
+      if (!all.length) return null;
+      const lgMean = all.reduce((a, b) => a + b, 0) / all.length;
+      const lgVar = all.reduce((a, b) => a + (b - lgMean) * (b - lgMean), 0) / Math.max(1, all.length - 1);
+      const model = {};
+      rosters.forEach(r => {
+        const mine = scoresById[r.roster_id] || [];
+        const n = mine.length;
+        const mean = n ? mine.reduce((a, b) => a + b, 0) / n : lgMean;
+        let variance = lgVar;
+        if (n >= 3) {
+          const v = mine.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (n - 1);
+          const wgt = Math.min(1, (n - 2) / 8);
+          variance = wgt * v + (1 - wgt) * lgVar;
+        }
+        // Same shrink on the mean -- four weeks is not a true talent level.
+        const meanWeight = Math.min(1, n / 8);
+        model[r.roster_id] = {
+          mean: meanWeight * mean + (1 - meanWeight) * lgMean,
+          sd: Math.sqrt(Math.max(1, variance)),
+          n,
+        };
+      });
+      return model;
+    }
+
+    // P(a beats b) for two independent normal scores. Abramowitz & Stegun
+    // 7.1.26 for the error function -- accurate to ~1e-7, which is far
+    // finer than a number rounded to a whole percent needs.
+    function ldschNormalWinPct(a, b) {
+      if (!a || !b) return null;
+      const sd = Math.sqrt(a.sd * a.sd + b.sd * b.sd);
+      if (!(sd > 0)) return null;
+      const z = (a.mean - b.mean) / (sd * Math.SQRT2);
+      const sign = z < 0 ? -1 : 1;
+      const x = Math.abs(z);
+      const t = 1 / (1 + 0.3275911 * x);
+      const erf = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+      return Math.round(50 * (1 + sign * erf));
+    }
+
+    function ldschOddsCell(pct, kind) {
+      if (pct == null) return '<span class="ldsch-blank">&mdash;</span>';
+      const tag = kind ? `<span class="ldsch-tag">${kind}</span>` : '';
+      return `<span class="ldsch-num">${pct}%</span>` +
+        `<span class="ldsch-odds-bar"><span class="ldsch-odds-fill" style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>` +
+        tag;
+    }
+
+    async function ldschLoad() {
+      const bodyEl = document.getElementById('ldschBody');
+      const sumEl = document.getElementById('ldschSummary');
+      const entry = ldschEntry;
+      const rosterId = ldschRosterId;
+      if (!bodyEl || !entry || rosterId == null) return;
+
+      const league = entry.league;
+      const rosters = entry.allRosters || [];
+      const me = rosters.find(r => r.roster_id === rosterId);
+      const playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
+      // Through the playoff rounds, not just the regular season -- the
+      // bracket weeks are part of the year this team plays.
+      const lastWeek = Math.min(18, playoffStart + 2);
+      const liveWeek = entry.week || 1;
+
+      // Matchups for every week. sleeperGetWeekMatchups caches per league
+      // and week in memory, so most of these are already warm from the
+      // rest of the page and this costs nothing.
+      const weekNums = [];
+      for (let w = 1; w <= lastWeek; w++) weekNums.push(w);
+      const weeks = await Promise.all(weekNums.map(w =>
+        sleeperGetWeekMatchups(league.league_id, w).catch(() => [])));
+      const played = weeks.map(ms => Array.isArray(ms) && ms.some(m => (Number(m.points) || 0) > 0));
+
+      const model = ldschScoringModel(weeks, played, rosters);
+
+      // The live week's real lineup projection, on the same footing as the
+      // Scoreboard's. Only this one week gets a projections fetch: it is
+      // the only week where a lineup-level number means anything.
+      let liveProjMap = null, liveEspn = null;
+      const liveIdx = liveWeek - 1;
+      if (weeks[liveIdx]) {
+        if (window.sleeperGetWeekProjections) {
+          try { liveProjMap = await window.sleeperGetWeekProjections(league.season, liveWeek); } catch (e) {}
+        }
+        if (window.sleeperGetEspnGameData) {
+          liveEspn = await window.sleeperGetEspnGameData(liveWeek, league.season).catch(() => null);
+        }
+      }
+
+      const userFor = roster => {
+        if (!roster) return null;
+        return (entry.users || []).find(u => u.user_id === roster.owner_id) || null;
+      };
+      const nameFor = roster => {
+        const u = userFor(roster);
+        return (u && (u.display_name || u.username)) || 'Unknown';
+      };
+
+      let projRemaining = 0;
+      const rows = [];
+
+      for (let i = 0; i < weeks.length; i++) {
+        const week = i + 1;
+        const ms = weeks[i];
+        const mine = Array.isArray(ms) ? ms.find(m => m.roster_id === rosterId) : null;
+        const isPlayoffWeek = week >= playoffStart;
+
+        // No pairing published: either the week does not exist yet or this
+        // roster is on a bye (odd team counts, or a playoff bracket this
+        // team is not in).
+        if (!mine || mine.matchup_id == null) {
+          if (!Array.isArray(ms) || !ms.length) continue;
+          rows.push({ week, isPlayoffWeek, bye: true });
+          continue;
+        }
+        const opp = ms.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== rosterId);
+        // A matchup id with nobody on the other side of it. Sleeper does
+        // this for a league with an odd number of teams, and briefly for a
+        // playoff round whose bracket is only half filled in. There is no
+        // opponent, no result and no probability to show, so showing this
+        // team's own points beside a 0.0 would invent a blowout win that
+        // never happened -- it reads as a bye, which is what it is.
+        if (!opp) {
+          rows.push({ week, isPlayoffWeek, bye: true });
+          continue;
+        }
+        const oppRoster = rosters.find(r => r.roster_id === opp.roster_id) || null;
+
+        const myPts = Number(mine.points) || 0;
+        const oppPts = Number(opp.points) || 0;
+        const isFinal = played[i] && week < liveWeek;
+        const isLive = week === liveWeek && played[i];
+
+        let result = null;
+        if (isFinal) result = myPts > oppPts ? 'W' : (myPts < oppPts ? 'L' : 'T');
+
+        // Win probability, by the three rules described above.
+        let pct = null, pctKind = '';
+        if (week === liveWeek && liveProjMap) {
+          const ctx = sbBuildFieldContext(
+            { league, roster: me, users: entry.users, myMatchup: mine, oppMatchup: opp, oppUser: userFor(oppRoster), week },
+            { week, projections: liveProjMap, oppUser: userFor(oppRoster), myMatchup: mine, oppMatchup: opp, espnGameData: liveEspn },
+            ldmuDict, liveEspn
+          );
+          if (ctx.winPct != null) { pct = ctx.winPct; pctKind = isLive ? 'LIVE' : 'PROJ'; }
+        }
+        if (pct == null && week >= liveWeek && model) {
+          pct = ldschNormalWinPct(model[rosterId], model[opp.roster_id]);
+          if (pct != null) pctKind = 'EST';
+        }
+        if (pct != null && week >= liveWeek && !isPlayoffWeek) projRemaining += pct / 100;
+
+        rows.push({
+          week, isPlayoffWeek, opp, oppRoster,
+          oppName: nameFor(oppRoster),
+          oppRecord: ldmuRecord(oppRoster),
+          myPts, oppPts, isFinal, isLive, result, pct, pctKind,
+        });
+      }
+
+      if (!rows.length) {
+        bodyEl.innerHTML = '<div class="exp-loading">No schedule published for this league yet.</div>';
+        if (sumEl) sumEl.innerHTML = '';
+        return;
+      }
+
+      const scoreCell = (a, b, show) => show
+        ? `<span class="ldsch-num">${a.toFixed(1)}</span> <span class="ldsch-blank">-</span> <span class="ldsch-num">${b.toFixed(1)}</span>`
+        : '<span class="ldsch-blank">&mdash;</span>';
+
+      const bodyHtml = rows.map(r => {
+        const cls = (r.isLive ? ' is-live' : '') +
+          (r.isPlayoffWeek && r.week === playoffStart ? ' is-playoff-start' : '');
+        if (r.bye) {
+          return `<tr class="${cls.trim()}"><td class="ldsch-week">Wk ${r.week}</td>` +
+            `<td class="ldsch-bye">BYE${r.isPlayoffWeek ? '<span class="ldsch-tag">PLAYOFFS</span>' : ''}</td>` +
+            '<td></td><td></td><td></td><td></td></tr>';
+        }
+        const oppHtml = `<span class="ldsch-opp">${sbFieldEsc(r.oppName)}</span>` +
+          (r.oppRecord ? `<span class="ldsch-opp-rec">${r.oppRecord}</span>` : '') +
+          (r.isPlayoffWeek ? '<span class="ldsch-tag">PLAYOFFS</span>' : '');
+        const resultHtml = r.result
+          ? `<span class="ldsch-result is-${r.result.toLowerCase()}">${r.result}</span>`
+          : '<span class="ldsch-blank">&mdash;</span>';
+        return `<tr class="${cls.trim()}">` +
+          `<td class="ldsch-week">Wk ${r.week}</td>` +
+          `<td>${oppHtml}</td>` +
+          `<td>${ldschOddsCell(r.pct, r.pctKind)}</td>` +
+          `<td>${scoreCell(r.myPts, r.oppPts, r.isLive)}</td>` +
+          `<td>${scoreCell(r.myPts, r.oppPts, r.isFinal)}</td>` +
+          `<td>${resultHtml}</td>` +
+        '</tr>';
+      }).join('');
+
+      bodyEl.innerHTML =
+        '<table class="ldsch-table"><thead><tr>' +
+          '<th>WEEK</th><th>OPPONENT</th><th>WIN PROJ.</th><th>LIVE</th><th>FINAL</th><th>RESULT</th>' +
+        '</tr></thead><tbody>' + bodyHtml + '</tbody></table>';
+
+      if (sumEl) {
+        // Record and points come off the roster's own Sleeper settings
+        // rather than being re-totalled from the rows above. The rows and
+        // Sleeper can legitimately disagree for a week -- a stat correction
+        // Sleeper has applied to the standings but not to the matchup, a
+        // week scored by median -- and a summary that contradicts the
+        // standings two inches above it is worse than one that is a week
+        // behind the table under it.
+        const st = (me && me.settings) || {};
+        const w = st.wins || 0, l = st.losses || 0, t = st.ties || 0;
+        const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
+        const pa = (st.fpts_against || 0) + (st.fpts_against_decimal || 0) / 100;
+        const gamesLeft = rows.filter(r => !r.bye && !r.isFinal && !r.isPlayoffWeek).length;
+        const cell = (label, value) =>
+          `<div class="ldsch-sum-cell"><div class="ldsch-sum-label">${label}</div>` +
+          `<div class="ldsch-sum-value">${value}</div></div>`;
+        sumEl.innerHTML =
+          cell('RECORD', `${w}-${l}${t ? '-' + t : ''}`) +
+          cell('POINTS FOR', pf.toFixed(1)) +
+          cell('POINTS AGAINST', pa.toFixed(1)) +
+          // Expected wins from here, summing each remaining week's own win
+          // probability -- which is what those percentages add up to, and
+          // a more honest "where does this finish" than a record alone.
+          (gamesLeft
+            ? cell('PROJ. FINAL', `${(w + projRemaining).toFixed(1)}-${(l + gamesLeft - projRemaining).toFixed(1)}`)
+            : cell('GAMES LEFT', '0'));
+      }
+    }
+
+    async function ldschOpen() {
+      const standingsListEl = document.getElementById('ldStandingsList');
+      const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
+      const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+      if (!entry) return;
+
+      // Whichever manager's roster the page is currently expanded on --
+      // the same row the stat strip this button lives in belongs to. With
+      // no row active (a one-team view) that is your own roster.
+      const activeRow = standingsListEl
+        ? standingsListEl.querySelector('.league-standings-row.is-active')
+        : null;
+      const rosterId = activeRow && activeRow.dataset.rosterId != null && activeRow.dataset.rosterId !== ''
+        ? Number(activeRow.dataset.rosterId)
+        : (entry.roster ? entry.roster.roster_id : null);
+      if (rosterId == null) return;
+
+      ldschEntry = entry;
+      ldschRosterId = rosterId;
+
+      const roster = (entry.allRosters || []).find(r => r.roster_id === rosterId);
+      const user = roster ? (entry.users || []).find(u => u.user_id === roster.owner_id) : null;
+      const titleEl = document.getElementById('ldschTitleTeam');
+      if (titleEl) {
+        const who = (user && (user.display_name || user.username)) || 'Team';
+        titleEl.textContent = `${who} · ${entry.league.name} · ${entry.league.season}`;
+      }
+
+      const overlay = document.getElementById('ldschOverlay');
+      const modal = document.getElementById('ldschModal');
+      if (overlay) overlay.hidden = false;
+      if (modal) modal.hidden = false;
+      const bodyEl = document.getElementById('ldschBody');
+      if (bodyEl) bodyEl.innerHTML = '<div class="exp-loading">Loading schedule...</div>';
+      const sumEl = document.getElementById('ldschSummary');
+      if (sumEl) sumEl.innerHTML = '';
+
+      // The lineup projection path needs the player dictionary, and this
+      // modal can be the first thing opened on the page.
+      if (!ldmuDict && window.sleeperGetPlayerDict) {
+        try { ldmuDict = await window.sleeperGetPlayerDict(); } catch (err) {}
+      }
+      await ldschLoad();
+    }
+
+    function ldschClose() {
+      const overlay = document.getElementById('ldschOverlay');
+      const modal = document.getElementById('ldschModal');
+      if (overlay) overlay.hidden = true;
+      if (modal) modal.hidden = true;
+    }
+
+    const ldSchedBtnEl = document.getElementById('ldSchedBtn');
+    if (ldSchedBtnEl) ldSchedBtnEl.addEventListener('click', ldschOpen);
+    const ldschCloseEl = document.getElementById('ldschClose');
+    if (ldschCloseEl) ldschCloseEl.addEventListener('click', ldschClose);
+    const ldschOverlayEl = document.getElementById('ldschOverlay');
+    if (ldschOverlayEl) ldschOverlayEl.addEventListener('click', ldschClose);
     const ldmuWeekDropdownEl = document.getElementById('ldmuWeekDropdown');
     if (ldmuWeekDropdownEl) {
       const select = ldmuWeekDropdownEl.querySelector('.week-select');
@@ -20716,6 +21371,34 @@
       return { label: 'REBUILD', cls: 'rebuild' };
     }
 
+    // ---- Playoff / bye odds, as they appear on a standings row --------
+    // A percent, or an em dash while the simulation that produces it has
+    // not finished for this league. Deliberately never a zero: "0%" and
+    // "not computed yet" are different answers and must not look alike.
+    function oddsPctText(prob) {
+      if (prob == null) return '—';
+      const pct = prob * 100;
+      if (pct >= 99.5) return '100%';
+      if (pct > 0 && pct < 1) return '<1%';
+      return Math.round(pct) + '%';
+    }
+    function oddsCls(prob) {
+      if (prob == null) return '';
+      if (prob >= 0.65) return ' class="ld-odds-good"';
+      if (prob <= 0.20) return ' class="ld-odds-bad"';
+      return '';
+    }
+    function oddsTitle(odds, which) {
+      if (!odds) return 'Still simulating this league';
+      const runs = '1,500 simulated seasons';
+      if (which === 'bye') {
+        return `First-round bye (top ${odds.byeSlots} of ${odds.playoffTeams} seeds) in ` +
+          `${oddsPctText(odds.bye)} of ${runs}`;
+      }
+      const seed = odds.seed != null ? `, average finish ${odds.seed.toFixed(1)}` : '';
+      return `Made the ${odds.playoffTeams}-team field in ${oddsPctText(odds.playoff)} of ${runs}${seed}`;
+    }
+
     function sbBuildLeagueStandingsHtml(entry, activeRosterId, sortBy) {
       const allRosters = entry.allRosters || [];
       const pfOf = r => {
@@ -20787,7 +21470,12 @@
         const posRanks = posRanksOf(r);
         const weeklyPts = weeklyPtsByRoster[r.roster_id] != null ? weeklyPtsByRoster[r.roster_id] : -Infinity;
         const type = sbStandingsRosterType(conRank, valRank, half);
-        return { rosterId: r.roster_id, ownerId: r.owner_id, customAvatar, accountAvatar, name, subName, wins, losses, ties, conRank, valRank, posRanks, weeklyPts, type };
+        // Playoff and first-round-bye odds for THIS manager, out of the
+        // same season simulation the pick model runs -- so every team in
+        // the league gets the number, not just yours. Null until the
+        // simulation has landed for this league.
+        const odds = window.ppTeamOdds ? window.ppTeamOdds(entry, r.roster_id) : null;
+        return { rosterId: r.roster_id, ownerId: r.owner_id, customAvatar, accountAvatar, name, subName, wins, losses, ties, conRank, valRank, posRanks, weeklyPts, type, odds };
       });
       if (sortBy === 'val') {
         rows.sort((a, b) => (a.valRank || 999) - (b.valRank || 999) || (b.weeklyPts - a.weeklyPts));
@@ -20834,7 +21522,10 @@
             `<span class="ld-tag">WR <b>${row.posRanks.WR != null ? ldOrdinal(row.posRanks.WR) : '—'}</b></span>` +
             `<span class="ld-tag">TE <b>${row.posRanks.TE != null ? ldOrdinal(row.posRanks.TE) : '—'}</b></span>` +
             '<span class="ld-tag">PICKS <b>—</b></span>' +
-            '<span class="ld-tag">PLAYOFF <b>—</b></span>' +
+            `<span class="ld-tag" title="${sbFieldEsc(oddsTitle(row.odds, 'playoff'))}">PLAYOFF <b${oddsCls(row.odds && row.odds.playoff)}>${oddsPctText(row.odds && row.odds.playoff)}</b></span>` +
+            (row.odds && row.odds.byeSlots
+              ? `<span class="ld-tag" title="${sbFieldEsc(oddsTitle(row.odds, 'bye'))}">BYE <b${oddsCls(row.odds.bye)}>${oddsPctText(row.odds.bye)}</b></span>`
+              : '') +
           '</div>' +
           (isActive ? '<div class="ld-header-icons"><span class="ld-icon ld-icon-photo" title="Export as image">&#128247;</span></div>' : '') +
         '</div>';
@@ -20927,6 +21618,7 @@
     }
 
     window.sleeperGetPlayerDict = getPlayerDict;
+    window.sleeperApplyPlayerPositionFixes = applyPlayerPositionFixes;
     window.sleeperFetch = sleeperFetch;
     window.sleeperReloadData = loadSleeperData;
     window.sleeperGetWeekProjections = getWeekProjections;
@@ -22030,6 +22722,47 @@
   }
 
   const PP_SIM_RUNS = 1500;
+  // Every week still to be played is simulated as if both managers start
+  // their best possible lineup.
+  //
+  // This is a deliberate choice, not an oversight. The alternative is to
+  // carry each team's own historical start-vs-optimal gap forward, which
+  // amounts to predicting that a manager who left points on the bench in
+  // week 3 will do it again in week 12 -- and that is really a prediction
+  // about the waiver claims, trades and bye-week planning nobody has made
+  // yet, which is not knowable. Assuming everyone plays their roster
+  // properly is the neutral assumption: it treats every manager the same
+  // and lets the rosters, not past lineup mistakes, decide the rest.
+  //
+  // Two things follow from it, and both are applied below: the projected
+  // weekly mean is lifted back out of "what teams actually start" into
+  // "best possible lineup" space, and a simulated week's potential points
+  // equal its points, because a team that started its best lineup left
+  // nothing on the bench by definition.
+  const PP_ASSUME_OPTIMAL_LINEUPS = true;
+
+  // Where a team's projected weekly scoring comes from for the weeks
+  // still to be played: Sleeper's own per-player projections, arranged
+  // into that roster's best possible lineup.
+  //
+  // The alternative -- and what this used to do -- is to blend that
+  // against what the team has actually scored so far, with the history
+  // taking over as the season runs on. That sounds more informed than it
+  // is. Points already scored are banked; they are in the standings and
+  // in the points-for totals the draft order runs on, and they do not
+  // need to be counted a second time as a prediction about November. What
+  // the remaining weeks turn on is which players a roster can actually
+  // start, and that is exactly what the projections describe.
+  //
+  // History still does the job it is uniquely good at: the SPREAD. Sleeper
+  // projects a number, not a distribution, so how much a given team swings
+  // from week to week can only come from watching it, and it still does
+  // (see `sd` and `tau` below). The projection sets the level; the team's
+  // own scoring says how reliable that level is.
+  //
+  // With no projections to be had -- the offseason, or a failed fetch --
+  // this falls back to the old blend rather than to nothing.
+  const PP_PROJECTION_DRIVEN = true;
   // How many weeks of real results it takes for what a team has scored to
   // carry as much weight as what its roster projects to score. Six is
   // about half a regular season, so the two are level around week 6 and
@@ -22080,11 +22813,32 @@
   // `teams` is [{ id, wins, pf, ppts }], and the returned array is
   // slot-ordered: index 0 holds the 1.01.
   function ppDraftOrderFor(teams, playoffTeams) {
+    return ppSeasonOutcome(teams, playoffTeams).order;
+  }
+
+  // The finish of one simulated season: the seeded standings, who made the
+  // playoffs, and the resulting draft order. The standings sort is done
+  // once and both answers read off it -- the draft order and the playoff
+  // field can never disagree about who finished where.
+  function ppSeasonOutcome(teams, playoffTeams) {
     const standings = teams.slice().sort((a, b) => b.wins - a.wins || b.pf - a.pf);
     const inPlayoffs = new Set(standings.slice(0, playoffTeams).map(t => t.id));
     const missed = teams.filter(t => !inPlayoffs.has(t.id)).sort((a, b) => a.ppts - b.ppts || a.pf - b.pf);
     const made = teams.filter(t => inPlayoffs.has(t.id)).sort((a, b) => a.wins - b.wins || a.pf - b.pf);
-    return missed.concat(made);
+    return { standings, inPlayoffs, order: missed.concat(made) };
+  }
+
+  // How many of the playoff seeds get a first-round bye. A bracket is
+  // built on the next power of two at or above the field size, and the
+  // byes are the empty slots -- 6 teams into an 8-slot bracket is two
+  // byes, 4 into 4 is none. This is how Sleeper builds its bracket, so it
+  // matches what the league will actually play.
+  function ppByeCountFor(playoffTeams) {
+    const n = Math.max(0, Number(playoffTeams) || 0);
+    if (n < 3) return 0;
+    let bracket = 1;
+    while (bracket < n) bracket *= 2;
+    return bracket - n;
   }
 
   // ---- This season, simulated out -------------------------------------
@@ -22146,6 +22900,12 @@
     // real started scores (nobody starts their optimal lineup, and the
     // league-wide ratio between the two is what says by how much).
     const strengthById = {};
+    // League-wide "started points / best-possible points". Used twice: to
+    // put the optimal projection on the same footing as real started
+    // scores for the blend below, and then to undo that at the end, so
+    // the weeks still to be played are projected at best-possible-lineup
+    // level (see PP_ASSUME_OPTIMAL_LINEUPS).
+    let realismFactor = null;
     if (window.sbTeamOptimalProjection) {
       let optSum = 0, optCount = 0;
       rosters.forEach(r => {
@@ -22155,6 +22915,7 @@
       if (optCount === rosters.length && optSum > 0) {
         const optMean = optSum / optCount;
         const realism = leagueMean / optMean;
+        realismFactor = realism > 0 ? realism : null;
         rosters.forEach(r => { strengthById[r.roster_id] *= realism; });
         // Roster value on top of it, and deliberately a much smaller
         // weight than the lineup projection. What it adds is optionality:
@@ -22207,8 +22968,24 @@
       // value drifting as a team's real quality shows, and it snapping
       // around every Sunday.
       const strength = strengthById[r.roster_id];
-      const scoredWeight = strength == null ? 1 : n / (n + PP_STRENGTH_WEEKS);
-      const projectedMean = strength == null ? scored : scoredWeight * scored + (1 - scoredWeight) * strength;
+      // Weight on what the team has already scored. Zero when the
+      // projections are driving (PP_PROJECTION_DRIVEN), which leaves the
+      // optimal-lineup projection as the whole of the mean; one when
+      // there is no projection to use, which leaves the history as the
+      // whole of it.
+      const scoredWeight = strength == null
+        ? 1
+        : (PP_PROJECTION_DRIVEN ? 0 : n / (n + PP_STRENGTH_WEEKS));
+      let projectedMean = strength == null ? scored : scoredWeight * scored + (1 - scoredWeight) * strength;
+      // The blend above lives in "what teams actually start" space,
+      // because that is the only space the two halves of it share. The
+      // weeks being simulated are played on the assumption that everyone
+      // starts their best lineup, so the mean is divided back out by the
+      // same league-wide ratio that put the optimal projection into that
+      // space to begin with. Applied to every team identically, so it
+      // does not reshuffle anybody -- it moves the whole league onto the
+      // scale the simulated weeks are actually played at.
+      if (PP_ASSUME_OPTIMAL_LINEUPS && realismFactor) projectedMean /= realismFactor;
       const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
       const ppts = (st.ppts || 0) + (st.ppts_decimal || 0) / 100;
       // How wrong the projected level itself could be. Without this the
@@ -22232,7 +23009,14 @@
         weeksPlayed: n,
         wins: (st.wins || 0) + (st.ties || 0) * 0.5,
         pf, ppts,
-        ratio: pf > 0 ? Math.min(1.8, Math.max(1, ppts / pf)) : 1.25,
+        // How a week's points become potential points. Under the optimal
+        // lineup assumption a simulated week's best-possible total IS what
+        // the team scored, so the ratio is exactly 1. Without it, each
+        // team carries its own historical started-to-potential gap
+        // forward.
+        ratio: PP_ASSUME_OPTIMAL_LINEUPS
+          ? 1
+          : (pf > 0 ? Math.min(1.8, Math.max(1, ppts / pf)) : 1.25),
       };
     });
     const byId = {};
@@ -22258,6 +23042,16 @@
     // came out at that slot across every simulated finish.
     const slotCounts = {};
     model.forEach(m => { slotCounts[m.id] = new Array(teamCount).fill(0); });
+
+    // Playoff and bye odds come free with the draft-order work: the same
+    // sorted standings that decide where a pick lands also decide who made
+    // the field and who earned a bye, so they are counted in the same
+    // pass rather than simulated separately. One simulation, one answer --
+    // the pick model and the playoff odds can never tell different
+    // stories about the same season.
+    const byeSlots = ppByeCountFor(playoffTeams);
+    const playoffCounts = {}, byeCounts = {}, seedSum = {};
+    model.forEach(m => { playoffCounts[m.id] = 0; byeCounts[m.id] = 0; seedSum[m.id] = 0; });
 
     const scratch = model.map(m => ({ id: m.id, wins: 0, pf: 0, ppts: 0 }));
     // Matchups name roster ids; the simulation works on array positions.
@@ -22297,16 +23091,33 @@
           else { scratch[ia].wins += 0.5; scratch[ib].wins += 0.5; }
         }
       }
-      const order = ppDraftOrderFor(scratch, playoffTeams);
+      const outcome = ppSeasonOutcome(scratch, playoffTeams);
+      const order = outcome.order;
       for (let i = 0; i < order.length; i++) slotCounts[order[i].id][i]++;
+      const standings = outcome.standings;
+      for (let i = 0; i < standings.length; i++) {
+        const id = standings[i].id;
+        seedSum[id] += i + 1;
+        if (i < playoffTeams) playoffCounts[id]++;
+        if (i < byeSlots) byeCounts[id]++;
+      }
     }
 
     const slotProb = {};
     Object.keys(slotCounts).forEach(id => {
       slotProb[id] = slotCounts[id].map(c => c / PP_SIM_RUNS);
     });
+    const playoffProb = {}, byeProb = {}, avgSeed = {};
+    Object.keys(playoffCounts).forEach(id => {
+      playoffProb[id] = playoffCounts[id] / PP_SIM_RUNS;
+      byeProb[id] = byeCounts[id] / PP_SIM_RUNS;
+      avgSeed[id] = seedSum[id] / PP_SIM_RUNS;
+    });
     const weeksLeft = remaining.length;
-    return { slotProb, teamCount, playoffTeams, regularWeeks, weeksLeft, model: byId, leagueMean };
+    return {
+      slotProb, teamCount, playoffTeams, byeSlots, regularWeeks, weeksLeft,
+      model: byId, leagueMean, playoffProb, byeProb, avgSeed,
+    };
   }
 
   // ---- Later drafts ----------------------------------------------------
@@ -22451,6 +23262,32 @@
     return f ? f.ev : ppPickValue(pick.round);
   }
   window.ppPickForecast = ppPickForecast;
+
+  // ---- Playoff / bye odds for any team --------------------------------
+  // The same simulation the pick model runs, read from the other end.
+  // Returns null until it has landed for this league, which every caller
+  // treats as "no answer yet" rather than as a zero.
+  //
+  //   playoff : share of simulated seasons this team made the field
+  //   bye     : share where it finished high enough for a first-round bye
+  //   seed    : its average finishing seed across those seasons
+  function ppTeamOdds(entry, rosterId) {
+    if (!entry || !entry.league || rosterId == null) return null;
+    const model = window.__ppPickModel[entry.league.league_id];
+    const cur = model && model.current;
+    if (!cur || !cur.playoffProb) return null;
+    const playoff = cur.playoffProb[rosterId];
+    if (playoff == null) return null;
+    return {
+      playoff,
+      bye: cur.byeProb[rosterId] != null ? cur.byeProb[rosterId] : null,
+      seed: cur.avgSeed[rosterId] != null ? cur.avgSeed[rosterId] : null,
+      byeSlots: cur.byeSlots,
+      playoffTeams: cur.playoffTeams,
+      weeksLeft: cur.weeksLeft,
+    };
+  }
+  window.ppTeamOdds = ppTeamOdds;
   window.ppPickValueFuture = ppPickValueFuture;
   window.ppSlotValue = ppSlotValue;
 
@@ -23697,8 +24534,8 @@
   // -- that badge is the whole point: it tells you at a glance which
   // games actually matter to your week. Selecting a card opens a hero
   // panel (score, linescore, situation, field graphic, last play) over a
-  // three-column body: your fantasy stats, live play-by-play, and the
-  // injury report. ----
+  // three-column body: your fantasy stats, live play-by-play, and your
+  // leagues with a starter in the game. ----
 
   // GameCast scores every player on the shared house line (defined once as
   // SB_HOUSE_SCORING, and used by the Rooting Guide too, so the two pages
@@ -23720,7 +24557,6 @@
 
   window.__gcSelectedEventId = window.__gcSelectedEventId || null;
   window.__gcStatsTeam = window.__gcStatsTeam || null;   // 'away' | 'home'
-  window.__gcInjuryTeam = window.__gcInjuryTeam || null; // 'away' | 'home'
   window.__gcExpandedPlayer = window.__gcExpandedPlayer || null;
   window.__gcHeroData = window.__gcHeroData || null;
 
@@ -24133,13 +24969,6 @@
           </span>
         </div>
         <div class="gc-hero-grid">
-          <div class="gc-hero-injury">
-            <div class="gc-panel-head">
-              <span class="gc-panel-title">Injury Report</span>
-              ${gcTeamSwitchHtml(g, window.__gcInjuryTeam || 'away', 'gc-inj-team')}
-            </div>
-            <div class="gc-hero-injury-scroll" id="gcInjBody">${gcInjuryHtml(g, window.__gcInjuryTeam || 'away', dict || {})}</div>
-          </div>
           <div class="gc-hero-center">
             <div class="gc-hero-score">
               ${side(g.away, 'away')}
@@ -24401,38 +25230,6 @@
     }).join('');
   }
 
-  // ---- Injury column ---------------------------------------------------
-  const GC_INJ_ORDER = { OUT: 0, IR: 0, PUP: 1, DOUBTFUL: 2, QUESTIONABLE: 3 };
-  function gcInjuryHtml(game, whichTeam, dict) {
-    const abbr = whichTeam === 'home' ? game.home.abbr : game.away.abbr;
-    const rows = Object.keys(dict)
-      .filter(id => {
-        const p = dict[id];
-        return p && p.team === abbr && (p.injury_status || (p.status && p.status !== 'Active'));
-      })
-      .map(id => {
-        const p = dict[id];
-        const raw = String(p.injury_status || p.status || '').toUpperCase();
-        return { id, p, raw };
-      })
-      .sort((a, b) => {
-        const ra = GC_INJ_ORDER[a.raw] != null ? GC_INJ_ORDER[a.raw] : 9;
-        const rb = GC_INJ_ORDER[b.raw] != null ? GC_INJ_ORDER[b.raw] : 9;
-        return ra - rb;
-      });
-    if (!rows.length) return '<div class="gc-empty">No reported injuries.</div>';
-    return rows.map(r => {
-      const name = r.p.full_name || [r.p.first_name, r.p.last_name].filter(Boolean).join(' ');
-      const cls = (r.raw === 'OUT' || r.raw === 'IR') ? ' gc-inj-out' : ((r.raw === 'QUESTIONABLE' || r.raw === 'DOUBTFUL') ? ' gc-inj-q' : '');
-      const label = r.raw === 'QUESTIONABLE' ? 'Q' : (r.raw === 'DOUBTFUL' ? 'D' : r.raw);
-      return `<div class="gc-inj-row">
-        <span class="gc-inj-pos">${sbFieldEsc(r.p.position || '')}</span>
-        <span class="gc-inj-name">${sbFieldEsc(name)}</span>
-        <span class="gc-inj-status${cls}">${sbFieldEsc(label)}</span>
-      </div>`;
-    }).join('');
-  }
-
   // ---- League breakdown column ----------------------------------------
   // Every one of your leagues with a starter in THIS game and nobody
   // else's -- your side against your opponent's -- so you can see exactly
@@ -24537,7 +25334,6 @@
       const live = sorted.find(g => g.state === 'in');
       window.__gcSelectedEventId = (live || sorted[0] || {}).eventId || null;
       window.__gcStatsTeam = null;
-      window.__gcInjuryTeam = null;
     }
 
     gcRenderRail(sorted, dict);
@@ -24573,7 +25369,6 @@
     window.__gcHeroData = { game, dict, statsMap, projMap };
 
     if (!window.__gcStatsTeam) window.__gcStatsTeam = 'away';
-    if (!window.__gcInjuryTeam) window.__gcInjuryTeam = 'away';
 
     if (cols) {
       cols.innerHTML = `
@@ -24630,7 +25425,6 @@
         window.__gcSelectedEventId = card.dataset.gcEvent;
         // A new game means the old team/player selections are meaningless.
         window.__gcStatsTeam = null;
-        window.__gcInjuryTeam = null;
         window.__gcExpandedPlayer = null;
         renderRealGameCast();
       });
@@ -24646,8 +25440,7 @@
     if (rightBtn) rightBtn.addEventListener('click', () => scrollRail(1));
     window.addEventListener('resize', gcUpdateRailArrows);
 
-    // The injury panel now lives in the hero and the stats/leagues panels
-    // in the body, so one delegated handler is bound to both containers.
+    // One delegated handler bound to both the hero and the body containers.
     const onPanelClick = (e) => {
       const statsBtn = e.target.closest('[data-gc-stats-team]');
       if (statsBtn) {
@@ -24655,15 +25448,6 @@
         window.__gcExpandedPlayer = null;
         statsBtn.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === statsBtn));
         gcRefreshStatsBody();
-        return;
-      }
-      const injBtn = e.target.closest('[data-gc-inj-team]');
-      if (injBtn) {
-        window.__gcInjuryTeam = injBtn.dataset.gcInjTeam;
-        injBtn.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === injBtn));
-        const cur = window.__gcHeroData;
-        const body = document.getElementById('gcInjBody');
-        if (cur && body) body.innerHTML = gcInjuryHtml(cur.game, window.__gcInjuryTeam, cur.dict);
         return;
       }
       const lgRow = e.target.closest('.gc-lg-row');
@@ -25973,7 +26757,8 @@
     if (window.__sleeperPlayerDict) return window.__sleeperPlayerDict;
     if (!window.sleeperFetch) return null;
     try {
-      const dict = await window.sleeperFetch('/players/nfl');
+      let dict = await window.sleeperFetch('/players/nfl');
+      if (window.sleeperApplyPlayerPositionFixes) dict = window.sleeperApplyPlayerPositionFixes(dict);
       window.__sleeperPlayerDict = dict;
       return dict;
     } catch (e) {
@@ -26880,27 +27665,21 @@
       return window.ppPickForecast ? window.ppPickForecast(entry, season, round, rosterId) : null;
     }
 
-    // One bar per draft slot, height = how often the pick landed there
-    // across the simulated seasons. Scaled to the most likely slot rather
-    // than to 1, so a genuinely uncertain pick still reads as a shape
-    // instead of as a flat line.
-    function distCell(f, order) {
-      if (!f) return '<span class="tt-blank">&mdash;</span>';
-      const nonPlayoffSlots = order ? order.total - order.playoffTeams : Math.max(1, f.teamCount - 6);
-      const peak = Math.max.apply(null, f.dist) || 1;
-      const bars = f.dist.map((prob, i) => {
-        const slot = i + 1;
-        const h = Math.round((prob / peak) * 17);
-        const cls = prob <= 0.001 ? ' is-empty'
-          : (slot <= 3 ? ' is-top' : (slot <= nonPlayoffSlots ? ' is-lottery' : ''));
-        return `<span class="tt-dist-bar${cls}" style="height:${Math.max(1, h)}px"></span>`;
-      }).join('');
-      const title = `Simulated ${f.basis === 'season' ? 'to the end of this season' : 'from team strength, ' + f.yearsOut + ' draft' + (f.yearsOut === 1 ? '' : 's') + ' out'}`
-        + ` -- most likely ${f.median}, 10th-90th percentile ${f.p10}-${f.p90}`;
-      const range = f.p10 === f.p90 ? String(f.p10) : `${f.p10}–${f.p90}`;
-      return `<span class="tt-dist" title="${sbFieldEsc(title)}">` +
-        `<span class="tt-dist-track">${bars}</span>` +
-        `<span class="tt-range">${range} of ${f.teamCount}</span></span>`;
+    // How often the team this pick comes from made the playoff field,
+    // across the same simulated seasons the slot distribution comes from.
+    // It is the single most useful thing to know about somebody else's
+    // pick: a team that makes the playoffs picks at the back of the
+    // round, so a low number here is what makes a pick valuable.
+    function playoffCell(entry, rosterId) {
+      const odds = window.ppTeamOdds ? window.ppTeamOdds(entry, rosterId) : null;
+      if (!odds || odds.playoff == null) return '<span class="tt-blank">&mdash;</span>';
+      const pct = odds.playoff * 100;
+      const text = pct >= 99.5 ? '100%' : (pct < 1 && pct > 0 ? '<1%' : Math.round(pct) + '%');
+      const bye = odds.bye != null && odds.byeSlots
+        ? ` -- first-round bye in ${Math.round(odds.bye * 100)}%`
+        : '';
+      const title = `Made the playoffs in ${text} of simulated seasons${bye}`;
+      return `<span class="tt-odds${odds.playoff >= 0.5 ? ' is-live' : ''}" title="${sbFieldEsc(title)}">${text}</span>`;
     }
 
     function oddsCell(prob) {
@@ -26969,30 +27748,168 @@
         .filter(e => e.roster && e.league && (isCoManagedIncluded() || !e.isCoOwned));
     }
 
-    async function renderRealTankingTracker() {
-      const entries = ttEntries();
-      if (!entries.length) {
-        raceBody.innerHTML = '<tr><td colspan="9" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
-        picksBody.innerHTML = '<tr><td colspan="11" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>';
-        return;
+    // A bye-odds cell, on the same footing as the playoff one beside it.
+    // A league whose bracket has no byes at all shows a dash: 0% would
+    // read as "this team cannot earn one", when in fact nobody can.
+    function byeCell(entry, rosterId) {
+      const odds = window.ppTeamOdds ? window.ppTeamOdds(entry, rosterId) : null;
+      if (!odds || odds.bye == null) return '<span class="tt-blank">&mdash;</span>';
+      if (!odds.byeSlots) {
+        return '<span class="tt-blank" title="This league&rsquo;s bracket has no first-round byes">&mdash;</span>';
       }
+      const pct = odds.bye * 100;
+      const text = pct >= 99.5 ? '100%' : (pct < 1 && pct > 0 ? '<1%' : Math.round(pct) + '%');
+      const title = `Earns one of the ${odds.byeSlots} first-round byes in ${text} of simulated seasons`;
+      return `<span class="tt-odds${odds.bye >= 0.25 ? ' is-live' : ''}" title="${sbFieldEsc(title)}">${text}</span>`;
+    }
 
-      // ---- Race to the 1.01, closest first ----
-      const raceRows = entries.map(entry => {
-        const order = ttDraftOrder(entry);
-        const gap = ttGapTo101(entry, entry.roster.roster_id, order);
-        return { entry, order, gap, slot: order ? order.slots[entry.roster.roster_id] : null };
-      }).sort((a, b) => {
-        const av = a.gap ? a.gap.value : Infinity;
-        const bv = b.gap ? b.gap.value : Infinity;
-        return av - bv;
+    // ---- Sorting ---------------------------------------------------------
+    // Both tables are sortable on every column. The rows are fully computed
+    // (including the one genuinely async column, last week's result) before
+    // anything is drawn, so a click is a plain in-memory re-sort and
+    // re-render -- nothing is re-fetched and the simulation is not re-run.
+    //
+    // Each key returns a number, and higher always means "further up the
+    // table on the first click". Anything missing sorts to the bottom in
+    // both directions rather than pretending to be a zero.
+    const TT_MISSING = -Infinity;
+    const ttOddsOf = (entry, rosterId, which) => {
+      const o = window.ppTeamOdds ? window.ppTeamOdds(entry, rosterId) : null;
+      if (!o) return TT_MISSING;
+      if (which === 'bye') return o.byeSlots ? (o.bye != null ? o.bye : TT_MISSING) : TT_MISSING;
+      return o.playoff != null ? o.playoff : TT_MISSING;
+    };
+    const ttWinPct = (r) => {
+      const st = (r && r.settings) || {};
+      const games = (st.wins || 0) + (st.losses || 0) + (st.ties || 0);
+      return games ? ((st.wins || 0) + (st.ties || 0) * 0.5) / games : TT_MISSING;
+    };
+    // A slot is better when it is LOWER, so it is negated: one click still
+    // puts the 1.01 on top, like every other column's "best first".
+    const ttSlotKey = (slot) => (slot == null ? TT_MISSING : -slot);
+
+    const TT_RACE_KEYS = {
+      league: r => r.entry.league.name.toLowerCase(),
+      record: r => ttWinPct(r.entry.roster),
+      pf: r => pfOf(r.entry.roster),
+      ppts: r => pptsOf(r.entry.roster),
+      slot: r => ttSlotKey(r.slot),
+      playoff: r => ttOddsOf(r.entry, r.entry.roster.roster_id, 'playoff'),
+      bye: r => ttOddsOf(r.entry, r.entry.roster.roster_id, 'bye'),
+      p101: r => r.fc ? r.fc.p101 : TT_MISSING,
+      top3: r => r.fc ? r.fc.pTop3 : TT_MISSING,
+      value: r => r.fc ? r.fc.ev : TT_MISSING,
+      // The race's own natural order: least ground to make up on the 1.01
+      // first, so it is negated like a slot.
+      gap: r => r.gap ? -r.gap.value : TT_MISSING,
+    };
+
+    const TT_PICK_KEYS = {
+      league: p => p.entry.league.name.toLowerCase(),
+      // Soonest draft first, and within a year the earliest round.
+      pick: p => -(Number(p.pick.season) * 10 + p.pick.round),
+      from: p => {
+        const u = (p.entry.users || []).find(x => x.user_id === p.from.owner_id);
+        return ((u && (u.display_name || u.username)) || '').toLowerCase();
+      },
+      record: p => ttWinPct(p.from),
+      lastwk: p => {
+        const res = p.lastWeek;
+        if (!res) return TT_MISSING;
+        return res.result === 'W' ? 2 : (res.result === 'T' ? 1 : 0);
+      },
+      pfrank: p => -ldRankOf(p.entry.allRosters || [], pfOf, p.pick.fromRosterId),
+      pptsrank: p => -ldRankOf(p.entry.allRosters || [], pptsOf, p.pick.fromRosterId),
+      slot: p => ttSlotKey(p.slot),
+      playoff: p => ttOddsOf(p.entry, p.pick.fromRosterId, 'playoff'),
+      bye: p => ttOddsOf(p.entry, p.pick.fromRosterId, 'bye'),
+      p101: p => p.fc ? p.fc.p101 : TT_MISSING,
+      top3: p => p.fc ? p.fc.pTop3 : TT_MISSING,
+      value: p => p.fc ? p.fc.ev : TT_MISSING,
+    };
+
+    let ttRaceRows = [], ttPickRows = [];
+    let ttRaceSort = { key: 'gap', dir: 'desc' };
+    let ttPickSort = { key: 'pick', dir: 'desc' };
+
+    function ttSortRows(rows, keys, state) {
+      const valueOf = keys[state.key];
+      if (!valueOf) return rows.slice();
+      return rows.slice().sort((a, b) => {
+        const va = valueOf(a), vb = valueOf(b);
+        if (typeof va === 'string' || typeof vb === 'string') {
+          const diff = String(va).localeCompare(String(vb));
+          return state.dir === 'desc' ? diff : -diff;
+        }
+        // Missing values sink to the bottom whichever way the column is
+        // pointed -- flipping the sort should not promote "no answer".
+        const aMissing = va === TT_MISSING, bMissing = vb === TT_MISSING;
+        if (aMissing && bMissing) return 0;
+        if (aMissing) return 1;
+        if (bMissing) return -1;
+        const diff = vb - va;
+        return state.dir === 'desc' ? diff : -diff;
       });
+    }
 
-      raceBody.innerHTML = raceRows.map(({ entry, order, gap, slot }) => {
+    function ttHeadHtml(cols, state) {
+      return cols.map(c => {
+        const active = c.key === state.key;
+        const arrow = active ? (state.dir === 'desc' ? ' &#9660;' : ' &#9650;') : '';
+        return `<th class="rb-sort-th${active ? ' active' : ''}${c.cls ? ' ' + c.cls : ''}" data-tt-sort="${c.key}">${c.label}${arrow}</th>`;
+      }).join('');
+    }
+
+    function ttBindHead(thead, state, redraw) {
+      thead.querySelectorAll('.rb-sort-th').forEach(el => {
+        el.addEventListener('click', () => {
+          const key = el.dataset.ttSort;
+          state.dir = (state.key === key && state.dir === 'desc') ? 'asc' : 'desc';
+          state.key = key;
+          redraw();
+        });
+      });
+    }
+
+    const TT_RACE_COLS = [
+      { key: 'league', label: 'League', cls: 'rb-th-league' },
+      { key: 'record', label: 'Record' },
+      { key: 'pf', label: 'PF' },
+      { key: 'ppts', label: 'Max PF' },
+      { key: 'slot', label: 'Proj Slot' },
+      { key: 'playoff', label: 'Playoff %' },
+      { key: 'bye', label: 'Bye %' },
+      { key: 'p101', label: '1.01 %' },
+      { key: 'top3', label: 'Top 3 %' },
+      { key: 'value', label: 'Value' },
+      { key: 'gap', label: 'Pts From 1.01', cls: 'rb-po-col' },
+    ];
+
+    const TT_PICK_COLS = [
+      { key: 'league', label: 'League', cls: 'rb-th-league' },
+      { key: 'pick', label: 'Pick' },
+      { key: 'from', label: 'From', cls: 'tt-th-team' },
+      { key: 'record', label: 'Record' },
+      { key: 'lastwk', label: 'Last Wk' },
+      { key: 'pfrank', label: 'PF Rank' },
+      { key: 'pptsrank', label: 'Max PF Rank' },
+      { key: 'slot', label: 'Proj Slot', cls: 'rb-po-col' },
+      { key: 'playoff', label: 'Playoff %' },
+      { key: 'bye', label: 'Bye %' },
+      { key: 'p101', label: '1.01 %' },
+      { key: 'top3', label: 'Top 3 %' },
+      { key: 'value', label: 'Value' },
+    ];
+
+    function ttDrawRace() {
+      const head = document.getElementById('ttRaceHead');
+      if (head) {
+        head.innerHTML = `<tr>${ttHeadHtml(TT_RACE_COLS, ttRaceSort)}</tr>`;
+        ttBindHead(head, ttRaceSort, ttDrawRace);
+      }
+      raceBody.innerHTML = ttSortRows(ttRaceRows, TT_RACE_KEYS, ttRaceSort).map(row => {
+        const { entry, order, gap, slot, fc } = row;
         const r = entry.roster;
-        // Your own next 1st -- the pick this whole race is about.
-        const nextSeason = (Number(entry.league.season) || new Date().getFullYear()) + 1;
-        const fc = ttForecast(entry, nextSeason, 1, r.roster_id);
         return `<tr data-league-name="${sbFieldEsc(entry.league.name)}">` +
           `<td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(entry.league.name)}</span>` +
             `${entry.isCoOwned ? '<span class="rb-co-badge">CO</span>' : ''}</td>` +
@@ -27000,12 +27917,69 @@
           `<td>${num(pfOf(r))}</td>` +
           `<td>${num(pptsOf(r))}</td>` +
           `<td>${slotCell(slot, order)}</td>` +
-          `<td>${distCell(fc, order)}</td>` +
+          `<td>${playoffCell(entry, r.roster_id)}</td>` +
+          `<td>${byeCell(entry, r.roster_id)}</td>` +
           `<td>${oddsCell(fc ? fc.p101 : null)}</td>` +
+          `<td>${oddsCell(fc ? fc.pTop3 : null)}</td>` +
           `<td>${pickValueCell(fc)}</td>` +
           `<td class="rb-po-col">${gapCell(gap)}</td>` +
         `</tr>`;
       }).join('');
+    }
+
+    function ttDrawPicks() {
+      const head = document.getElementById('ttPicksHead');
+      if (head) {
+        head.innerHTML = `<tr>${ttHeadHtml(TT_PICK_COLS, ttPickSort)}</tr>`;
+        ttBindHead(head, ttPickSort, ttDrawPicks);
+      }
+      if (!ttPickRows.length) {
+        picksBody.innerHTML = `<tr><td colspan="${TT_PICK_COLS.length}" class="rb-empty">You do not hold anyone else&rsquo;s picks right now.</td></tr>`;
+        return;
+      }
+      picksBody.innerHTML = ttSortRows(ttPickRows, TT_PICK_KEYS, ttPickSort).map(p => {
+        const roundLabel = `${p.pick.season} ${p.pick.round}${p.pick.round === 1 ? 'st' : p.pick.round === 2 ? 'nd' : p.pick.round === 3 ? 'rd' : 'th'}`;
+        const fc = p.fc;
+        return `<tr data-league-name="${sbFieldEsc(p.entry.league.name)}">` +
+          `<td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(p.entry.league.name)}</span></td>` +
+          `<td><span class="tt-pick">${sbFieldEsc(roundLabel)}</span></td>` +
+          `<td class="tt-team-cell">${teamCell(p.entry, p.from)}</td>` +
+          `<td>${sbFieldEsc(recordOf(p.from))}</td>` +
+          `<td>${lastWeekCell(p.lastWeek)}</td>` +
+          `<td>${rankCell(p.entry.allRosters || [], pfOf, p.pick.fromRosterId)}</td>` +
+          `<td>${rankCell(p.entry.allRosters || [], pptsOf, p.pick.fromRosterId)}</td>` +
+          `<td class="rb-po-col">${slotCell(p.slot, p.order, p.pick.round)}</td>` +
+          `<td>${playoffCell(p.entry, p.pick.fromRosterId)}</td>` +
+          `<td>${byeCell(p.entry, p.pick.fromRosterId)}</td>` +
+          `<td>${oddsCell(fc ? fc.p101 : null)}</td>` +
+          `<td>${oddsCell(fc ? fc.pTop3 : null)}</td>` +
+          `<td>${pickValueCell(fc)}</td>` +
+        `</tr>`;
+      }).join('');
+    }
+
+    async function renderRealTankingTracker() {
+      const entries = ttEntries();
+      if (!entries.length) {
+        ttRaceRows = []; ttPickRows = [];
+        raceBody.innerHTML = `<tr><td colspan="${TT_RACE_COLS.length}" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>`;
+        picksBody.innerHTML = `<tr><td colspan="${TT_PICK_COLS.length}" class="rb-empty">Connect a Sleeper account in Settings to fill this in.</td></tr>`;
+        return;
+      }
+
+      // ---- Race to the 1.01 ----
+      ttRaceRows = entries.map(entry => {
+        const order = ttDraftOrder(entry);
+        const gap = ttGapTo101(entry, entry.roster.roster_id, order);
+        // Your own next 1st -- the pick this whole race is about.
+        const nextSeason = (Number(entry.league.season) || new Date().getFullYear()) + 1;
+        return {
+          entry, order, gap,
+          slot: order ? order.slots[entry.roster.roster_id] : null,
+          fc: ttForecast(entry, nextSeason, 1, entry.roster.roster_id),
+        };
+      });
+      ttDrawRace();
 
       // ---- Future pick outlook ----
       // Only picks that started on somebody else's roster: your own picks
@@ -27019,50 +27993,24 @@
           .forEach(p => {
             const from = (entry.allRosters || []).find(r => r.roster_id === p.fromRosterId);
             if (!from) return;
-            picks.push({ entry, order, pick: p, from, slot: order ? order.slots[p.fromRosterId] : null });
+            picks.push({
+              entry, order, pick: p, from,
+              slot: order ? order.slots[p.fromRosterId] : null,
+              fc: ttForecast(entry, p.season, p.round, p.fromRosterId),
+              lastWeek: null,
+            });
           });
       });
 
-      if (!picks.length) {
-        picksBody.innerHTML = '<tr><td colspan="11" class="rb-empty">You do not hold anyone else&rsquo;s picks right now.</td></tr>';
-        return;
-      }
+      // Last week's result is the one column that needs the network. It is
+      // resolved once, here, and cached on the row -- so sorting the table
+      // afterwards never refetches it.
+      const lastWeeks = await Promise.all(
+        picks.map(p => ttLastWeek(p.entry, p.pick.fromRosterId).catch(() => null)));
+      picks.forEach((p, i) => { p.lastWeek = lastWeeks[i]; });
 
-      // Draft-class order: every 2027 1st, then every 2027 2nd, and so on
-      // into 2028. Sorting by projected slot first read as one scrambled
-      // list, because a 2028 4th from a tanking team outranked a 2027 1st.
-      // Within a round the best projected pick still comes first.
-      // Within a round, the most valuable pick first -- which is what the
-      // model now actually knows, rather than today's frozen slot.
-      const evOf = (p) => {
-        const f = ttForecast(p.entry, p.pick.season, p.pick.round, p.pick.fromRosterId);
-        return f ? f.ev : null;
-      };
-      picks.sort((a, b) => Number(a.pick.season) - Number(b.pick.season)
-        || a.pick.round - b.pick.round
-        || ((evOf(b) == null ? -1 : evOf(b)) - (evOf(a) == null ? -1 : evOf(a)))
-        || (a.slot == null ? 99 : a.slot) - (b.slot == null ? 99 : b.slot)
-        || a.entry.league.name.localeCompare(b.entry.league.name));
-
-      const lastWeeks = await Promise.all(picks.map(p => ttLastWeek(p.entry, p.pick.fromRosterId).catch(() => null)));
-
-      picksBody.innerHTML = picks.map((p, i) => {
-        const roundLabel = `${p.pick.season} ${p.pick.round}${p.pick.round === 1 ? 'st' : p.pick.round === 2 ? 'nd' : p.pick.round === 3 ? 'rd' : 'th'}`;
-        const fc = ttForecast(p.entry, p.pick.season, p.pick.round, p.pick.fromRosterId);
-        return `<tr data-league-name="${sbFieldEsc(p.entry.league.name)}">` +
-          `<td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(p.entry.league.name)}</span></td>` +
-          `<td><span class="tt-pick">${sbFieldEsc(roundLabel)}</span></td>` +
-          `<td class="tt-team-cell">${teamCell(p.entry, p.from)}</td>` +
-          `<td>${sbFieldEsc(recordOf(p.from))}</td>` +
-          `<td>${lastWeekCell(lastWeeks[i])}</td>` +
-          `<td>${rankCell(p.entry.allRosters || [], pfOf, p.pick.fromRosterId)}</td>` +
-          `<td>${rankCell(p.entry.allRosters || [], pptsOf, p.pick.fromRosterId)}</td>` +
-          `<td class="rb-po-col">${slotCell(p.slot, p.order, p.pick.round)}</td>` +
-          `<td>${distCell(fc, p.order)}</td>` +
-          `<td>${oddsCell(fc ? fc.pTop3 : null)}</td>` +
-          `<td>${pickValueCell(fc)}</td>` +
-        `</tr>`;
-      }).join('');
+      ttPickRows = picks;
+      ttDrawPicks();
     }
 
     window.renderRealTankingTracker = renderRealTankingTracker;
