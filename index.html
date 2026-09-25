@@ -4,24 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fantasy Desk — Mockup</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Source+Serif+4:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
 <style>
   :root {
-    /* Cream Classic -- the original light palette. */
-    --bg: #faf8f4;
-    --surface: #ffffff;
-    --border: #e5e1d8;
-    --border-soft: #eeeae0;
-    --ink: #14141a;
-    --muted: #6b6b74;
-    --faint: #9a988f;
-    --red: #c8102e;
-    --navy: #1a3a6b;
-    --green: #2f8a4e;
-    --green-bg: #eaf4ec;
-    --gold: #a3760a;
-    --blue: #2f6fa3;
-    --red-bg: #f7e7e7;
+    /* Retro Sports Card -- warm cardstock and navy ink, the direction this
+       project picked at the start and now runs on everywhere. Only the
+       colours changed: every size, weight, radius and layout is the one
+       the Cream Classic palette had.
+
+       --ink is a deep navy rather than near-black, which is what makes the
+       whole page read as printed cardstock instead of as a white app with
+       a beige background. --navy stays a step brighter so it still works
+       as an accent against the text around it. */
+    --bg: #f2e9d5;
+    --surface: #fff9ea;
+    --border: #d5c7a8;
+    --border-soft: #e4d9c0;
+    --ink: #1d3557;
+    --muted: #4a5f7f;
+    /* Deliberately darker than the cream palette's --faint (#9a988f, which
+       sat at about 2.6:1 on its own background). This clears 3.3:1, which
+       is better but still under WCAG's 4.5 for small text -- the same
+       compromise the previous palette made, carried forward knowingly
+       rather than by accident. */
+    --faint: #6f7f96;
+    --red: #c8322d;
+    --navy: #2a5a8f;
+    --green: #2f7d4f;
+    --green-bg: #e6f0e4;
+    --gold: #b07a12;
+    --blue: #31648f;
+    --red-bg: #f7e6dd;
     --ticker-h: 48px;
   }
   * { box-sizing: border-box; }
@@ -1249,6 +1262,38 @@
     gap: 10px;
   }
 
+  /* ---- Grid View ----------------------------------------------------
+     The layout this page had before the reading pane: every matchup as a
+     card across the full width, several to a row, and clicking one opens
+     its lineups inline underneath rather than in a pane off to the side.
+     Kept as a third option because seeing a dozen matchups at once is a
+     genuinely different job from reading one closely.
+
+     It is a layout switch only -- the cards, the sorting, the toolbar and
+     the panel contents are the same ones the other two views use. */
+  .sb-gridview .sb-split { grid-template-columns: 1fr; }
+  .sb-gridview .sb-split-detail { display: none; }
+  .sb-gridview .sb-split-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+  /* Two wide columns, not as many as will fit: a matchup card carries a
+     league name, a record, two projections and a live line, and squeezing
+     four of them across a wide screen shrinks all of that to nothing. */
+  .sb-gridview .sb-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .sb-gridview .sb-grid { grid-template-columns: 1fr; } }
+  /* An open card and its panel take the whole row, so the panel sits
+     directly under the card it belongs to instead of below and to the
+     left of it. */
+  .sb-gridview .sb-grid .sb-card.is-open,
+  .sb-gridview .sb-grid .sb-expand,
+  .sb-gridview .sb-grid .sb-group-header { grid-column: 1 / -1; }
+
   /* Toolbar above the matchup list: find a player on the left, sort on
      the right. */
   .sb-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -1739,6 +1784,9 @@
   /* The row for the week being played right now, so it is findable in an
      18-row table without having to remember what week it is. */
   .ldsch-table tr.is-live td { background: rgba(232, 161, 60, 0.10); }
+  .ldsch-table tr.is-linked { cursor: pointer; }
+  .ldsch-table tr.is-linked:hover td { background: var(--border-soft); }
+  .ldsch-table tr.is-linked.is-live:hover td { background: rgba(232, 161, 60, 0.18); }
   .ldsch-table tr.is-playoff-start td { border-top: 2px solid var(--border); }
   .ldsch-week { font-weight: 700; color: var(--muted); }
   .ldsch-opp { font-weight: 700; color: var(--ink); }
@@ -1785,7 +1833,7 @@
      it gets a pointer and a hover rather than reading as another stat. */
   .ld-stat-cell-action { cursor: pointer; flex: 0 0 auto; }
   .ld-stat-cell-action:hover { background: var(--surface-2, rgba(29, 53, 87, 0.04)); }
-  .ld-stat-cell-action .ld-stat-value { display: flex; align-items: center; gap: 5px; }
+  .ld-stat-cell-action .ld-stat-value { display: flex; align-items: center; gap: 5px; margin-top: 0; }
   .ld-stat-cell-action .ld-stat-chev { font-size: 11px; color: var(--faint); }
   .sb-card-meta .sb-delta { color: var(--green); }
   .sb-card-score { text-align: right; flex-shrink: 0; }
@@ -1826,20 +1874,6 @@
     font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px;
     color: var(--muted); background: var(--bg);
     border: 1px solid var(--border); border-radius: 20px; padding: 2px 8px;
-  }
-  .sb-exp-logo {
-    flex-shrink: 0;
-    width: 44px;
-    height: 44px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-    font-weight: 700;
-    font-size: 13px;
-    color: #fff;
   }
   .sb-exp-title { flex: 1; min-width: 0; }
   .sb-exp-name { font-weight: 700; font-size: 16px; }
@@ -2652,6 +2686,12 @@
   .sortable-head:hover { color: var(--ink); }
   .sortable-head.active { color: var(--green); }
   .week-dropdown { position: relative; display: inline-block; }
+  /* The Leagues header cell keeps its column label as ordinary header
+     text and puts the picker beside it, rather than folding the label
+     into the control -- which made that one chip twice the width of
+     every other one. */
+  .lhr-week-cell { display: inline-flex; align-items: center; gap: 8px; }
+  .lhr-week-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.6px; color: var(--faint); }
   /* ---- The week / year / team dropdown, one definition -------------
      There are six of these across the app and they had drifted into four
      different looks: 16px bold caps on the Scoreboard, 9.5px on the
@@ -2667,30 +2707,62 @@
   .week-select {
     cursor: pointer;
     display: inline-flex;
-    align-items: baseline;
-    gap: 6px;
-    font-size: 11px;
+    align-items: center;
+    gap: 7px;
+    /* Every visual property is set here and none is inherited. That is the
+       whole point: these controls sit in wildly different typographic
+       contexts -- a 9.5px faint table-header row on Leagues, a normal-size
+       page header on the Scoreboard, a banner in the Matchup Hub -- and
+       styling only the text meant inheriting the surroundings, so the same
+       control came out a different size and color on every page. As a
+       self-contained bordered chip it ignores its context entirely and
+       reads identically everywhere, and it finally looks like the button
+       it has always been rather than like stray text. */
+    padding: 4px 9px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    line-height: 1;
+    white-space: nowrap;
+    vertical-align: middle;
+    text-transform: none;
+    letter-spacing: normal;
+    font-family: 'Source Sans 3', sans-serif;
+    font-style: normal;
+    font-size: 14px;
     font-weight: 700;
-    letter-spacing: 0.5px;
-    color: var(--muted);
+    color: var(--ink);
+    transition: border-color 0.12s, background 0.12s;
   }
-  .week-select .week-lead {
-    font-size: 11px;
+  /* Every inheritable property is restated on all three parts, including
+     the ones that look redundant. Anything left unset leaks in from the
+     container, and the containers disagree: the Leagues header row sets
+     font-weight 700, headings set a serif family, table headers set a
+     letter-spacing. Leaving one property out is exactly how this control
+     kept coming out subtly different from page to page. */
+  /* The word and the number are ONE label and are styled identically --
+     same family, size, weight and color. They were not: the word sat at
+     9.5px in --faint next to a 14px --ink number, so "WEEK 3" read as two
+     unrelated bits of text with the number shouting over the word. Every
+     property below is deliberately repeated on all three parts rather
+     than shared through the parent, so nothing can inherit a different
+     value from whatever the control happens to be sitting in. */
+  .week-select .week-lead,
+  .week-select .week-num,
+  .week-select .week-caret {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 13px;
     font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  /* Never uppercased -- this also holds team names and years, not just a
-     week number. */
-  .week-select .week-num {
-    font-size: 16px;
-    font-weight: 800;
-    letter-spacing: 0;
+    font-style: normal;
+    letter-spacing: 0.3px;
+    text-transform: none;
     color: var(--ink);
     line-height: 1;
   }
-  .week-select .week-caret { font-size: 10px; color: var(--faint); }
+  /* The caret is a glyph, not a word: same color and weight as the label,
+     just sized down so it reads as a control affordance. */
+  .week-select .week-caret { font-size: 10px; letter-spacing: 0; }
+  .week-select:hover { border-color: var(--red); background: var(--bg); }
   .week-select:hover .week-lead,
   .week-select:hover .week-num,
   .week-select:hover .week-caret { color: var(--red); }
@@ -3079,12 +3151,12 @@
   .ldrec-table td { font-size: 12.5px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); color: var(--ink); white-space: nowrap; }
   .ldrec-table tr:last-child td { border-bottom: none; }
   .ldrec-wl { font-weight: 800; }
-  .ldrec-table td.ldrec-wl-w { color: #22c55e; }
-  .ldrec-table td.ldrec-wl-l { color: #ef4444; }
-  .ldrec-pos { color: #22c55e; }
-  .ldrec-neg { color: #ef4444; }
-  .ldrec-table td.ldrec-pos { color: #22c55e; }
-  .ldrec-table td.ldrec-neg { color: #ef4444; }
+  .ldrec-table td.ldrec-wl-w { color: var(--green); }
+  .ldrec-table td.ldrec-wl-l { color: var(--red); }
+  .ldrec-pos { color: var(--green); }
+  .ldrec-neg { color: var(--red); }
+  .ldrec-table td.ldrec-pos { color: var(--green); }
+  .ldrec-table td.ldrec-neg { color: var(--red); }
   .ldrec-empty { text-align: center; color: var(--faint); font-size: 13px; padding: 30px 0; }
 
   /* Record Book: one row per league in a single grid, not a stack of
@@ -3097,15 +3169,15 @@
   .rb-table td.rb-league-cell { position: sticky; left: 0; background: var(--surface); }
   .rb-league-name { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 13px; color: var(--ink); }
   .rb-co-badge { display: inline-block; margin-left: 5px; font-size: 8.5px; font-weight: 800; color: var(--faint); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; vertical-align: 1px; }
-  .rb-playoff-yes { color: #22c55e; font-weight: 800; }
-  .rb-playoff-no { color: #ef4444; font-weight: 800; }
+  .rb-playoff-yes { color: var(--green); font-weight: 800; }
+  .rb-playoff-no { color: var(--red); font-weight: 800; }
   .rb-playoff-tbd { color: var(--faint); }
   /* A live probability, shown where the tick/cross will eventually go.
      Deliberately lighter-weight than the settled tick so a season that is
      merely likely never reads as a season already won. */
   .rb-playoff-odds { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
-  .rb-playoff-odds.is-good { color: #22c55e; }
-  .rb-playoff-odds.is-bad { color: #ef4444; }
+  .rb-playoff-odds.is-good { color: var(--green); }
+  .rb-playoff-odds.is-bad { color: var(--red); }
   .rb-wl-chip { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 20px; border-radius: 4px; font-size: 10.5px; font-weight: 800; color: #fff; }
   .rb-wl-chip.rb-wl-w { background: #22c55e; }
   .rb-wl-chip.rb-wl-l { background: #ef4444; }
@@ -3395,6 +3467,106 @@
     justify-content: center;
     padding: 24px;
   }
+  /* ---- The first-run chooser: a pair of ticket stubs -----------------
+     The front door of the Retro Sports Card identity the whole app now
+     runs on: warm cardstock, heavy navy rules, hard offset shadows and a
+     condensed display face. Its colours are the shared tokens, so it
+     never drifts from the screens behind it. */
+  .mode-chooser { background: var(--bg); flex-direction: column; }
+  .mc-eyebrow {
+    font-family: 'Anton', sans-serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--ink);
+    opacity: 0.65;
+  }
+  .mc-title {
+    margin: 14px 0 6px;
+    font-family: 'Anton', sans-serif;
+    font-size: 62px;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+    text-transform: uppercase;
+    line-height: 1;
+    text-align: center;
+  }
+  .mc-sub { margin: 0 0 40px; font-size: 16px; font-weight: 700; color: var(--muted); text-align: center; }
+  .mc-stubs { display: flex; gap: 34px; align-items: stretch; flex-wrap: wrap; justify-content: center; }
+  .mc-stub {
+    cursor: pointer;
+    font-family: 'Source Sans 3', sans-serif;
+    text-align: left;
+    width: 440px;
+    max-width: 100%;
+    padding: 0;
+    background: var(--surface);
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 7px 7px 0 0 var(--ink);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .mc-stub:hover { transform: translate(-2px, -2px); box-shadow: 10px 10px 0 0 var(--ink); }
+  .mc-stub:active { transform: translate(2px, 2px); box-shadow: 4px 4px 0 0 var(--ink); }
+  /* The colour band across the top of each stub -- navy for dynasty, red
+     for redraft. No text: it is the card's colour, not a label. */
+  .mc-band { display: block; height: 20px; }
+  .mc-band-dynasty { background: var(--ink); }
+  .mc-band-redraft { background: var(--red); }
+  .mc-body { padding: 30px 26px 24px; display: flex; flex-direction: column; flex-grow: 1; }
+  .mc-name {
+    font-family: 'Anton', sans-serif;
+    font-size: 58px;
+    line-height: 0.95;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+    text-transform: uppercase;
+  }
+  .mc-desc { margin-top: 12px; font-size: 15px; font-weight: 600; line-height: 1.5; color: var(--muted); }
+  .mc-spacer { flex-grow: 1; }
+  .mc-stats { display: flex; gap: 10px; margin-top: 24px; align-items: stretch; }
+  .mc-stat {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 0;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 2px solid var(--ink);
+    border-radius: 9px;
+    display: flex;
+    flex-direction: column;
+  }
+  .mc-stat-value { font-family: 'Anton', sans-serif; font-size: 25px; line-height: 1.1; color: var(--ink); }
+  .mc-stat-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.8px; color: var(--muted); }
+  .mc-stat-note { font-size: 9.5px; font-weight: 600; letter-spacing: 0.4px; color: var(--muted); }
+  .mc-enter {
+    border-top: 3px dashed var(--border);
+    padding: 15px 26px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+  }
+  .mc-enter-label { font-family: 'Anton', sans-serif; font-size: 17px; letter-spacing: 1.6px; color: var(--red); }
+  .mc-all { margin-top: 34px; }
+  .mc-all a {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 2px;
+  }
+  .mc-all a:hover { color: var(--red); border-bottom-color: var(--red); }
+  @media (max-width: 980px) {
+    .mc-title { font-size: 44px; }
+    .mc-name { font-size: 44px; }
+  }
+
+  /* The compact picker in Settings keeps the app's own look -- it sits
+     inside an ordinary settings panel, not on the front door. */
   .mode-chooser-card { max-width: 520px; text-align: center; }
   .mode-chooser-card h1 { font-family: 'Source Serif 4', serif; font-size: 26px; margin: 0 0 8px; color: var(--ink); }
   .mode-chooser-card p { color: var(--muted); font-size: 13.5px; margin: 0 0 28px; }
@@ -3948,6 +4120,29 @@
   }
   .trade-card-meta { font-size: 11px; color: var(--faint); margin-top: 4px; }
   .trade-card-with { font-size: 12px; color: var(--muted); margin-top: 4px; margin-bottom: 12px; }
+  /* How a trade has aged, on its own line under the two sides. */
+  .trade-aged {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 7px;
+    margin-top: 12px; padding-top: 10px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 11px;
+  }
+  .trade-aged-label { font-size: 9px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); }
+  .trade-aged-val { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 13px; }
+  .trade-aged-val.is-pos { color: var(--green); }
+  .trade-aged-val.is-neg { color: var(--red); }
+  .trade-aged-arrow { color: var(--faint); font-size: 12px; }
+  .trade-aged-drift {
+    margin-left: auto;
+    font-weight: 800; font-size: 11px;
+    padding: 2px 7px; border-radius: 4px;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .trade-aged-drift.is-pos { color: var(--green); border-color: var(--green); }
+  .trade-aged-drift.is-neg { color: var(--red); border-color: var(--red); }
+  .trade-aged-drift.is-flat { color: var(--faint); }
+  .trade-aged-note { margin-left: auto; color: var(--faint); font-size: 10.5px; font-style: italic; }
   .trade-card-with b { color: var(--ink); }
   .trade-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .trade-side-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 8px; }
@@ -4271,22 +4466,69 @@
 </nav>
 
 <div class="mode-chooser" id="modeChooser" hidden>
-  <div class="mode-chooser-card">
-    <h1>Dynasty or Redraft?</h1>
-    <p>Pick which leagues you want to see by default. You can always show all leagues, or switch modes later in Settings.</p>
-    <div class="mode-chooser-options">
-      <div class="mode-chooser-option" data-mode="dynasty">
-        <div class="mode-chooser-emoji">&#127942;</div>
-        <div class="mode-chooser-name">Dynasty</div>
-        <div class="mode-chooser-sub">Keeper &amp; dynasty leagues</div>
-      </div>
-      <div class="mode-chooser-option" data-mode="redraft">
-        <div class="mode-chooser-emoji">&#128256;</div>
-        <div class="mode-chooser-name">Redraft</div>
-        <div class="mode-chooser-sub">Season-only leagues</div>
-      </div>
-    </div>
+  <div class="mc-eyebrow">FANTASY DESK</div>
+  <h1 class="mc-title">Take Your Pick</h1>
+  <p class="mc-sub" id="mcSub">Two ways in.</p>
+
+  <div class="mc-stubs">
+    <button type="button" class="mc-stub" data-mode="dynasty">
+      <span class="mc-band mc-band-dynasty"></span>
+      <span class="mc-body">
+        <span class="mc-name">Dynasty</span>
+        <span class="mc-desc">Keeper and dynasty leagues. Picks, rookie classes and player values that carry year to year.</span>
+        <span class="mc-spacer"></span>
+        <span class="mc-stats" id="mcDynastyStats" hidden>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcDynLeagues">&mdash;</span>
+            <span class="mc-stat-label">LEAGUES</span>
+          </span>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcDynRecord">&mdash;</span>
+            <span class="mc-stat-label">RECORD</span>
+            <span class="mc-stat-note" id="mcDynRecordNote"></span>
+          </span>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcDynFirsts">&mdash;</span>
+            <span class="mc-stat-label">FIRSTS</span>
+            <span class="mc-stat-note" id="mcDynFirstsNote">PER LEAGUE</span>
+          </span>
+        </span>
+      </span>
+      <span class="mc-enter">
+        <span class="mc-enter-label">ENTER</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c8322d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+      </span>
+    </button>
+
+    <button type="button" class="mc-stub" data-mode="redraft">
+      <span class="mc-band mc-band-redraft"></span>
+      <span class="mc-body">
+        <span class="mc-name">Redraft</span>
+        <span class="mc-desc">Season-only leagues. No draft capital and no dynasty value.</span>
+        <span class="mc-spacer"></span>
+        <span class="mc-stats" id="mcRedraftStats" hidden>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcRedLeagues">&mdash;</span>
+            <span class="mc-stat-label">LEAGUES</span>
+          </span>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcRedRecord">&mdash;</span>
+            <span class="mc-stat-label">RECORD</span>
+          </span>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcRedPlayoff">&mdash;</span>
+            <span class="mc-stat-label">IN PLAYOFF</span>
+          </span>
+        </span>
+      </span>
+      <span class="mc-enter">
+        <span class="mc-enter-label">ENTER</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c8322d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+      </span>
+    </button>
   </div>
+
+  <div class="mc-all"><a href="#" id="mcShowAll">Season pass &mdash; show every league</a></div>
 </div>
 
 <div class="content">
@@ -4304,7 +4546,7 @@
       <div class="record-card">
         <div>
           <div class="record-label">2026 COMBINED RECORD</div>
-          <div class="record-sub">Every league's record, added together</div>
+          <div class="record-sub">Total record among leagues not marked as tanking</div>
         </div>
         <div class="record-value"><span class="win">12</span><span class="sep">-</span><span class="loss">4</span></div>
       </div>
@@ -4528,10 +4770,10 @@
     <div class="table-scroll">
     <div class="league-head-row">
       <span>LEAGUE</span>
-      <span class="week-dropdown" id="weekDropdown">
-        <span class="week-select" id="weekSelect"><span class="week-lead">Matchup Projections &middot; Week</span> <span class="week-num" id="weekSelectLabel">1</span> <span class="week-caret">&#9662;</span></span>
+      <span class="lhr-week-cell"><span class="lhr-week-label">Matchup Projections</span><span class="week-dropdown" id="weekDropdown">
+        <span class="week-select" id="weekSelect"><span class="week-lead">Week</span> <span class="week-num" id="weekSelectLabel">1</span> <span class="week-caret">&#9662;</span></span>
         <span class="week-menu" id="weekMenu" hidden></span>
-      </span>
+      </span></span>
       <span class="sortable-head" data-sort="roster">ROSTER TYPE</span>
       <span class="sortable-head" data-sort="record">RECORD</span>
       <span class="sortable-head" data-sort="value">ROSTER VALUE</span>
@@ -5023,8 +5265,7 @@
       <div id="ldRosterExpand">
       <div class="ld-stats" id="ldStats">
         <div class="ld-stat-cell ld-stat-cell-action" id="ldSchedBtn" title="Every matchup this team plays this season">
-          <div class="ld-stat-label">SCHEDULE</div>
-          <div class="ld-stat-value">Full Year <span class="ld-stat-chev">&#9656;</span></div>
+          <div class="ld-stat-value">Schedule <span class="ld-stat-chev">&#9656;</span></div>
         </div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell">
@@ -5271,6 +5512,7 @@
           <div class="sb-view-toggle" id="sbViewToggle">
             <button type="button" class="sb-view-toggle-btn is-active" data-sbv="scoreboard">Standard View</button>
             <button type="button" class="sb-view-toggle-btn" data-sbv="field">Field View</button>
+            <button type="button" class="sb-view-toggle-btn" data-sbv="grid">Grid View</button>
           </div>
         </div>
         <span class="week-dropdown" id="sbWeekDropdown">
@@ -5324,20 +5566,20 @@
           </div>
           <div class="sb-player-filter-chip" id="sbPlayerFilterChip" hidden></div>
         <div class="sort-dropdown" style="display:flex;justify-content:flex-end">
-          <div class="sort-select" id="sbSortSelect"><span id="sbSortSelectLabel">Win Category</span> <span>&#9662;</span></div>
+          <div class="sort-select" id="sbSortSelect"><span id="sbSortSelectLabel">Closest Matchup</span> <span>&#9662;</span></div>
           <div class="sort-menu" id="sbSortMenu" hidden style="left:auto;right:0">
             <div class="sort-option" data-sort="sleeper">Sleeper Order</div>
             <div class="sort-option" data-sort="az">A&ndash;Z</div>
             <div class="sort-option" data-sort="winhigh">Highest Win %</div>
             <div class="sort-option" data-sort="winlow">Lowest Win %</div>
-            <div class="sort-option" data-sort="closest">Closest Matchup</div>
+            <div class="sort-option active" data-sort="closest">Closest Matchup</div>
             <div class="sort-option" data-sort="live">Live Players</div>
             <div class="sort-option" data-sort="left">Most Players Left</div>
             <div class="sort-option" data-sort="playoffs">Playoff Odds</div>
             <div class="sort-option" data-sort="record">Record</div>
             <div class="sort-option" data-sort="livepts">Most Points Scored</div>
             <div class="sort-option" data-sort="score">Highest Projected</div>
-            <div class="sort-option active" data-sort="category">Win Category</div>
+            <div class="sort-option" data-sort="category">Win Category</div>
           </div>
         </div>
         </div>
@@ -12544,9 +12786,28 @@
   // It stays pending until a render finds the card, which covers arriving
   // before the leagues have finished syncing; a few seconds of retries
   // cover the render not having been kicked off at all yet.
-  function goToLeagueMatchup(leagueId) {
+  // `week` is optional: without it the Matchup Hub stays on whatever week
+  // it is showing, which is what a jump from a league page wants. The
+  // season schedule passes one, because clicking week 11 there and landing
+  // on week 4 here would be the wrong matchup entirely.
+  function goToLeagueMatchup(leagueId, week) {
     if (!leagueId) return;
     goToSection('lineups');
+    const wantWeek = Number(week);
+    if (wantWeek >= 1 && wantWeek <= 18) {
+      const label = document.getElementById('sbWeekLabel');
+      if (label) label.textContent = String(wantWeek);
+      document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = wantWeek; });
+      const menu = document.getElementById('sbWeekMenu');
+      if (menu) {
+        menu.querySelectorAll('.week-option').forEach(o => {
+          o.classList.toggle('active', Number(o.dataset.week) === wantWeek);
+        });
+      }
+      if (typeof loadScoreboardWeek === 'function') {
+        try { loadScoreboardWeek(wantWeek); } catch (e) {}
+      }
+    }
     window.__sbPendingOpenLeagueId = String(leagueId);
     const started = Date.now();
     (function pump() {
@@ -14369,6 +14630,61 @@
       // because a pick that became a player is only known at this point.
       const playerLedger = new Map();
 
+      // How a trade has aged.
+      //
+      // Two numbers: what the deal was worth on the day it was completed,
+      // priced at the rankings that were live then, and what the same
+      // assets are worth now. The interesting part is the distance
+      // between them -- a deal that was a coin flip at the time and is
+      // now a win is a different story from one that was always a win,
+      // and only the pair tells you which happened.
+      //
+      // A trade older than the first set of rankings on file gets an
+      // honest "no rankings from then" rather than today's numbers
+      // dressed up as history.
+      function tradeAgedRowHtml(gotThen, gaveThen, gotNow, gaveNow, hasThen, ts) {
+        const now = gotNow - gaveNow;
+        const nowTxt = (now >= 0 ? '+' : '') + now.toFixed(2);
+        if (!hasThen) {
+          return '<div class="trade-aged">' +
+            '<span class="trade-aged-label">Today</span>' +
+            `<span class="trade-aged-val ${now >= 0 ? 'is-pos' : 'is-neg'}">${nowTxt}</span>` +
+          '</div>';
+        }
+        const then = gotThen - gaveThen;
+        const thenTxt = (then >= 0 ? '+' : '') + then.toFixed(2);
+        const drift = now - then;
+        const driftTxt = (drift >= 0 ? '+' : '') + drift.toFixed(2);
+        // Under half a tenth of a base 1st is not movement, it is rounding.
+        const flat = Math.abs(drift) < 0.05;
+        const driftCls = flat ? 'is-flat' : (drift > 0 ? 'is-pos' : 'is-neg');
+        const driftWord = flat ? 'held' : (drift > 0 ? 'your way' : 'their way');
+        // Which rankings this was priced against, and whether that is
+        // really "the day of the trade" or the earliest set on file. A
+        // trade older than the first rankings is measured from that first
+        // set, and the label says so rather than implying a reading that
+        // never existed.
+        const pricedIso = typeof ppValueAsOfDate === 'function' ? ppValueAsOfDate(ts) : null;
+        const tradeIso = ts ? new Date(ts).toISOString().slice(0, 10) : null;
+        const fromEarliest = !!(pricedIso && tradeIso && pricedIso > tradeIso);
+        const pretty = (iso) => iso
+          ? new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+          : '';
+        const when = pretty(pricedIso);
+        const leadLabel = fromEarliest ? `Since ${when}` : 'At the time';
+        const leadTitle = fromEarliest
+          ? `This trade is older than the first rankings on file, so it is priced from the earliest set (${when})`
+          : `Priced at the rankings that were live on ${when}`;
+        return '<div class="trade-aged">' +
+          `<span class="trade-aged-label" title="${sbFieldEsc(leadTitle)}">${sbFieldEsc(leadLabel)}</span>` +
+          `<span class="trade-aged-val ${then >= 0 ? 'is-pos' : 'is-neg'}">${thenTxt}</span>` +
+          '<span class="trade-aged-arrow">&rarr;</span>' +
+          '<span class="trade-aged-label">Today</span>' +
+          `<span class="trade-aged-val ${now >= 0 ? 'is-pos' : 'is-neg'}">${nowTxt}</span>` +
+          `<span class="trade-aged-drift ${driftCls}">${flat ? 'held' : driftTxt + ' ' + driftWord}</span>` +
+        '</div>';
+      }
+
       const cardsHtml = allTrades.map(({ entry, t }) => {
         const myRosterId = entry.roster.roster_id;
         const gotHtml = [];
@@ -14378,6 +14694,13 @@
         const showValue = getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league);
         let gotValue = 0;
         let gaveValue = 0;
+        // The same two totals, priced at the rankings that were live the
+        // day the trade was completed. Null once the trade predates the
+        // oldest rankings on file -- see ppValueTableAt.
+        const tradeTs = sbTradeCompletedAt(t);
+        const hasThen = typeof ppHasHistoricalValues === 'function' && ppHasHistoricalValues(tradeTs);
+        let gotThen = 0;
+        let gaveThen = 0;
 
         Object.entries(t.adds || {}).forEach(([pid, rid]) => {
           if (rid === myRosterId) {
@@ -14386,6 +14709,7 @@
             playerNames.push(asset.name);
             cardPlayers.push({ id: pid, side: 'got' });
             gotValue += ppValueForPlayerId(pid, dict);
+            if (hasThen) gotThen += ppValueForPlayerIdAt(pid, dict, tradeTs) || 0;
           }
         });
         Object.entries(t.drops || {}).forEach(([pid, rid]) => {
@@ -14395,6 +14719,7 @@
             playerNames.push(asset.name);
             cardPlayers.push({ id: pid, side: 'gave' });
             gaveValue += ppValueForPlayerId(pid, dict);
+            if (hasThen) gaveThen += ppValueForPlayerIdAt(pid, dict, tradeTs) || 0;
           }
         });
         (t.draft_picks || []).forEach(pick => {
@@ -14411,6 +14736,23 @@
           if (!side) return;
           (side === 'got' ? gotHtml : gaveHtml).push(tradePickAssetHtml(pick, entry, resolved, dict));
           if (side === 'got') gotValue += value; else gaveValue += value;
+          if (hasThen) {
+            // A pick that has since been drafted is the player it became,
+            // so it is priced at what HE was worth then.
+            //
+            // A pick still unspent takes today's value on BOTH sides, so
+            // it contributes exactly nothing to the drift. This is the one
+            // honest answer available: its value comes from simulating
+            // this season, and that simulation cannot be replayed as of a
+            // date in the past. Pricing it at the flat round value instead
+            // -- a 1st at a round 1.00 against a simulated 0.83 today --
+            // was comparing two different units and inventing a 0.17 swing
+            // on trades that had not moved at all.
+            const thenVal = resolved
+              ? ppPickValueResolvedAt(resolved, pick.round, dict, tradeTs)
+              : value;
+            if (side === 'got') gotThen += thenVal; else gaveThen += thenVal;
+          }
           // A pick that has been used IS the player it became, so it counts
           // toward his ledger the same as trading for him would.
           if (resolved) {
@@ -14498,6 +14840,7 @@
                 ${gaveHtml.join('') || '<div class="trade-asset-name" style="color:var(--faint)">Nothing</div>'}
               </div>
             </div>
+            ${showValue ? tradeAgedRowHtml(gotThen, gaveThen, gotValue, gaveValue, hasThen, tradeTs) : ''}
           </div>`;
       });
 
@@ -16756,6 +17099,9 @@
   // the original inline behavior.
   function sbMountExpand(card, panel) {
     const detail = document.getElementById('sbDetail');
+    // Grid View has no reading pane -- the panel belongs under its own
+    // card, which is how this page worked before the pane existed.
+    if (window.__sbGridView) { card.after(panel); return; }
     if (detail && card.closest('#sbGrid')) {
       detail.innerHTML = '';
       detail.appendChild(panel);
@@ -16814,10 +17160,9 @@
     // card, so it carries its own heading: whose league this is, the
     // record, the opponent, and where the team actually sits in that
     // league (standings place and points-for place).
-    const cardLogoEl = card.querySelector('.sb-card-logo');
-    const logoHtml = cardLogoEl
-      ? `<div class="sb-exp-logo" style="${cardLogoEl.getAttribute('style') || ''}">${cardLogoEl.innerHTML}</div>`
-      : '';
+    // No league logo here. The card you clicked is still on screen a few
+    // inches to the left with its own logo on it, so repeating it in the
+    // pane heading identified nothing the name below it did not.
     const rosterSettings = entry.roster && entry.roster.settings;
     const recordText = rosterSettings
       ? `${rosterSettings.wins || 0}-${rosterSettings.losses || 0}${rosterSettings.ties ? `-${rosterSettings.ties}` : ''}`
@@ -16834,7 +17179,6 @@
     ].filter(Boolean).join('');
     panel.innerHTML =
       '<div class="sb-exp-header">' +
-        logoHtml +
         '<div class="sb-exp-title">' +
           `<div class="sb-exp-name">${sbFieldEsc(entry.league.name)}</div>` +
           `<div class="sb-exp-meta">vs ${sbFieldEsc(oppLabel)}</div>` +
@@ -16852,6 +17196,16 @@
 
   // Re-draw whatever matchup is currently open -- used when the
   // Standard/Field toggle flips what the reading pane should be showing.
+  // Grid View has no reading pane, even though #sbDetail is still in the
+  // DOM (CSS hides it). Everything that changes behavior based on "is
+  // there a pane" has to ask this, not just look for the element --
+  // otherwise Grid View inherits the pane's rules: a matchup always open,
+  // and an open card that will not close when you click it again.
+  function sbHasReadingPane() {
+    return !!document.getElementById('sbDetail') && !window.__sbGridView;
+  }
+  window.sbHasReadingPane = sbHasReadingPane;
+
   function sbReopenOpenMatchup() {
     const card = document.querySelector('#sbGrid .sb-card.is-open');
     if (!card) return;
@@ -17024,20 +17378,58 @@
     const toggleEl = document.getElementById('sbViewToggle');
     if (!toggleEl) return;
     const SB_VIEW_KEY = 'dynastyToolSbView';
-    // Standard and Field are the same page now: the matchup list and the
-    // reading pane never change, only what the pane draws for the open
-    // matchup -- lineup tables (standard) or the two teams on the
-    // win-probability field.
+    // Three views over one page. Standard and Field share the split
+    // layout and differ only in what the reading pane draws for the open
+    // matchup -- lineup tables, or the two teams on the win-probability
+    // field. Grid is the layout this page had before the reading pane
+    // existed: cards across the full width, several to a row, and the
+    // open matchup's lineups inline underneath it.
+    const SB_VIEWS = ['scoreboard', 'field', 'grid'];
+    const page = toggleEl.closest('.sb-page');
     function applyView(view) {
+      // Grid is a layout, not a different panel: what it draws for an open
+      // matchup is the standard lineup view.
       window.__sbPaneView = view === 'field' ? 'field' : 'scoreboard';
+      window.__sbGridView = view === 'grid';
+      if (page) page.classList.toggle('sb-gridview', view === 'grid');
       toggleEl.querySelectorAll('.sb-view-toggle-btn').forEach(btn => {
         btn.classList.toggle('is-active', btn.dataset.sbv === view);
       });
-      if (window.sbReopenOpenMatchup) window.sbReopenOpenMatchup();
+      // Each layout carries its own sort -- Grid opens grouped by win
+      // category, the pane views on the closest matchups.
+      //
+      // Skipped on the very first call. sbApplyLayoutSort is a top-level
+      // function declaration, so it is already reachable on window here,
+      // but the sort state it reads is declared much further down the file
+      // and is still in its temporal dead zone while this runs. The
+      // catch-up call beside that state handles the opening view instead.
+      if (sbViewReady && window.sbApplyLayoutSort) window.sbApplyLayoutSort(view === 'grid');
+      if (view === 'grid') {
+        // Grid View opens with every matchup closed -- the point of it is
+        // seeing the whole slate at once, and an auto-opened panel pushes
+        // half of that off the screen. Reopening is for the two pane views,
+        // which need something in the pane.
+        document.querySelectorAll('#sbGrid .sb-expand').forEach(el => el.remove());
+        document.querySelectorAll('#sbGrid .sb-card.is-open').forEach(el => el.classList.remove('is-open'));
+        const detail = document.getElementById('sbDetail');
+        if (detail) detail.innerHTML = '';
+      } else {
+        // Coming back from Grid View, the open matchup's panel is sitting
+        // inline under its card. Reopening alone would build a second one
+        // in the reading pane and leave the first where it was, so the
+        // inline one is cleared first and the pane rebuilds it.
+        document.querySelectorAll('#sbGrid .sb-expand').forEach(el => el.remove());
+        if (window.sbReopenOpenMatchup) window.sbReopenOpenMatchup();
+      }
     }
+    let sbViewReady = false;
     let savedView = 'scoreboard';
     try { savedView = localStorage.getItem(SB_VIEW_KEY) || 'scoreboard'; } catch (e) {}
+    // A stored value from an older build (or a hand-edited one) must not
+    // leave the page in a state no button matches.
+    if (!SB_VIEWS.includes(savedView)) savedView = 'scoreboard';
     applyView(savedView);
+    sbViewReady = true;
     toggleEl.addEventListener('click', (e) => {
       const btn = e.target.closest('.sb-view-toggle-btn');
       if (!btn) return;
@@ -17059,7 +17451,7 @@
       // With the reading pane there is always a matchup open, so clicking
       // the one already showing is a no-op instead of closing it. Without
       // the pane (narrow/legacy markup) the old toggle still applies.
-      const detailPane = document.getElementById('sbDetail');
+      const detailPane = sbHasReadingPane();
       const alreadyOpen = detailPane
         ? card.classList.contains('is-open')
         : (card.nextElementSibling && card.nextElementSibling.classList.contains('sb-expand'));
@@ -17249,6 +17641,22 @@
     // week's exposure preview with the same excluded leagues the Rooting
     // Guide itself is using, instead of guessing at "everything included".
     window.__rgBlacklistSet = rgBlacklist;
+    // The one place anything outside this module should ask "which of
+    // this player's leagues actually count?".
+    //
+    // A league unchecked in Weekly Sweats is one you have said you do not
+    // care about, and the page has always honored that. The raw rows on
+    // window.__sleeperRootingRows do NOT -- they carry every league, and
+    // the page filters them at render time. Anything else reading those
+    // rows therefore quoted a number the page never showed: the ticker
+    // said +5 for a player the page had at +4, because it was counting a
+    // league you had blacklisted. Exported so the ticker filters through
+    // exactly the same set, rather than keeping its own copy of the rule.
+    window.rgVisibleLeagues = (list) => {
+      const bl = window.__rgBlacklistSet;
+      if (!bl || !bl.size) return list || [];
+      return (list || []).filter(name => !bl.has(name));
+    };
     let rgRows = Array.from(document.querySelectorAll('.rg-row')).map(el => ({
       el,
       forAll: (el.dataset.for || '').split(' &middot; ').filter(Boolean),
@@ -19833,10 +20241,23 @@
     }
 
     function rbTotalRowHtml(rows, maxRegWeeks, label, showMedian) {
-      const totalWins = rows.reduce((s, r) => s + r.wins, 0);
-      const totalLosses = rows.reduce((s, r) => s + r.losses, 0);
-      const totalTies = rows.reduce((s, r) => s + r.ties, 0);
-      const totalRecord = `${totalWins}-${totalLosses}${totalTies ? '-' + totalTies : ''}`;
+      // A league's OWN row shows its real record, median included -- in a
+      // median league a 2-2 through two weeks is genuinely 2-2, and that is
+      // the number its commissioner would read out.
+      //
+      // Totalling across leagues is a different question. A median league
+      // produces two results a week where every other league produces one,
+      // so counted at face value it carries twice the weight of the league
+      // beside it in the same column. Halving both of its results fixes
+      // that: one league, one week, one unit of record -- which is also
+      // why this row can land on a half.
+      const rbWeight = (r) => (r.hasMedian ? 0.5 : 1);
+      const totalWins = rows.reduce((s, r) => s + r.wins * rbWeight(r), 0);
+      const totalLosses = rows.reduce((s, r) => s + r.losses * rbWeight(r), 0);
+      const totalTies = rows.reduce((s, r) => s + r.ties * rbWeight(r), 0);
+      const rbHalf = (n) => (Math.abs(n - Math.round(n)) < 1e-9 ? String(Math.round(n)) : n.toFixed(1));
+      const totalRecord = `${rbHalf(totalWins)}-${rbHalf(totalLosses)}`
+        + (totalTies ? '-' + rbHalf(totalTies) : '');
 
       const finishRanked = rows.filter(r => r.finishRank != null);
       const avgFinish = finishRanked.length
@@ -19854,24 +20275,36 @@
       const totalNet = rows.reduce((s, r) => s + (r.net || 0), 0);
       const netCls = ldrecSignClass(totalNet);
 
-      const weeklyRecordOf = (res) => {
+      // Each ENTRY is { res, wgt }. A league that plays a median produces
+      // two results a week, so each of them is worth half: a week where you
+      // won head-to-head and missed the median reads 0.5-0.5 rather than
+      // 1-1, and one league never counts double against a league that only
+      // plays head-to-head. The halves are why this row can read 12.5-2.5.
+      const weeklyRecordOf = (cells) => {
         let w = 0, l = 0;
-        res.forEach(r => { if (r === 'W') w++; else if (r === 'L') l++; });
-        return `${w}-${l}`;
+        cells.forEach(c => {
+          const wgt = c.wgt == null ? 1 : c.wgt;
+          if (c.res === 'W') w += wgt; else if (c.res === 'L') l += wgt;
+        });
+        const fmt = (n) => (Math.abs(n - Math.round(n)) < 1e-9 ? String(Math.round(n)) : n.toFixed(1));
+        return `${fmt(w)}-${fmt(l)}`;
       };
       let weekCellsHtml = '';
       for (let i = 0; i < maxRegWeeks; i++) {
-        const results = rows.map(r => (i < r.weekResults.length ? r.weekResults[i] : null)).filter(Boolean);
-        // Include median results in the combined weekly count too, for any
-        // league that has them, so the footer isn't undercounting real
-        // results for median leagues.
-        const medianResults = rows
-          .flatMap(r => (r.hasMedian && r.weekMedianResults && i < r.weekMedianResults.length) ? [r.weekMedianResults[i]] : [])
-          .filter(Boolean);
-        const combined = [...results, ...medianResults];
-        weekCellsHtml += `<td>${combined.length ? weeklyRecordOf(combined) : '&mdash;'}</td>`;
+        const cells = [];
+        rows.forEach(r => {
+          // Half each in a median league, so one league is worth one week
+          // however many results that week produced.
+          const wgt = r.hasMedian ? 0.5 : 1;
+          const h2h = i < r.weekResults.length ? r.weekResults[i] : null;
+          if (h2h) cells.push({ res: h2h, wgt });
+          const med = (r.hasMedian && r.weekMedianResults && i < r.weekMedianResults.length)
+            ? r.weekMedianResults[i] : null;
+          if (med) cells.push({ res: med, wgt: 0.5 });
+        });
+        weekCellsHtml += `<td>${cells.length ? weeklyRecordOf(cells) : '&mdash;'}</td>`;
       }
-      const roundRecordOf = (key) => weeklyRecordOf(rows.map(r => r[key]).filter(Boolean));
+      const roundRecordOf = (key) => weeklyRecordOf(rows.map(r => r[key]).filter(Boolean).map(res => ({ res, wgt: 1 })));
 
       // Totals across every league, plus the single best and worst week you
       // put up anywhere -- an average of averages would be wrong here, so
@@ -20963,6 +21396,22 @@
           );
           if (ctx.winPct != null) { pct = ctx.winPct; pctKind = isLive ? 'LIVE' : 'PROJ'; }
         }
+        // Every week past the live one is played on the assumption that
+        // BOTH managers start their best possible lineup -- yours included,
+        // since nobody has set a week 14 lineup in week 4. So the two sides
+        // are the optimal-lineup projections of the rosters as they stand,
+        // which is the same assumption the pick and playoff models make.
+        if (pct == null && week > liveWeek && window.sbTeamOptimalProjection && oppRoster && me) {
+          const mineProj = window.sbTeamOptimalProjection(me.players, league);
+          const oppProj = window.sbTeamOptimalProjection(oppRoster.players, league);
+          if (mineProj > 0 && oppProj > 0) {
+            pct = Math.round(sbWinProbability(mineProj, oppProj));
+            pctKind = 'PROJ';
+          }
+        }
+        // Only where those projections are not to be had (the offseason, a
+        // failed fetch) does this fall back to the team-strength read off
+        // each side's own scoring so far.
         if (pct == null && week >= liveWeek && model) {
           pct = ldschNormalWinPct(model[rosterId], model[opp.roster_id]);
           if (pct != null) pctKind = 'EST';
@@ -21001,7 +21450,10 @@
         const resultHtml = r.result
           ? `<span class="ldsch-result is-${r.result.toLowerCase()}">${r.result}</span>`
           : '<span class="ldsch-blank">&mdash;</span>';
-        return `<tr class="${cls.trim()}">` +
+        // A row is a link into that week's matchup in the Matchup Hub --
+        // the schedule says what is coming, the Hub says who is in it.
+        return `<tr class="${cls.trim()} is-linked" data-sch-week="${r.week}" ` +
+          `title="Open week ${r.week} in the Matchup Hub">` +
           `<td class="ldsch-week">Wk ${r.week}</td>` +
           `<td>${oppHtml}</td>` +
           `<td>${ldschOddsCell(r.pct, r.pctKind)}</td>` +
@@ -21015,6 +21467,15 @@
         '<table class="ldsch-table"><thead><tr>' +
           '<th>WEEK</th><th>OPPONENT</th><th>WIN PROJ.</th><th>LIVE</th><th>FINAL</th><th>RESULT</th>' +
         '</tr></thead><tbody>' + bodyHtml + '</tbody></table>';
+      bodyEl.querySelectorAll('tr.is-linked[data-sch-week]').forEach(tr => {
+        tr.addEventListener('click', () => {
+          const wk = Number(tr.dataset.schWeek);
+          ldschClose();
+          if (typeof goToLeagueMatchup === 'function') {
+            goToLeagueMatchup(entry.league.league_id, wk);
+          }
+        });
+      });
 
       if (sumEl) {
         // Record and points come off the roster's own Sleeper settings
@@ -21666,7 +22127,26 @@
     const modeChooserEl = document.getElementById('modeChooser');
     if (modeChooserEl && !getSiteMode()) {
       modeChooserEl.hidden = false;
-      modeChooserEl.querySelectorAll('.mode-chooser-option').forEach(opt => {
+      if (window.renderModeChooserStats) window.renderModeChooserStats();
+      const showAllLink = document.getElementById('mcShowAll');
+      if (showAllLink) {
+        showAllLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          // "Every league" still needs a stored mode -- dynasty is the one
+          // that keeps the pick and value columns switched on, and the
+          // show-all toggle then widens it past that mode's own leagues.
+          setSiteMode('dynasty');
+          if (typeof setShowAllLeagues === 'function') setShowAllLeagues(true);
+          modeChooserEl.hidden = true;
+          if (window.refreshSettingsModeOptions) window.refreshSettingsModeOptions();
+          if (window.updateModeToggleBtn) window.updateModeToggleBtn();
+          if (window.sleeperReloadData) window.sleeperReloadData();
+          if (!getSavedUser()) {
+            setTimeout(() => { connectPanel.hidden = false; usernameInput.focus(); }, 0);
+          }
+        });
+      }
+      modeChooserEl.querySelectorAll('.mc-stub').forEach(opt => {
         opt.addEventListener('click', () => {
           setSiteMode(opt.dataset.mode);
           modeChooserEl.hidden = true;
@@ -22688,6 +23168,81 @@
   // good roster that stays good from a good roster that is about to fall
   // over, which is what decides a pick two drafts out.
   const PP_PLAYER_AGES = {"josh allen":30.3,"jaxon smith-njigba":24.6,"jahmyr gibbs":24.5,"bijan robinson":24.6,"jamarr chase":26.6,"malik nabers":23.2,"puka nacua":25.3,"ashton jeanty":22.8,"caleb williams":24.8,"drake maye":24.1,"jeremiyah love":21.3,"brock bowers":23.8,"amon-ra st brown":26.9,"trey mcbride":26.8,"lamar jackson":29.7,"justin jefferson":27.3,"ceedee lamb":27.5,"patrick mahomes":31.0,"joe burrow":29.8,"drake london":25.2,"jalen hurts":28.1,"tetairoa mcmillan":23.5,"colston loveland":22.5,"jayden daniels":25.8,"jonathan taylor":27.7,"kenneth walker":25.9,"chris olave":26.2,"trevor lawrence":27.0,"brock purdy":26.7,"justin herbert":28.5,"omarion hampton":23.5,"james cook":27.0,"garrett wilson":26.2,"devon achane":24.9,"nico collins":27.5,"george pickens":25.6,"zay flowers":26.0,"jaxson dart":23.4,"ladd mcconkey":24.9,"devonta smith":27.9,"parker washington":24.5,"jordyn tyson":22.1,"tyler warren":24.3,"jordan love":27.9,"emeka egbuka":23.9,"luther burden":22.8,"carnell tate":21.7,"chase brown":26.5,"breece hall":25.3,"christian mccaffrey":30.3,"bo nix":26.6,"makai lemon":22.3,"jaylen waddle":27.8,"tee higgins":27.7,"bucky irving":24.1,"fernando mendoza":23.0,"dak prescott":33.2,"jared goff":31.9,"treveyon henderson":23.9,"quinshon judkins":22.9,"christian watson":27.4,"matthew golden":23.1,"sam laporta":25.7,"dalton kincaid":26.9,"tucker kraft":25.9,"tyler shough":27.0,"jameson williams":25.5,"kc concepcion":22.0,"javonte williams":26.4,"saquon barkley":29.6,"jadarian price":23.0,"kyren williams":26.1,"derrick henry":32.7,"dandre swift":27.7,"bryce young":25.2,"brian thomas":24.0,"bhayshul tuten":23.6,"harold fannin":22.2,"jalen coker":24.9,"rome odunze":24.3,"denzel boston":22.8,"aj brown":29.2,"cam skattebo":24.6,"baker mayfield":31.4,"kyler murray":29.1,"sam darnold":29.3,"cj stroud":25.0,"rashee rice":26.4,"kenyon sadiq":21.6,"daniel jones":29.3,"matthew stafford":38.6,"josh downs":25.1,"isaiah likely":26.4,"cam ward":24.3,"jordan addison":24.7,"mike evans":33.1,"malik willis":27.3,"george kittle":33.0,"chuba hubbard":27.3,"kyle pitts":26.0,"dj moore":29.4,"dk metcalf":28.8,"ty simpson":23.8,"marvin harrison":24.1,"david montgomery":29.3,"travis etienne":27.7,"michael wilson":26.6,"alec pierce":26.4,"omar cooper":22.8,"terry mclaurin":31.0,"davante adams":33.7,"kyle monangai":24.3,"jaylen warren":27.9,"josh jacobs":28.6,"jonah coleman":23.1,"jonathon brooks":23.2,"rj harvey":25.6,"terrance ferguson":23.6,"germie bernard":22.8,"antonio williams":22.2,"travis hunter":23.4,"dezhaun stribling":23.8,"caleb douglas":23.0,"blake corum":25.8,"rhamondre stevenson":28.6,"michael penix":26.4,"stefon diggs":32.8,"oronde gadsden":23.2,"xavier worthy":23.4,"eli raridon":22.6,"brenton strange":25.7,"jake ferguson":27.7,"emmett johnson":23.0,"chris godwin":30.6,"jacory croskey-merritt":25.5,"pat bryant":23.8,"jakobi lane":22.4,"quentin johnston":25.0,"michael pittman":29.0,"geno smith":36.0,"juwan johnson":30.0,"deebo samuel":30.7,"eli stowers":23.4,"travis kelce":37.0,"chig okonkwo":27.0,"rico dowdle":28.3,"rachaad white":27.7,"kaelon black":24.9,"jayden reed":26.4,"khalil shakir":26.6,"chris bell":22.3,"dalton schultz":30.2,"dallas goedert":31.7,"mark andrews":31.0,"mac jones":28.1,"shedeur sanders":24.6,"jk dobbins":27.8,"woody marks":25.7,"dontayvion wicks":25.3,"adonai mitchell":24.0,"wandale robinson":25.7,"courtland sutton":31.0,"jakobi meyers":29.9,"romeo doubs":26.4,"michael mayer":25.2,"mike washington":23.2,"zach charbonnet":25.7,"tua tagovailoa":28.6,"keaton mitchell":24.7,"aaron jones":31.8,"marshawn lloyd":25.7,"kenny gainwell":27.5,"tank bigsby":24.1,"tyjae spears":25.3,"nicholas singleton":22.7,"jalen mcmillan":24.8,"carson beck":23.8,"jacoby brissett":33.8,"aaron rodgers":42.8,"ricky pearsall":26.0,"ted hurst":22.2,"jayden higgins":23.8,"oscar delp":23.1,"jordan mason":27.3,"aj barner":24.4,"tre harris":24.6,"zachariah branch":22.5,"drew allar":22.5,"kaytron allen":23.7,"tony pollard":29.4,"tyler allgeier":26.4,"braelon allen":22.7,"brian robinson":27.5,"ray davis":26.9,"elijah sarratt":23.3,"tre tucker":25.5,"malik washington":25.7,"dylan sampson":22.0,"pat freiermuth":27.9,"deshaun watson":31.0,"max klare":23.2,"adam randall":22.2,"demond claiborne":23.0,"chris rodriguez":27.0,"rashid shaheed":28.1,"tj hockenson":29.2,"hunter henry":31.8,"gunnar helm":24.0,"cyrus allen":23.6,"devaughn vele":28.8,"malachi fields":23.1,"jaylin noel":24.1,"kayshon boutte":24.4,"cade otton":27.4,"seth mcgowan":24.9,"kalif raymond":32.1,"ryan flournoy":26.9,"jalen nailor":27.6,"jameis winston":32.7,"marcus mariota":32.9,"jj mccarthy":23.7,"cade klubnik":23.0,"alvin kamara":31.2,"marlin klein":24.0,"elijah arroyo":23.5,"tank dell":26.9,"brandon aiyuk":28.5,"jordan james":22.5,"isaac teslaa":24.6,"mason taylor":22.4,"kirk cousins":38.1,"darren waller":34.0,"keon coleman":23.4,"jerry jeudy":27.4,"jauan jennings":29.2,"matt hibner":24.5,"evan engram":32.1,"greg dulcich":26.5,"mike gesicki":31.0,"keenan allen":34.4,"kimani vidal":25.1,"troy franklin":23.6,"dj giddens":23.1,"tanner koziol":22.7,"kevin coleman":23.0,"brenen thompson":23.2,"calvin ridley":31.8,"tory horton":23.8,"elic ayomanor":23.3,"skyler bell":24.2,"jack bech":23.8,"chris brazzell":23.0,"anthony richardson":24.3,"bryce lance":24.1,"erick all":26.0,"justin fields":27.6,"justin joly":22.2,"kaleb johnson":23.1,"kendre miller":24.3,"kyle williams":23.9,"demario douglas":25.8,"devin singletary":29.1,"samaje perine":31.0,"rashod bateman":26.8,"jaylen wright":23.5,"ollie gordon":22.7,"drew lock":29.9,"tyson bagent":26.3,"will shipley":24.1,"najee harris":28.5,"chris brooks":26.7,"tyrone tracy":26.8,"jalen royals":23.6,"darnell washington":25.1,"eli heidenreich":23.2,"isiah pacheco":27.6,"james conner":31.4,"tyreek hill":32.6,"cole kmet":27.5,"cole payton":23.9,"garrett nussmeier":24.6,"jack endries":22.5,"jalen milroe":23.8,"malik benson":23.9,"mitchell evans":23.5,"taylen green":23.9,"tez johnson":24.4,"zavion thomas":22.6,"jalon daniels":23.9,"roman wilson":25.3,"emari demercado":27.7,"sean tucker":24.9,"tahj brooks":24.4,"sione vaki":25.2,"carson wentz":33.7};
+  // ---- What the rankings used to say --------------------------------
+  // PP_PLAYER_VALUES above is what a player is worth TODAY. These are what
+  // it said on the dates it said it, oldest first, recovered from this
+  // file's own history -- every time a new set of Pure Potential values
+  // was pasted in, the old one is still there in the commit it replaced.
+  //
+  // That is what makes "how has this trade aged?" answerable at all. A
+  // trade is valued twice: once at the rankings that were live the day it
+  // was completed, and once at today's. The gap between those two numbers
+  // is the only honest way to say whether a deal that looked fair has
+  // since turned into a win.
+  //
+  // Each entry holds the values in force FROM its asOf date until the next
+  // entry's. The current table takes over from PP_VALUE_CURRENT_ASOF.
+  // A trade completed before the first date below has no historical
+  // ranking to price it against and honestly says so, rather than being
+  // priced at today's values and pretending that is what it was worth at
+  // the time.
+  const PP_VALUE_CURRENT_ASOF = "2026-09-23";
+  const PP_VALUE_HISTORY = [
+    { asOf: "2026-09-06", values: {"josh allen":3.0,"jamarr chase":2.93,"puka nacua":2.86,"drake maye":2.79,"jaxon smith-njigba":2.72,"bijan robinson":2.65,"jahmyr gibbs":2.58,"brock bowers":2.5,"jayden daniels":2.44,"ashton jeanty":2.39,"lamar jackson":2.34,"malik nabers":2.28,"caleb williams":2.23,"jeremiyah love":2.17,"drake london":2.12,"amon-ra st brown":2.06,"trey mcbride":2.0,"justin jefferson":1.98,"ceedee lamb":1.96,"joe burrow":1.93,"justin herbert":1.91,"colston loveland":1.89,"tetairoa mcmillan":1.87,"omarion hampton":1.85,"jalen hurts":1.82,"patrick mahomes":1.8,"devon achane":1.75,"jaxson dart":1.55,"trevor lawrence":1.5,"garrett wilson":1.47,"chris olave":1.45,"nico collins":1.42,"jonathan taylor":1.39,"james cook":1.37,"george pickens":1.34,"carnell tate":1.31,"brock purdy":1.29,"luther burden":1.25,"tyler warren":1.23,"bo nix":1.2,"emeka egbuka":1.18,"zay flowers":1.15,"jordyn tyson":1.13,"kenneth walker":1.1,"makai lemon":1.08,"ladd mcconkey":1.05,"jordan love":1.03,"chase brown":1.0,"breece hall":0.98,"christian mccaffrey":0.97,"aj brown":0.95,"quinshon judkins":0.94,"devonta smith":0.92,"fernando mendoza":0.91,"harold fannin":0.89,"jaylen waddle":0.88,"rashee rice":0.86,"tee higgins":0.85,"saquon barkley":0.83,"treveyon henderson":0.82,"marvin harrison":0.8,"dak prescott":0.79,"jared goff":0.77,"cam skattebo":0.75,"sam laporta":0.74,"kc concepcion":0.73,"jameson williams":0.72,"bucky irving":0.71,"tucker kraft":0.7,"tyler shough":0.69,"brian thomas":0.68,"cam ward":0.66,"rome odunze":0.65,"baker mayfield":0.64,"jadarian price":0.63,"parker washington":0.62,"kyler murray":0.61,"travis etienne":0.6,"kyren williams":0.59,"javonte williams":0.58,"bhayshul tuten":0.57,"sam darnold":0.56,"kyle pitts":0.55,"josh jacobs":0.54,"cj stroud":0.53,"kenyon sadiq":0.52,"daniel jones":0.5,"derrick henry":0.49,"christian watson":0.48,"josh downs":0.47,"matthew stafford":0.46,"jordan addison":0.44,"malik willis":0.43,"dandre swift":0.42,"jonathon brooks":0.41,"bryce young":0.4,"david montgomery":0.39,"ty simpson":0.37,"omar cooper":0.35,"terry mclaurin":0.34,"davante adams":0.33,"denzel boston":0.32,"mike evans":0.31,"rj harvey":0.3,"dalton kincaid":0.3,"oronde gadsden":0.29,"george kittle":0.29,"dezhaun stribling":0.28,"matthew golden":0.28,"xavier worthy":0.27,"alec pierce":0.27,"dj moore":0.26,"jayden reed":0.26,"michael wilson":0.26,"chris godwin":0.25,"jonah coleman":0.25,"wandale robinson":0.24,"dk metcalf":0.24,"isaiah likely":0.23,"rhamondre stevenson":0.23,"jacory croskey-merritt":0.22,"michael pittman":0.22,"quentin johnston":0.21,"jalen coker":0.21,"jaylen warren":0.21,"jake ferguson":0.2,"eli raridon":0.2,"romeo doubs":0.2,"chig okonkwo":0.19,"eli stowers":0.19,"brenton strange":0.19,"chuba hubbard":0.19,"germie bernard":0.19,"blake corum":0.18,"kyle monangai":0.18,"michael penix":0.18,"jakobi meyers":0.18,"rico dowdle":0.18,"jk dobbins":0.17,"tony pollard":0.17,"kenny gainwell":0.17,"terrance ferguson":0.17,"stefon diggs":0.17,"rachaad white":0.16,"dallas goedert":0.16,"courtland sutton":0.16,"nicholas singleton":0.16,"geno smith":0.16,"juwan johnson":0.15,"jakobi lane":0.15,"chris bell":0.15,"tua tagovailoa":0.15,"jordan mason":0.15,"travis kelce":0.14,"mark andrews":0.14,"mac jones":0.14,"zach charbonnet":0.14,"khalil shakir":0.14,"jalen mcmillan":0.14,"michael mayer":0.14,"dylan sampson":0.14,"shedeur sanders":0.13,"tank bigsby":0.13,"keaton mitchell":0.13,"tyjae spears":0.13,"emmett johnson":0.13,"mike washington":0.13,"carson beck":0.13,"woody marks":0.12,"rashid shaheed":0.12,"pat bryant":0.12,"tre harris":0.12,"antonio williams":0.12,"jayden higgins":0.12,"gunnar helm":0.12,"aj barner":0.12,"zachariah branch":0.11,"max klare":0.11,"oscar delp":0.11,"jaylin noel":0.11,"elijah sarratt":0.11,"marshawn lloyd":0.11,"aaron rodgers":0.11,"drew allar":0.1,"ricky pearsall":0.1,"chris rodriguez":0.1,"kaytron allen":0.1,"ted hurst":0.1,"tyler allgeier":0.09,"aaron jones":0.09,"brian robinson":0.09,"jj mccarthy":0.09,"jacoby brissett":0.09,"braelon allen":0.09,"jaydon blue":0.08,"demond claiborne":0.08,"adonai mitchell":0.08,"cyrus allen":0.08,"dalton schultz":0.08,"ray davis":0.07,"hunter henry":0.07,"kaelon black":0.07,"adam randall":0.07,"kayshon boutte":0.07,"deebo samuel":0.06,"tj hockenson":0.06,"troy franklin":0.06,"jordan james":0.06,"keon coleman":0.06,"justin joly":0.06,"pat freiermuth":0.05,"caleb douglas":0.05,"tyrone tracy":0.05,"isiah pacheco":0.05,"malachi fields":0.05,"elijah arroyo":0.05,"greg dulcich":0.05,"dontayvion wicks":0.05,"malik washington":0.05,"tre tucker":0.05,"ryan flournoy":0.05,"keenan allen":0.05,"tank dell":0.05,"deshaun watson":0.04,"chris brazzell":0.04,"elic ayomanor":0.04,"tory horton":0.04,"skyler bell":0.04,"jerry jeudy":0.04,"jack bech":0.04,"jalen nailor":0.04,"brandon aiyuk":0.04,"cade otton":0.04,"mason taylor":0.04,"david njoku":0.04,"brenen thompson":0.04,"jaylen wright":0.04,"kimani vidal":0.04,"seth mcgowan":0.04,"calvin ridley":0.04,"alvin kamara":0.04,"jauan jennings":0.04,"george holani":0.04,"devin neal":0.03,"dj giddens":0.03,"cade klubnik":0.03,"isaac teslaa":0.03,"kevin coleman":0.03,"kirk cousins":0.03,"tanner koziol":0.03,"matt hibner":0.03,"chimere dike":0.03,"anthony richardson":0.03,"bryce lance":0.03,"charlie kolar":0.03,"colby parkinson":0.03,"darnell washington":0.03,"darren waller":0.03,"emanuel wilson":0.03,"erick all":0.03,"jack endries":0.03,"jalen royals":0.03,"jake tonges":0.03,"james conner":0.03,"justin fields":0.03,"kaleb johnson":0.02,"kyle williams":0.02,"marcus mariota":0.02,"mike gesicki":0.02,"najee harris":0.02,"ollie gordon":0.02,"sean tucker":0.02,"tahj brooks":0.02,"taylen green":0.02,"theo johnson":0.02,"tyreek hill":0.02,"brashard smith":0.02,"cedric tillman":0.02,"cj daniels":0.02,"cole kmet":0.02,"cole payton":0.02,"darnell mooney":0.02,"eli heidenreich":0.02,"eric mcalister":0.02,"garrett nussmeier":0.02,"isaiah davis":0.02,"jmari taylor":0.02,"jalen milroe":0.02,"jarquez hunter":0.02,"jaydn ott":0.02,"joe mixon":0.01,"kendre miller":0.01,"malik benson":0.01,"marlin klein":0.01,"marvin mims":0.01,"mitchell evans":0.01,"phil mafah":0.01,"sam roush":0.01,"tai felton":0.01,"tez johnson":0.01,"trevor etienne":0.01,"trey benson":0.01,"zavion thomas":0.01} },
+    { asOf: "2026-09-15", values: {"josh allen":3,"jahmyr gibbs":3,"bijan robinson":3,"malik nabers":2.94,"jaxon smith-njigba":2.88,"jamarr chase":2.82,"puka nacua":2.76,"caleb williams":2.7,"drake maye":2.64,"ashton jeanty":2.58,"jayden daniels":2.5,"lamar jackson":2.4,"jeremiyah love":2.3,"brock bowers":2.2,"amon-ra st brown":2,"trey mcbride":1.96,"justin jefferson":1.92,"drake london":1.89,"joe burrow":1.85,"ceedee lamb":1.81,"jalen hurts":1.77,"trevor lawrence":1.73,"patrick mahomes":1.7,"colston loveland":1.66,"tetairoa mcmillan":1.62,"jaxson dart":1.58,"justin herbert":1.55,"omarion hampton":1.5,"garrett wilson":1.48,"chris olave":1.46,"nico collins":1.44,"jonathan taylor":1.42,"james cook":1.39,"kenneth walker":1.37,"devon achane":1.35,"george pickens":1.33,"zay flowers":1.31,"brock purdy":1.29,"ladd mcconkey":1.25,"tyler warren":1.23,"emeka egbuka":1.21,"luther burden":1.18,"jordyn tyson":1.16,"jordan love":1.14,"breece hall":1.12,"chase brown":1.1,"carnell tate":1.07,"makai lemon":1.05,"christian mccaffrey":1.03,"bo nix":1,"quinshon judkins":0.98,"devonta smith":0.96,"saquon barkley":0.94,"jaylen waddle":0.92,"parker washington":0.9,"jameson williams":0.88,"tee higgins":0.86,"fernando mendoza":0.83,"dak prescott":0.81,"jared goff":0.79,"treveyon henderson":0.77,"sam laporta":0.75,"tucker kraft":0.74,"bucky irving":0.73,"cam skattebo":0.72,"rashee rice":0.72,"matthew golden":0.71,"kc concepcion":0.7,"jadarian price":0.69,"harold fannin":0.68,"tyler shough":0.67,"javonte williams":0.66,"kyren williams":0.65,"derrick henry":0.65,"dandre swift":0.64,"christian watson":0.63,"rome odunze":0.62,"brian thomas":0.61,"aj brown":0.6,"baker mayfield":0.59,"kyler murray":0.58,"sam darnold":0.58,"bryce young":0.57,"cj stroud":0.56,"daniel jones":0.55,"bhayshul tuten":0.54,"travis etienne":0.53,"kyle pitts":0.52,"marvin harrison":0.52,"josh downs":0.5,"kenyon sadiq":0.49,"dalton kincaid":0.48,"david montgomery":0.47,"matthew stafford":0.46,"mike evans":0.44,"dj moore":0.43,"isaiah likely":0.42,"jalen coker":0.41,"dk metcalf":0.4,"malik willis":0.39,"cam ward":0.38,"jordan addison":0.37,"denzel boston":0.35,"terry mclaurin":0.34,"george kittle":0.33,"ty simpson":0.32,"jonathon brooks":0.31,"alec pierce":0.3,"xavier worthy":0.29,"michael wilson":0.29,"omar cooper":0.28,"rj harvey":0.27,"jacory croskey-merritt":0.26,"chuba hubbard":0.26,"davante adams":0.25,"chris godwin":0.24,"dezhaun stribling":0.23,"rhamondre stevenson":0.23,"kyle monangai":0.22,"jaylen warren":0.21,"josh jacobs":0.21,"travis hunter":0.2,"jonah coleman":0.2,"michael pittman":0.2,"quentin johnston":0.2,"jayden reed":0.19,"rico dowdle":0.19,"blake corum":0.19,"stefon diggs":0.19,"michael penix":0.19,"eli raridon":0.19,"terrance ferguson":0.18,"caleb douglas":0.18,"jakobi lane":0.18,"brenton strange":0.18,"jake ferguson":0.18,"dallas goedert":0.18,"geno smith":0.18,"jk dobbins":0.17,"emmett johnson":0.17,"marshawn lloyd":0.17,"pat bryant":0.17,"wandale robinson":0.17,"germie bernard":0.17,"juwan johnson":0.17,"eli stowers":0.16,"kenny gainwell":0.16,"rachaad white":0.16,"oronde gadsden":0.16,"deebo samuel":0.16,"courtland sutton":0.16,"jakobi meyers":0.15,"chig okonkwo":0.15,"travis kelce":0.15,"tank bigsby":0.15,"jordan mason":0.15,"tyjae spears":0.14,"khalil shakir":0.14,"antonio williams":0.14,"chris bell":0.14,"shedeur sanders":0.14,"mark andrews":0.14,"dalton schultz":0.13,"romeo doubs":0.13,"tua tagovailoa":0.13,"mac jones":0.13,"michael mayer":0.13,"zach charbonnet":0.13,"mike washington":0.13,"keaton mitchell":0.12,"kaelon black":0.12,"aaron rodgers":0.12,"carson beck":0.12,"jalen mcmillan":0.12,"tre harris":0.12,"nicholas singleton":0.12,"woody marks":0.11,"aj barner":0.11,"oscar delp":0.11,"ricky pearsall":0.11,"jayden higgins":0.11,"aaron jones":0.11,"tony pollard":0.1,"jacoby brissett":0.1,"zachariah branch":0.1,"elijah sarratt":0.1,"drew allar":0.1,"chris rodriguez":0.09,"kaytron allen":0.09,"dylan sampson":0.09,"tyler allgeier":0.09,"braelon allen":0.09,"malik washington":0.09,"dontayvion wicks":0.08,"rashid shaheed":0.08,"ted hurst":0.08,"max klare":0.08,"brian robinson":0.08,"ray davis":0.07,"adam randall":0.07,"demond claiborne":0.07,"cyrus allen":0.07,"adonai mitchell":0.07,"tj hockenson":0.07,"hunter henry":0.06,"pat freiermuth":0.06,"malachi fields":0.06,"jaylin noel":0.06,"kayshon boutte":0.06,"david njoku":0.06,"cade otton":0.05,"gunnar helm":0.05,"greg dulcich":0.05,"mike gesicki":0.05,"kalif raymond":0.05,"jordan james":0.05,"keenan allen":0.05,"tre tucker":0.05,"ryan flournoy":0.05,"jj mccarthy":0.04,"deshaun watson":0.04,"jalen nailor":0.04,"elijah arroyo":0.04,"jerry jeudy":0.04,"tank dell":0.04,"brandon aiyuk":0.04,"mason taylor":0.04,"seth mcgowan":0.04,"cade klubnik":0.04,"alvin kamara":0.04,"marlin klein":0.04,"evan engram":0.04,"devaughn vele":0.04,"jauan jennings":0.03,"george holani":0.03,"isaac teslaa":0.03,"kirk cousins":0.03,"matt hibner":0.03,"darren waller":0.03,"keon coleman":0.03,"kimani vidal":0.03,"troy franklin":0.03,"dj giddens":0.03,"tanner koziol":0.03,"kevin coleman":0.03,"brenen thompson":0.03,"calvin ridley":0.03,"tory horton":0.03,"elic ayomanor":0.03,"skyler bell":0.03,"jack bech":0.03,"chris brazzell":0.03,"najee harris":0.03,"tyrone tracy":0.03,"anthony richardson":0.03,"bryce lance":0.03,"erick all":0.02,"jake tonges":0.02,"justin fields":0.02,"justin joly":0.02,"kaleb johnson":0.02,"kendre miller":0.02,"kyle williams":0.02,"marcus mariota":0.02,"charlie kolar":0.02,"demario douglas":0.02,"devin singletary":0.02,"samaje perine":0.02,"rashod bateman":0.02,"jaylen wright":0.02,"ollie gordon":0.02,"colby parkinson":0.02,"jalen royals":0.02,"darnell washington":0.02,"eli heidenreich":0.02,"isiah pacheco":0.02,"james conner":0.02,"tyreek hill":0.02,"cj daniels":0.02,"cole kmet":0.02,"cole payton":0.02,"garrett nussmeier":0.02,"jack endries":0.02,"jalen milroe":0.02,"malik benson":0.02,"mitchell evans":0.01,"sam roush":0.01,"taylen green":0.01,"tez johnson":0.01,"zavion thomas":0.01,"cooper kupp":0.01,"jalon daniels":0.01,"roman wilson":0.01,"spencer rattler":0.01,"emari demercado":0.01,"drew lock":0.01,"sean tucker":0.01,"tahj brooks":0.01,"sione vaki":0.01} },
+    { asOf: "2026-09-22", values: {"josh allen":3,"jaxon smith-njigba":3,"jahmyr gibbs":3,"bijan robinson":3,"jamarr chase":2.91,"malik nabers":2.83,"puka nacua":2.74,"ashton jeanty":2.65,"caleb williams":2.5,"drake maye":2.43,"jeremiyah love":2.37,"brock bowers":2.3,"amon-ra st brown":2.23,"trey mcbride":2.17,"lamar jackson":2.1,"justin jefferson":2,"ceedee lamb":1.94,"patrick mahomes":1.87,"drake london":1.81,"joe burrow":1.74,"jalen hurts":1.67,"tetairoa mcmillan":1.61,"jaxson dart":1.55,"colston loveland":1.5,"chris olave":1.5,"jonathan taylor":1.5,"kenneth walker":1.5,"trevor lawrence":1.5,"brock purdy":1.5,"justin herbert":1.5,"jayden daniels":1.5,"omarion hampton":1.45,"james cook":1.4,"garrett wilson":1.38,"devon achane":1.36,"nico collins":1.33,"george pickens":1.31,"zay flowers":1.29,"ladd mcconkey":1.25,"devonta smith":1.23,"jordyn tyson":1.21,"parker washington":1.18,"tyler warren":1.16,"jordan love":1.14,"emeka egbuka":1.12,"carnell tate":1.1,"breece hall":1.07,"chase brown":1.05,"christian mccaffrey":1.03,"luther burden":1,"bo nix":0.98,"makai lemon":0.95,"jaylen waddle":0.93,"tee higgins":0.91,"bucky irving":0.89,"fernando mendoza":0.86,"dak prescott":0.84,"jared goff":0.82,"quinshon judkins":0.8,"treveyon henderson":0.77,"sam laporta":0.75,"dalton kincaid":0.74,"tucker kraft":0.73,"matthew golden":0.72,"christian watson":0.72,"tyler shough":0.71,"jameson williams":0.7,"kc concepcion":0.69,"javonte williams":0.68,"saquon barkley":0.67,"jadarian price":0.67,"kyren williams":0.66,"derrick henry":0.65,"cam skattebo":0.64,"dandre swift":0.63,"bryce young":0.62,"brian thomas":0.62,"bhayshul tuten":0.61,"harold fannin":0.6,"jalen coker":0.59,"rome odunze":0.58,"aj brown":0.57,"denzel boston":0.57,"baker mayfield":0.56,"kyler murray":0.55,"sam darnold":0.54,"cj stroud":0.53,"rashee rice":0.52,"kenyon sadiq":0.52,"daniel jones":0.5,"matthew stafford":0.49,"josh downs":0.47,"isaiah likely":0.46,"cam ward":0.45,"jordan addison":0.44,"mike evans":0.42,"malik willis":0.41,"dk metcalf":0.4,"george kittle":0.39,"chuba hubbard":0.37,"kyle pitts":0.36,"dj moore":0.35,"ty simpson":0.33,"marvin harrison":0.32,"david montgomery":0.31,"travis etienne":0.3,"michael wilson":0.29,"alec pierce":0.28,"omar cooper":0.27,"terry mclaurin":0.27,"davante adams":0.26,"kyle monangai":0.25,"jaylen warren":0.24,"josh jacobs":0.23,"jonah coleman":0.22,"jonathon brooks":0.21,"rj harvey":0.21,"terrance ferguson":0.2,"germie bernard":0.2,"antonio williams":0.2,"travis hunter":0.19,"dezhaun stribling":0.19,"caleb douglas":0.19,"blake corum":0.19,"rhamondre stevenson":0.19,"michael penix":0.19,"stefon diggs":0.18,"oronde gadsden":0.18,"xavier worthy":0.18,"eli raridon":0.18,"brenton strange":0.18,"jake ferguson":0.18,"emmett johnson":0.17,"chris godwin":0.17,"jacory croskey-merritt":0.17,"pat bryant":0.17,"jakobi lane":0.17,"quentin johnston":0.17,"michael pittman":0.16,"geno smith":0.16,"juwan johnson":0.16,"deebo samuel":0.16,"eli stowers":0.16,"travis kelce":0.16,"chig okonkwo":0.15,"rico dowdle":0.15,"rachaad white":0.15,"kaelon black":0.15,"dallas goedert":0.15,"jk dobbins":0.14,"jayden reed":0.14,"khalil shakir":0.14,"chris bell":0.14,"dalton schultz":0.14,"mark andrews":0.14,"shedeur sanders":0.14,"mac jones":0.14,"woody marks":0.13,"dontayvion wicks":0.13,"adonai mitchell":0.13,"wandale robinson":0.13,"courtland sutton":0.13,"jakobi meyers":0.13,"romeo doubs":0.13,"michael mayer":0.13,"mike washington":0.12,"zach charbonnet":0.12,"tua tagovailoa":0.12,"keaton mitchell":0.12,"aaron jones":0.12,"marshawn lloyd":0.12,"kenny gainwell":0.12,"tank bigsby":0.12,"tyjae spears":0.11,"nicholas singleton":0.11,"jalen mcmillan":0.11,"carson beck":0.11,"jacoby brissett":0.11,"aaron rodgers":0.11,"ricky pearsall":0.11,"ted hurst":0.11,"jayden higgins":0.1,"oscar delp":0.1,"jordan mason":0.1,"aj barner":0.1,"tre harris":0.1,"zachariah branch":0.1,"drew allar":0.09,"kaytron allen":0.09,"tony pollard":0.09,"tyler allgeier":0.09,"braelon allen":0.09,"brian robinson":0.09,"ray davis":0.08,"elijah sarratt":0.08,"tre tucker":0.08,"malik washington":0.08,"dylan sampson":0.08,"pat freiermuth":0.08,"deshaun watson":0.07,"max klare":0.07,"adam randall":0.07,"demond claiborne":0.07,"chris rodriguez":0.07,"rashid shaheed":0.07,"tj hockenson":0.06,"hunter henry":0.06,"gunnar helm":0.06,"cyrus allen":0.06,"devaughn vele":0.06,"malachi fields":0.06,"jaylin noel":0.05,"kayshon boutte":0.05,"cade otton":0.05,"seth mcgowan":0.05,"kalif raymond":0.05,"ryan flournoy":0.05,"jalen nailor":0.05,"jj mccarthy":0.05,"alvin kamara":0.04,"elijah arroyo":0.04,"jerry jeudy":0.04,"tank dell":0.04,"brandon aiyuk":0.04,"jordan james":0.04,"cade klubnik":0.04,"marlin klein":0.04,"mason taylor":0.04,"isaac teslaa":0.04,"kirk cousins":0.03,"marcus mariota":0.03,"darren waller":0.03,"keon coleman":0.03,"jauan jennings":0.03,"matt hibner":0.03,"evan engram":0.03,"greg dulcich":0.03,"mike gesicki":0.03,"keenan allen":0.03,"kimani vidal":0.03,"troy franklin":0.03,"dj giddens":0.03,"tanner koziol":0.03,"kevin coleman":0.03,"brenen thompson":0.03,"calvin ridley":0.03,"tory horton":0.03,"elic ayomanor":0.03,"skyler bell":0.03,"jack bech":0.03,"chris brazzell":0.02,"anthony richardson":0.02,"bryce lance":0.02,"erick all":0.02,"justin fields":0.02,"justin joly":0.02,"kaleb johnson":0.02,"kendre miller":0.02,"kyle williams":0.02,"demario douglas":0.02,"devin singletary":0.02,"samaje perine":0.02,"rashod bateman":0.02,"jaylen wright":0.02,"ollie gordon":0.02,"najee harris":0.02,"tyrone tracy":0.02,"jalen royals":0.02,"darnell washington":0.02,"eli heidenreich":0.02,"isiah pacheco":0.02,"james conner":0.02,"tyreek hill":0.02,"cole kmet":0.02,"cole payton":0.02,"garrett nussmeier":0.02,"jack endries":0.02,"jalen milroe":0.02,"malik benson":0.01,"mitchell evans":0.01,"taylen green":0.01,"tez johnson":0.01,"zavion thomas":0.01,"jalon daniels":0.01,"roman wilson":0.01,"emari demercado":0.01,"drew lock":0.01,"sean tucker":0.01,"tahj brooks":0.01,"sione vaki":0.01} },
+  ];
+
+  // The value table in force at a given moment. Anything at or after the
+  // current table's date -- which includes every future date, so an
+  // unparseable or missing timestamp lands here -- gets today's values.
+  function ppValueTableAt(ts) {
+    if (ts == null || !isFinite(ts)) return PP_PLAYER_VALUES;
+    const day = new Date(ts);
+    if (isNaN(day.getTime())) return PP_PLAYER_VALUES;
+    const iso = day.toISOString().slice(0, 10);
+    if (iso >= PP_VALUE_CURRENT_ASOF) return PP_PLAYER_VALUES;
+    let table = null;
+    for (let i = 0; i < PP_VALUE_HISTORY.length; i++) {
+      if (iso >= PP_VALUE_HISTORY[i].asOf) table = PP_VALUE_HISTORY[i].values;
+    }
+    // A trade older than the first set of rankings is priced at that first
+    // set -- it is the earliest reading that exists, and a preseason trade
+    // measured against preseason values is a fair comparison even if the
+    // deal itself predates the file. The label says which date was used,
+    // so it never reads as "this is what it was worth that day" when it is
+    // really "this is what it was worth on the 6th".
+    return table || (PP_VALUE_HISTORY[0] ? PP_VALUE_HISTORY[0].values : null);
+  }
+
+  // The date whose rankings a given trade is priced against -- which is
+  // the trade's own date once it is inside the history, and the earliest
+  // date on file for anything older.
+  function ppValueAsOfDate(ts) {
+    if (!PP_VALUE_HISTORY.length) return null;
+    const first = PP_VALUE_HISTORY[0].asOf;
+    if (ts == null || !isFinite(ts)) return null;
+    const day = new Date(ts);
+    if (isNaN(day.getTime())) return null;
+    const iso = day.toISOString().slice(0, 10);
+    return iso < first ? first : iso;
+  }
+
+  // Is there any ranking at all to price this against? True whenever the
+  // history is non-empty, since the earliest set now backstops everything.
+  function ppHasHistoricalValues(ts) { return ppValueTableAt(ts) != null; }
+
+  // One player's value as of a date. Same name normalization as
+  // ppValueForPlayerId -- it goes through the same key function, so a
+  // player who resolves today resolves in every older table too.
+  function ppValueForPlayerIdAt(playerId, dict, ts) {
+    const table = ppValueTableAt(ts);
+    if (!table) return null;
+    const key = ppKeyForPlayerId(playerId, dict);
+    if (key == null) return null;
+    return table[key] != null ? table[key] : null;
+  }
+
   function ppAgeForPlayerId(playerId, dict) {
     const key = ppKeyForPlayerId(playerId, dict);
     return key == null ? null : PP_PLAYER_AGES[key];
@@ -22710,11 +23265,49 @@
   // Box-Muller, with the second deviate kept rather than thrown away --
   // this runs a few million times per sync.
   let ppSpareNormal = null;
+  // ---- A seeded generator, on purpose --------------------------------
+  // This used to draw from Math.random(), which meant 1,500 simulated
+  // seasons produced a slightly different answer every single time they
+  // were run -- and they are re-run on every sync. A pick sat there
+  // visibly flickering between 0.82 and 0.85 while nothing about the
+  // league had changed, which is indistinguishable from the model being
+  // broken and is corrosive to trusting any number on the page.
+  //
+  // That flicker was never information. It is sampling noise: the spread
+  // of a 1,500-run average around the answer the model actually believes.
+  // Seeding the generator per league removes it, so the same inputs
+  // always give the same output and a number only moves when something
+  // real moves -- a score, a roster, a week. The estimate is no less
+  // accurate for being stable; it is the same estimate, just no longer
+  // redrawn from scratch for no reason.
+  //
+  // mulberry32: small, fast, and good enough for Monte Carlo.
+  let ppRandState = 0x9e3779b9;
+  function ppSeedRandom(seedText) {
+    // FNV-1a over the seed string, so a league id and week map to a fixed
+    // starting state.
+    let h = 0x811c9dc5;
+    const str = String(seedText);
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    ppRandState = h >>> 0;
+    ppSpareNormal = null;
+  }
+  function ppRandom() {
+    ppRandState = (ppRandState + 0x6D2B79F5) >>> 0;
+    let t = ppRandState;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
   function ppRandNormal() {
     if (ppSpareNormal !== null) { const v = ppSpareNormal; ppSpareNormal = null; return v; }
     let u = 0, v = 0, sq = 0;
     do {
-      u = Math.random() * 2 - 1; v = Math.random() * 2 - 1; sq = u * u + v * v;
+      u = ppRandom() * 2 - 1; v = ppRandom() * 2 - 1; sq = u * u + v * v;
     } while (sq === 0 || sq >= 1);
     const f = Math.sqrt(-2 * Math.log(sq) / sq);
     ppSpareNormal = v * f;
@@ -22858,6 +23451,10 @@
     const teamCount = rosters.length;
     if (!teamCount || !league) return null;
     const leagueId = league.league_id;
+    // Fixed seed per league, season and week: re-running this with the
+    // same inputs gives the same answer, so a value on screen only moves
+    // when the data behind it moves. See ppSeedRandom.
+    ppSeedRandom('season|' + leagueId + '|' + league.season + '|' + (entry.week || 0));
     const playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
     const regularWeeks = Math.max(1, playoffStart - 1);
     const playoffTeams = Math.min(teamCount, (league.settings && league.settings.playoff_teams) || 6);
@@ -22867,8 +23464,22 @@
       weeks.push(await sleeperGetWeekMatchups(leagueId, w).catch(() => []));
     }
 
-    // A week counts as played once somebody in it has actually scored.
-    const played = weeks.map(ms => Array.isArray(ms) && ms.some(m => (Number(m.points) || 0) > 0));
+    // A week counts as played once it is OVER -- not once somebody in it
+    // has scored.
+    //
+    // The old test was "has anyone scored yet", which makes the week
+    // currently being played count as history from the first touchdown of
+    // the Sunday. Its half-finished scores then fed the model as though
+    // they were a final result, so every 60-second poll handed the
+    // simulation slightly different inputs and a pick drifted all
+    // afternoon -- 0.88, 0.80, 0.84 -- on nothing but partial box scores.
+    // A week in progress belongs to the part of the season still to be
+    // simulated, which is exactly where the remaining-schedule loop below
+    // already puts it.
+    const liveWeek = Number(entry.week) || 0;
+    const played = weeks.map((ms, i) =>
+      Array.isArray(ms) && ms.some(m => (Number(m.points) || 0) > 0)
+      && (liveWeek ? (i + 1) < liveWeek : true));
 
     const scoresById = {};
     rosters.forEach(r => { scoresById[r.roster_id] = []; });
@@ -23166,6 +23777,7 @@
   function ppSimulateFutureYear(entry, dict, yearsOut) {
     const strengths = ppTeamStrengths(entry, dict);
     if (!strengths) return null;
+    ppSeedRandom('future|' + entry.league.league_id + '|' + entry.league.season + '|' + yearsOut);
     const teamCount = strengths.length;
     const playoffTeams = Math.min(teamCount,
       (entry.league.settings && entry.league.settings.playoff_teams) || 6);
@@ -23295,6 +23907,37 @@
   // the render path entirely: the pages draw with the flat fallback on the
   // first pass and are asked to redraw once the real numbers exist.
   let ppPickModelRun = 0;
+  // ---- When a pick value is allowed to move ---------------------------
+  // What a pick is worth should change when something real changes, and
+  // not otherwise. Two things count as real: a week finishing, and a
+  // roster changing hands. Everything else that moves during a Sunday --
+  // live scores, Sleeper nudging its own player projections between
+  // drives -- is noise as far as a draft pick four months out is
+  // concerned, and watching a value tick 0.88 / 0.80 / 0.84 while nothing
+  // has actually happened makes the whole number look untrustworthy.
+  //
+  // So the model is rebuilt only when this signature changes: the league,
+  // the season, which week is live (so it settles once on Monday night,
+  // when the week that just finished becomes history), and the exact set
+  // of players on every roster (so a trade or a waiver claim updates it
+  // immediately, without waiting for the week to end).
+  window.__ppPickModelSig = window.__ppPickModelSig || {};
+  function ppModelSignature(entry) {
+    const league = entry.league;
+    const rosterPart = (entry.allRosters || [])
+      .map(r => r.roster_id + ':' + ((r.players || []).slice().sort().join(',')))
+      .sort()
+      .join('|');
+    // Hashed rather than kept whole: this is ~18 rosters of ~30 ids and
+    // there is no reason to hold that string per league.
+    let h = 0x811c9dc5;
+    for (let i = 0; i < rosterPart.length; i++) {
+      h ^= rosterPart.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return [league.league_id, league.season, entry.week || 0, (h >>> 0).toString(36)].join('|');
+  }
+
   async function ppBuildPickModels(onDone) {
     const run = ++ppPickModelRun;
     let dict = null;
@@ -23302,6 +23945,12 @@
     const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.league);
     for (const entry of entries) {
       if (run !== ppPickModelRun) return;
+      const sig = ppModelSignature(entry);
+      // Nothing that matters has changed since this league was last
+      // simulated, so the existing answer still stands. Skipping the
+      // rebuild is what actually holds the number still.
+      if (window.__ppPickModelSig[entry.league.league_id] === sig
+        && window.__ppPickModel[entry.league.league_id]) continue;
       let current = null;
       try {
         current = await ppSimulateSeason(entry, dict);
@@ -23316,6 +23965,9 @@
         try { future[k] = ppSimulateFutureYear(entry, dict, k); } catch (e) { future[k] = null; }
       }
       window.__ppPickModel[entry.league.league_id] = { current, future };
+      // Only recorded once the model is actually stored, so a failed run
+      // is retried on the next sync rather than being cached as done.
+      window.__ppPickModelSig[entry.league.league_id] = sig;
       // Yield between leagues so a sync never locks the page up.
       await new Promise(r => setTimeout(r, 0));
     }
@@ -23606,6 +24258,26 @@
     return ppPickValue(round);
   }
 
+  // The same thing, priced at the rankings that were live on a given day.
+  //
+  // A pick that has since been used is the player it became, so it is
+  // valued at what HE was worth then.
+  //
+  // For an UNSPENT pick this returns null, not a number: its value comes
+  // from simulating this season, and that simulation cannot be replayed
+  // as of a past date. Callers are expected to use today's value on both
+  // sides of the comparison, so an unspent pick contributes no drift
+  // rather than a made-up one.
+  function ppPickValueResolvedAt(resolved, round, dict, ts) {
+    if (!resolved) return null;
+    const v = ppValueForPlayerIdAt(resolved.playerId, dict, ts);
+    return v != null ? v : 0;
+  }
+  window.ppValueForPlayerIdAt = ppValueForPlayerIdAt;
+  window.ppPickValueResolvedAt = ppPickValueResolvedAt;
+  window.ppHasHistoricalValues = ppHasHistoricalValues;
+  window.ppValueAsOfDate = ppValueAsOfDate;
+
   // Every future pick (next 2 draft classes, rounds 1-4) a roster actually
   // owns right now, resolved through the league's real traded_picks records
   // -- same walk as League Detail's PICKS column, shared here so both that
@@ -23643,6 +24315,42 @@
   // no-fabricated-numbers rule -- redraft has no dynasty asset value to
   // rank). Weekly Schedule stays mock since Sleeper's public API doesn't
   // expose an NFL schedule endpoint.
+  // ---- A record with the median taken back out -------------------------
+  // In a league that plays a median, Sleeper folds BOTH of the week's
+  // results into wins/losses: the head-to-head one and the one against
+  // that week's median score. So a week where you beat your opponent and
+  // missed the median lands in the standings as 1-1, and the portfolio
+  // record on the front page read 12-3 for a week you actually went 12-2.
+  //
+  // This recovers the head-to-head half by replaying the weeks from the
+  // matchup cache the pick model already warms for every league. A league
+  // with no median needs none of this -- its stored record is head-to-head
+  // already -- and a league whose weeks are not cached yet returns null,
+  // which the caller reads as "use the stored record" rather than as zero.
+  function sbHeadToHeadRecord(entry) {
+    const league = entry && entry.league;
+    if (!league || !entry.roster) return null;
+    if (!(league.settings && league.settings.league_average_match)) return null;
+    const cache = window.__sleeperWeekMatchupsCache;
+    if (!cache) return null;
+    const myId = entry.roster.roster_id;
+    const liveWeek = Number(entry.week) || 1;
+    let w = 0, l = 0, t = 0;
+    for (let week = 1; week < liveWeek; week++) {
+      const ms = cache[league.league_id + '_' + week];
+      if (!Array.isArray(ms) || !ms.length) return null;
+      const mine = ms.find(m => m.roster_id === myId);
+      if (!mine || mine.matchup_id == null) continue;
+      const opp = ms.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== myId);
+      if (!opp) continue;
+      const a = Number(mine.points) || 0, b = Number(opp.points) || 0;
+      if (a === 0 && b === 0) continue;
+      if (a > b) w++; else if (b > a) l++; else t++;
+    }
+    return { w, l, t };
+  }
+  window.sbHeadToHeadRecord = sbHeadToHeadRecord;
+
   function renderRealDashboard() {
     const entries = Object.values(window.sleeperLeagueData || {})
       .filter(e => e.roster && (isCoManagedIncluded() || !e.isCoOwned));
@@ -23656,20 +24364,27 @@
     // that are losing on purpose.
     const recordTankList = (typeof sbGetTankList === 'function') ? sbGetTankList() : new Set();
     const recordEntries = entries.filter(e => e.league && !recordTankList.has(e.league.name));
-    let wins = 0, losses = 0, ties = 0;
-    recordEntries.forEach(e => {
-      const s = e.roster.settings || {};
-      wins += s.wins || 0;
-      losses += s.losses || 0;
-      ties += s.ties || 0;
-    });
-    let tankWins = 0, tankLosses = 0, tankTies = 0;
-    entries.filter(e => e.league && recordTankList.has(e.league.name)).forEach(e => {
-      const s = e.roster.settings || {};
-      tankWins += s.wins || 0;
-      tankLosses += s.losses || 0;
-      tankTies += s.ties || 0;
-    });
+    // Head-to-head only: the median result is a second, separate outcome
+    // and folding it in here made this number disagree with the weeks a
+    // person actually remembers playing. It still counts in full on
+    // Results, which is where the median belongs.
+    let medianLeagues = 0;
+    const addRecord = (e, acc) => {
+      const h2h = sbHeadToHeadRecord(e);
+      if (h2h) {
+        medianLeagues++;
+        acc.w += h2h.w; acc.l += h2h.l; acc.t += h2h.t;
+        return;
+      }
+      const st = e.roster.settings || {};
+      acc.w += st.wins || 0; acc.l += st.losses || 0; acc.t += st.ties || 0;
+    };
+    const main = { w: 0, l: 0, t: 0 };
+    recordEntries.forEach(e => addRecord(e, main));
+    const wins = main.w, losses = main.l, ties = main.t;
+    const tank = { w: 0, l: 0, t: 0 };
+    entries.filter(e => e.league && recordTankList.has(e.league.name)).forEach(e => addRecord(e, tank));
+    const tankWins = tank.w, tankLosses = tank.l, tankTies = tank.t;
     const tankLeagueCount = entries.length - recordEntries.length;
 
     // Pulled straight from the Scoreboard's own PROJECTED RECORD number
@@ -23704,10 +24419,7 @@
     // wrong, so the card says what it left out and what those teams did.
     const recordSubEl = document.querySelector('.record-row .record-card .record-sub');
     if (recordSubEl) {
-      recordSubEl.textContent = tankLeagueCount
-        ? `Every league's record added together, excluding ${tankLeagueCount} tanking `
-          + `(${tankWins}-${tankLosses}${tankTies ? '-' + tankTies : ''} there)`
-        : "Every league's record, added together";
+      recordSubEl.textContent = 'Total record among leagues not marked as tanking';
     }
     if (recordValues[1]) {
       recordValues[1].innerHTML = `<span class="win">${projWinSum.toFixed(2)}</span><span class="sep">-</span><span class="loss">${projLossSum.toFixed(2)}</span>`;
@@ -24049,6 +24761,121 @@
     });
     return count;
   }
+
+  // ---- The front door's numbers ---------------------------------------
+  // Filled in only when there is real data to fill them with: on a first
+  // visit with no Sleeper account connected the stat strip is hidden
+  // outright rather than showing a row of dashes, which reads as broken.
+  //
+  // Every figure here is the same one the app shows elsewhere -- the
+  // record is the Dashboard's combined record (tanking leagues left out,
+  // dynasty only, since nobody tanks a redraft league), and FIRSTS is the
+  // Dashboard's own Draft Capital average for the upcoming rookie class.
+  function renderModeChooserStats() {
+    const chooser = document.getElementById('modeChooser');
+    if (!chooser || chooser.hidden) return;
+    const all = Object.values(window.sleeperLeagueData || {})
+      .filter(e => e.roster && e.league && (isCoManagedIncluded() || !e.isCoOwned));
+    const dynastyStats = document.getElementById('mcDynastyStats');
+    const redraftStats = document.getElementById('mcRedraftStats');
+    if (!all.length) {
+      if (dynastyStats) dynastyStats.hidden = true;
+      if (redraftStats) redraftStats.hidden = true;
+      return;
+    }
+
+    const dyn = all.filter(e => sbLeagueIsDynasty(e.league));
+    const red = all.filter(e => !sbLeagueIsDynasty(e.league));
+    const tankList = (typeof sbGetTankList === 'function') ? sbGetTankList() : new Set();
+    const set = (id, text) => { const el = document.getElementById(id); if (el) el.innerHTML = text; };
+
+    const recordOf = (list) => {
+      let w = 0, l = 0, t = 0;
+      list.forEach(e => {
+        const st = e.roster.settings || {};
+        w += st.wins || 0; l += st.losses || 0; t += st.ties || 0;
+      });
+      return `${w}&ndash;${l}${t ? '&ndash;' + t : ''}`;
+    };
+
+    if (dynastyStats) {
+      dynastyStats.hidden = !dyn.length;
+      if (dyn.length) {
+        // Tanking leagues come out of the record, the same as they do on
+        // the Dashboard -- a team losing on purpose is not part of how the
+        // season is going.
+        const counted = dyn.filter(e => !tankList.has(e.league.name));
+        const excluded = dyn.length - counted.length;
+        set('mcDynLeagues', String(dyn.length));
+        set('mcDynRecord', recordOf(counted.length ? counted : dyn));
+        // Two things can be left out of this number, and the box only has
+        // room to name one. Tankers win the line, since that is the one a
+        // person is most likely to be surprised by; the median exclusion
+        // takes the line when there are no tankers, and the full sentence
+        // is on the card either way.
+        const anyMedian = dyn.some(e => e.league.settings && e.league.settings.league_average_match);
+        set('mcDynRecordNote', excluded ? 'EXCL. TANKERS' : (anyMedian ? 'MATCHUPS ONLY' : ''));
+        const recBox = document.getElementById('mcDynRecord');
+        const recCell = recBox && recBox.parentNode;
+        if (recCell) {
+          const parts = ["Every dynasty league's record added together"];
+          if (excluded) parts.push(`${excluded} tanking ${excluded === 1 ? 'league' : 'leagues'} left out`);
+          if (anyMedian) parts.push('matchups only, median results not counted');
+          recCell.setAttribute('title', parts.join(' \u2014 '));
+        }
+
+        // The upcoming rookie class only -- next season's 1sts, averaged
+        // per league, which is the "1st" figure the Dashboard's Draft
+        // Capital column already shows for that year.
+        const season = Number(dyn[0].league.season) || new Date().getFullYear();
+        let firsts = 0;
+        dyn.forEach(e => { firsts += dcPickCountForLeague(e, season + 1, 1); });
+        set('mcDynFirsts', (firsts / dyn.length).toFixed(1));
+        const note = document.getElementById('mcDynFirstsNote');
+        if (note) note.textContent = (season + 1) + ' PER LEAGUE';
+      }
+    }
+
+    if (redraftStats) {
+      redraftStats.hidden = !red.length;
+      if (red.length) {
+        set('mcRedLeagues', String(red.length));
+        set('mcRedRecord', recordOf(red));
+        const redMedian = red.some(e => e.league.settings && e.league.settings.league_average_match);
+        const redRec = document.getElementById('mcRedRecord');
+        if (redRec && redRec.parentNode) {
+          redRec.parentNode.setAttribute('title', "Every redraft league's record added together"
+            + (redMedian ? ' \u2014 matchups only, median results not counted' : ''));
+        }
+        // How many of those teams would make the field if the season ended
+        // now -- the same standings rule the pick model and Results use.
+        let inSpot = 0, known = 0;
+        red.forEach(e => {
+          const rosters = e.allRosters || [];
+          if (rosters.length < 2) return;
+          known++;
+          const spots = Math.min(rosters.length,
+            (e.league.settings && e.league.settings.playoff_teams) || 6);
+          const winsOf = (r) => ((r.settings && r.settings.wins) || 0)
+            + (((r.settings && r.settings.ties) || 0) * 0.5);
+          const pfOf = (r) => ((r.settings && r.settings.fpts) || 0)
+            + (((r.settings && r.settings.fpts_decimal) || 0) / 100);
+          const standings = rosters.slice().sort((a, b) => winsOf(b) - winsOf(a) || pfOf(b) - pfOf(a));
+          const seed = standings.findIndex(r => r.roster_id === e.roster.roster_id) + 1;
+          if (seed > 0 && seed <= spots) inSpot++;
+        });
+        set('mcRedPlayoff', known ? `${inSpot}<span style="font-size:16px">/${known}</span>` : '&mdash;');
+      }
+    }
+
+    const sub = document.getElementById('mcSub');
+    if (sub) {
+      sub.textContent = all.length
+        ? `${all.length} leagues, split two ways.`
+        : 'Two ways in.';
+    }
+  }
+  window.renderModeChooserStats = renderModeChooserStats;
 
   function dcCurrentDynastyEntries() {
     const entries = Object.values(window.sleeperLeagueData || {})
@@ -25983,7 +26810,10 @@
     // Whatever was open, unless the player filter has just ruled it off
     // the list -- then the pane follows the filter to the top match.
     const visibleCards = Array.from(sbGrid.querySelectorAll('.sb-card:not(.sb-card-filtered)'));
-    const firstCard = document.getElementById('sbDetail') ? visibleCards[0] : null;
+    // The reading pane wants a matchup showing at all times, so it falls
+    // back to the first card. Grid View deliberately does not: it opens
+    // with everything closed and only shows a matchup you asked for.
+    const firstCard = sbHasReadingPane() ? visibleCards[0] : null;
     const openStillVisible = openLeagueId &&
       visibleCards.some(c => c.dataset.sleeperLeagueId === openLeagueId);
     const effectiveOpenId = (openStillVisible ? openLeagueId : null)
@@ -26012,7 +26842,18 @@
   // Persists across re-renders (every 60s poll rebuilds sbGrid's innerHTML
   // from scratch) so the chosen sort order sticks instead of resetting back
   // to Sleeper order on every sync.
-  let sbSortCriterion = 'category';
+  // The two layouts want different opening sorts, because they are for
+  // different jobs. The reading-pane views show one matchup at a time, so
+  // they open on the ones still in doubt (Closest Matchup). Grid View
+  // shows the whole slate at once, where the useful shape is the week
+  // grouped into what you are winning and what you are losing, best
+  // chance first -- which is Win Category.
+  //
+  // Each layout remembers its own sort, so switching between them does not
+  // silently re-sort the other one.
+  const SB_DEFAULT_SORT = { pane: 'closest', grid: 'category' };
+  let sbSortByLayout = { pane: SB_DEFAULT_SORT.pane, grid: SB_DEFAULT_SORT.grid };
+  let sbSortCriterion = SB_DEFAULT_SORT.pane;
   let sbSortDir = 1;
   // leagueId -> Set of every player id in that league's matchup (both
   // sides). Rebuilt by renderRealScoreboard; read by the player search.
@@ -26249,6 +27090,32 @@
     });
   })();
 
+  // Called by the view toggle: put the incoming layout's own sort back in
+  // force, and move the dropdown's label and tick to match so the control
+  // never disagrees with the order on screen.
+  function sbApplyLayoutSort(isGrid) {
+    const want = sbSortByLayout[isGrid ? 'grid' : 'pane'];
+    if (!want || want === sbSortCriterion) return;
+    sbSortCriterion = want;
+    sbSortDir = 1;
+    const menu = document.getElementById('sbSortMenu');
+    const label = document.getElementById('sbSortSelectLabel');
+    if (menu) {
+      menu.querySelectorAll('.sort-option').forEach(o => {
+        const on = o.dataset.sort === want;
+        o.classList.toggle('active', on);
+        if (on && label) label.textContent = o.textContent;
+      });
+    }
+    if (typeof applySbSort === 'function') applySbSort();
+  }
+  window.sbApplyLayoutSort = sbApplyLayoutSort;
+  // The view toggle runs earlier in the file than this, so a session that
+  // opens straight into Grid View has already applied the view without
+  // this helper existing yet. Catch that one case up now.
+  if (window.__sbGridView) sbApplyLayoutSort(true);
+
+
   const sbSortSelect = document.getElementById('sbSortSelect');
   const sbSortMenu = document.getElementById('sbSortMenu');
   const sbSortSelectLabel = document.getElementById('sbSortSelectLabel');
@@ -26262,6 +27129,7 @@
         const criterion = option.dataset.sort;
         sbSortDir = criterion === sbSortCriterion ? sbSortDir * -1 : 1;
         sbSortCriterion = criterion;
+        sbSortByLayout[window.__sbGridView ? 'grid' : 'pane'] = criterion;
         sbSortMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
         option.classList.add('active');
         if (sbSortSelectLabel) sbSortSelectLabel.textContent = option.textContent;
@@ -28117,8 +28985,15 @@
     }
 
     // And the delta is the click target for that player's Weekly Sweats row.
+    // Which of a player's leagues count, after the Weekly Sweats
+    // blacklist. The ticker quotes that page, so it has to filter the
+    // same way the page does -- see window.rgVisibleLeagues.
+    function tkFor(r) { return window.rgVisibleLeagues ? window.rgVisibleLeagues(r.for) : (r.for || []); }
+    function tkAgainst(r) { return window.rgVisibleLeagues ? window.rgVisibleLeagues(r.against) : (r.against || []); }
+    function tkSwing(r) { return tkFor(r).length + tkAgainst(r).length; }
+
     function deltaCell(r) {
-      const d = (r.for.length || 0) - (r.against.length || 0);
+      const d = tkFor(r).length - tkAgainst(r).length;
       const cls = d > 0 ? 'is-pos' : (d < 0 ? 'is-neg' : 'is-even');
       const label = d > 0 ? `+${d} for you` : (d < 0 ? `${d} against you` : 'even');
       return `<span class="tk-delta is-sweat ${cls}" data-sweat-id="${esc(r.id)}">${esc(label)}</span>`;
@@ -28249,7 +29124,7 @@
           const poe = r.poe == null ? '' :
             `<span class="tk-delta ${r.poe >= 0 ? 'is-pos' : 'is-neg'}">POE ${signed(r.poe)}</span>`;
           // Only players actually in one of your matchups carry a swing.
-          const swing = (r.for.length + r.against.length) > 0 ? deltaCell(r) : '';
+          const swing = tkSwing(r) > 0 ? deltaCell(r) : '';
           return `<div class="tk-item">${playerCell(r)}` +
                  `<span class="tk-pts">${one(r.pprPoints)}</span>` +
                  `<span class="tk-sub">proj ${one(r.liveProj)}</span>` +
@@ -28318,7 +29193,7 @@
         : (net > 0 ? `+${net} for you` : (net < 0 ? `${net} against you` : 'even'));
       return `<div class="tk-item">${playerCell(item)}` +
         `<span class="tk-delta is-sweat ${cls}" data-sweat-id="${esc(item.id)}">${esc(label)}</span>` +
-        `<span class="tk-sub">${esc(item.for.length)} for &middot; ${esc(item.against.length)} vs</span></div>`;
+        `<span class="tk-sub">${esc(tkFor(item).length)} for &middot; ${esc(tkAgainst(item).length)} vs</span></div>`;
     }
 
     // Ten a side. The whole list belongs on the Weekly Sweats page; a ticker
@@ -28363,8 +29238,8 @@
       // reproduce the order it will land on rather than showing an empty
       // feed, and take the same ten a side.
       const scored = rows
-        .filter(r => (r.for.length + r.against.length) > 0)
-        .map(r => ({ r, delta: r.for.length - r.against.length }))
+        .filter(r => tkSwing(r) > 0)
+        .map(r => ({ r, delta: tkFor(r).length - tkAgainst(r).length }))
         .filter(x => x.delta !== 0);
       const tie = (a, b) => (b.r.liveProj || 0) - (a.r.liveProj || 0);
       // Each side ranked from its own extreme inwards, the way the page's
