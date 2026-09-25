@@ -1784,6 +1784,9 @@
   /* The row for the week being played right now, so it is findable in an
      18-row table without having to remember what week it is. */
   .ldsch-table tr.is-live td { background: rgba(232, 161, 60, 0.10); }
+  .ldsch-table tr.is-linked { cursor: pointer; }
+  .ldsch-table tr.is-linked:hover td { background: var(--border-soft); }
+  .ldsch-table tr.is-linked.is-live:hover td { background: rgba(232, 161, 60, 0.18); }
   .ldsch-table tr.is-playoff-start td { border-top: 2px solid var(--border); }
   .ldsch-week { font-weight: 700; color: var(--muted); }
   .ldsch-opp { font-weight: 700; color: var(--ink); }
@@ -1830,7 +1833,7 @@
      it gets a pointer and a hover rather than reading as another stat. */
   .ld-stat-cell-action { cursor: pointer; flex: 0 0 auto; }
   .ld-stat-cell-action:hover { background: var(--surface-2, rgba(29, 53, 87, 0.04)); }
-  .ld-stat-cell-action .ld-stat-value { display: flex; align-items: center; gap: 5px; }
+  .ld-stat-cell-action .ld-stat-value { display: flex; align-items: center; gap: 5px; margin-top: 0; }
   .ld-stat-cell-action .ld-stat-chev { font-size: 11px; color: var(--faint); }
   .sb-card-meta .sb-delta { color: var(--green); }
   .sb-card-score { text-align: right; flex-shrink: 0; }
@@ -1871,20 +1874,6 @@
     font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px;
     color: var(--muted); background: var(--bg);
     border: 1px solid var(--border); border-radius: 20px; padding: 2px 8px;
-  }
-  .sb-exp-logo {
-    flex-shrink: 0;
-    width: 44px;
-    height: 44px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-    font-weight: 700;
-    font-size: 13px;
-    color: #fff;
   }
   .sb-exp-title { flex: 1; min-width: 0; }
   .sb-exp-name { font-weight: 700; font-size: 16px; }
@@ -4557,7 +4546,7 @@
       <div class="record-card">
         <div>
           <div class="record-label">2026 COMBINED RECORD</div>
-          <div class="record-sub">Every league's record, added together</div>
+          <div class="record-sub">Total record among leagues not marked as tanking</div>
         </div>
         <div class="record-value"><span class="win">12</span><span class="sep">-</span><span class="loss">4</span></div>
       </div>
@@ -5276,8 +5265,7 @@
       <div id="ldRosterExpand">
       <div class="ld-stats" id="ldStats">
         <div class="ld-stat-cell ld-stat-cell-action" id="ldSchedBtn" title="Every matchup this team plays this season">
-          <div class="ld-stat-label">SCHEDULE</div>
-          <div class="ld-stat-value">Full Year <span class="ld-stat-chev">&#9656;</span></div>
+          <div class="ld-stat-value">Schedule <span class="ld-stat-chev">&#9656;</span></div>
         </div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell">
@@ -12798,9 +12786,28 @@
   // It stays pending until a render finds the card, which covers arriving
   // before the leagues have finished syncing; a few seconds of retries
   // cover the render not having been kicked off at all yet.
-  function goToLeagueMatchup(leagueId) {
+  // `week` is optional: without it the Matchup Hub stays on whatever week
+  // it is showing, which is what a jump from a league page wants. The
+  // season schedule passes one, because clicking week 11 there and landing
+  // on week 4 here would be the wrong matchup entirely.
+  function goToLeagueMatchup(leagueId, week) {
     if (!leagueId) return;
     goToSection('lineups');
+    const wantWeek = Number(week);
+    if (wantWeek >= 1 && wantWeek <= 18) {
+      const label = document.getElementById('sbWeekLabel');
+      if (label) label.textContent = String(wantWeek);
+      document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = wantWeek; });
+      const menu = document.getElementById('sbWeekMenu');
+      if (menu) {
+        menu.querySelectorAll('.week-option').forEach(o => {
+          o.classList.toggle('active', Number(o.dataset.week) === wantWeek);
+        });
+      }
+      if (typeof loadScoreboardWeek === 'function') {
+        try { loadScoreboardWeek(wantWeek); } catch (e) {}
+      }
+    }
     window.__sbPendingOpenLeagueId = String(leagueId);
     const started = Date.now();
     (function pump() {
@@ -17153,10 +17160,9 @@
     // card, so it carries its own heading: whose league this is, the
     // record, the opponent, and where the team actually sits in that
     // league (standings place and points-for place).
-    const cardLogoEl = card.querySelector('.sb-card-logo');
-    const logoHtml = cardLogoEl
-      ? `<div class="sb-exp-logo" style="${cardLogoEl.getAttribute('style') || ''}">${cardLogoEl.innerHTML}</div>`
-      : '';
+    // No league logo here. The card you clicked is still on screen a few
+    // inches to the left with its own logo on it, so repeating it in the
+    // pane heading identified nothing the name below it did not.
     const rosterSettings = entry.roster && entry.roster.settings;
     const recordText = rosterSettings
       ? `${rosterSettings.wins || 0}-${rosterSettings.losses || 0}${rosterSettings.ties ? `-${rosterSettings.ties}` : ''}`
@@ -17173,7 +17179,6 @@
     ].filter(Boolean).join('');
     panel.innerHTML =
       '<div class="sb-exp-header">' +
-        logoHtml +
         '<div class="sb-exp-title">' +
           `<div class="sb-exp-name">${sbFieldEsc(entry.league.name)}</div>` +
           `<div class="sb-exp-meta">vs ${sbFieldEsc(oppLabel)}</div>` +
@@ -21391,6 +21396,22 @@
           );
           if (ctx.winPct != null) { pct = ctx.winPct; pctKind = isLive ? 'LIVE' : 'PROJ'; }
         }
+        // Every week past the live one is played on the assumption that
+        // BOTH managers start their best possible lineup -- yours included,
+        // since nobody has set a week 14 lineup in week 4. So the two sides
+        // are the optimal-lineup projections of the rosters as they stand,
+        // which is the same assumption the pick and playoff models make.
+        if (pct == null && week > liveWeek && window.sbTeamOptimalProjection && oppRoster && me) {
+          const mineProj = window.sbTeamOptimalProjection(me.players, league);
+          const oppProj = window.sbTeamOptimalProjection(oppRoster.players, league);
+          if (mineProj > 0 && oppProj > 0) {
+            pct = Math.round(sbWinProbability(mineProj, oppProj));
+            pctKind = 'PROJ';
+          }
+        }
+        // Only where those projections are not to be had (the offseason, a
+        // failed fetch) does this fall back to the team-strength read off
+        // each side's own scoring so far.
         if (pct == null && week >= liveWeek && model) {
           pct = ldschNormalWinPct(model[rosterId], model[opp.roster_id]);
           if (pct != null) pctKind = 'EST';
@@ -21429,7 +21450,10 @@
         const resultHtml = r.result
           ? `<span class="ldsch-result is-${r.result.toLowerCase()}">${r.result}</span>`
           : '<span class="ldsch-blank">&mdash;</span>';
-        return `<tr class="${cls.trim()}">` +
+        // A row is a link into that week's matchup in the Matchup Hub --
+        // the schedule says what is coming, the Hub says who is in it.
+        return `<tr class="${cls.trim()} is-linked" data-sch-week="${r.week}" ` +
+          `title="Open week ${r.week} in the Matchup Hub">` +
           `<td class="ldsch-week">Wk ${r.week}</td>` +
           `<td>${oppHtml}</td>` +
           `<td>${ldschOddsCell(r.pct, r.pctKind)}</td>` +
@@ -21443,6 +21467,15 @@
         '<table class="ldsch-table"><thead><tr>' +
           '<th>WEEK</th><th>OPPONENT</th><th>WIN PROJ.</th><th>LIVE</th><th>FINAL</th><th>RESULT</th>' +
         '</tr></thead><tbody>' + bodyHtml + '</tbody></table>';
+      bodyEl.querySelectorAll('tr.is-linked[data-sch-week]').forEach(tr => {
+        tr.addEventListener('click', () => {
+          const wk = Number(tr.dataset.schWeek);
+          ldschClose();
+          if (typeof goToLeagueMatchup === 'function') {
+            goToLeagueMatchup(entry.league.league_id, wk);
+          }
+        });
+      });
 
       if (sumEl) {
         // Record and points come off the roster's own Sleeper settings
@@ -24386,11 +24419,7 @@
     // wrong, so the card says what it left out and what those teams did.
     const recordSubEl = document.querySelector('.record-row .record-card .record-sub');
     if (recordSubEl) {
-      const medianNote = medianLeagues ? ' Matchups only \u2014 median results are not counted here.' : '';
-      recordSubEl.textContent = (tankLeagueCount
-        ? `Every league's record added together, excluding ${tankLeagueCount} tanking `
-          + `(${tankWins}-${tankLosses}${tankTies ? '-' + tankTies : ''} there)`
-        : "Every league's record, added together") + medianNote;
+      recordSubEl.textContent = 'Total record among leagues not marked as tanking';
     }
     if (recordValues[1]) {
       recordValues[1].innerHTML = `<span class="win">${projWinSum.toFixed(2)}</span><span class="sep">-</span><span class="loss">${projLossSum.toFixed(2)}</span>`;
