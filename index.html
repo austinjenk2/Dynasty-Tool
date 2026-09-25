@@ -2734,40 +2734,32 @@
      font-weight 700, headings set a serif family, table headers set a
      letter-spacing. Leaving one property out is exactly how this control
      kept coming out subtly different from page to page. */
-  .week-select .week-lead {
+  /* The word and the number are ONE label and are styled identically --
+     same family, size, weight and color. They were not: the word sat at
+     9.5px in --faint next to a 14px --ink number, so "WEEK 3" read as two
+     unrelated bits of text with the number shouting over the word. Every
+     property below is deliberately repeated on all three parts rather
+     than shared through the parent, so nothing can inherit a different
+     value from whatever the control happens to be sitting in. */
+  .week-select .week-lead,
+  .week-select .week-num,
+  .week-select .week-caret {
     font-family: 'Nunito', system-ui, sans-serif;
-    font-size: 9.5px;
+    font-size: 13px;
     font-weight: 800;
     font-style: normal;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-    color: var(--faint);
-    line-height: 1;
-  }
-  /* Never uppercased -- this also holds team names and years, not just a
-     week number. */
-  .week-select .week-num {
-    font-family: 'Nunito', system-ui, sans-serif;
-    font-size: 14px;
-    font-weight: 800;
-    font-style: normal;
-    letter-spacing: 0;
+    letter-spacing: 0.3px;
     text-transform: none;
     color: var(--ink);
     line-height: 1;
   }
-  .week-select .week-caret {
-    font-family: 'Nunito', system-ui, sans-serif;
-    font-size: 9px;
-    font-weight: 700;
-    font-style: normal;
-    letter-spacing: 0;
-    text-transform: none;
-    color: var(--faint);
-    line-height: 1;
-  }
+  /* The caret is a glyph, not a word: same color and weight as the label,
+     just sized down so it reads as a control affordance. */
+  .week-select .week-caret { font-size: 10px; letter-spacing: 0; }
   .week-select:hover { border-color: var(--red); background: var(--bg); }
-  .week-select:hover .week-num, .week-select:hover .week-caret { color: var(--red); }
+  .week-select:hover .week-lead,
+  .week-select:hover .week-num,
+  .week-select:hover .week-caret { color: var(--red); }
   .week-menu {
     position: absolute;
     top: calc(100% + 6px);
@@ -14486,7 +14478,6 @@
           return '<div class="trade-aged">' +
             '<span class="trade-aged-label">Today</span>' +
             `<span class="trade-aged-val ${now >= 0 ? 'is-pos' : 'is-neg'}">${nowTxt}</span>` +
-            '<span class="trade-aged-note" title="These rankings only go back to the first set on file, so there is nothing to price this trade against on the day it was made">no rankings from then</span>' +
           '</div>';
         }
         const then = gotThen - gaveThen;
@@ -14497,9 +14488,24 @@
         const flat = Math.abs(drift) < 0.05;
         const driftCls = flat ? 'is-flat' : (drift > 0 ? 'is-pos' : 'is-neg');
         const driftWord = flat ? 'held' : (drift > 0 ? 'your way' : 'their way');
-        const when = ts ? new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        // Which rankings this was priced against, and whether that is
+        // really "the day of the trade" or the earliest set on file. A
+        // trade older than the first rankings is measured from that first
+        // set, and the label says so rather than implying a reading that
+        // never existed.
+        const pricedIso = typeof ppValueAsOfDate === 'function' ? ppValueAsOfDate(ts) : null;
+        const tradeIso = ts ? new Date(ts).toISOString().slice(0, 10) : null;
+        const fromEarliest = !!(pricedIso && tradeIso && pricedIso > tradeIso);
+        const pretty = (iso) => iso
+          ? new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+          : '';
+        const when = pretty(pricedIso);
+        const leadLabel = fromEarliest ? `Since ${when}` : 'At the time';
+        const leadTitle = fromEarliest
+          ? `This trade is older than the first rankings on file, so it is priced from the earliest set (${when})`
+          : `Priced at the rankings that were live on ${when}`;
         return '<div class="trade-aged">' +
-          `<span class="trade-aged-label" title="Priced at the rankings that were live on ${sbFieldEsc(when)}">At the time</span>` +
+          `<span class="trade-aged-label" title="${sbFieldEsc(leadTitle)}">${sbFieldEsc(leadLabel)}</span>` +
           `<span class="trade-aged-val ${then >= 0 ? 'is-pos' : 'is-neg'}">${thenTxt}</span>` +
           '<span class="trade-aged-arrow">&rarr;</span>' +
           '<span class="trade-aged-label">Today</span>' +
@@ -14560,7 +14566,20 @@
           (side === 'got' ? gotHtml : gaveHtml).push(tradePickAssetHtml(pick, entry, resolved, dict));
           if (side === 'got') gotValue += value; else gaveValue += value;
           if (hasThen) {
-            const thenVal = ppPickValueResolvedAt(resolved, pick.round, dict, tradeTs);
+            // A pick that has since been drafted is the player it became,
+            // so it is priced at what HE was worth then.
+            //
+            // A pick still unspent takes today's value on BOTH sides, so
+            // it contributes exactly nothing to the drift. This is the one
+            // honest answer available: its value comes from simulating
+            // this season, and that simulation cannot be replayed as of a
+            // date in the past. Pricing it at the flat round value instead
+            // -- a 1st at a round 1.00 against a simulated 0.83 today --
+            // was comparing two different units and inventing a 0.17 swing
+            // on trades that had not moved at all.
+            const thenVal = resolved
+              ? ppPickValueResolvedAt(resolved, pick.round, dict, tradeTs)
+              : value;
             if (side === 'got') gotThen += thenVal; else gaveThen += thenVal;
           }
           // A pick that has been used IS the player it became, so it counts
@@ -17008,6 +17027,16 @@
 
   // Re-draw whatever matchup is currently open -- used when the
   // Standard/Field toggle flips what the reading pane should be showing.
+  // Grid View has no reading pane, even though #sbDetail is still in the
+  // DOM (CSS hides it). Everything that changes behavior based on "is
+  // there a pane" has to ask this, not just look for the element --
+  // otherwise Grid View inherits the pane's rules: a matchup always open,
+  // and an open card that will not close when you click it again.
+  function sbHasReadingPane() {
+    return !!document.getElementById('sbDetail') && !window.__sbGridView;
+  }
+  window.sbHasReadingPane = sbHasReadingPane;
+
   function sbReopenOpenMatchup() {
     const card = document.querySelector('#sbGrid .sb-card.is-open');
     if (!card) return;
@@ -17197,7 +17226,23 @@
       toggleEl.querySelectorAll('.sb-view-toggle-btn').forEach(btn => {
         btn.classList.toggle('is-active', btn.dataset.sbv === view);
       });
-      if (window.sbReopenOpenMatchup) window.sbReopenOpenMatchup();
+      if (view === 'grid') {
+        // Grid View opens with every matchup closed -- the point of it is
+        // seeing the whole slate at once, and an auto-opened panel pushes
+        // half of that off the screen. Reopening is for the two pane views,
+        // which need something in the pane.
+        document.querySelectorAll('#sbGrid .sb-expand').forEach(el => el.remove());
+        document.querySelectorAll('#sbGrid .sb-card.is-open').forEach(el => el.classList.remove('is-open'));
+        const detail = document.getElementById('sbDetail');
+        if (detail) detail.innerHTML = '';
+      } else {
+        // Coming back from Grid View, the open matchup's panel is sitting
+        // inline under its card. Reopening alone would build a second one
+        // in the reading pane and leave the first where it was, so the
+        // inline one is cleared first and the pane rebuilds it.
+        document.querySelectorAll('#sbGrid .sb-expand').forEach(el => el.remove());
+        if (window.sbReopenOpenMatchup) window.sbReopenOpenMatchup();
+      }
     }
     let savedView = 'scoreboard';
     try { savedView = localStorage.getItem(SB_VIEW_KEY) || 'scoreboard'; } catch (e) {}
@@ -17226,7 +17271,7 @@
       // With the reading pane there is always a matchup open, so clicking
       // the one already showing is a no-op instead of closing it. Without
       // the pane (narrow/legacy markup) the old toggle still applies.
-      const detailPane = document.getElementById('sbDetail');
+      const detailPane = sbHasReadingPane();
       const alreadyOpen = detailPane
         ? card.classList.contains('is-open')
         : (card.nextElementSibling && card.nextElementSibling.classList.contains('sb-expand'));
@@ -22909,12 +22954,30 @@
     for (let i = 0; i < PP_VALUE_HISTORY.length; i++) {
       if (iso >= PP_VALUE_HISTORY[i].asOf) table = PP_VALUE_HISTORY[i].values;
     }
-    // null, not today's table: before the first snapshot there is no
-    // honest answer, and the callers render that as a dash.
-    return table;
+    // A trade older than the first set of rankings is priced at that first
+    // set -- it is the earliest reading that exists, and a preseason trade
+    // measured against preseason values is a fair comparison even if the
+    // deal itself predates the file. The label says which date was used,
+    // so it never reads as "this is what it was worth that day" when it is
+    // really "this is what it was worth on the 6th".
+    return table || (PP_VALUE_HISTORY[0] ? PP_VALUE_HISTORY[0].values : null);
   }
 
-  // Was this date early enough that nothing was being tracked yet?
+  // The date whose rankings a given trade is priced against -- which is
+  // the trade's own date once it is inside the history, and the earliest
+  // date on file for anything older.
+  function ppValueAsOfDate(ts) {
+    if (!PP_VALUE_HISTORY.length) return null;
+    const first = PP_VALUE_HISTORY[0].asOf;
+    if (ts == null || !isFinite(ts)) return null;
+    const day = new Date(ts);
+    if (isNaN(day.getTime())) return null;
+    const iso = day.toISOString().slice(0, 10);
+    return iso < first ? first : iso;
+  }
+
+  // Is there any ranking at all to price this against? True whenever the
+  // history is non-empty, since the earliest set now backstops everything.
   function ppHasHistoricalValues(ts) { return ppValueTableAt(ts) != null; }
 
   // One player's value as of a date. Same name normalization as
@@ -22950,11 +23013,49 @@
   // Box-Muller, with the second deviate kept rather than thrown away --
   // this runs a few million times per sync.
   let ppSpareNormal = null;
+  // ---- A seeded generator, on purpose --------------------------------
+  // This used to draw from Math.random(), which meant 1,500 simulated
+  // seasons produced a slightly different answer every single time they
+  // were run -- and they are re-run on every sync. A pick sat there
+  // visibly flickering between 0.82 and 0.85 while nothing about the
+  // league had changed, which is indistinguishable from the model being
+  // broken and is corrosive to trusting any number on the page.
+  //
+  // That flicker was never information. It is sampling noise: the spread
+  // of a 1,500-run average around the answer the model actually believes.
+  // Seeding the generator per league removes it, so the same inputs
+  // always give the same output and a number only moves when something
+  // real moves -- a score, a roster, a week. The estimate is no less
+  // accurate for being stable; it is the same estimate, just no longer
+  // redrawn from scratch for no reason.
+  //
+  // mulberry32: small, fast, and good enough for Monte Carlo.
+  let ppRandState = 0x9e3779b9;
+  function ppSeedRandom(seedText) {
+    // FNV-1a over the seed string, so a league id and week map to a fixed
+    // starting state.
+    let h = 0x811c9dc5;
+    const str = String(seedText);
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    ppRandState = h >>> 0;
+    ppSpareNormal = null;
+  }
+  function ppRandom() {
+    ppRandState = (ppRandState + 0x6D2B79F5) >>> 0;
+    let t = ppRandState;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
   function ppRandNormal() {
     if (ppSpareNormal !== null) { const v = ppSpareNormal; ppSpareNormal = null; return v; }
     let u = 0, v = 0, sq = 0;
     do {
-      u = Math.random() * 2 - 1; v = Math.random() * 2 - 1; sq = u * u + v * v;
+      u = ppRandom() * 2 - 1; v = ppRandom() * 2 - 1; sq = u * u + v * v;
     } while (sq === 0 || sq >= 1);
     const f = Math.sqrt(-2 * Math.log(sq) / sq);
     ppSpareNormal = v * f;
@@ -23098,6 +23199,10 @@
     const teamCount = rosters.length;
     if (!teamCount || !league) return null;
     const leagueId = league.league_id;
+    // Fixed seed per league, season and week: re-running this with the
+    // same inputs gives the same answer, so a value on screen only moves
+    // when the data behind it moves. See ppSeedRandom.
+    ppSeedRandom('season|' + leagueId + '|' + league.season + '|' + (entry.week || 0));
     const playoffStart = (league.settings && league.settings.playoff_week_start) || 15;
     const regularWeeks = Math.max(1, playoffStart - 1);
     const playoffTeams = Math.min(teamCount, (league.settings && league.settings.playoff_teams) || 6);
@@ -23406,6 +23511,7 @@
   function ppSimulateFutureYear(entry, dict, yearsOut) {
     const strengths = ppTeamStrengths(entry, dict);
     if (!strengths) return null;
+    ppSeedRandom('future|' + entry.league.league_id + '|' + entry.league.season + '|' + yearsOut);
     const teamCount = strengths.length;
     const playoffTeams = Math.min(teamCount,
       (entry.league.settings && entry.league.settings.playoff_teams) || 6);
@@ -23849,21 +23955,22 @@
   // The same thing, priced at the rankings that were live on a given day.
   //
   // A pick that has since been used is the player it became, so it is
-  // valued at what HE was worth then. A pick still unspent is valued at
-  // its plain round value, which is the right call and not a shortcut:
-  // the simulated slot value is a read on how this season is going, and
-  // replaying that as of a date months ago is not something the model can
-  // honestly do.
+  // valued at what HE was worth then.
+  //
+  // For an UNSPENT pick this returns null, not a number: its value comes
+  // from simulating this season, and that simulation cannot be replayed
+  // as of a past date. Callers are expected to use today's value on both
+  // sides of the comparison, so an unspent pick contributes no drift
+  // rather than a made-up one.
   function ppPickValueResolvedAt(resolved, round, dict, ts) {
-    if (resolved) {
-      const v = ppValueForPlayerIdAt(resolved.playerId, dict, ts);
-      return v != null ? v : 0;
-    }
-    return ppPickValue(round);
+    if (!resolved) return null;
+    const v = ppValueForPlayerIdAt(resolved.playerId, dict, ts);
+    return v != null ? v : 0;
   }
   window.ppValueForPlayerIdAt = ppValueForPlayerIdAt;
   window.ppPickValueResolvedAt = ppPickValueResolvedAt;
   window.ppHasHistoricalValues = ppHasHistoricalValues;
+  window.ppValueAsOfDate = ppValueAsOfDate;
 
   // Every future pick (next 2 draft classes, rounds 1-4) a roster actually
   // owns right now, resolved through the league's real traded_picks records
@@ -26242,7 +26349,10 @@
     // Whatever was open, unless the player filter has just ruled it off
     // the list -- then the pane follows the filter to the top match.
     const visibleCards = Array.from(sbGrid.querySelectorAll('.sb-card:not(.sb-card-filtered)'));
-    const firstCard = document.getElementById('sbDetail') ? visibleCards[0] : null;
+    // The reading pane wants a matchup showing at all times, so it falls
+    // back to the first card. Grid View deliberately does not: it opens
+    // with everything closed and only shows a matchup you asked for.
+    const firstCard = sbHasReadingPane() ? visibleCards[0] : null;
     const openStillVisible = openLeagueId &&
       visibleCards.some(c => c.dataset.sleeperLeagueId === openLeagueId);
     const effectiveOpenId = (openStillVisible ? openLeagueId : null)
