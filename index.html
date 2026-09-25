@@ -1265,11 +1265,15 @@
     overflow: visible;
     padding-right: 0;
   }
+  /* Two wide columns, not as many as will fit: a matchup card carries a
+     league name, a record, two projections and a live line, and squeezing
+     four of them across a wide screen shrinks all of that to nothing. */
   .sb-gridview .sb-grid {
-    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     align-items: start;
   }
+  @media (max-width: 900px) { .sb-gridview .sb-grid { grid-template-columns: 1fr; } }
   /* An open card and its panel take the whole row, so the panel sits
      directly under the card it belongs to instead of below and to the
      left of it. */
@@ -17226,6 +17230,15 @@
       toggleEl.querySelectorAll('.sb-view-toggle-btn').forEach(btn => {
         btn.classList.toggle('is-active', btn.dataset.sbv === view);
       });
+      // Each layout carries its own sort -- Grid opens grouped by win
+      // category, the pane views on the closest matchups.
+      //
+      // Skipped on the very first call. sbApplyLayoutSort is a top-level
+      // function declaration, so it is already reachable on window here,
+      // but the sort state it reads is declared much further down the file
+      // and is still in its temporal dead zone while this runs. The
+      // catch-up call beside that state handles the opening view instead.
+      if (sbViewReady && window.sbApplyLayoutSort) window.sbApplyLayoutSort(view === 'grid');
       if (view === 'grid') {
         // Grid View opens with every matchup closed -- the point of it is
         // seeing the whole slate at once, and an auto-opened panel pushes
@@ -17244,12 +17257,14 @@
         if (window.sbReopenOpenMatchup) window.sbReopenOpenMatchup();
       }
     }
+    let sbViewReady = false;
     let savedView = 'scoreboard';
     try { savedView = localStorage.getItem(SB_VIEW_KEY) || 'scoreboard'; } catch (e) {}
     // A stored value from an older build (or a hand-edited one) must not
     // leave the page in a state no button matches.
     if (!SB_VIEWS.includes(savedView)) savedView = 'scoreboard';
     applyView(savedView);
+    sbViewReady = true;
     toggleEl.addEventListener('click', (e) => {
       const btn = e.target.closest('.sb-view-toggle-btn');
       if (!btn) return;
@@ -23212,8 +23227,22 @@
       weeks.push(await sleeperGetWeekMatchups(leagueId, w).catch(() => []));
     }
 
-    // A week counts as played once somebody in it has actually scored.
-    const played = weeks.map(ms => Array.isArray(ms) && ms.some(m => (Number(m.points) || 0) > 0));
+    // A week counts as played once it is OVER -- not once somebody in it
+    // has scored.
+    //
+    // The old test was "has anyone scored yet", which makes the week
+    // currently being played count as history from the first touchdown of
+    // the Sunday. Its half-finished scores then fed the model as though
+    // they were a final result, so every 60-second poll handed the
+    // simulation slightly different inputs and a pick drifted all
+    // afternoon -- 0.88, 0.80, 0.84 -- on nothing but partial box scores.
+    // A week in progress belongs to the part of the season still to be
+    // simulated, which is exactly where the remaining-schedule loop below
+    // already puts it.
+    const liveWeek = Number(entry.week) || 0;
+    const played = weeks.map((ms, i) =>
+      Array.isArray(ms) && ms.some(m => (Number(m.points) || 0) > 0)
+      && (liveWeek ? (i + 1) < liveWeek : true));
 
     const scoresById = {};
     rosters.forEach(r => { scoresById[r.roster_id] = []; });
@@ -23641,6 +23670,37 @@
   // the render path entirely: the pages draw with the flat fallback on the
   // first pass and are asked to redraw once the real numbers exist.
   let ppPickModelRun = 0;
+  // ---- When a pick value is allowed to move ---------------------------
+  // What a pick is worth should change when something real changes, and
+  // not otherwise. Two things count as real: a week finishing, and a
+  // roster changing hands. Everything else that moves during a Sunday --
+  // live scores, Sleeper nudging its own player projections between
+  // drives -- is noise as far as a draft pick four months out is
+  // concerned, and watching a value tick 0.88 / 0.80 / 0.84 while nothing
+  // has actually happened makes the whole number look untrustworthy.
+  //
+  // So the model is rebuilt only when this signature changes: the league,
+  // the season, which week is live (so it settles once on Monday night,
+  // when the week that just finished becomes history), and the exact set
+  // of players on every roster (so a trade or a waiver claim updates it
+  // immediately, without waiting for the week to end).
+  window.__ppPickModelSig = window.__ppPickModelSig || {};
+  function ppModelSignature(entry) {
+    const league = entry.league;
+    const rosterPart = (entry.allRosters || [])
+      .map(r => r.roster_id + ':' + ((r.players || []).slice().sort().join(',')))
+      .sort()
+      .join('|');
+    // Hashed rather than kept whole: this is ~18 rosters of ~30 ids and
+    // there is no reason to hold that string per league.
+    let h = 0x811c9dc5;
+    for (let i = 0; i < rosterPart.length; i++) {
+      h ^= rosterPart.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return [league.league_id, league.season, entry.week || 0, (h >>> 0).toString(36)].join('|');
+  }
+
   async function ppBuildPickModels(onDone) {
     const run = ++ppPickModelRun;
     let dict = null;
@@ -23648,6 +23708,12 @@
     const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.league);
     for (const entry of entries) {
       if (run !== ppPickModelRun) return;
+      const sig = ppModelSignature(entry);
+      // Nothing that matters has changed since this league was last
+      // simulated, so the existing answer still stands. Skipping the
+      // rebuild is what actually holds the number still.
+      if (window.__ppPickModelSig[entry.league.league_id] === sig
+        && window.__ppPickModel[entry.league.league_id]) continue;
       let current = null;
       try {
         current = await ppSimulateSeason(entry, dict);
@@ -23662,6 +23728,9 @@
         try { future[k] = ppSimulateFutureYear(entry, dict, k); } catch (e) { future[k] = null; }
       }
       window.__ppPickModel[entry.league.league_id] = { current, future };
+      // Only recorded once the model is actually stored, so a failed run
+      // is retried on the next sync rather than being cached as done.
+      window.__ppPickModelSig[entry.league.league_id] = sig;
       // Yield between leagues so a sync never locks the page up.
       await new Promise(r => setTimeout(r, 0));
     }
@@ -26381,11 +26450,18 @@
   // Persists across re-renders (every 60s poll rebuilds sbGrid's innerHTML
   // from scratch) so the chosen sort order sticks instead of resetting back
   // to Sleeper order on every sync.
-  // Closest Matchup on a first visit: the matchups worth looking at are
-  // the ones still in doubt, and a page that opens on those is useful
-  // before you touch anything. (A sort you pick yourself is remembered
-  // from then on -- this is only the starting point.)
-  let sbSortCriterion = 'closest';
+  // The two layouts want different opening sorts, because they are for
+  // different jobs. The reading-pane views show one matchup at a time, so
+  // they open on the ones still in doubt (Closest Matchup). Grid View
+  // shows the whole slate at once, where the useful shape is the week
+  // grouped into what you are winning and what you are losing, best
+  // chance first -- which is Win Category.
+  //
+  // Each layout remembers its own sort, so switching between them does not
+  // silently re-sort the other one.
+  const SB_DEFAULT_SORT = { pane: 'closest', grid: 'category' };
+  let sbSortByLayout = { pane: SB_DEFAULT_SORT.pane, grid: SB_DEFAULT_SORT.grid };
+  let sbSortCriterion = SB_DEFAULT_SORT.pane;
   let sbSortDir = 1;
   // leagueId -> Set of every player id in that league's matchup (both
   // sides). Rebuilt by renderRealScoreboard; read by the player search.
@@ -26622,6 +26698,32 @@
     });
   })();
 
+  // Called by the view toggle: put the incoming layout's own sort back in
+  // force, and move the dropdown's label and tick to match so the control
+  // never disagrees with the order on screen.
+  function sbApplyLayoutSort(isGrid) {
+    const want = sbSortByLayout[isGrid ? 'grid' : 'pane'];
+    if (!want || want === sbSortCriterion) return;
+    sbSortCriterion = want;
+    sbSortDir = 1;
+    const menu = document.getElementById('sbSortMenu');
+    const label = document.getElementById('sbSortSelectLabel');
+    if (menu) {
+      menu.querySelectorAll('.sort-option').forEach(o => {
+        const on = o.dataset.sort === want;
+        o.classList.toggle('active', on);
+        if (on && label) label.textContent = o.textContent;
+      });
+    }
+    if (typeof applySbSort === 'function') applySbSort();
+  }
+  window.sbApplyLayoutSort = sbApplyLayoutSort;
+  // The view toggle runs earlier in the file than this, so a session that
+  // opens straight into Grid View has already applied the view without
+  // this helper existing yet. Catch that one case up now.
+  if (window.__sbGridView) sbApplyLayoutSort(true);
+
+
   const sbSortSelect = document.getElementById('sbSortSelect');
   const sbSortMenu = document.getElementById('sbSortMenu');
   const sbSortSelectLabel = document.getElementById('sbSortSelectLabel');
@@ -26635,6 +26737,7 @@
         const criterion = option.dataset.sort;
         sbSortDir = criterion === sbSortCriterion ? sbSortDir * -1 : 1;
         sbSortCriterion = criterion;
+        sbSortByLayout[window.__sbGridView ? 'grid' : 'pane'] = criterion;
         sbSortMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
         option.classList.add('active');
         if (sbSortSelectLabel) sbSortSelectLabel.textContent = option.textContent;
