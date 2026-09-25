@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fantasy Desk — Mockup</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Source+Serif+4:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
 <style>
   :root {
     /* Cream Classic -- the original light palette. */
@@ -3465,6 +3465,107 @@
     justify-content: center;
     padding: 24px;
   }
+  /* ---- The first-run chooser: a pair of ticket stubs -----------------
+     Deliberately not the Cream Classic palette the rest of the app runs
+     on. This is the front door and it is allowed its own voice: the
+     Retro Sports Card direction the project picked at the start --
+     warm cardstock, heavy navy rules, hard offset shadows and a
+     condensed display face. The screens behind it stay as they are. */
+  .mode-chooser { background: #f2e9d5; flex-direction: column; }
+  .mc-eyebrow {
+    font-family: 'Anton', sans-serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: #1d3557;
+    opacity: 0.65;
+  }
+  .mc-title {
+    margin: 14px 0 6px;
+    font-family: 'Anton', sans-serif;
+    font-size: 62px;
+    letter-spacing: 0.5px;
+    color: #1d3557;
+    text-transform: uppercase;
+    line-height: 1;
+    text-align: center;
+  }
+  .mc-sub { margin: 0 0 40px; font-size: 16px; font-weight: 700; color: #4a5f7f; text-align: center; }
+  .mc-stubs { display: flex; gap: 34px; align-items: stretch; flex-wrap: wrap; justify-content: center; }
+  .mc-stub {
+    cursor: pointer;
+    font-family: 'Source Sans 3', sans-serif;
+    text-align: left;
+    width: 440px;
+    max-width: 100%;
+    padding: 0;
+    background: #fff9ea;
+    border: 3px solid #1d3557;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 7px 7px 0 0 #1d3557;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .mc-stub:hover { transform: translate(-2px, -2px); box-shadow: 10px 10px 0 0 #1d3557; }
+  .mc-stub:active { transform: translate(2px, 2px); box-shadow: 4px 4px 0 0 #1d3557; }
+  /* The colour band across the top of each stub -- navy for dynasty, red
+     for redraft. No text: it is the card's colour, not a label. */
+  .mc-band { display: block; height: 20px; }
+  .mc-band-dynasty { background: #1d3557; }
+  .mc-band-redraft { background: #c8322d; }
+  .mc-body { padding: 30px 26px 24px; display: flex; flex-direction: column; flex-grow: 1; }
+  .mc-name {
+    font-family: 'Anton', sans-serif;
+    font-size: 58px;
+    line-height: 0.95;
+    letter-spacing: 0.5px;
+    color: #1d3557;
+    text-transform: uppercase;
+  }
+  .mc-desc { margin-top: 12px; font-size: 15px; font-weight: 600; line-height: 1.5; color: #4a5f7f; }
+  .mc-spacer { flex-grow: 1; }
+  .mc-stats { display: flex; gap: 10px; margin-top: 24px; align-items: stretch; }
+  .mc-stat {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 0;
+    padding: 10px 12px;
+    background: #f2e9d5;
+    border: 2px solid #1d3557;
+    border-radius: 9px;
+    display: flex;
+    flex-direction: column;
+  }
+  .mc-stat-value { font-family: 'Anton', sans-serif; font-size: 25px; line-height: 1.1; color: #1d3557; }
+  .mc-stat-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.8px; color: #4a5f7f; }
+  .mc-stat-note { font-size: 9.5px; font-weight: 600; letter-spacing: 0.4px; color: #4a5f7f; }
+  .mc-enter {
+    border-top: 3px dashed #c9bda2;
+    padding: 15px 26px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff9ea;
+  }
+  .mc-enter-label { font-family: 'Anton', sans-serif; font-size: 17px; letter-spacing: 1.6px; color: #c8322d; }
+  .mc-all { margin-top: 34px; }
+  .mc-all a {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1d3557;
+    text-decoration: none;
+    border-bottom: 2px solid #c9bda2;
+    padding-bottom: 2px;
+  }
+  .mc-all a:hover { color: #c8322d; border-bottom-color: #c8322d; }
+  @media (max-width: 980px) {
+    .mc-title { font-size: 44px; }
+    .mc-name { font-size: 44px; }
+  }
+
+  /* The compact picker in Settings keeps the app's own look -- it sits
+     inside an ordinary settings panel, not on the front door. */
   .mode-chooser-card { max-width: 520px; text-align: center; }
   .mode-chooser-card h1 { font-family: 'Source Serif 4', serif; font-size: 26px; margin: 0 0 8px; color: var(--ink); }
   .mode-chooser-card p { color: var(--muted); font-size: 13.5px; margin: 0 0 28px; }
@@ -4364,22 +4465,69 @@
 </nav>
 
 <div class="mode-chooser" id="modeChooser" hidden>
-  <div class="mode-chooser-card">
-    <h1>Dynasty or Redraft?</h1>
-    <p>Pick which leagues you want to see by default. You can always show all leagues, or switch modes later in Settings.</p>
-    <div class="mode-chooser-options">
-      <div class="mode-chooser-option" data-mode="dynasty">
-        <div class="mode-chooser-emoji">&#127942;</div>
-        <div class="mode-chooser-name">Dynasty</div>
-        <div class="mode-chooser-sub">Keeper &amp; dynasty leagues</div>
-      </div>
-      <div class="mode-chooser-option" data-mode="redraft">
-        <div class="mode-chooser-emoji">&#128256;</div>
-        <div class="mode-chooser-name">Redraft</div>
-        <div class="mode-chooser-sub">Season-only leagues</div>
-      </div>
-    </div>
+  <div class="mc-eyebrow">FANTASY DESK</div>
+  <h1 class="mc-title">Take Your Pick</h1>
+  <p class="mc-sub" id="mcSub">Two ways in.</p>
+
+  <div class="mc-stubs">
+    <button type="button" class="mc-stub" data-mode="dynasty">
+      <span class="mc-band mc-band-dynasty"></span>
+      <span class="mc-body">
+        <span class="mc-name">Dynasty</span>
+        <span class="mc-desc">Keeper and dynasty leagues. Picks, rookie classes and player values that carry year to year.</span>
+        <span class="mc-spacer"></span>
+        <span class="mc-stats" id="mcDynastyStats" hidden>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcDynLeagues">&mdash;</span>
+            <span class="mc-stat-label">LEAGUES</span>
+          </span>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcDynRecord">&mdash;</span>
+            <span class="mc-stat-label">RECORD</span>
+            <span class="mc-stat-note" id="mcDynRecordNote"></span>
+          </span>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcDynFirsts">&mdash;</span>
+            <span class="mc-stat-label">FIRSTS</span>
+            <span class="mc-stat-note" id="mcDynFirstsNote">PER LEAGUE</span>
+          </span>
+        </span>
+      </span>
+      <span class="mc-enter">
+        <span class="mc-enter-label">ENTER</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c8322d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+      </span>
+    </button>
+
+    <button type="button" class="mc-stub" data-mode="redraft">
+      <span class="mc-band mc-band-redraft"></span>
+      <span class="mc-body">
+        <span class="mc-name">Redraft</span>
+        <span class="mc-desc">Season-only leagues. No draft capital and no dynasty value.</span>
+        <span class="mc-spacer"></span>
+        <span class="mc-stats" id="mcRedraftStats" hidden>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcRedLeagues">&mdash;</span>
+            <span class="mc-stat-label">LEAGUES</span>
+          </span>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcRedRecord">&mdash;</span>
+            <span class="mc-stat-label">RECORD</span>
+          </span>
+          <span class="mc-stat">
+            <span class="mc-stat-value" id="mcRedPlayoff">&mdash;</span>
+            <span class="mc-stat-label">IN PLAYOFF</span>
+          </span>
+        </span>
+      </span>
+      <span class="mc-enter">
+        <span class="mc-enter-label">ENTER</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c8322d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+      </span>
+    </button>
   </div>
+
+  <div class="mc-all"><a href="#" id="mcShowAll">Season pass &mdash; show every league</a></div>
 </div>
 
 <div class="content">
@@ -20097,24 +20245,36 @@
       const totalNet = rows.reduce((s, r) => s + (r.net || 0), 0);
       const netCls = ldrecSignClass(totalNet);
 
-      const weeklyRecordOf = (res) => {
+      // Each ENTRY is { res, wgt }. A league that plays a median produces
+      // two results a week, so each of them is worth half: a week where you
+      // won head-to-head and missed the median reads 0.5-0.5 rather than
+      // 1-1, and one league never counts double against a league that only
+      // plays head-to-head. The halves are why this row can read 12.5-2.5.
+      const weeklyRecordOf = (cells) => {
         let w = 0, l = 0;
-        res.forEach(r => { if (r === 'W') w++; else if (r === 'L') l++; });
-        return `${w}-${l}`;
+        cells.forEach(c => {
+          const wgt = c.wgt == null ? 1 : c.wgt;
+          if (c.res === 'W') w += wgt; else if (c.res === 'L') l += wgt;
+        });
+        const fmt = (n) => (Math.abs(n - Math.round(n)) < 1e-9 ? String(Math.round(n)) : n.toFixed(1));
+        return `${fmt(w)}-${fmt(l)}`;
       };
       let weekCellsHtml = '';
       for (let i = 0; i < maxRegWeeks; i++) {
-        const results = rows.map(r => (i < r.weekResults.length ? r.weekResults[i] : null)).filter(Boolean);
-        // Include median results in the combined weekly count too, for any
-        // league that has them, so the footer isn't undercounting real
-        // results for median leagues.
-        const medianResults = rows
-          .flatMap(r => (r.hasMedian && r.weekMedianResults && i < r.weekMedianResults.length) ? [r.weekMedianResults[i]] : [])
-          .filter(Boolean);
-        const combined = [...results, ...medianResults];
-        weekCellsHtml += `<td>${combined.length ? weeklyRecordOf(combined) : '&mdash;'}</td>`;
+        const cells = [];
+        rows.forEach(r => {
+          // Half each in a median league, so one league is worth one week
+          // however many results that week produced.
+          const wgt = r.hasMedian ? 0.5 : 1;
+          const h2h = i < r.weekResults.length ? r.weekResults[i] : null;
+          if (h2h) cells.push({ res: h2h, wgt });
+          const med = (r.hasMedian && r.weekMedianResults && i < r.weekMedianResults.length)
+            ? r.weekMedianResults[i] : null;
+          if (med) cells.push({ res: med, wgt: 0.5 });
+        });
+        weekCellsHtml += `<td>${cells.length ? weeklyRecordOf(cells) : '&mdash;'}</td>`;
       }
-      const roundRecordOf = (key) => weeklyRecordOf(rows.map(r => r[key]).filter(Boolean));
+      const roundRecordOf = (key) => weeklyRecordOf(rows.map(r => r[key]).filter(Boolean).map(res => ({ res, wgt: 1 })));
 
       // Totals across every league, plus the single best and worst week you
       // put up anywhere -- an average of averages would be wrong here, so
@@ -21909,7 +22069,26 @@
     const modeChooserEl = document.getElementById('modeChooser');
     if (modeChooserEl && !getSiteMode()) {
       modeChooserEl.hidden = false;
-      modeChooserEl.querySelectorAll('.mode-chooser-option').forEach(opt => {
+      if (window.renderModeChooserStats) window.renderModeChooserStats();
+      const showAllLink = document.getElementById('mcShowAll');
+      if (showAllLink) {
+        showAllLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          // "Every league" still needs a stored mode -- dynasty is the one
+          // that keeps the pick and value columns switched on, and the
+          // show-all toggle then widens it past that mode's own leagues.
+          setSiteMode('dynasty');
+          if (typeof setShowAllLeagues === 'function') setShowAllLeagues(true);
+          modeChooserEl.hidden = true;
+          if (window.refreshSettingsModeOptions) window.refreshSettingsModeOptions();
+          if (window.updateModeToggleBtn) window.updateModeToggleBtn();
+          if (window.sleeperReloadData) window.sleeperReloadData();
+          if (!getSavedUser()) {
+            setTimeout(() => { connectPanel.hidden = false; usernameInput.focus(); }, 0);
+          }
+        });
+      }
+      modeChooserEl.querySelectorAll('.mc-stub').forEach(opt => {
         opt.addEventListener('click', () => {
           setSiteMode(opt.dataset.mode);
           modeChooserEl.hidden = true;
@@ -24078,6 +24257,42 @@
   // no-fabricated-numbers rule -- redraft has no dynasty asset value to
   // rank). Weekly Schedule stays mock since Sleeper's public API doesn't
   // expose an NFL schedule endpoint.
+  // ---- A record with the median taken back out -------------------------
+  // In a league that plays a median, Sleeper folds BOTH of the week's
+  // results into wins/losses: the head-to-head one and the one against
+  // that week's median score. So a week where you beat your opponent and
+  // missed the median lands in the standings as 1-1, and the portfolio
+  // record on the front page read 12-3 for a week you actually went 12-2.
+  //
+  // This recovers the head-to-head half by replaying the weeks from the
+  // matchup cache the pick model already warms for every league. A league
+  // with no median needs none of this -- its stored record is head-to-head
+  // already -- and a league whose weeks are not cached yet returns null,
+  // which the caller reads as "use the stored record" rather than as zero.
+  function sbHeadToHeadRecord(entry) {
+    const league = entry && entry.league;
+    if (!league || !entry.roster) return null;
+    if (!(league.settings && league.settings.league_average_match)) return null;
+    const cache = window.__sleeperWeekMatchupsCache;
+    if (!cache) return null;
+    const myId = entry.roster.roster_id;
+    const liveWeek = Number(entry.week) || 1;
+    let w = 0, l = 0, t = 0;
+    for (let week = 1; week < liveWeek; week++) {
+      const ms = cache[league.league_id + '_' + week];
+      if (!Array.isArray(ms) || !ms.length) return null;
+      const mine = ms.find(m => m.roster_id === myId);
+      if (!mine || mine.matchup_id == null) continue;
+      const opp = ms.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== myId);
+      if (!opp) continue;
+      const a = Number(mine.points) || 0, b = Number(opp.points) || 0;
+      if (a === 0 && b === 0) continue;
+      if (a > b) w++; else if (b > a) l++; else t++;
+    }
+    return { w, l, t };
+  }
+  window.sbHeadToHeadRecord = sbHeadToHeadRecord;
+
   function renderRealDashboard() {
     const entries = Object.values(window.sleeperLeagueData || {})
       .filter(e => e.roster && (isCoManagedIncluded() || !e.isCoOwned));
@@ -24091,20 +24306,27 @@
     // that are losing on purpose.
     const recordTankList = (typeof sbGetTankList === 'function') ? sbGetTankList() : new Set();
     const recordEntries = entries.filter(e => e.league && !recordTankList.has(e.league.name));
-    let wins = 0, losses = 0, ties = 0;
-    recordEntries.forEach(e => {
-      const s = e.roster.settings || {};
-      wins += s.wins || 0;
-      losses += s.losses || 0;
-      ties += s.ties || 0;
-    });
-    let tankWins = 0, tankLosses = 0, tankTies = 0;
-    entries.filter(e => e.league && recordTankList.has(e.league.name)).forEach(e => {
-      const s = e.roster.settings || {};
-      tankWins += s.wins || 0;
-      tankLosses += s.losses || 0;
-      tankTies += s.ties || 0;
-    });
+    // Head-to-head only: the median result is a second, separate outcome
+    // and folding it in here made this number disagree with the weeks a
+    // person actually remembers playing. It still counts in full on
+    // Results, which is where the median belongs.
+    let medianLeagues = 0;
+    const addRecord = (e, acc) => {
+      const h2h = sbHeadToHeadRecord(e);
+      if (h2h) {
+        medianLeagues++;
+        acc.w += h2h.w; acc.l += h2h.l; acc.t += h2h.t;
+        return;
+      }
+      const st = e.roster.settings || {};
+      acc.w += st.wins || 0; acc.l += st.losses || 0; acc.t += st.ties || 0;
+    };
+    const main = { w: 0, l: 0, t: 0 };
+    recordEntries.forEach(e => addRecord(e, main));
+    const wins = main.w, losses = main.l, ties = main.t;
+    const tank = { w: 0, l: 0, t: 0 };
+    entries.filter(e => e.league && recordTankList.has(e.league.name)).forEach(e => addRecord(e, tank));
+    const tankWins = tank.w, tankLosses = tank.l, tankTies = tank.t;
     const tankLeagueCount = entries.length - recordEntries.length;
 
     // Pulled straight from the Scoreboard's own PROJECTED RECORD number
@@ -24139,10 +24361,11 @@
     // wrong, so the card says what it left out and what those teams did.
     const recordSubEl = document.querySelector('.record-row .record-card .record-sub');
     if (recordSubEl) {
-      recordSubEl.textContent = tankLeagueCount
+      const medianNote = medianLeagues ? ' Head-to-head only \u2014 median results are counted on Results.' : '';
+      recordSubEl.textContent = (tankLeagueCount
         ? `Every league's record added together, excluding ${tankLeagueCount} tanking `
           + `(${tankWins}-${tankLosses}${tankTies ? '-' + tankTies : ''} there)`
-        : "Every league's record, added together";
+        : "Every league's record, added together") + medianNote;
     }
     if (recordValues[1]) {
       recordValues[1].innerHTML = `<span class="win">${projWinSum.toFixed(2)}</span><span class="sep">-</span><span class="loss">${projLossSum.toFixed(2)}</span>`;
@@ -24484,6 +24707,101 @@
     });
     return count;
   }
+
+  // ---- The front door's numbers ---------------------------------------
+  // Filled in only when there is real data to fill them with: on a first
+  // visit with no Sleeper account connected the stat strip is hidden
+  // outright rather than showing a row of dashes, which reads as broken.
+  //
+  // Every figure here is the same one the app shows elsewhere -- the
+  // record is the Dashboard's combined record (tanking leagues left out,
+  // dynasty only, since nobody tanks a redraft league), and FIRSTS is the
+  // Dashboard's own Draft Capital average for the upcoming rookie class.
+  function renderModeChooserStats() {
+    const chooser = document.getElementById('modeChooser');
+    if (!chooser || chooser.hidden) return;
+    const all = Object.values(window.sleeperLeagueData || {})
+      .filter(e => e.roster && e.league && (isCoManagedIncluded() || !e.isCoOwned));
+    const dynastyStats = document.getElementById('mcDynastyStats');
+    const redraftStats = document.getElementById('mcRedraftStats');
+    if (!all.length) {
+      if (dynastyStats) dynastyStats.hidden = true;
+      if (redraftStats) redraftStats.hidden = true;
+      return;
+    }
+
+    const dyn = all.filter(e => sbLeagueIsDynasty(e.league));
+    const red = all.filter(e => !sbLeagueIsDynasty(e.league));
+    const tankList = (typeof sbGetTankList === 'function') ? sbGetTankList() : new Set();
+    const set = (id, text) => { const el = document.getElementById(id); if (el) el.innerHTML = text; };
+
+    const recordOf = (list) => {
+      let w = 0, l = 0, t = 0;
+      list.forEach(e => {
+        const st = e.roster.settings || {};
+        w += st.wins || 0; l += st.losses || 0; t += st.ties || 0;
+      });
+      return `${w}&ndash;${l}${t ? '&ndash;' + t : ''}`;
+    };
+
+    if (dynastyStats) {
+      dynastyStats.hidden = !dyn.length;
+      if (dyn.length) {
+        // Tanking leagues come out of the record, the same as they do on
+        // the Dashboard -- a team losing on purpose is not part of how the
+        // season is going.
+        const counted = dyn.filter(e => !tankList.has(e.league.name));
+        const excluded = dyn.length - counted.length;
+        set('mcDynLeagues', String(dyn.length));
+        set('mcDynRecord', recordOf(counted.length ? counted : dyn));
+        set('mcDynRecordNote', excluded ? 'EXCL. TANKERS' : '');
+
+        // The upcoming rookie class only -- next season's 1sts, averaged
+        // per league, which is the "1st" figure the Dashboard's Draft
+        // Capital column already shows for that year.
+        const season = Number(dyn[0].league.season) || new Date().getFullYear();
+        let firsts = 0;
+        dyn.forEach(e => { firsts += dcPickCountForLeague(e, season + 1, 1); });
+        set('mcDynFirsts', (firsts / dyn.length).toFixed(1));
+        const note = document.getElementById('mcDynFirstsNote');
+        if (note) note.textContent = (season + 1) + ' PER LEAGUE';
+      }
+    }
+
+    if (redraftStats) {
+      redraftStats.hidden = !red.length;
+      if (red.length) {
+        set('mcRedLeagues', String(red.length));
+        set('mcRedRecord', recordOf(red));
+        // How many of those teams would make the field if the season ended
+        // now -- the same standings rule the pick model and Results use.
+        let inSpot = 0, known = 0;
+        red.forEach(e => {
+          const rosters = e.allRosters || [];
+          if (rosters.length < 2) return;
+          known++;
+          const spots = Math.min(rosters.length,
+            (e.league.settings && e.league.settings.playoff_teams) || 6);
+          const winsOf = (r) => ((r.settings && r.settings.wins) || 0)
+            + (((r.settings && r.settings.ties) || 0) * 0.5);
+          const pfOf = (r) => ((r.settings && r.settings.fpts) || 0)
+            + (((r.settings && r.settings.fpts_decimal) || 0) / 100);
+          const standings = rosters.slice().sort((a, b) => winsOf(b) - winsOf(a) || pfOf(b) - pfOf(a));
+          const seed = standings.findIndex(r => r.roster_id === e.roster.roster_id) + 1;
+          if (seed > 0 && seed <= spots) inSpot++;
+        });
+        set('mcRedPlayoff', known ? `${inSpot}<span style="font-size:16px">/${known}</span>` : '&mdash;');
+      }
+    }
+
+    const sub = document.getElementById('mcSub');
+    if (sub) {
+      sub.textContent = all.length
+        ? `${all.length} leagues, split two ways.`
+        : 'Two ways in.';
+    }
+  }
+  window.renderModeChooserStats = renderModeChooserStats;
 
   function dcCurrentDynastyEntries() {
     const entries = Object.values(window.sleeperLeagueData || {})
