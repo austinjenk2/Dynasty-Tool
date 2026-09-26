@@ -18694,7 +18694,11 @@
       // this league. Stored on the row as well as drawn, so the sort menu's
       // "Playoff Odds" option has something real to order by -- it was
       // pinned at 0 for every league, which quietly made that sort a no-op.
-      const playoffPct = sbPlayoffOdds(entry);
+      // The row is built from the league entry assembled just above in the
+      // sync, so read it back by league_id -- `entry` is not a local here,
+      // and referencing it threw, which aborted the whole sync.
+      const oddsEntry = (window.sleeperLeagueData || {})[league.league_id] || null;
+      const playoffPct = oddsEntry ? sbPlayoffOdds(oddsEntry) : null;
       row.dataset.playoff = String(playoffPct != null ? playoffPct : -1);
       row.dataset.wins = String(wins);
       row.dataset.contending = '999';
