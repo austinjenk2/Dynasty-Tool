@@ -1695,8 +1695,24 @@
      and with records added it would have been four numbers on one line.
      One line per manager instead, each carrying its own record and its
      own projection, with the favored side called out. */
-  .ldmu-teams { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-  .ldmu-side { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+  .ldmu-teams { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .ldmu-side { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .ldmu-av {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .ldmu-av img { width: 100%; height: 100%; object-fit: cover; }
   .ldmu-name {
     font-weight: 700;
     font-size: 14px;
@@ -1705,21 +1721,28 @@
     text-overflow: ellipsis;
   }
   .ldmu-side .sb-card-record { margin-left: 0; font-size: 12px; }
-  .ldmu-odds-tag {
-    font-size: 9.5px;
-    font-weight: 800;
-    letter-spacing: 0.3px;
-    color: var(--faint);
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    padding: 1px 4px;
-    white-space: nowrap;
+  .ldmu-spacer { flex-grow: 1; }
+  /* Each side carries its OWN win percentage. One number floating to the
+     right of two names never said which manager it belonged to -- the
+     reading was always "the top one", which is not something a row should
+     make you know. */
+  .ldmu-win {
+    flex-shrink: 0;
+    width: 46px;
+    text-align: right;
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
   }
-  .ldmu-odds-tag.is-good { color: var(--green); }
-  .ldmu-odds-tag.is-bad { color: var(--red); }
+  .ldmu-win.is-good { color: var(--green); }
+  .ldmu-win.is-bad { color: var(--red); }
+  .ldmu-win.is-none { color: var(--faint); }
   .ldmu-side .ldmu-score {
-    margin-left: auto;
-    padding-left: 12px;
+    flex-shrink: 0;
+    width: 58px;
+    text-align: right;
     font-family: 'Source Serif 4', serif;
     font-size: 15px;
     font-weight: 700;
@@ -1728,19 +1751,79 @@
   }
   .ldmu-side.is-leading .ldmu-name { color: var(--ink); }
   .ldmu-side.is-leading .ldmu-score { color: var(--navy); }
-  .ldmu-odds {
+  /* Names the win column once for the row, so neither side has to. */
+  .ldmu-winlabel {
     flex-shrink: 0;
-    width: 74px;
-    text-align: right;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    width: 40px;
+    text-align: center;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+    color: var(--faint);
   }
-  .ldmu-odds-pct { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--ink); }
-  .ldmu-odds-label { font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
-  .ldmu-odds-none { font-size: 11px; color: var(--faint); }
   /* Manager records on the two lineup columns inside an open matchup. */
   .sb-lineup-label .sb-lineup-rec { font-weight: 700; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+
+  /* ---- League standings --------------------------------------------
+     Every team in one league, with the numbers that decide both ends of
+     the table: the playoff race at the top and the draft order at the
+     bottom. Sortable on every column, because which end you care about
+     changes week to week. */
+  .ldst-modal { width: 880px; }
+  .ldst-wrap { overflow-x: auto; max-height: 62vh; }
+  .ldst-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .ldst-table th {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    text-align: right;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--faint);
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  .ldst-table th:first-child { text-align: left; }
+  .ldst-table th:hover { color: var(--ink); }
+  .ldst-table th.is-sorted { color: var(--ink); }
+  .ldst-table td {
+    text-align: right;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .ldst-table td:first-child { text-align: left; }
+  .ldst-table tr:last-child td { border-bottom: none; }
+  .ldst-table tr.is-me td { background: var(--green-bg); }
+  /* The playoff cut, drawn where it actually falls rather than described
+     in a caption -- the teams above this line are in, the ones below are
+     drafting. */
+  .ldst-table tr.is-cut td { border-bottom: 2px dashed var(--border); }
+  .ldst-team { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .ldst-av {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    font-size: 9.5px; font-weight: 700; color: var(--muted);
+  }
+  .ldst-av img { width: 100%; height: 100%; object-fit: cover; }
+  .ldst-name { font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+  .ldst-seed { flex-shrink: 0; width: 18px; font-size: 11px; font-weight: 700; color: var(--faint); }
+  .ldst-pct { font-weight: 700; }
+  .ldst-pct.is-good { color: var(--green); }
+  .ldst-pct.is-bad { color: var(--red); }
+  .ldst-slot { font-weight: 700; color: var(--navy); }
+  .ldst-blank { color: var(--faint); }
 
   /* ---- Season schedule -------------------------------------------- */
   .ldsch-summary {
@@ -3267,7 +3350,6 @@
   }
 
   /* League Detail -> Waivers modal */
-  .ldwv-modal { width: 720px; }
   .ldwv-banner {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
     margin: 16px 0; padding: 12px 16px;
@@ -3277,7 +3359,6 @@
   .ldwv-banner-label { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; color: var(--ink); }
   .ldwv-banner-note { font-size: 12px; color: var(--muted); }
   .ldwv-banner-meta { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
-  .ldwv-modal .ww-list { max-height: 420px; overflow-y: auto; }
 
   /* League Detail -> Settings modal */
   .lds-modal { width: 640px; }
@@ -5234,10 +5315,10 @@
 
       <div class="ld-nav-row">
         <div class="ld-nav-btn" id="ldNavMatchups"><span class="ld-nav-title">League Matchups</span><span class="ld-nav-sub">Every Matchup This Week</span></div>
+        <div class="ld-nav-btn" id="ldNavStandings"><span class="ld-nav-title">Standings</span><span class="ld-nav-sub">Record &middot; Points &middot; Playoff Odds</span></div>
         <div class="ld-nav-btn" id="ldNavRecords"><span class="ld-nav-title">Records</span><span class="ld-nav-sub">Transactions &middot; League History</span></div>
         <div class="ld-nav-btn" id="ldNavSettings"><span class="ld-nav-title">Settings</span><span class="ld-nav-sub">Scoring &middot; Roster &middot; League Rules</span></div>
         <div class="ld-nav-btn"><span class="ld-nav-title">Insights</span><span class="ld-nav-sub">WAR &middot; Value &middot; Trade Activity</span></div>
-        <div class="ld-nav-btn" id="ldNavWaivers"><span class="ld-nav-title">Waivers</span><span class="ld-nav-sub">Browse Free Agents &middot; Trending Adds</span></div>
         <div class="ld-nav-btn" id="ldNavNotes"><span class="ld-nav-title">Notes</span><span class="ld-nav-sub">Your Notes &middot; Roster Type</span></div>
       </div>
 
@@ -5411,46 +5492,20 @@
     <div class="ldsch-wrap" id="ldschBody"><div class="exp-loading">Loading schedule...</div></div>
   </div>
 
-  <div class="ldrec-overlay" id="ldwvOverlay" hidden></div>
-  <div class="ldrec-modal ldwv-modal" id="ldwvModal" hidden>
+  <div class="ldrec-overlay" id="ldstOverlay" hidden></div>
+  <div class="ldrec-modal ldst-modal" id="ldstModal" hidden>
     <div class="ldrec-head">
-      <div class="ldrec-title">Waivers <span class="ldrec-title-sub" id="ldwvTitleLeague">League</span></div>
-      <div class="ldrec-close" id="ldwvClose">&#10005;</div>
+      <div class="ldrec-title">Standings <span class="ldrec-title-sub" id="ldstTitleLeague">League</span></div>
+      <div class="ldrec-close" id="ldstClose">&#10005;</div>
     </div>
-
     <div class="ldwv-banner">
       <div class="ldwv-banner-left">
-        <span class="ldwv-banner-label">FREE AGENTS</span>
-        <span class="ldwv-banner-note">Viewing only &mdash; claims are made in the Sleeper app.</span>
+        <span class="ldwv-banner-label">THE WHOLE LEAGUE</span>
+        <span class="ldwv-banner-note">Draft slot runs off max points for below the playoff line, and off record above it.</span>
       </div>
-      <div class="ldwv-banner-meta" id="ldwvMeta">&nbsp;</div>
+      <div class="ldwv-banner-meta" id="ldstMeta">&nbsp;</div>
     </div>
-
-    <div class="ww-toolbar">
-      <div class="ww-search"><span>&#128269;</span><input type="text" id="ldwvSearch" placeholder="Search any free agent..."></div>
-      <div class="ww-toggle-group" id="ldwvModeToggle">
-        <span class="ww-toggle active" data-ldwv-mode="value">Value</span>
-        <span class="ww-toggle" data-ldwv-mode="trending">Trending</span>
-      </div>
-      <div class="ww-pos-filter" id="ldwvPosFilter">
-        <span class="ww-pos-chip active" data-ldwv-pos="ALL">All</span>
-        <span class="ww-pos-chip" data-ldwv-pos="QB">QB</span>
-        <span class="ww-pos-chip" data-ldwv-pos="RB">RB</span>
-        <span class="ww-pos-chip" data-ldwv-pos="WR">WR</span>
-        <span class="ww-pos-chip" data-ldwv-pos="TE">TE</span>
-      </div>
-    </div>
-
-    <p class="ww-sub" id="ldwvSub">Best available &middot; sorted by player value</p>
-
-    <div class="ww-table-head">
-      <span>PLAYER</span>
-      <span>VALUE</span>
-      <span>PROJ PPG</span>
-      <span>ROSTER %</span>
-    </div>
-
-    <div class="ww-list" id="ldwvList"><div class="exp-loading">Loading...</div></div>
+    <div class="ldst-wrap" id="ldstBody"><div class="exp-loading">Loading standings...</div></div>
   </div>
 
   <div class="ldrec-overlay" id="ldmuOverlay" hidden></div>
@@ -18633,7 +18688,14 @@
           '<div class="matchup-scores"><span class="proj-score mine">&mdash;</span><span class="matchup-vs">vs</span><span class="proj-score theirs">&mdash;</span></div>' +
           '<div class="favored-tag">No matchup yet</div>';
       }
-      row.dataset.playoff = '0';
+      // Playoff odds come out of the same season simulation the Tanking
+      // Tracker and the standings rows read (sbPlayoffOdds), which falls
+      // back to the closed-form estimate until that simulation lands for
+      // this league. Stored on the row as well as drawn, so the sort menu's
+      // "Playoff Odds" option has something real to order by -- it was
+      // pinned at 0 for every league, which quietly made that sort a no-op.
+      const playoffPct = sbPlayoffOdds(entry);
+      row.dataset.playoff = String(playoffPct != null ? playoffPct : -1);
       row.dataset.wins = String(wins);
       row.dataset.contending = '999';
 
@@ -18652,10 +18714,39 @@
         '<div class="col-center" data-roster-value-cell>&mdash;</div>' +
         `<div class="col-center">${weeklyProjText}</div>` +
         '<div class="col-center" data-contending-cell>&mdash;</div>' +
-        '<div class="col-center">&mdash;</div>' +
+        `<div class="col-center" data-playoff-cell>${leaguePlayoffOddsHtml(playoffPct)}</div>` +
         '<div class="row-chevron">&#9662;</div>';
       return row;
     }
+
+    // A percent, coloured the way the rank columns beside it are. Never
+    // shows a bare 0 or 100: the model is not certain of either, and a
+    // column of absolutes would read as a bug.
+    function leaguePlayoffOddsHtml(pct) {
+      if (pct == null) return '&mdash;';
+      const cls = pct >= 60 ? ' rank-good' : (pct >= 35 ? ' rank-mid' : ' rank-bad');
+      const text = pct >= 99 ? '99%+' : (pct <= 1 ? '<1%' : pct + '%');
+      return `<span class="${cls.trim()}">${text}</span>`;
+    }
+
+    // The simulation finishes after the first render, so the odds drawn
+    // above start as the closed-form estimate and are corrected here once
+    // the real numbers exist. Only the one cell is rewritten -- rebuilding
+    // every row would throw away an open expand panel.
+    function refreshLeaguePlayoffOdds() {
+      document.querySelectorAll('.league-row[data-sleeper-league-id]').forEach(row => {
+        const entry = (window.sleeperLeagueData || {})[row.dataset.sleeperLeagueId];
+        if (!entry || !entry.roster) return;
+        const pct = sbPlayoffOdds(entry);
+        row.dataset.playoff = String(pct != null ? pct : -1);
+        const cell = row.querySelector('[data-playoff-cell]');
+        if (cell) cell.innerHTML = leaguePlayoffOddsHtml(pct);
+      });
+      // A list currently ordered by this column has to be reordered, or it
+      // is sorted on numbers that are no longer on screen.
+      if (typeof reapplySort === 'function') reapplySort();
+    }
+    window.refreshLeaguePlayoffOdds = refreshLeaguePlayoffOdds;
 
     let cachedNflState = null;
     let cachedNflStateAt = 0;
@@ -19102,6 +19193,10 @@
             if (window.renderRealDashboard) window.renderRealDashboard();
             if (window.renderRosterValueRanks) window.renderRosterValueRanks();
             if (window.renderContendingRanks) window.renderContendingRanks();
+            if (window.refreshLeaguePlayoffOdds) window.refreshLeaguePlayoffOdds();
+            // Standings shows playoff and bye odds, so it redraws too when
+            // the simulation behind them lands -- but only if it is open.
+            if (window.ldstRender) window.ldstRender();
           });
         }
         if (window.updateModeToggleBtn) window.updateModeToggleBtn();
@@ -20807,172 +20902,191 @@
     const ldrecOverlayEl = document.getElementById('ldrecOverlay');
     if (ldrecOverlayEl) ldrecOverlayEl.addEventListener('click', ldrecClose);
 
-    // League Detail -> Waivers modal: the same "Best Available" free-agent
-    // list as the standalone Waiver Manager page, scoped to just the one
-    // league clicked into instead of every connected league. Real dynasty
-    // value (Pure Potential list) for VALUE, the live per-player projection
-    // for PROJ PPG, and -- same heuristic the Waiver Manager page already
-    // uses since there's no real ownership-% endpoint available -- ROSTER %
-    // is how many of the user's own connected leagues roster this player.
-    const ldwvState = { mode: 'value', pos: 'ALL', search: '' };
-    let ldwvRows = [];
+    // ---- League Detail -> Standings --------------------------------------
+    // One league, every team, with the numbers that decide both ends of the
+    // table: the playoff race above the line and the draft order below it.
+    //
+    // The draft slot is NOT a second opinion -- it runs through
+    // ppDraftOrderFor, the same rule the pick model and the Tanking
+    // Tracker's Proj Slot use. Teams out of the playoff picture draft
+    // first, ordered by max points for from the bottom up; the teams in it
+    // draft after them, worst record first, points for breaking ties. One
+    // rule, so this page can never contradict a pick's value.
+    let ldstEntry = null;
+    let ldstSort = { key: 'seed', dir: 'asc' };
 
-    function ldwvRenderList() {
-      const listEl = document.getElementById('ldwvList');
-      if (!listEl) return;
-      const term = ldwvState.search.trim().toLowerCase();
-      let rows = ldwvRows.filter(r => ldwvState.pos === 'ALL' || r.pos === ldwvState.pos);
-      if (term) rows = rows.filter(r => r.name.toLowerCase().includes(term));
-      if (ldwvState.mode === 'trending') {
-        rows = rows.filter(r => r.trend > 0).sort((a, b) => b.trend - a.trend);
-      } else {
-        rows = rows.slice().sort((a, b) => b.value - a.value);
-      }
-      rows = rows.slice(0, 150);
-      const subEl = document.getElementById('ldwvSub');
-      if (subEl) {
-        subEl.textContent = ldwvState.mode === 'trending'
-          ? 'Best available · sorted by trending adds'
-          : 'Best available · sorted by player value';
-      }
-      listEl.innerHTML = rows.length ? rows.map(r => {
-        const posClass = r.pos.toLowerCase();
-        return `<div class="ww-row" data-pos="${r.pos}">
-            <div class="ww-player">
-              <div class="ww-avatar"><img src="${sbHeadshotUrl(r.id)}" alt="" loading="lazy" onerror="this.remove()"></div>
-              <div>
-                <div class="ww-pname">${r.name}</div>
-                <div class="ww-pmeta"><span class="ww-pos-${posClass}">${r.pos}</span>${r.team ? ' &middot; ' + r.team : ''}</div>
-              </div>
-            </div>
-            <div class="ww-value">${r.value.toFixed(2)}</div>
-            <div class="ww-proj">${r.proj != null ? r.proj.toFixed(1) : '&mdash;'}</div>
-            <div class="ww-roster">${r.rosterPct}%</div>
-          </div>`;
-      }).join('') : '<div class="exp-loading">No free agents match.</div>';
+    const LDST_COLS = [
+      { key: 'seed', label: 'Team', num: false },
+      { key: 'record', label: 'Record' },
+      { key: 'pf', label: 'PF' },
+      { key: 'pa', label: 'PA' },
+      { key: 'ppts', label: 'Max PF' },
+      { key: 'playoff', label: 'Playoff %' },
+      { key: 'bye', label: 'Bye %' },
+      { key: 'slot', label: 'Draft' },
+    ];
+
+    function ldstRows(entry) {
+      const rosters = entry.allRosters || [];
+      if (!rosters.length) return [];
+      const users = entry.users || [];
+      const num = (a, b) => (a || 0) + ((b || 0) / 100);
+      const teams = rosters.map(r => {
+        const st = r.settings || {};
+        return {
+          id: r.roster_id,
+          wins: (st.wins || 0) + ((st.ties || 0) * 0.5),
+          rawWins: st.wins || 0, losses: st.losses || 0, ties: st.ties || 0,
+          pf: num(st.fpts, st.fpts_decimal),
+          pa: num(st.fpts_against, st.fpts_against_decimal),
+          ppts: num(st.ppts, st.ppts_decimal),
+        };
+      });
+      const playoffTeams = Math.min(rosters.length,
+        (entry.league.settings && entry.league.settings.playoff_teams) || 6);
+      // Standings order and the draft order come off one sort, so the seed
+      // shown beside a name and the slot shown at the end of its row are
+      // always describing the same finish.
+      const outcome = ppSeasonOutcome(teams, playoffTeams);
+      const seedOf = {}, slotOf = {};
+      outcome.standings.forEach((t, i) => { seedOf[t.id] = i + 1; });
+      outcome.order.forEach((t, i) => { slotOf[t.id] = i + 1; });
+
+      return teams.map(t => {
+        const roster = rosters.find(r => r.roster_id === t.id);
+        const user = users.find(u => u.user_id === (roster && roster.owner_id));
+        const meta = (user && user.metadata) || {};
+        const name = meta.team_name || (user && (user.display_name || user.username)) || 'Unknown';
+        const odds = window.ppTeamOdds ? window.ppTeamOdds(entry, t.id) : null;
+        return {
+          ...t, name,
+          avatar: meta.avatar, accountAvatar: user ? user.avatar : null,
+          isMe: entry.roster && t.id === entry.roster.roster_id,
+          seed: seedOf[t.id], slot: slotOf[t.id],
+          inPlayoffs: outcome.inPlayoffs.has(t.id),
+          playoff: odds && odds.playoff != null ? odds.playoff : null,
+          bye: odds && odds.byeSlots && odds.bye != null ? odds.bye : null,
+          playoffTeams,
+        };
+      });
     }
 
-    async function ldwvOpen() {
+    function ldstPctCell(p) {
+      if (p == null) return '<span class="ldst-blank">&mdash;</span>';
+      const pct = p * 100;
+      const text = pct >= 99.5 ? '>99%' : (pct > 0 && pct < 1 ? '<1%' : Math.round(pct) + '%');
+      const cls = p >= 0.65 ? ' is-good' : (p <= 0.2 ? ' is-bad' : '');
+      return `<span class="ldst-pct${cls}">${text}</span>`;
+    }
+
+    function ldstRender() {
+      const body = document.getElementById('ldstBody');
+      if (!body || !ldstEntry) return;
+      const rows = ldstRows(ldstEntry);
+      if (!rows.length) {
+        body.innerHTML = '<div class="exp-loading">No rosters in this league yet.</div>';
+        return;
+      }
+      const val = (r) => {
+        switch (ldstSort.key) {
+          case 'record': return r.wins;
+          case 'pf': return r.pf;
+          case 'pa': return r.pa;
+          case 'ppts': return r.ppts;
+          case 'playoff': return r.playoff == null ? -1 : r.playoff;
+          case 'bye': return r.bye == null ? -1 : r.bye;
+          case 'slot': return r.slot;
+          default: return r.seed;
+        }
+      };
+      const sorted = rows.slice().sort((a, b) => {
+        const d = val(a) - val(b);
+        return ldstSort.dir === 'asc' ? d : -d;
+      });
+      // The playoff cut is only a real line when the table is in standings
+      // order; on any other sort the rows either side of it are not the
+      // teams the cut separates, so it is not drawn.
+      const cutAt = (ldstSort.key === 'seed' && ldstSort.dir === 'asc')
+        ? rows[0].playoffTeams : -1;
+
+      const head = LDST_COLS.map(c => {
+        const on = c.key === ldstSort.key;
+        const arrow = on ? (ldstSort.dir === 'asc' ? ' &#9650;' : ' &#9660;') : '';
+        return `<th class="${on ? 'is-sorted' : ''}" data-ldst-sort="${c.key}">${c.label}${arrow}</th>`;
+      }).join('');
+
+      const bodyHtml = sorted.map((r, i) => {
+        const initials = String(r.name).trim().slice(0, 2).toUpperCase();
+        const rec = `${r.rawWins}-${r.losses}${r.ties ? '-' + r.ties : ''}`;
+        const cls = [r.isMe ? 'is-me' : '', (i + 1) === cutAt ? 'is-cut' : ''].filter(Boolean).join(' ');
+        return `<tr class="${cls}">` +
+          '<td><span class="ldst-team">' +
+            `<span class="ldst-seed">${r.seed}</span>` +
+            `<span class="ldst-av">${sbTeamAvatarHtml(r.avatar, r.accountAvatar, initials)}</span>` +
+            `<span class="ldst-name">${sbFieldEsc(r.name)}</span>` +
+          '</span></td>' +
+          `<td>${rec}</td>` +
+          `<td>${r.pf.toFixed(1)}</td>` +
+          `<td>${r.pa.toFixed(1)}</td>` +
+          `<td>${r.ppts.toFixed(1)}</td>` +
+          `<td>${ldstPctCell(r.playoff)}</td>` +
+          `<td>${ldstPctCell(r.bye)}</td>` +
+          `<td><span class="ldst-slot">1.${String(r.slot).padStart(2, '0')}</span></td>` +
+        '</tr>';
+      }).join('');
+
+      body.innerHTML = `<table class="ldst-table"><thead><tr>${head}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
+      body.querySelectorAll('th[data-ldst-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+          const key = th.dataset.ldstSort;
+          if (ldstSort.key === key) {
+            ldstSort.dir = ldstSort.dir === 'asc' ? 'desc' : 'asc';
+          } else {
+            // Seed and draft slot read best smallest-first; every other
+            // column is a quantity, where biggest-first is what you want.
+            ldstSort = { key, dir: (key === 'seed' || key === 'slot') ? 'asc' : 'desc' };
+          }
+          ldstRender();
+        });
+      });
+
+      const meta = document.getElementById('ldstMeta');
+      if (meta) {
+        const pt = rows[0].playoffTeams;
+        meta.textContent = `${rows.length} teams · top ${pt} make the playoffs`;
+      }
+    }
+    window.ldstRender = () => { if (ldstEntry) ldstRender(); };
+
+    function ldstOpen() {
       const standingsListEl = document.getElementById('ldStandingsList');
       const leagueId = standingsListEl ? standingsListEl.dataset.leagueId : null;
       const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
       if (!entry) return;
-
-      const overlay = document.getElementById('ldwvOverlay');
-      const modal = document.getElementById('ldwvModal');
-      const titleLeagueEl = document.getElementById('ldwvTitleLeague');
-      if (titleLeagueEl) titleLeagueEl.textContent = entry.league.name;
+      ldstEntry = entry;
+      ldstSort = { key: 'seed', dir: 'asc' };
+      const title = document.getElementById('ldstTitleLeague');
+      if (title) title.textContent = entry.league.name;
+      const overlay = document.getElementById('ldstOverlay');
+      const modal = document.getElementById('ldstModal');
       if (overlay) overlay.hidden = false;
       if (modal) modal.hidden = false;
-
-      const listEl = document.getElementById('ldwvList');
-      if (listEl) listEl.innerHTML = '<div class="exp-loading">Loading...</div>';
-
-      const metaEl = document.getElementById('ldwvMeta');
-      const settings = entry.league.settings || {};
-      const typeLabel = WW_WAIVER_TYPE_LABEL[settings.waiver_type] || 'Waivers';
-      if (metaEl) metaEl.textContent = `${typeLabel} · Today`;
-
-      if (!window.sleeperGetPlayerDict) return;
-      let dict;
-      try { dict = await window.sleeperGetPlayerDict(); } catch (err) { return; }
-
-      const rosteredHere = new Set();
-      (entry.allRosters || []).forEach(r => (r.players || []).forEach(id => rosteredHere.add(id)));
-
-      const allEntries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster);
-      const entryRosterSets = allEntries.map(e => {
-        const set = new Set();
-        (e.allRosters || []).forEach(r => (r.players || []).forEach(id => set.add(id)));
-        return set;
-      });
-
-      const trendCounts = {};
-      (window.__sleeperTrendingAdds || []).forEach(t => { trendCounts[t.player_id] = t.count; });
-      const projections = window.__sleeperProjections || {};
-      const projStats = window.__sleeperProjectionStats || {};
-      const FA_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE']);
-      // Same fixed base as the Rooting Guide's PPR Points/Projection Over
-      // Expected: full PPR plus a 0.5-per-catch TE premium, since a
-      // free-agent list has no single real league's scoring to key off of.
-      function ldwvBaseProj(id, pos) {
-        const stats = projStats[id];
-        if (stats) {
-          const base = stats.pts_ppr ?? stats.pts_half_ppr ?? stats.pts_std;
-          if (base != null) return Number(base) + (pos === 'TE' ? 0.5 * Number(stats.rec || 0) : 0);
-        }
-        return projections[id] != null ? Number(projections[id]) : null;
-      }
-
-      // Sleeper's full player pool carries some stale/duplicate entries
-      // (retired or otherwise defunct players Sleeper flags inactive) --
-      // without this, one can surface here as a "free agent" under the
-      // wrong position (the real, currently-rostered player of the same
-      // name gets correctly excluded by rosteredHere, but the stale
-      // duplicate doesn't).
-      ldwvRows = Object.keys(dict).filter(id => {
-        const p = dict[id];
-        return p && p.active !== false && FA_POSITIONS.has(p.position) && !rosteredHere.has(id);
-      }).map(id => {
-        const p = dict[id];
-        const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id;
-        const rosteredInCount = entryRosterSets.filter(set => set.has(id)).length;
-        const rosterPct = allEntries.length ? Math.round((rosteredInCount / allEntries.length) * 100) : 0;
-        return {
-          id,
-          name,
-          pos: p.position,
-          team: p.team || '',
-          value: ppValueForPlayerId(id, dict) || 0,
-          proj: ldwvBaseProj(id, p.position),
-          trend: trendCounts[id] || 0,
-          rosterPct,
-        };
-      });
-
-      ldwvRenderList();
+      ldstRender();
     }
 
-    function ldwvClose() {
-      const overlay = document.getElementById('ldwvOverlay');
-      const modal = document.getElementById('ldwvModal');
+    function ldstClose() {
+      const overlay = document.getElementById('ldstOverlay');
+      const modal = document.getElementById('ldstModal');
       if (overlay) overlay.hidden = true;
       if (modal) modal.hidden = true;
     }
 
-    const ldNavWaiversEl = document.getElementById('ldNavWaivers');
-    if (ldNavWaiversEl) ldNavWaiversEl.addEventListener('click', ldwvOpen);
-    const ldwvCloseEl = document.getElementById('ldwvClose');
-    if (ldwvCloseEl) ldwvCloseEl.addEventListener('click', ldwvClose);
-    const ldwvOverlayEl = document.getElementById('ldwvOverlay');
-    if (ldwvOverlayEl) ldwvOverlayEl.addEventListener('click', ldwvClose);
-    const ldwvSearchEl = document.getElementById('ldwvSearch');
-    if (ldwvSearchEl) ldwvSearchEl.addEventListener('input', () => {
-      ldwvState.search = ldwvSearchEl.value;
-      ldwvRenderList();
-    });
-    const ldwvModeToggleEl = document.getElementById('ldwvModeToggle');
-    if (ldwvModeToggleEl) {
-      ldwvModeToggleEl.querySelectorAll('.ww-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-          ldwvModeToggleEl.querySelectorAll('.ww-toggle').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          ldwvState.mode = btn.dataset.ldwvMode;
-          ldwvRenderList();
-        });
-      });
-    }
-    const ldwvPosFilterEl = document.getElementById('ldwvPosFilter');
-    if (ldwvPosFilterEl) {
-      ldwvPosFilterEl.querySelectorAll('.ww-pos-chip').forEach(chip => {
-        chip.addEventListener('click', () => {
-          ldwvPosFilterEl.querySelectorAll('.ww-pos-chip').forEach(c => c.classList.remove('active'));
-          chip.classList.add('active');
-          ldwvState.pos = chip.dataset.ldwvPos;
-          ldwvRenderList();
-        });
-      });
-    }
+    const ldNavStandingsEl = document.getElementById('ldNavStandings');
+    if (ldNavStandingsEl) ldNavStandingsEl.addEventListener('click', ldstOpen);
+    const ldstCloseEl = document.getElementById('ldstClose');
+    if (ldstCloseEl) ldstCloseEl.addEventListener('click', ldstClose);
+    const ldstOverlayEl = document.getElementById('ldstOverlay');
+    if (ldstOverlayEl) ldstOverlayEl.addEventListener('click', ldstClose);
 
     // League Detail -> League Matchups modal: every real matchup in this
     // league for a given week, not just your own -- reuses the exact same
@@ -20999,21 +21113,6 @@
     function ldmuRecordHtml(roster) {
       const rec = ldmuRecord(roster);
       return rec ? `<span class="sb-card-record">${rec}</span>` : '';
-    }
-
-    // Playoff odds for one side of a matchup, from the season simulation.
-    // Shown next to the record because it is the same kind of fact -- how
-    // this team's year is going -- and because a matchup between two teams
-    // on the bubble reads completely differently from one between a lock
-    // and a team already out.
-    function ldmuOddsHtml(roster) {
-      if (!roster || !ldmuEntry || !window.ppTeamOdds) return '';
-      const odds = window.ppTeamOdds(ldmuEntry, roster.roster_id);
-      if (!odds || odds.playoff == null) return '';
-      const pct = Math.round(odds.playoff * 100);
-      const cls = odds.playoff >= 0.65 ? ' is-good' : (odds.playoff <= 0.20 ? ' is-bad' : '');
-      const bye = odds.byeSlots ? `, first-round bye ${Math.round((odds.bye || 0) * 100)}%` : '';
-      return `<span class="ldmu-odds-tag${cls}" title="Makes the playoffs in ${pct}% of simulated seasons${bye}">${pct}% PO</span>`;
     }
 
     function ldmuRowHtml(r, i) {
@@ -21044,23 +21143,39 @@
         if (ctx.hasData) return (which === 0 ? ctx.myProj : ctx.oppProj).toFixed(1);
         return '';
       };
-      const sideHtml = (which, name, roster) =>
+      // A win percentage per side rather than one number for the row.
+      // ctx.winPct is the FIRST side's chance, and a single figure floating
+      // to the right of two names never said which of them it belonged to.
+      const pctFor = (which) => {
+        if (ctx.winPct == null) return null;
+        return which === 0 ? ctx.winPct : (100 - ctx.winPct);
+      };
+      const pctHtml = (which) => {
+        const pct = pctFor(which);
+        if (pct == null) return '<span class="ldmu-win is-none">&mdash;</span>';
+        const cls = pct >= 60 ? ' is-good' : (pct <= 40 ? ' is-bad' : '');
+        return `<span class="ldmu-win${cls}">${pct}%</span>`;
+      };
+      const avatarFor = (user, name) => {
+        const meta = (user && user.metadata) || {};
+        const initials = String(name || '?').replace(/&[^;]+;/g, '').trim().slice(0, 2).toUpperCase();
+        return `<span class="ldmu-av">${sbTeamAvatarHtml(meta.avatar, user ? user.avatar : null, initials)}</span>`;
+      };
+      const sideHtml = (which, name, roster, user) =>
         `<div class="ldmu-side${lead(which)}">` +
+          avatarFor(user, name) +
           `<span class="ldmu-name">${name}</span>` +
           ldmuRecordHtml(roster) +
-          ldmuOddsHtml(roster) +
+          `<span class="ldmu-spacer"></span>` +
+          pctHtml(which) +
           `<span class="ldmu-score">${scoreFor(which)}</span>` +
         `</div>`;
-      const oddsHtml = ctx.winPct != null
-        ? `<span class="ldmu-odds-pct">${ctx.winPct}%</span>` +
-          `<span class="ldmu-odds-label">${live ? 'WIN PROB' : 'PROJ WIN'}</span>`
-        : '<span class="ldmu-odds-none">No proj</span>';
       return `<div class="sb-card ldmu-row" data-ldmu-idx="${i}">
           <div class="ldmu-teams">
-            ${sideHtml(0, name1, r.r1)}
-            ${sideHtml(1, name2, r.r2)}
+            ${sideHtml(0, name1, r.r1, r.u1)}
+            ${sideHtml(1, name2, r.r2, r.u2)}
           </div>
-          <div class="ldmu-odds" title="${ctx.winPct != null ? sbFieldEsc(name1 + ' ' + ctx.winPct + '% / ' + name2 + ' ' + (100 - ctx.winPct) + '%') : ''}">${oddsHtml}</div>
+          <div class="ldmu-winlabel">${live ? 'WIN<br>PROB' : 'PROJ<br>WIN'}</div>
           <div class="sb-chevron">&#9662;</div>
         </div>`;
     }
