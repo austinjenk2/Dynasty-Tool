@@ -18633,7 +18633,14 @@
           '<div class="matchup-scores"><span class="proj-score mine">&mdash;</span><span class="matchup-vs">vs</span><span class="proj-score theirs">&mdash;</span></div>' +
           '<div class="favored-tag">No matchup yet</div>';
       }
-      row.dataset.playoff = '0';
+      // Playoff odds come out of the same season simulation the Tanking
+      // Tracker and the standings rows read (sbPlayoffOdds), which falls
+      // back to the closed-form estimate until that simulation lands for
+      // this league. Stored on the row as well as drawn, so the sort menu's
+      // "Playoff Odds" option has something real to order by -- it was
+      // pinned at 0 for every league, which quietly made that sort a no-op.
+      const playoffPct = sbPlayoffOdds(entry);
+      row.dataset.playoff = String(playoffPct != null ? playoffPct : -1);
       row.dataset.wins = String(wins);
       row.dataset.contending = '999';
 
@@ -18652,10 +18659,39 @@
         '<div class="col-center" data-roster-value-cell>&mdash;</div>' +
         `<div class="col-center">${weeklyProjText}</div>` +
         '<div class="col-center" data-contending-cell>&mdash;</div>' +
-        '<div class="col-center">&mdash;</div>' +
+        `<div class="col-center" data-playoff-cell>${leaguePlayoffOddsHtml(playoffPct)}</div>` +
         '<div class="row-chevron">&#9662;</div>';
       return row;
     }
+
+    // A percent, coloured the way the rank columns beside it are. Never
+    // shows a bare 0 or 100: the model is not certain of either, and a
+    // column of absolutes would read as a bug.
+    function leaguePlayoffOddsHtml(pct) {
+      if (pct == null) return '&mdash;';
+      const cls = pct >= 60 ? ' rank-good' : (pct >= 35 ? ' rank-mid' : ' rank-bad');
+      const text = pct >= 99 ? '99%+' : (pct <= 1 ? '<1%' : pct + '%');
+      return `<span class="${cls.trim()}">${text}</span>`;
+    }
+
+    // The simulation finishes after the first render, so the odds drawn
+    // above start as the closed-form estimate and are corrected here once
+    // the real numbers exist. Only the one cell is rewritten -- rebuilding
+    // every row would throw away an open expand panel.
+    function refreshLeaguePlayoffOdds() {
+      document.querySelectorAll('.league-row[data-sleeper-league-id]').forEach(row => {
+        const entry = (window.sleeperLeagueData || {})[row.dataset.sleeperLeagueId];
+        if (!entry || !entry.roster) return;
+        const pct = sbPlayoffOdds(entry);
+        row.dataset.playoff = String(pct != null ? pct : -1);
+        const cell = row.querySelector('[data-playoff-cell]');
+        if (cell) cell.innerHTML = leaguePlayoffOddsHtml(pct);
+      });
+      // A list currently ordered by this column has to be reordered, or it
+      // is sorted on numbers that are no longer on screen.
+      if (typeof reapplySort === 'function') reapplySort();
+    }
+    window.refreshLeaguePlayoffOdds = refreshLeaguePlayoffOdds;
 
     let cachedNflState = null;
     let cachedNflStateAt = 0;
@@ -19102,6 +19138,7 @@
             if (window.renderRealDashboard) window.renderRealDashboard();
             if (window.renderRosterValueRanks) window.renderRosterValueRanks();
             if (window.renderContendingRanks) window.renderContendingRanks();
+            if (window.refreshLeaguePlayoffOdds) window.refreshLeaguePlayoffOdds();
           });
         }
         if (window.updateModeToggleBtn) window.updateModeToggleBtn();
