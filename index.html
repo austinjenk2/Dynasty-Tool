@@ -28773,14 +28773,23 @@
     };
     // A slot is better when it is LOWER, so it is negated: one click still
     // puts the 1.01 on top, like every other column's "best first".
-    const ttSlotKey = (slot) => (slot == null ? TT_MISSING : -slot);
+    //
+    // The round (and the draft year, for a pick two classes out) has to be
+    // part of the key, or a 2.01 sorts level with a 1.01 and the column
+    // reads 1.01, 2.01, 1.05. Ordered the way you'd actually read a draft:
+    // soonest year first, then round, then slot within the round -- 1.01,
+    // 1.05, 1.12, 2.01, 2.08, 3.04.
+    const ttSlotKey = (slot, round, season) => {
+      if (slot == null) return TT_MISSING;
+      return -((Number(season) || 0) * 10000 + (Number(round) || 1) * 100 + slot);
+    };
 
     const TT_RACE_KEYS = {
       league: r => r.entry.league.name.toLowerCase(),
       record: r => ttWinPct(r.entry.roster),
       pf: r => pfOf(r.entry.roster),
       ppts: r => pptsOf(r.entry.roster),
-      slot: r => ttSlotKey(r.slot),
+      slot: r => ttSlotKey(r.slot, 1, r.season),
       playoff: r => ttOddsOf(r.entry, r.entry.roster.roster_id, 'playoff'),
       bye: r => ttOddsOf(r.entry, r.entry.roster.roster_id, 'bye'),
       p101: r => r.fc ? r.fc.p101 : TT_MISSING,
@@ -28807,7 +28816,7 @@
       },
       pfrank: p => -ldRankOf(p.entry.allRosters || [], pfOf, p.pick.fromRosterId),
       pptsrank: p => -ldRankOf(p.entry.allRosters || [], pptsOf, p.pick.fromRosterId),
-      slot: p => ttSlotKey(p.slot),
+      slot: p => ttSlotKey(p.slot, p.pick.round, p.pick.season),
       playoff: p => ttOddsOf(p.entry, p.pick.fromRosterId, 'playoff'),
       bye: p => ttOddsOf(p.entry, p.pick.fromRosterId, 'bye'),
       p101: p => p.fc ? p.fc.p101 : TT_MISSING,
@@ -28816,8 +28825,10 @@
     };
 
     let ttRaceRows = [], ttPickRows = [];
-    let ttRaceSort = { key: 'gap', dir: 'desc' };
-    let ttPickSort = { key: 'pick', dir: 'desc' };
+    // Both tables open on the pick itself, earliest first -- the question
+    // either one answers is "which pick am I getting, and how early".
+    let ttRaceSort = { key: 'slot', dir: 'desc' };
+    let ttPickSort = { key: 'slot', dir: 'desc' };
 
     function ttSortRows(rows, keys, state) {
       const valueOf = keys[state.key];
@@ -28962,6 +28973,7 @@
         const nextSeason = (Number(entry.league.season) || new Date().getFullYear()) + 1;
         return {
           entry, order, gap,
+          season: nextSeason,
           slot: order ? order.slots[entry.roster.roster_id] : null,
           fc: ttForecast(entry, nextSeason, 1, entry.roster.roster_id),
         };
