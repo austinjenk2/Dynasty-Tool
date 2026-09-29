@@ -956,23 +956,6 @@
   .gc-rail-spacer { flex: 1; }
   .gc-rail-hint { font-size: 11px; color: var(--faint); }
 
-  .gc-rail-wrap { position: relative; margin-bottom: 18px; }
-  .gc-rail {
-    display: flex; gap: 10px; overflow-x: auto; scroll-behavior: smooth;
-    padding: 2px 2px 10px;
-    scrollbar-width: thin;
-  }
-  .gc-rail-arrow {
-    position: absolute; top: 50%; transform: translateY(-60%);
-    width: 30px; height: 30px; border-radius: 50%; z-index: 3;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--surface); border: 1px solid var(--border);
-    color: var(--ink); font-size: 15px; font-weight: 800; cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.14);
-  }
-  .gc-rail-arrow:hover { background: var(--border-soft); }
-  .gc-rail-arrow-left { left: -6px; }
-  .gc-rail-arrow-right { right: -6px; }
 
   .gc-card {
     flex: 0 0 208px; cursor: pointer;
@@ -1069,46 +1052,6 @@
      the field rather than drifting out of line with it. */
   .gc-hero-field { padding-left: 3%; padding-right: 5.5%; }
   @media (max-width: 760px) { .gc-hero-field { padding-left: 4%; padding-right: 4%; } }
-  .gc-field-stage { perspective: 620px; }
-  .gc-field {
-    position: relative; height: 172px; border-radius: 4px; overflow: hidden;
-    transform: rotateX(34deg); transform-style: preserve-3d;
-    background: repeating-linear-gradient(to right, #2d8449 0 10%, #348e50 10% 20%);
-    box-shadow: 0 14px 28px -12px rgba(0,0,0,0.45);
-  }
-  .gc-field-ez { position: absolute; top: 0; bottom: 0; width: 10%; background: rgba(0,0,0,0.32); display: flex; align-items: center; justify-content: center; }
-  .gc-field-ez-left { left: 0; }
-  .gc-field-ez-right { right: 0; }
-  .gc-field-ez span { color: rgba(255,255,255,0.92); font-size: 12px; font-weight: 800; letter-spacing: 1px; }
-  /* Logo sits in the end zone like a painted field mark; the abbreviation
-     underneath it is the fallback when the logo image fails to load. */
-  .gc-field-ez img { width: 34px; height: 34px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.55)); }
-  .gc-field-yl { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.5); }
-  .gc-field-yl.gc-field-50 { width: 2px; background: rgba(255,255,255,0.85); }
-  .gc-field-num { position: absolute; top: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 800; font-style: italic; }
-  .gc-field-los { position: absolute; top: 0; bottom: 0; width: 2.5px; background: #3fc7ff; box-shadow: 0 0 7px rgba(63,199,255,0.9); transition: left 1.2s cubic-bezier(0.22,1,0.36,1); }
-  /* First-down marker, dashed the way a broadcast draws it so it reads as
-     a different kind of line from the solid line of scrimmage. */
-  .gc-field-fd {
-    position: absolute; top: 0; bottom: 0; width: 0;
-    border-left: 2.5px dashed #ffb020;
-    filter: drop-shadow(0 0 4px rgba(255,176,32,0.85));
-    transition: left 1.2s cubic-bezier(0.22,1,0.36,1);
-  }
-  /* Last play, drawn as an arc from where the ball was to where it is. */
-  .gc-field-arc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-  .gc-field-arc path {
-    fill: none; stroke: #3fc7ff; stroke-width: 1.6; stroke-dasharray: 4 3;
-    stroke-linecap: round; vector-effect: non-scaling-stroke;
-    filter: drop-shadow(0 0 3px rgba(63,199,255,0.8));
-  }
-  .gc-field-spot {
-    position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%;
-    background: #3fc7ff; border: 2px solid #fff;
-    transform: translate(-50%, -50%);
-    transition: left 1.2s cubic-bezier(0.22,1,0.36,1);
-  }
-  .gc-field-caption { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-top: 10px; }
 
   .gc-lastplay { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
   .gc-lastplay-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.7px; color: var(--faint); margin-bottom: 4px; }
@@ -1824,6 +1767,202 @@
   .ldst-pct.is-bad { color: var(--red); }
   .ldst-slot { font-weight: 700; color: var(--navy); }
   .ldst-blank { color: var(--faint); }
+
+  /* ---- GameCast ------------------------------------------------------
+     Every score on the left, everything happening in the league on the
+     right. The two halves are independent: opening a game's box score
+     does not disturb the feed, and a new play does not redraw the grid.
+
+     What used to be here -- a 3D field with a moving line of scrimmage, a
+     drive arc and a per-game hero -- is gone. It animated on every tick of
+     a page that re-renders every twenty seconds, and it showed one game at
+     a time, which is the opposite of what this page is for. */
+  .gc-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .gc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; }
+  .gc-grid .gc-card { width: auto; min-width: 0; margin: 0; flex: none; scroll-snap-align: none; }
+  /* The open game's panel spans the whole left half rather than living
+     inside a 300px card, which is the only way a box score fits. */
+  .gc-inline { grid-column: 1 / -1; background: var(--surface); border: 1px solid var(--navy); border-radius: 8px; padding: 12px 14px; }
+  .gc-inline-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .gc-inline-title { font-family: 'Source Serif 4', serif; font-size: 14px; font-weight: 700; color: var(--ink); }
+  .gc-inline-spacer { flex: 1; }
+  .gc-inline-close { cursor: pointer; font-size: 13px; color: var(--faint); padding: 0 4px; }
+  .gc-inline-close:hover { color: var(--ink); }
+  .gc-inline-section { margin-top: 10px; }
+  .gc-inline-label { font-size: 9px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 6px; }
+  .gc-inline-scroll { max-height: 240px; overflow-y: auto; }
+
+  .gc-feed-col { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; position: sticky; top: 12px; }
+  .gc-feed { max-height: calc(100vh - 200px); overflow-y: auto; margin-top: 8px; }
+  .gc-feed-item { padding: 8px 0; border-bottom: 1px solid var(--border-soft); }
+  .gc-feed-item:last-child { border-bottom: none; }
+  /* A play one of your players was involved in is the reason this column
+     exists, so it is marked on the row rather than left to be found. */
+  .gc-feed-item.is-mine { border-left: 2px solid var(--green); padding-left: 8px; margin-left: -10px; }
+  .gc-feed-item.is-against { border-left: 2px solid var(--red); padding-left: 8px; margin-left: -10px; }
+  .gc-feed-top { display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); }
+  .gc-feed-game { color: var(--ink); font-weight: 800; cursor: pointer; }
+  .gc-feed-game:hover { color: var(--navy); }
+  .gc-feed-spacer { flex: 1; }
+  .gc-feed-text { font-size: 12px; color: var(--muted); line-height: 1.45; margin-top: 3px; }
+  .gc-feed-players { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+  .gc-feed-player {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 2px 9px;
+  }
+  .gc-feed-fp { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .gc-feed-fp.is-pos { color: var(--green); }
+  .gc-feed-fp.is-neg { color: var(--red); }
+  .gc-feed-exp-for { color: var(--green); font-size: 10px; }
+  .gc-feed-exp-against { color: var(--red); font-size: 10px; }
+  .gc-feed-net { margin-top: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px; }
+  .gc-feed-net.is-pos { color: var(--green); }
+  .gc-feed-net.is-neg { color: var(--red); }
+  .gc-feed-net.is-flat { color: var(--faint); }
+
+  @media (max-width: 1000px) {
+    .gc-split { grid-template-columns: 1fr; }
+    .gc-feed-col { position: static; }
+    .gc-feed { max-height: 420px; }
+  }
+  @media (max-width: 560px) {
+    .gc-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---- Rankings ----------------------------------------------------
+     The whole board in one table: where a player ranks, what he is, and
+     what he is worth. Reads top to bottom like a printed ranking sheet --
+     tier bands across the full width, and the big drops between players
+     called out where they happen instead of left for you to spot in the
+     value column. */
+  .rk-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .rk-search {
+    flex: 1;
+    min-width: 200px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--faint);
+    font-size: 13px;
+  }
+  .rk-search input {
+    border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 13px; color: var(--ink); width: 100%;
+  }
+  .rk-search input::placeholder { color: var(--faint); }
+  .rk-edition {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .rk-edition span { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
+  .rk-edition select {
+    border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--ink); cursor: pointer;
+  }
+  .rk-note { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+  .rk-note b { color: var(--ink); }
+
+  .rk-table th.rk-th-player, .rk-table th.rk-th-arch { text-align: left; }
+  .rk-table th.rk-th-rank, .rk-table th.rk-th-value { text-align: right; }
+  .rk-table td.rk-rank {
+    text-align: right;
+    width: 46px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .rk-table td.rk-player-cell, .rk-table td.rk-arch-cell { text-align: left; }
+  .rk-player { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .rk-shot {
+    position: relative;
+    flex-shrink: 0;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    font-size: 10px; font-weight: 800; color: var(--muted);
+  }
+  .rk-shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .rk-name { font-weight: 700; font-size: 13.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+  /* How far a player moved since the edition before this one -- the only
+     thing on the row that is about change rather than state, so it is the
+     only thing coloured green or red. */
+  .rk-move { flex-shrink: 0; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .rk-move.is-up { color: var(--green); }
+  .rk-move.is-down { color: var(--red); }
+  .rk-move.is-new { color: var(--navy); letter-spacing: 0.4px; }
+  .rk-team { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+  .rk-team img { width: 20px; height: 20px; object-fit: contain; }
+  .rk-arch { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; color: var(--ink); }
+  .rk-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--faint); }
+  .rk-dot.tone-elite { background: var(--navy); }
+  .rk-dot.tone-starter { background: var(--blue); }
+  .rk-dot.tone-young { background: var(--green); }
+  .rk-dot.tone-vet { background: var(--gold); }
+  .rk-dot.tone-depth { background: var(--red); }
+  .rk-dot.tone-bench { background: var(--faint); }
+  .rk-arch.is-blank { color: var(--faint); font-weight: 400; }
+  .rk-pos { font-size: 11.5px; font-weight: 800; color: var(--muted); }
+  .rk-pos.sb-pos-qb { color: var(--red); }
+  .rk-pos.sb-pos-rb { color: var(--green); }
+  .rk-pos.sb-pos-wr { color: var(--blue); }
+  .rk-pos.sb-pos-te { color: var(--gold); }
+  .rk-age { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .rk-value {
+    text-align: right;
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .rk-table tbody tr.rk-row { cursor: pointer; }
+  /* Every row on the same cardstock -- a board you read straight down
+     should not have bands of shading in it. Hover is carried by the name
+     alone, which is enough to say the row is clickable without turning
+     the row into a different colour from its neighbours. */
+  .rk-table tbody tr.rk-row:hover .rk-name { color: var(--navy); }
+
+  /* A tier band. Full width, its own rule, and the value that opens the
+     tier on the right -- the number is what defines the band, so it is
+     printed rather than implied. */
+  .rk-table tr.rk-tier td { border-bottom: 1px solid var(--border); padding: 14px 10px 10px; }
+  .rk-tier-inner { display: flex; align-items: center; gap: 14px; }
+  .rk-tier-name { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; color: var(--ink); white-space: nowrap; }
+  .rk-tier-rule { flex: 1; height: 1px; background: var(--border); }
+  .rk-tier-count { font-size: 10px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); white-space: nowrap; }
+  .rk-tier-chip {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 3px 10px; white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 700px) {
+    .rk-table th.rk-th-arch, .rk-table td.rk-arch-cell { display: none; }
+  }
+
+  /* What each player has gained or lost, sat next to what he is worth.
+     The only colour in the table is the direction he moved. */
+  .mv-delta { font-family: 'Source Serif 4', serif; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .mv-delta.is-up { color: var(--green); }
+  .mv-delta.is-down { color: var(--red); }
+  .mv-delta.is-flat { color: var(--faint); }
+  .mv-delta.is-new { font-family: inherit; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--navy); }
+  .rk-table td.mv-cell { text-align: right; width: 68px; }
 
   /* ---- Season schedule -------------------------------------------- */
   .ldsch-summary {
@@ -4540,6 +4679,7 @@
     <a class="section-tab" data-section="exposures">Exposures</a>
     <a class="section-tab" data-section="trades">Trade History</a>
     <a class="section-tab" data-section="records">Results</a>
+    <a class="section-tab" data-section="rankings">Rankings</a>
     <a class="section-tab" data-section="calculator">Trade Calc</a>
     <a class="section-tab" data-section="tanking">Tanking Tracker</a>
     <a class="section-tab" data-section="settings">Settings</a>
@@ -6112,15 +6252,22 @@
       <span class="gc-rail-title">NFL Scores</span>
       <span class="gc-live-pill" id="gcLivePill" hidden><span class="gc-live-dot"></span>LIVE</span>
       <span class="gc-rail-spacer"></span>
-      <span class="gc-rail-hint">Green = your starters in this game &middot; red = starters against you</span>
+      <span class="gc-rail-hint">Green = your starters in this game &middot; red = starters against you &middot; tap a game for your leagues and its box score</span>
     </div>
-    <div class="gc-rail-wrap">
-      <button type="button" class="gc-rail-arrow gc-rail-arrow-left" id="gcRailLeft" hidden>&#8249;</button>
-      <div class="gc-rail" id="gcRail"><div class="ld-loading">Loading this week's games&hellip;</div></div>
-      <button type="button" class="gc-rail-arrow gc-rail-arrow-right" id="gcRailRight" hidden>&#8250;</button>
+    <div class="gc-split">
+      <div class="gc-grid" id="gcGrid"><div class="ld-loading">Loading this week&rsquo;s games&hellip;</div></div>
+      <div class="gc-feed-col">
+        <div class="gc-panel-head">
+          <span class="gc-panel-title">Around The League</span>
+          <span class="ww-toggle-group" id="gcFeedFilter">
+            <span class="ww-toggle active" data-gc-feed="all">Every play</span>
+            <span class="ww-toggle" data-gc-feed="mine">Mine only</span>
+          </span>
+        </div>
+        <div class="gc-panel-sub" id="gcFeedSub">Newest first, every game at once.</div>
+        <div class="gc-feed" id="gcFeed"><div class="ld-loading">Loading plays&hellip;</div></div>
+      </div>
     </div>
-    <div id="gcHero"></div>
-    <div id="gcColumns"></div>
   </div>
 
       <div data-view="rooting">
@@ -12199,6 +12346,58 @@
       </div>
     </div>
   </div>
+  <div data-view="rankings">
+    <div class="page-title">
+      <h1>Rankings</h1>
+      <p>The Pure Potential board every value on this site is priced off. <b>Base 1 Value</b> is a relative trade scale, not points: a 1.00 is worth exactly one first-round pick in a vacuum, so a 2.00 is worth two of them and a 0.10 is a throw-in. Ages are as of the current export.</p>
+    </div>
+
+    <div class="rk-toolbar">
+      <div class="rk-search"><span>&#128269;</span><input type="text" id="rkSearch" placeholder="Search any player..."></div>
+      <div class="ww-pos-filter" id="rkPosFilter">
+        <span class="ww-pos-chip active" data-rk-pos="ALL">All</span>
+        <span class="ww-pos-chip" data-rk-pos="QB">QB</span>
+        <span class="ww-pos-chip" data-rk-pos="RB">RB</span>
+        <span class="ww-pos-chip" data-rk-pos="WR">WR</span>
+        <span class="ww-pos-chip" data-rk-pos="TE">TE</span>
+      </div>
+      <label class="rk-edition">
+        <span>SORT</span>
+        <select id="rkSort">
+          <option value="value">Value</option>
+          <option value="lastUp">Risers &middot; since last</option>
+          <option value="lastDown">Fallers &middot; since last</option>
+          <option value="seasonUp">Risers &middot; since Wk 1</option>
+          <option value="seasonDown">Fallers &middot; since Wk 1</option>
+        </select>
+      </label>
+      <label class="rk-edition">
+        <span>AS OF</span>
+        <select id="rkEdition"></select>
+      </label>
+    </div>
+
+    <p class="rk-note" id="rkNote"></p>
+
+    <div class="rb-table-wrap">
+      <table class="rb-table rk-table">
+        <thead>
+          <tr>
+            <th class="rk-th-rank">RANK</th>
+            <th class="rk-th-player">PLAYER</th>
+            <th>TEAM</th>
+            <th class="rk-th-arch">ARCHETYPE</th>
+            <th>POS</th>
+            <th>AGE</th>
+            <th class="rk-th-value">SINCE LAST</th>
+            <th class="rk-th-value">SINCE WK 1</th>
+            <th class="rk-th-value">VALUE</th>
+          </tr>
+        </thead>
+        <tbody id="rkBody"><tr><td colspan="9" class="rb-empty">Loading rankings...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
   <div data-view="settings">
     <div class="page-title">
       <h1>Settings</h1>
@@ -12877,7 +13076,7 @@
   // GameCast keys a game on, so callers pass that rather than team codes.
   function goToGameCast(eventId) {
     if (!eventId) return;
-    window.__gcSelectedEventId = String(eventId);
+    window.__gcOpenEventId = String(eventId);
     goToSection('gamecast');
     if (window.renderRealGameCast) { try { window.renderRealGameCast(); } catch (e) {} }
   }
@@ -23052,7 +23251,7 @@
   // (Team Strength's x-axis, Portfolio Health's Roster Value track, the
   // League Detail VAL rank, etc). Keyed by a normalized player name since
   // this list has no Sleeper player_id to join on.
-  const PP_PLAYER_VALUES = {"josh allen":3,"jaxon smith-njigba":3,"jahmyr gibbs":3,"bijan robinson":3,"jamarr chase":2.91,"malik nabers":2.83,"puka nacua":2.74,"ashton jeanty":2.65,"caleb williams":2.5,"drake maye":2.43,"jeremiyah love":2.37,"brock bowers":2.3,"amon-ra st brown":2.23,"trey mcbride":2.17,"lamar jackson":2.1,"justin jefferson":2,"ceedee lamb":1.94,"patrick mahomes":1.87,"joe burrow":1.81,"drake london":1.74,"jalen hurts":1.67,"tetairoa mcmillan":1.61,"colston loveland":1.55,"jayden daniels":1.5,"jonathan taylor":1.49,"kenneth walker":1.48,"chris olave":1.46,"trevor lawrence":1.45,"brock purdy":1.44,"justin herbert":1.42,"omarion hampton":1.41,"james cook":1.4,"garrett wilson":1.38,"devon achane":1.36,"nico collins":1.34,"george pickens":1.33,"zay flowers":1.31,"jaxson dart":1.29,"ladd mcconkey":1.25,"devonta smith":1.23,"parker washington":1.21,"jordyn tyson":1.18,"tyler warren":1.16,"jordan love":1.14,"emeka egbuka":1.12,"luther burden":1.1,"carnell tate":1.07,"chase brown":1.05,"breece hall":1.03,"christian mccaffrey":1,"bo nix":0.98,"makai lemon":0.96,"jaylen waddle":0.94,"tee higgins":0.92,"bucky irving":0.91,"fernando mendoza":0.89,"dak prescott":0.87,"jared goff":0.85,"treveyon henderson":0.83,"quinshon judkins":0.81,"christian watson":0.79,"matthew golden":0.77,"sam laporta":0.75,"dalton kincaid":0.74,"tucker kraft":0.73,"tyler shough":0.72,"jameson williams":0.71,"kc concepcion":0.7,"javonte williams":0.7,"saquon barkley":0.69,"jadarian price":0.68,"kyren williams":0.67,"derrick henry":0.66,"dandre swift":0.65,"bryce young":0.64,"brian thomas":0.63,"bhayshul tuten":0.62,"harold fannin":0.61,"jalen coker":0.61,"rome odunze":0.6,"denzel boston":0.59,"aj brown":0.58,"cam skattebo":0.57,"baker mayfield":0.56,"kyler murray":0.55,"sam darnold":0.54,"cj stroud":0.53,"rashee rice":0.52,"kenyon sadiq":0.52,"daniel jones":0.5,"matthew stafford":0.49,"josh downs":0.47,"isaiah likely":0.46,"cam ward":0.45,"jordan addison":0.44,"mike evans":0.42,"malik willis":0.41,"george kittle":0.4,"chuba hubbard":0.39,"kyle pitts":0.37,"dj moore":0.36,"dk metcalf":0.35,"ty simpson":0.33,"marvin harrison":0.32,"david montgomery":0.31,"travis etienne":0.3,"michael wilson":0.29,"alec pierce":0.28,"omar cooper":0.27,"terry mclaurin":0.27,"davante adams":0.26,"kyle monangai":0.25,"jaylen warren":0.24,"josh jacobs":0.23,"jonah coleman":0.22,"jonathon brooks":0.21,"rj harvey":0.21,"terrance ferguson":0.2,"germie bernard":0.2,"antonio williams":0.2,"travis hunter":0.19,"dezhaun stribling":0.19,"caleb douglas":0.19,"blake corum":0.19,"rhamondre stevenson":0.19,"michael penix":0.19,"stefon diggs":0.18,"oronde gadsden":0.18,"xavier worthy":0.18,"eli raridon":0.18,"brenton strange":0.18,"jake ferguson":0.18,"emmett johnson":0.17,"chris godwin":0.17,"jacory croskey-merritt":0.17,"pat bryant":0.17,"jakobi lane":0.17,"quentin johnston":0.17,"michael pittman":0.16,"geno smith":0.16,"juwan johnson":0.16,"deebo samuel":0.16,"eli stowers":0.16,"travis kelce":0.16,"chig okonkwo":0.15,"rico dowdle":0.15,"rachaad white":0.15,"kaelon black":0.15,"jayden reed":0.15,"khalil shakir":0.14,"chris bell":0.14,"dalton schultz":0.14,"dallas goedert":0.14,"mark andrews":0.14,"mac jones":0.14,"shedeur sanders":0.14,"jk dobbins":0.14,"woody marks":0.13,"dontayvion wicks":0.13,"adonai mitchell":0.13,"wandale robinson":0.13,"courtland sutton":0.13,"jakobi meyers":0.13,"romeo doubs":0.13,"michael mayer":0.13,"mike washington":0.12,"zach charbonnet":0.12,"tua tagovailoa":0.12,"keaton mitchell":0.12,"aaron jones":0.12,"marshawn lloyd":0.12,"kenny gainwell":0.12,"tank bigsby":0.12,"tyjae spears":0.11,"nicholas singleton":0.11,"jalen mcmillan":0.11,"carson beck":0.11,"jacoby brissett":0.11,"aaron rodgers":0.11,"ricky pearsall":0.11,"ted hurst":0.11,"jayden higgins":0.1,"oscar delp":0.1,"jordan mason":0.1,"aj barner":0.1,"tre harris":0.1,"zachariah branch":0.1,"drew allar":0.09,"kaytron allen":0.09,"tony pollard":0.09,"tyler allgeier":0.09,"braelon allen":0.09,"brian robinson":0.09,"ray davis":0.08,"elijah sarratt":0.08,"tre tucker":0.08,"malik washington":0.08,"dylan sampson":0.08,"pat freiermuth":0.08,"deshaun watson":0.07,"max klare":0.07,"adam randall":0.07,"demond claiborne":0.07,"chris rodriguez":0.07,"rashid shaheed":0.07,"tj hockenson":0.06,"hunter henry":0.06,"gunnar helm":0.06,"cyrus allen":0.06,"devaughn vele":0.06,"malachi fields":0.06,"jaylin noel":0.05,"kayshon boutte":0.05,"cade otton":0.05,"seth mcgowan":0.05,"kalif raymond":0.05,"ryan flournoy":0.05,"jalen nailor":0.05,"jameis winston":0.05,"marcus mariota":0.05,"jj mccarthy":0.04,"cade klubnik":0.04,"alvin kamara":0.04,"marlin klein":0.04,"elijah arroyo":0.04,"tank dell":0.04,"brandon aiyuk":0.04,"jordan james":0.04,"isaac teslaa":0.04,"mason taylor":0.04,"kirk cousins":0.03,"darren waller":0.03,"keon coleman":0.03,"jerry jeudy":0.03,"jauan jennings":0.03,"matt hibner":0.03,"evan engram":0.03,"greg dulcich":0.03,"mike gesicki":0.03,"keenan allen":0.03,"kimani vidal":0.03,"troy franklin":0.03,"dj giddens":0.03,"tanner koziol":0.03,"kevin coleman":0.03,"brenen thompson":0.03,"calvin ridley":0.03,"tory horton":0.03,"elic ayomanor":0.03,"skyler bell":0.03,"jack bech":0.03,"chris brazzell":0.02,"anthony richardson":0.02,"bryce lance":0.02,"erick all":0.02,"justin fields":0.02,"justin joly":0.02,"kaleb johnson":0.02,"kendre miller":0.02,"kyle williams":0.02,"demario douglas":0.02,"devin singletary":0.02,"samaje perine":0.02,"rashod bateman":0.02,"jaylen wright":0.02,"ollie gordon":0.02,"drew lock":0.02,"tyson bagent":0.02,"will shipley":0.02,"najee harris":0.02,"chris brooks":0.02,"tyrone tracy":0.02,"jalen royals":0.02,"darnell washington":0.02,"eli heidenreich":0.02,"isiah pacheco":0.02,"james conner":0.02,"tyreek hill":0.02,"cole kmet":0.02,"cole payton":0.02,"garrett nussmeier":0.02,"jack endries":0.01,"jalen milroe":0.01,"malik benson":0.01,"mitchell evans":0.01,"taylen green":0.01,"tez johnson":0.01,"zavion thomas":0.01,"jalon daniels":0.01,"roman wilson":0.01,"emari demercado":0.01,"sean tucker":0.01,"tahj brooks":0.01,"sione vaki":0.01,"carson wentz":0.01};
+  const PP_PLAYER_VALUES = {"jaxon smith-njigba":3,"josh allen":3,"jahmyr gibbs":3,"bijan robinson":3,"jamarr chase":2.9,"puka nacua":2.6,"ashton jeanty":2.59,"jeremiyah love":2.58,"brock bowers":2.5,"malik nabers":2.41,"trey mcbride":2.32,"lamar jackson":2.24,"caleb williams":2.15,"amon-ra st brown":2.06,"ceedee lamb":2,"patrick mahomes":1.94,"drake london":1.89,"justin jefferson":1.83,"joe burrow":1.77,"jayden daniels":1.72,"kenneth walker":1.66,"tetairoa mcmillan":1.6,"brock purdy":1.55,"chris olave":1.5,"jonathan taylor":1.48,"trevor lawrence":1.46,"jalen hurts":1.45,"drake maye":1.43,"garrett wilson":1.41,"zay flowers":1.39,"colston loveland":1.38,"james cook":1.36,"justin herbert":1.34,"nico collins":1.32,"george pickens":1.31,"parker washington":1.29,"ladd mcconkey":1.25,"luther burden":1.22,"jordyn tyson":1.2,"jaxson dart":1.17,"tyler shough":1.14,"jordan love":1.11,"carnell tate":1.09,"devonta smith":1.06,"christian mccaffrey":1.03,"chase brown":1,"christian watson":0.99,"tee higgins":0.98,"dak prescott":0.96,"omarion hampton":0.95,"devon achane":0.94,"makai lemon":0.93,"matthew golden":0.92,"emeka egbuka":0.9,"tyler warren":0.89,"dalton kincaid":0.88,"bucky irving":0.87,"bo nix":0.86,"fernando mendoza":0.84,"jared goff":0.83,"breece hall":0.82,"sam laporta":0.81,"kc concepcion":0.8,"jaylen waddle":0.78,"tucker kraft":0.77,"javonte williams":0.75,"saquon barkley":0.74,"kyren williams":0.73,"derrick henry":0.72,"kenyon sadiq":0.71,"bryce young":0.7,"treveyon henderson":0.69,"jadarian price":0.68,"dandre swift":0.66,"bhayshul tuten":0.65,"cam skattebo":0.64,"jameson williams":0.63,"jalen coker":0.62,"denzel boston":0.61,"michael wilson":0.6,"quinshon judkins":0.59,"harold fannin":0.58,"josh downs":0.57,"dj moore":0.56,"rashee rice":0.55,"sam darnold":0.54,"cj stroud":0.53,"kyler murray":0.52,"aj brown":0.5,"jordan addison":0.49,"rome odunze":0.47,"matthew stafford":0.46,"george kittle":0.45,"chuba hubbard":0.43,"baker mayfield":0.42,"daniel jones":0.4,"isaiah likely":0.39,"ty simpson":0.38,"mike evans":0.36,"brian thomas":0.35,"malik willis":0.34,"marvin harrison":0.32,"dk metcalf":0.31,"terrance ferguson":0.3,"alec pierce":0.29,"david montgomery":0.28,"jonah coleman":0.27,"cam ward":0.26,"davante adams":0.25,"omar cooper":0.24,"terry mclaurin":0.23,"jaylen warren":0.22,"josh jacobs":0.22,"jonathon brooks":0.21,"chris bell":0.2,"antonio williams":0.2,"travis hunter":0.2,"dezhaun stribling":0.2,"adonai mitchell":0.19,"kyle monangai":0.19,"blake corum":0.19,"michael penix":0.19,"rj harvey":0.19,"travis etienne":0.19,"caleb douglas":0.18,"germie bernard":0.18,"kyle pitts":0.18,"stefon diggs":0.18,"juwan johnson":0.18,"eli raridon":0.18,"brenton strange":0.17,"rhamondre stevenson":0.17,"jacory croskey-merritt":0.17,"emmett johnson":0.17,"deebo samuel":0.17,"geno smith":0.17,"pat bryant":0.16,"jakobi lane":0.16,"oronde gadsden":0.16,"eli stowers":0.16,"travis kelce":0.16,"xavier worthy":0.16,"quentin johnston":0.15,"dalton schultz":0.15,"chig okonkwo":0.15,"rico dowdle":0.15,"rachaad white":0.15,"mac jones":0.15,"jacoby brissett":0.14,"dontayvion wicks":0.14,"chris godwin":0.14,"kaelon black":0.14,"woody marks":0.14,"mike washington":0.14,"michael mayer":0.14,"jake ferguson":0.14,"jayden reed":0.13,"khalil shakir":0.13,"zach charbonnet":0.13,"dallas goedert":0.13,"mark andrews":0.13,"jk dobbins":0.13,"romeo doubs":0.13,"wandale robinson":0.13,"jakobi meyers":0.12,"michael pittman":0.12,"keaton mitchell":0.12,"aaron jones":0.12,"carson beck":0.12,"aaron rodgers":0.12,"shedeur sanders":0.12,"ricky pearsall":0.12,"ted hurst":0.12,"jayden higgins":0.11,"malik washington":0.11,"braelon allen":0.11,"courtland sutton":0.11,"jalen mcmillan":0.11,"kenny gainwell":0.11,"tank bigsby":0.11,"tyjae spears":0.11,"nicholas singleton":0.1,"oscar delp":0.1,"tua tagovailoa":0.1,"jordan mason":0.1,"tony pollard":0.1,"aj barner":0.09,"tre harris":0.09,"zachariah branch":0.09,"drew allar":0.09,"brian robinson":0.09,"kaytron allen":0.09,"tyler allgeier":0.08,"ray davis":0.08,"tre tucker":0.08,"dylan sampson":0.08,"pat freiermuth":0.08,"deshaun watson":0.07,"adam randall":0.07,"demond claiborne":0.07,"chris rodriguez":0.07,"rashid shaheed":0.07,"elijah sarratt":0.07,"hunter henry":0.06,"cade otton":0.06,"tj hockenson":0.06,"gunnar helm":0.06,"max klare":0.06,"cyrus allen":0.06,"devaughn vele":0.05,"jaylin noel":0.05,"seth mcgowan":0.05,"ryan flournoy":0.05,"kalif raymond":0.05,"malachi fields":0.05,"jameis winston":0.05,"marcus mariota":0.05,"jj mccarthy":0.05,"cade klubnik":0.04,"alvin kamara":0.04,"isaac teslaa":0.04,"kirk cousins":0.04,"darren waller":0.04,"marlin klein":0.04,"keon coleman":0.04,"mason taylor":0.04,"rashod bateman":0.04,"kaleb johnson":0.04,"kayshon boutte":0.04,"marshawn lloyd":0.04,"brandon aiyuk":0.04,"ollie gordon":0.04,"jaylen wright":0.03,"jordan james":0.03,"elijah arroyo":0.03,"tank dell":0.03,"jalen nailor":0.03,"jauan jennings":0.03,"jalon daniels":0.03,"jerry jeudy":0.03,"greg dulcich":0.03,"mike gesicki":0.03,"roman wilson":0.03,"matt hibner":0.03,"keenan allen":0.03,"kimani vidal":0.03,"troy franklin":0.03,"dj giddens":0.03,"tanner koziol":0.03,"brenen thompson":0.03,"tory horton":0.03,"elic ayomanor":0.03,"skyler bell":0.02,"chris brazzell":0.02,"tyreek hill":0.02,"anthony richardson":0.02,"justin fields":0.02,"justin joly":0.02,"kendre miller":0.02,"kyle williams":0.02,"demario douglas":0.02,"tyrone tracy":0.02,"bryce lance":0.02,"evan engram":0.02,"isaiah davis":0.02,"emanuel wilson":0.02,"konata mumpfield":0.02,"jordan watkins":0.02,"samaje perine":0.02,"tyler goodson":0.02,"kevin coleman":0.02,"jack bech":0.02,"erick all":0.02,"calvin ridley":0.02,"drew lock":0.02,"tyson bagent":0.02,"will shipley":0.02,"sione vaki":0.02,"najee harris":0.02,"chris brooks":0.02,"jalen royals":0.02,"eli heidenreich":0.01,"isiah pacheco":0.01,"james conner":0.01,"taylen green":0.01,"cole payton":0.01,"garrett nussmeier":0.01,"cole kmet":0.01,"jack endries":0.01,"jalen milroe":0.01,"malik benson":0.01,"mitchell evans":0.01,"tez johnson":0.01,"zavion thomas":0.01,"sean tucker":0.01,"tahj brooks":0.01,"carson wentz":0.01};
 
   function ppNormalizeName(name) {
     return String(name || '').toLowerCase().replace(/[.',]/g, '').replace(/\s+/g, ' ').trim();
@@ -23090,22 +23289,55 @@
     const sortedKeys = Object.keys(PP_PLAYER_VALUES).sort((a, b) => PP_PLAYER_VALUES[b] - PP_PLAYER_VALUES[a]);
     return sortedKeys.indexOf(key) + 1;
   }
-  // Name -> position, built once from the full Sleeper player pool, so a
-  // positional rank (e.g. "RB6 of 45") can be worked out among just the
-  // other PP_PLAYER_VALUES entries at the same position -- PP_PLAYER_VALUES
-  // itself only stores name -> value, no position.
+  // Name -> the Sleeper player that name means, built once from the full
+  // player pool, so a positional rank ("RB6 of 45") can be worked out
+  // among just the other PP_PLAYER_VALUES entries at the same position --
+  // PP_PLAYER_VALUES itself only stores name -> value, no position.
+  //
+  // Names are not unique in Sleeper's pool: there is a cornerback called
+  // Lamar Jackson, a safety called Chris Olave's namesake, a practice
+  // squad full of them. Keying on the name alone meant whichever one the
+  // pool happened to list last won, which is how the quarterback with the
+  // second-highest value in the game came to be ranked among cornerbacks.
+  // So: only ever the four positions these rankings are about, and when a
+  // name still collides, the one who is actually on an NFL roster, then
+  // Sleeper's own search_rank, which orders by who you probably meant.
+  const PP_RANKED_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
+  let ppNameToPlayerCache = null;
+  function ppBuildNameToPlayer(dict) {
+    if (ppNameToPlayerCache) return ppNameToPlayerCache;
+    const map = {};
+    const score = (p) => (p.team ? 0 : 1e6) + (p.search_rank != null ? p.search_rank : 999999);
+    Object.entries(dict || {}).forEach(([id, p]) => {
+      if (!p || !p.position || !PP_RANKED_POSITIONS.includes(p.position)) return;
+      const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+      if (!name) return;
+      const key = ppNormalizeName(name).replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
+      const prev = map[key];
+      if (!prev || score(p) < score(prev.p)) map[key] = { id, p };
+    });
+    ppNameToPlayerCache = map;
+    return map;
+  }
   let ppNameToPosCache = null;
   function ppBuildNameToPos(dict) {
     if (ppNameToPosCache) return ppNameToPosCache;
     const map = {};
-    Object.values(dict || {}).forEach(p => {
-      if (!p) return;
-      const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-      if (!name || !p.position) return;
-      map[ppNormalizeName(name)] = p.position;
-    });
+    Object.entries(ppBuildNameToPlayer(dict)).forEach(([key, v]) => { map[key] = v.p.position; });
     ppNameToPosCache = map;
     return map;
+  }
+  // The rankings carry an age to one decimal -- 24.6, not 24 -- which for
+  // a dynasty asset is most of the information. Sleeper's own age is a
+  // whole number, so prefer the export's and fall back to Sleeper's only
+  // for someone the rankings do not cover.
+  function ppAgeForPlayerId(playerId, dict) {
+    const key = ppKeyForPlayerId(playerId, dict);
+    return key && PP_PLAYER_AGES[key] != null ? PP_PLAYER_AGES[key] : null;
+  }
+  function ppArchetypeForPlayerId(playerId, dict) {
+    const key = ppKeyForPlayerId(playerId, dict);
+    return key ? (PP_PLAYER_ARCHETYPES[key] || null) : null;
   }
   function ppPositionalRankForPlayerId(playerId, dict) {
     const p = dict && dict[playerId];
@@ -23286,7 +23518,29 @@
   // From the same Pure Potential export as the values. Only used to tell a
   // good roster that stays good from a good roster that is about to fall
   // over, which is what decides a pick two drafts out.
-  const PP_PLAYER_AGES = {"josh allen":30.3,"jaxon smith-njigba":24.6,"jahmyr gibbs":24.5,"bijan robinson":24.6,"jamarr chase":26.6,"malik nabers":23.2,"puka nacua":25.3,"ashton jeanty":22.8,"caleb williams":24.8,"drake maye":24.1,"jeremiyah love":21.3,"brock bowers":23.8,"amon-ra st brown":26.9,"trey mcbride":26.8,"lamar jackson":29.7,"justin jefferson":27.3,"ceedee lamb":27.5,"patrick mahomes":31.0,"joe burrow":29.8,"drake london":25.2,"jalen hurts":28.1,"tetairoa mcmillan":23.5,"colston loveland":22.5,"jayden daniels":25.8,"jonathan taylor":27.7,"kenneth walker":25.9,"chris olave":26.2,"trevor lawrence":27.0,"brock purdy":26.7,"justin herbert":28.5,"omarion hampton":23.5,"james cook":27.0,"garrett wilson":26.2,"devon achane":24.9,"nico collins":27.5,"george pickens":25.6,"zay flowers":26.0,"jaxson dart":23.4,"ladd mcconkey":24.9,"devonta smith":27.9,"parker washington":24.5,"jordyn tyson":22.1,"tyler warren":24.3,"jordan love":27.9,"emeka egbuka":23.9,"luther burden":22.8,"carnell tate":21.7,"chase brown":26.5,"breece hall":25.3,"christian mccaffrey":30.3,"bo nix":26.6,"makai lemon":22.3,"jaylen waddle":27.8,"tee higgins":27.7,"bucky irving":24.1,"fernando mendoza":23.0,"dak prescott":33.2,"jared goff":31.9,"treveyon henderson":23.9,"quinshon judkins":22.9,"christian watson":27.4,"matthew golden":23.1,"sam laporta":25.7,"dalton kincaid":26.9,"tucker kraft":25.9,"tyler shough":27.0,"jameson williams":25.5,"kc concepcion":22.0,"javonte williams":26.4,"saquon barkley":29.6,"jadarian price":23.0,"kyren williams":26.1,"derrick henry":32.7,"dandre swift":27.7,"bryce young":25.2,"brian thomas":24.0,"bhayshul tuten":23.6,"harold fannin":22.2,"jalen coker":24.9,"rome odunze":24.3,"denzel boston":22.8,"aj brown":29.2,"cam skattebo":24.6,"baker mayfield":31.4,"kyler murray":29.1,"sam darnold":29.3,"cj stroud":25.0,"rashee rice":26.4,"kenyon sadiq":21.6,"daniel jones":29.3,"matthew stafford":38.6,"josh downs":25.1,"isaiah likely":26.4,"cam ward":24.3,"jordan addison":24.7,"mike evans":33.1,"malik willis":27.3,"george kittle":33.0,"chuba hubbard":27.3,"kyle pitts":26.0,"dj moore":29.4,"dk metcalf":28.8,"ty simpson":23.8,"marvin harrison":24.1,"david montgomery":29.3,"travis etienne":27.7,"michael wilson":26.6,"alec pierce":26.4,"omar cooper":22.8,"terry mclaurin":31.0,"davante adams":33.7,"kyle monangai":24.3,"jaylen warren":27.9,"josh jacobs":28.6,"jonah coleman":23.1,"jonathon brooks":23.2,"rj harvey":25.6,"terrance ferguson":23.6,"germie bernard":22.8,"antonio williams":22.2,"travis hunter":23.4,"dezhaun stribling":23.8,"caleb douglas":23.0,"blake corum":25.8,"rhamondre stevenson":28.6,"michael penix":26.4,"stefon diggs":32.8,"oronde gadsden":23.2,"xavier worthy":23.4,"eli raridon":22.6,"brenton strange":25.7,"jake ferguson":27.7,"emmett johnson":23.0,"chris godwin":30.6,"jacory croskey-merritt":25.5,"pat bryant":23.8,"jakobi lane":22.4,"quentin johnston":25.0,"michael pittman":29.0,"geno smith":36.0,"juwan johnson":30.0,"deebo samuel":30.7,"eli stowers":23.4,"travis kelce":37.0,"chig okonkwo":27.0,"rico dowdle":28.3,"rachaad white":27.7,"kaelon black":24.9,"jayden reed":26.4,"khalil shakir":26.6,"chris bell":22.3,"dalton schultz":30.2,"dallas goedert":31.7,"mark andrews":31.0,"mac jones":28.1,"shedeur sanders":24.6,"jk dobbins":27.8,"woody marks":25.7,"dontayvion wicks":25.3,"adonai mitchell":24.0,"wandale robinson":25.7,"courtland sutton":31.0,"jakobi meyers":29.9,"romeo doubs":26.4,"michael mayer":25.2,"mike washington":23.2,"zach charbonnet":25.7,"tua tagovailoa":28.6,"keaton mitchell":24.7,"aaron jones":31.8,"marshawn lloyd":25.7,"kenny gainwell":27.5,"tank bigsby":24.1,"tyjae spears":25.3,"nicholas singleton":22.7,"jalen mcmillan":24.8,"carson beck":23.8,"jacoby brissett":33.8,"aaron rodgers":42.8,"ricky pearsall":26.0,"ted hurst":22.2,"jayden higgins":23.8,"oscar delp":23.1,"jordan mason":27.3,"aj barner":24.4,"tre harris":24.6,"zachariah branch":22.5,"drew allar":22.5,"kaytron allen":23.7,"tony pollard":29.4,"tyler allgeier":26.4,"braelon allen":22.7,"brian robinson":27.5,"ray davis":26.9,"elijah sarratt":23.3,"tre tucker":25.5,"malik washington":25.7,"dylan sampson":22.0,"pat freiermuth":27.9,"deshaun watson":31.0,"max klare":23.2,"adam randall":22.2,"demond claiborne":23.0,"chris rodriguez":27.0,"rashid shaheed":28.1,"tj hockenson":29.2,"hunter henry":31.8,"gunnar helm":24.0,"cyrus allen":23.6,"devaughn vele":28.8,"malachi fields":23.1,"jaylin noel":24.1,"kayshon boutte":24.4,"cade otton":27.4,"seth mcgowan":24.9,"kalif raymond":32.1,"ryan flournoy":26.9,"jalen nailor":27.6,"jameis winston":32.7,"marcus mariota":32.9,"jj mccarthy":23.7,"cade klubnik":23.0,"alvin kamara":31.2,"marlin klein":24.0,"elijah arroyo":23.5,"tank dell":26.9,"brandon aiyuk":28.5,"jordan james":22.5,"isaac teslaa":24.6,"mason taylor":22.4,"kirk cousins":38.1,"darren waller":34.0,"keon coleman":23.4,"jerry jeudy":27.4,"jauan jennings":29.2,"matt hibner":24.5,"evan engram":32.1,"greg dulcich":26.5,"mike gesicki":31.0,"keenan allen":34.4,"kimani vidal":25.1,"troy franklin":23.6,"dj giddens":23.1,"tanner koziol":22.7,"kevin coleman":23.0,"brenen thompson":23.2,"calvin ridley":31.8,"tory horton":23.8,"elic ayomanor":23.3,"skyler bell":24.2,"jack bech":23.8,"chris brazzell":23.0,"anthony richardson":24.3,"bryce lance":24.1,"erick all":26.0,"justin fields":27.6,"justin joly":22.2,"kaleb johnson":23.1,"kendre miller":24.3,"kyle williams":23.9,"demario douglas":25.8,"devin singletary":29.1,"samaje perine":31.0,"rashod bateman":26.8,"jaylen wright":23.5,"ollie gordon":22.7,"drew lock":29.9,"tyson bagent":26.3,"will shipley":24.1,"najee harris":28.5,"chris brooks":26.7,"tyrone tracy":26.8,"jalen royals":23.6,"darnell washington":25.1,"eli heidenreich":23.2,"isiah pacheco":27.6,"james conner":31.4,"tyreek hill":32.6,"cole kmet":27.5,"cole payton":23.9,"garrett nussmeier":24.6,"jack endries":22.5,"jalen milroe":23.8,"malik benson":23.9,"mitchell evans":23.5,"taylen green":23.9,"tez johnson":24.4,"zavion thomas":22.6,"jalon daniels":23.9,"roman wilson":25.3,"emari demercado":27.7,"sean tucker":24.9,"tahj brooks":24.4,"sione vaki":25.2,"carson wentz":33.7};
+  const PP_PLAYER_AGES = {"jaxon smith-njigba":24.6,"josh allen":30.4,"jahmyr gibbs":24.5,"bijan robinson":24.7,"jamarr chase":26.6,"puka nacua":25.3,"ashton jeanty":22.8,"jeremiyah love":21.3,"brock bowers":23.8,"malik nabers":23.2,"trey mcbride":26.9,"lamar jackson":29.7,"caleb williams":24.9,"amon-ra st brown":26.9,"ceedee lamb":27.5,"patrick mahomes":31.0,"drake london":25.2,"justin jefferson":27.3,"joe burrow":29.8,"jayden daniels":25.8,"kenneth walker":25.9,"tetairoa mcmillan":23.5,"brock purdy":26.8,"chris olave":26.3,"jonathan taylor":27.7,"trevor lawrence":27.0,"jalen hurts":28.1,"drake maye":24.1,"garrett wilson":26.2,"zay flowers":26.0,"colston loveland":22.5,"james cook":27.0,"justin herbert":28.6,"nico collins":27.5,"george pickens":25.6,"parker washington":24.5,"ladd mcconkey":24.9,"luther burden":22.8,"jordyn tyson":22.1,"jaxson dart":23.4,"tyler shough":27.0,"jordan love":27.9,"carnell tate":21.7,"devonta smith":27.9,"christian mccaffrey":30.3,"chase brown":26.5,"christian watson":27.4,"tee higgins":27.7,"dak prescott":33.2,"omarion hampton":23.5,"devon achane":25.0,"makai lemon":22.3,"matthew golden":23.2,"emeka egbuka":24.0,"tyler warren":24.4,"dalton kincaid":27.0,"bucky irving":24.1,"bo nix":26.6,"fernando mendoza":23.0,"jared goff":32.0,"breece hall":25.3,"sam laporta":25.7,"kc concepcion":22.0,"jaylen waddle":27.8,"tucker kraft":25.9,"javonte williams":26.4,"saquon barkley":29.6,"kyren williams":26.1,"derrick henry":32.7,"kenyon sadiq":21.6,"bryce young":25.2,"treveyon henderson":23.9,"jadarian price":23.0,"dandre swift":27.7,"bhayshul tuten":23.6,"cam skattebo":24.6,"jameson williams":25.5,"jalen coker":24.9,"denzel boston":22.8,"michael wilson":26.6,"quinshon judkins":22.9,"harold fannin":22.2,"josh downs":25.1,"dj moore":29.5,"rashee rice":26.4,"sam darnold":29.3,"cj stroud":25.0,"kyler murray":29.1,"aj brown":29.3,"jordan addison":24.7,"rome odunze":24.3,"matthew stafford":38.6,"george kittle":33.0,"chuba hubbard":27.3,"baker mayfield":31.5,"daniel jones":29.3,"isaiah likely":26.4,"ty simpson":23.8,"mike evans":33.1,"brian thomas":24.0,"malik willis":27.4,"marvin harrison":24.1,"dk metcalf":28.8,"terrance ferguson":23.6,"alec pierce":26.4,"david montgomery":29.3,"jonah coleman":23.1,"cam ward":24.3,"davante adams":33.8,"omar cooper":22.8,"terry mclaurin":31.0,"jaylen warren":27.9,"josh jacobs":28.6,"jonathon brooks":23.2,"chris bell":22.3,"antonio williams":22.2,"travis hunter":23.4,"dezhaun stribling":23.8,"adonai mitchell":24.0,"kyle monangai":24.3,"blake corum":25.8,"michael penix":26.4,"rj harvey":25.7,"travis etienne":27.7,"caleb douglas":23.1,"germie bernard":22.8,"kyle pitts":26.0,"stefon diggs":32.8,"juwan johnson":30.0,"eli raridon":22.6,"brenton strange":25.8,"rhamondre stevenson":28.6,"jacory croskey-merritt":25.5,"emmett johnson":23.0,"deebo samuel":30.7,"geno smith":36.0,"pat bryant":23.8,"jakobi lane":22.4,"oronde gadsden":23.3,"eli stowers":23.5,"travis kelce":37.0,"xavier worthy":23.4,"quentin johnston":25.1,"dalton schultz":30.2,"chig okonkwo":27.1,"rico dowdle":28.3,"rachaad white":27.7,"mac jones":28.1,"jacoby brissett":33.8,"dontayvion wicks":25.3,"chris godwin":30.6,"kaelon black":25.0,"woody marks":25.8,"mike washington":23.2,"michael mayer":25.2,"jake ferguson":27.7,"jayden reed":26.4,"khalil shakir":26.7,"zach charbonnet":25.7,"dallas goedert":31.7,"mark andrews":31.1,"jk dobbins":27.8,"romeo doubs":26.5,"wandale robinson":25.7,"jakobi meyers":29.9,"michael pittman":29.0,"keaton mitchell":24.7,"aaron jones":31.8,"carson beck":23.9,"aaron rodgers":42.8,"shedeur sanders":24.6,"ricky pearsall":26.1,"ted hurst":22.2,"jayden higgins":23.8,"malik washington":25.7,"braelon allen":22.7,"courtland sutton":31.0,"jalen mcmillan":24.8,"kenny gainwell":27.5,"tank bigsby":24.1,"tyjae spears":25.3,"nicholas singleton":22.7,"oscar delp":23.2,"tua tagovailoa":28.6,"jordan mason":27.4,"tony pollard":29.4,"aj barner":24.4,"tre harris":24.6,"zachariah branch":22.5,"drew allar":22.6,"brian robinson":27.5,"kaytron allen":23.7,"tyler allgeier":26.5,"ray davis":26.9,"tre tucker":25.6,"dylan sampson":22.0,"pat freiermuth":27.9,"deshaun watson":31.0,"adam randall":22.2,"demond claiborne":23.0,"chris rodriguez":27.0,"rashid shaheed":28.1,"elijah sarratt":23.3,"hunter henry":31.8,"cade otton":27.5,"tj hockenson":29.2,"gunnar helm":24.1,"max klare":23.2,"cyrus allen":23.6,"devaughn vele":28.8,"jaylin noel":24.1,"seth mcgowan":24.9,"ryan flournoy":26.9,"kalif raymond":32.1,"malachi fields":23.1,"jameis winston":32.7,"marcus mariota":32.9,"jj mccarthy":23.7,"cade klubnik":23.0,"alvin kamara":31.2,"isaac teslaa":24.6,"kirk cousins":38.1,"darren waller":34.0,"marlin klein":24.0,"keon coleman":23.4,"mason taylor":22.4,"rashod bateman":26.8,"kaleb johnson":23.1,"kayshon boutte":24.4,"marshawn lloyd":25.7,"brandon aiyuk":28.5,"ollie gordon":22.7,"jaylen wright":23.5,"jordan james":22.5,"elijah arroyo":23.5,"tank dell":26.9,"jalen nailor":27.6,"jauan jennings":29.2,"jalon daniels":23.9,"jerry jeudy":27.4,"greg dulcich":26.5,"mike gesicki":31.0,"roman wilson":25.3,"matt hibner":24.6,"keenan allen":34.4,"kimani vidal":25.1,"troy franklin":23.6,"dj giddens":23.1,"tanner koziol":22.7,"brenen thompson":23.2,"tory horton":23.8,"elic ayomanor":23.3,"skyler bell":24.2,"chris brazzell":23.0,"tyreek hill":32.6,"anthony richardson":24.4,"justin fields":27.6,"justin joly":22.2,"kendre miller":24.3,"kyle williams":23.9,"demario douglas":25.8,"tyrone tracy":26.9,"bryce lance":24.1,"evan engram":32.1,"isaiah davis":24.6,"emanuel wilson":27.4,"konata mumpfield":23.9,"jordan watkins":24.6,"samaje perine":31.0,"tyler goodson":25.9,"kevin coleman":23.1,"jack bech":23.8,"erick all":26.0,"calvin ridley":31.8,"drew lock":29.9,"tyson bagent":26.3,"will shipley":24.1,"sione vaki":25.2,"najee harris":28.6,"chris brooks":26.7,"jalen royals":23.6,"eli heidenreich":23.3,"isiah pacheco":27.6,"james conner":31.4,"taylen green":23.9,"cole payton":23.9,"garrett nussmeier":24.6,"cole kmet":27.6,"jack endries":22.5,"jalen milroe":23.8,"malik benson":24.0,"mitchell evans":23.5,"tez johnson":24.4,"zavion thomas":22.6,"sean tucker":24.9,"tahj brooks":24.4,"carson wentz":33.7};
+  // ---- Player archetypes ----------------------------------------------
+  // Also from the Pure Potential export: the one-word read on what a
+  // player IS -- a Cornerstone you build around, a Handcuff you hold in
+  // case, a Stopgap you start until something better shows up. Shown on
+  // the Rankings page beside the value, because two players can be worth
+  // the same 0.15 for completely different reasons.
+  //
+  // Not everyone is labelled. A player the export left blank is shown as
+  // unlabelled rather than guessed at.
+  const PP_PLAYER_ARCHETYPES = {"jaxon smith-njigba":"Cornerstone","josh allen":"Cornerstone","jahmyr gibbs":"Cornerstone","bijan robinson":"Cornerstone","jamarr chase":"Cornerstone","puka nacua":"Cornerstone","ashton jeanty":"Cornerstone","jeremiyah love":"Blue Chip","brock bowers":"Cornerstone","malik nabers":"Cornerstone","trey mcbride":"Cornerstone","lamar jackson":"Cornerstone","caleb williams":"Cornerstone","amon-ra st brown":"Cornerstone","ceedee lamb":"Cornerstone","patrick mahomes":"Cornerstone","drake london":"Cornerstone","justin jefferson":"Cornerstone","joe burrow":"Cornerstone","jayden daniels":"Cornerstone","kenneth walker":"Anchor","tetairoa mcmillan":"Blue Chip","brock purdy":"Anchor","chris olave":"Anchor","jonathan taylor":"Anchor","trevor lawrence":"Anchor","jalen hurts":"Anchor","drake maye":"Anchor","garrett wilson":"Anchor","zay flowers":"Anchor","colston loveland":"Blue Chip","james cook":"Anchor","justin herbert":"Anchor","nico collins":"Anchor","george pickens":"Anchor","parker washington":"Potential Star","ladd mcconkey":"Potential Star","luther burden":"Wild Card","jordyn tyson":"Prospect","jaxson dart":"Blue Chip","tyler shough":"Anchor","jordan love":"Anchor","carnell tate":"Prospect","devonta smith":"Anchor","christian mccaffrey":"Elite Veteran","chase brown":"Anchor","christian watson":"Building Block","tee higgins":"Building Block","dak prescott":"Building Block","omarion hampton":"Potential Star","devon achane":"Anchor","makai lemon":"Prospect","matthew golden":"Potential Star","emeka egbuka":"Potential Star","tyler warren":"Potential Star","dalton kincaid":"Building Block","bucky irving":"Potential Star","bo nix":"Building Block","fernando mendoza":"Prospect","jared goff":"Building Block","breece hall":"Anchor","sam laporta":"Building Block","kc concepcion":"Prospect","jaylen waddle":"Building Block","tucker kraft":"Building Block","javonte williams":"Building Block","saquon barkley":"Elite Veteran","kyren williams":"Building Block","derrick henry":"Elite Veteran","kenyon sadiq":"Potential Star","bryce young":"Potential Star","treveyon henderson":"Wild Card","jadarian price":"Potential Star","dandre swift":"Useful Veteran","bhayshul tuten":"Potential Star","cam skattebo":"Potential Star","jameson williams":"Building Block","jalen coker":"Potential Star","denzel boston":"Prospect","michael wilson":"Upside Flex","quinshon judkins":"Potential Star","harold fannin":"Potential Star","josh downs":"Potential Star","dj moore":"Useful Veteran","rashee rice":"Wild Card","sam darnold":"Building Block","cj stroud":"Upside Flex","kyler murray":"Wild Card","aj brown":"Useful Veteran","jordan addison":"Upside Flex","rome odunze":"Upside Flex","matthew stafford":"Elite Veteran","george kittle":"Elite Veteran","chuba hubbard":"Useful Veteran","baker mayfield":"Useful Veteran","daniel jones":"Useful Veteran","isaiah likely":"Upside Flex","ty simpson":"Prospect","mike evans":"Elite Veteran","brian thomas":"Upside Flex","malik willis":"Wild Card","marvin harrison":"Upside Flex","dk metcalf":"Useful Veteran","terrance ferguson":"Dart Throw","alec pierce":"Upside Flex","david montgomery":"Useful Veteran","jonah coleman":"Prospect","cam ward":"Upside Flex","davante adams":"Elite Veteran","omar cooper":"Prospect","terry mclaurin":"Useful Veteran","jaylen warren":"Useful Veteran","josh jacobs":"Useful Veteran","jonathon brooks":"Upside Flex","chris bell":"Prospect","antonio williams":"Prospect","travis hunter":"Developmental","dezhaun stribling":"Prospect","adonai mitchell":"Developmental","kyle monangai":"Flex Filler","blake corum":"Handcuff","michael penix":"Dart Throw","rj harvey":"Upside Flex","travis etienne":"Useful Veteran","caleb douglas":"Prospect","germie bernard":"Prospect","kyle pitts":"Upside Flex","stefon diggs":"Stopgap","juwan johnson":"Stopgap","eli raridon":"Prospect","brenton strange":"Flex Filler","rhamondre stevenson":"Useful Veteran","jacory croskey-merritt":"Flex Filler","emmett johnson":"Handcuff","deebo samuel":"Stopgap","geno smith":"Stopgap","pat bryant":"Developmental","jakobi lane":"Prospect","oronde gadsden":"Wild Card","eli stowers":"Prospect","travis kelce":"Stopgap","xavier worthy":"Flex Filler","quentin johnston":"Flex Filler","dalton schultz":"Stopgap","chig okonkwo":"Flex Filler","rico dowdle":"Stopgap","rachaad white":"Stopgap","mac jones":"Handcuff","jacoby brissett":"Stopgap","dontayvion wicks":"Developmental","chris godwin":"Stopgap","kaelon black":"Handcuff","woody marks":"Handcuff","mike washington":"Handcuff","michael mayer":"Developmental","jake ferguson":"Flex Filler","jayden reed":"Flex Filler","khalil shakir":"Flex Filler","zach charbonnet":"Handcuff","dallas goedert":"Stopgap","mark andrews":"Stopgap","jk dobbins":"Stopgap","romeo doubs":"Flex Filler","wandale robinson":"Flex Filler","jakobi meyers":"Stopgap","michael pittman":"Stopgap","keaton mitchell":"Handcuff","aaron jones":"Stopgap","carson beck":"Prospect","aaron rodgers":"Stopgap","shedeur sanders":"Dart Throw","ricky pearsall":"Dart Throw","ted hurst":"Prospect","jayden higgins":"Developmental","malik washington":"Stopgap","braelon allen":"Handcuff","courtland sutton":"Stopgap","jalen mcmillan":"Developmental","kenny gainwell":"Handcuff","tank bigsby":"Handcuff","tyjae spears":"Handcuff","nicholas singleton":"Prospect","oscar delp":"Prospect","tua tagovailoa":"Flex Filler","jordan mason":"Stopgap","tony pollard":"Stopgap","aj barner":"Developmental","tre harris":"Developmental","zachariah branch":"Prospect","drew allar":"Prospect","brian robinson":"Handcuff","kaytron allen":"Prospect","tyler allgeier":"Handcuff","ray davis":"Handcuff","tre tucker":"Stopgap","dylan sampson":"Handcuff","pat freiermuth":"Flex Filler","deshaun watson":"Dart Throw","adam randall":"Prospect","demond claiborne":"Prospect","chris rodriguez":"Handcuff","rashid shaheed":"Flex Filler","elijah sarratt":"Prospect","hunter henry":"Stopgap","cade otton":"Stopgap","tj hockenson":"Stopgap","gunnar helm":"Developmental","max klare":"Prospect","cyrus allen":"Prospect","devaughn vele":"Stopgap","jaylin noel":"Developmental","seth mcgowan":"Handcuff","ryan flournoy":"Stopgap","kalif raymond":"Stopgap","malachi fields":"Prospect","jameis winston":"Stopgap","marcus mariota":"Stopgap","jj mccarthy":"Dart Throw","cade klubnik":"Prospect","alvin kamara":"Stopgap","isaac teslaa":"Developmental","kirk cousins":"Stopgap","darren waller":"Stopgap","marlin klein":"Prospect","keon coleman":"Developmental","mason taylor":"Developmental","kayshon boutte":"Developmental","marshawn lloyd":"Handcuff","brandon aiyuk":"Dart Throw","jordan james":"Handcuff","elijah arroyo":"Developmental","tank dell":"Dart Throw","jalen nailor":"Stopgap","jauan jennings":"Stopgap","jerry jeudy":"Stopgap","greg dulcich":"Dart Throw","mike gesicki":"Stopgap","matt hibner":"Prospect","keenan allen":"Stopgap","kimani vidal":"Stash","troy franklin":"Developmental","dj giddens":"Stash","tanner koziol":"Prospect","brenen thompson":"Prospect","tory horton":"Developmental","elic ayomanor":"Developmental","skyler bell":"Prospect","chris brazzell":"Prospect","justin fields":"Handcuff","tyrone tracy":"Stash","bryce lance":"Prospect","evan engram":"Stopgap","kevin coleman":"Prospect","jack bech":"Developmental","erick all":"Developmental","calvin ridley":"Stash","najee harris":"Stash"};
+  // Each archetype's dot colour, grouped by what the label is really
+  // saying rather than one colour per label -- sixteen distinct hues
+  // would be a code to memorize, six families you can read at a glance.
+  const PP_ARCHETYPE_TONE = {
+    "Cornerstone": "elite", "Blue Chip": "elite",
+    "Anchor": "starter", "Building Block": "starter", "Potential Star": "starter",
+    "Prospect": "young", "Developmental": "young", "Wild Card": "young",
+    "Elite Veteran": "vet", "Useful Veteran": "vet", "Stopgap": "vet",
+    "Upside Flex": "depth", "Flex Filler": "depth", "Dart Throw": "depth",
+    "Handcuff": "bench", "Stash": "bench",
+  };
+
   // ---- What the rankings used to say --------------------------------
   // PP_PLAYER_VALUES above is what a player is worth TODAY. These are what
   // it said on the dates it said it, oldest first, recovered from this
@@ -23305,11 +23559,12 @@
   // ranking to price it against and honestly says so, rather than being
   // priced at today's values and pretending that is what it was worth at
   // the time.
-  const PP_VALUE_CURRENT_ASOF = "2026-09-23";
+  const PP_VALUE_CURRENT_ASOF = "2026-09-29";
   const PP_VALUE_HISTORY = [
     { asOf: "2026-09-06", values: {"josh allen":3.0,"jamarr chase":2.93,"puka nacua":2.86,"drake maye":2.79,"jaxon smith-njigba":2.72,"bijan robinson":2.65,"jahmyr gibbs":2.58,"brock bowers":2.5,"jayden daniels":2.44,"ashton jeanty":2.39,"lamar jackson":2.34,"malik nabers":2.28,"caleb williams":2.23,"jeremiyah love":2.17,"drake london":2.12,"amon-ra st brown":2.06,"trey mcbride":2.0,"justin jefferson":1.98,"ceedee lamb":1.96,"joe burrow":1.93,"justin herbert":1.91,"colston loveland":1.89,"tetairoa mcmillan":1.87,"omarion hampton":1.85,"jalen hurts":1.82,"patrick mahomes":1.8,"devon achane":1.75,"jaxson dart":1.55,"trevor lawrence":1.5,"garrett wilson":1.47,"chris olave":1.45,"nico collins":1.42,"jonathan taylor":1.39,"james cook":1.37,"george pickens":1.34,"carnell tate":1.31,"brock purdy":1.29,"luther burden":1.25,"tyler warren":1.23,"bo nix":1.2,"emeka egbuka":1.18,"zay flowers":1.15,"jordyn tyson":1.13,"kenneth walker":1.1,"makai lemon":1.08,"ladd mcconkey":1.05,"jordan love":1.03,"chase brown":1.0,"breece hall":0.98,"christian mccaffrey":0.97,"aj brown":0.95,"quinshon judkins":0.94,"devonta smith":0.92,"fernando mendoza":0.91,"harold fannin":0.89,"jaylen waddle":0.88,"rashee rice":0.86,"tee higgins":0.85,"saquon barkley":0.83,"treveyon henderson":0.82,"marvin harrison":0.8,"dak prescott":0.79,"jared goff":0.77,"cam skattebo":0.75,"sam laporta":0.74,"kc concepcion":0.73,"jameson williams":0.72,"bucky irving":0.71,"tucker kraft":0.7,"tyler shough":0.69,"brian thomas":0.68,"cam ward":0.66,"rome odunze":0.65,"baker mayfield":0.64,"jadarian price":0.63,"parker washington":0.62,"kyler murray":0.61,"travis etienne":0.6,"kyren williams":0.59,"javonte williams":0.58,"bhayshul tuten":0.57,"sam darnold":0.56,"kyle pitts":0.55,"josh jacobs":0.54,"cj stroud":0.53,"kenyon sadiq":0.52,"daniel jones":0.5,"derrick henry":0.49,"christian watson":0.48,"josh downs":0.47,"matthew stafford":0.46,"jordan addison":0.44,"malik willis":0.43,"dandre swift":0.42,"jonathon brooks":0.41,"bryce young":0.4,"david montgomery":0.39,"ty simpson":0.37,"omar cooper":0.35,"terry mclaurin":0.34,"davante adams":0.33,"denzel boston":0.32,"mike evans":0.31,"rj harvey":0.3,"dalton kincaid":0.3,"oronde gadsden":0.29,"george kittle":0.29,"dezhaun stribling":0.28,"matthew golden":0.28,"xavier worthy":0.27,"alec pierce":0.27,"dj moore":0.26,"jayden reed":0.26,"michael wilson":0.26,"chris godwin":0.25,"jonah coleman":0.25,"wandale robinson":0.24,"dk metcalf":0.24,"isaiah likely":0.23,"rhamondre stevenson":0.23,"jacory croskey-merritt":0.22,"michael pittman":0.22,"quentin johnston":0.21,"jalen coker":0.21,"jaylen warren":0.21,"jake ferguson":0.2,"eli raridon":0.2,"romeo doubs":0.2,"chig okonkwo":0.19,"eli stowers":0.19,"brenton strange":0.19,"chuba hubbard":0.19,"germie bernard":0.19,"blake corum":0.18,"kyle monangai":0.18,"michael penix":0.18,"jakobi meyers":0.18,"rico dowdle":0.18,"jk dobbins":0.17,"tony pollard":0.17,"kenny gainwell":0.17,"terrance ferguson":0.17,"stefon diggs":0.17,"rachaad white":0.16,"dallas goedert":0.16,"courtland sutton":0.16,"nicholas singleton":0.16,"geno smith":0.16,"juwan johnson":0.15,"jakobi lane":0.15,"chris bell":0.15,"tua tagovailoa":0.15,"jordan mason":0.15,"travis kelce":0.14,"mark andrews":0.14,"mac jones":0.14,"zach charbonnet":0.14,"khalil shakir":0.14,"jalen mcmillan":0.14,"michael mayer":0.14,"dylan sampson":0.14,"shedeur sanders":0.13,"tank bigsby":0.13,"keaton mitchell":0.13,"tyjae spears":0.13,"emmett johnson":0.13,"mike washington":0.13,"carson beck":0.13,"woody marks":0.12,"rashid shaheed":0.12,"pat bryant":0.12,"tre harris":0.12,"antonio williams":0.12,"jayden higgins":0.12,"gunnar helm":0.12,"aj barner":0.12,"zachariah branch":0.11,"max klare":0.11,"oscar delp":0.11,"jaylin noel":0.11,"elijah sarratt":0.11,"marshawn lloyd":0.11,"aaron rodgers":0.11,"drew allar":0.1,"ricky pearsall":0.1,"chris rodriguez":0.1,"kaytron allen":0.1,"ted hurst":0.1,"tyler allgeier":0.09,"aaron jones":0.09,"brian robinson":0.09,"jj mccarthy":0.09,"jacoby brissett":0.09,"braelon allen":0.09,"jaydon blue":0.08,"demond claiborne":0.08,"adonai mitchell":0.08,"cyrus allen":0.08,"dalton schultz":0.08,"ray davis":0.07,"hunter henry":0.07,"kaelon black":0.07,"adam randall":0.07,"kayshon boutte":0.07,"deebo samuel":0.06,"tj hockenson":0.06,"troy franklin":0.06,"jordan james":0.06,"keon coleman":0.06,"justin joly":0.06,"pat freiermuth":0.05,"caleb douglas":0.05,"tyrone tracy":0.05,"isiah pacheco":0.05,"malachi fields":0.05,"elijah arroyo":0.05,"greg dulcich":0.05,"dontayvion wicks":0.05,"malik washington":0.05,"tre tucker":0.05,"ryan flournoy":0.05,"keenan allen":0.05,"tank dell":0.05,"deshaun watson":0.04,"chris brazzell":0.04,"elic ayomanor":0.04,"tory horton":0.04,"skyler bell":0.04,"jerry jeudy":0.04,"jack bech":0.04,"jalen nailor":0.04,"brandon aiyuk":0.04,"cade otton":0.04,"mason taylor":0.04,"david njoku":0.04,"brenen thompson":0.04,"jaylen wright":0.04,"kimani vidal":0.04,"seth mcgowan":0.04,"calvin ridley":0.04,"alvin kamara":0.04,"jauan jennings":0.04,"george holani":0.04,"devin neal":0.03,"dj giddens":0.03,"cade klubnik":0.03,"isaac teslaa":0.03,"kevin coleman":0.03,"kirk cousins":0.03,"tanner koziol":0.03,"matt hibner":0.03,"chimere dike":0.03,"anthony richardson":0.03,"bryce lance":0.03,"charlie kolar":0.03,"colby parkinson":0.03,"darnell washington":0.03,"darren waller":0.03,"emanuel wilson":0.03,"erick all":0.03,"jack endries":0.03,"jalen royals":0.03,"jake tonges":0.03,"james conner":0.03,"justin fields":0.03,"kaleb johnson":0.02,"kyle williams":0.02,"marcus mariota":0.02,"mike gesicki":0.02,"najee harris":0.02,"ollie gordon":0.02,"sean tucker":0.02,"tahj brooks":0.02,"taylen green":0.02,"theo johnson":0.02,"tyreek hill":0.02,"brashard smith":0.02,"cedric tillman":0.02,"cj daniels":0.02,"cole kmet":0.02,"cole payton":0.02,"darnell mooney":0.02,"eli heidenreich":0.02,"eric mcalister":0.02,"garrett nussmeier":0.02,"isaiah davis":0.02,"jmari taylor":0.02,"jalen milroe":0.02,"jarquez hunter":0.02,"jaydn ott":0.02,"joe mixon":0.01,"kendre miller":0.01,"malik benson":0.01,"marlin klein":0.01,"marvin mims":0.01,"mitchell evans":0.01,"phil mafah":0.01,"sam roush":0.01,"tai felton":0.01,"tez johnson":0.01,"trevor etienne":0.01,"trey benson":0.01,"zavion thomas":0.01} },
     { asOf: "2026-09-15", values: {"josh allen":3,"jahmyr gibbs":3,"bijan robinson":3,"malik nabers":2.94,"jaxon smith-njigba":2.88,"jamarr chase":2.82,"puka nacua":2.76,"caleb williams":2.7,"drake maye":2.64,"ashton jeanty":2.58,"jayden daniels":2.5,"lamar jackson":2.4,"jeremiyah love":2.3,"brock bowers":2.2,"amon-ra st brown":2,"trey mcbride":1.96,"justin jefferson":1.92,"drake london":1.89,"joe burrow":1.85,"ceedee lamb":1.81,"jalen hurts":1.77,"trevor lawrence":1.73,"patrick mahomes":1.7,"colston loveland":1.66,"tetairoa mcmillan":1.62,"jaxson dart":1.58,"justin herbert":1.55,"omarion hampton":1.5,"garrett wilson":1.48,"chris olave":1.46,"nico collins":1.44,"jonathan taylor":1.42,"james cook":1.39,"kenneth walker":1.37,"devon achane":1.35,"george pickens":1.33,"zay flowers":1.31,"brock purdy":1.29,"ladd mcconkey":1.25,"tyler warren":1.23,"emeka egbuka":1.21,"luther burden":1.18,"jordyn tyson":1.16,"jordan love":1.14,"breece hall":1.12,"chase brown":1.1,"carnell tate":1.07,"makai lemon":1.05,"christian mccaffrey":1.03,"bo nix":1,"quinshon judkins":0.98,"devonta smith":0.96,"saquon barkley":0.94,"jaylen waddle":0.92,"parker washington":0.9,"jameson williams":0.88,"tee higgins":0.86,"fernando mendoza":0.83,"dak prescott":0.81,"jared goff":0.79,"treveyon henderson":0.77,"sam laporta":0.75,"tucker kraft":0.74,"bucky irving":0.73,"cam skattebo":0.72,"rashee rice":0.72,"matthew golden":0.71,"kc concepcion":0.7,"jadarian price":0.69,"harold fannin":0.68,"tyler shough":0.67,"javonte williams":0.66,"kyren williams":0.65,"derrick henry":0.65,"dandre swift":0.64,"christian watson":0.63,"rome odunze":0.62,"brian thomas":0.61,"aj brown":0.6,"baker mayfield":0.59,"kyler murray":0.58,"sam darnold":0.58,"bryce young":0.57,"cj stroud":0.56,"daniel jones":0.55,"bhayshul tuten":0.54,"travis etienne":0.53,"kyle pitts":0.52,"marvin harrison":0.52,"josh downs":0.5,"kenyon sadiq":0.49,"dalton kincaid":0.48,"david montgomery":0.47,"matthew stafford":0.46,"mike evans":0.44,"dj moore":0.43,"isaiah likely":0.42,"jalen coker":0.41,"dk metcalf":0.4,"malik willis":0.39,"cam ward":0.38,"jordan addison":0.37,"denzel boston":0.35,"terry mclaurin":0.34,"george kittle":0.33,"ty simpson":0.32,"jonathon brooks":0.31,"alec pierce":0.3,"xavier worthy":0.29,"michael wilson":0.29,"omar cooper":0.28,"rj harvey":0.27,"jacory croskey-merritt":0.26,"chuba hubbard":0.26,"davante adams":0.25,"chris godwin":0.24,"dezhaun stribling":0.23,"rhamondre stevenson":0.23,"kyle monangai":0.22,"jaylen warren":0.21,"josh jacobs":0.21,"travis hunter":0.2,"jonah coleman":0.2,"michael pittman":0.2,"quentin johnston":0.2,"jayden reed":0.19,"rico dowdle":0.19,"blake corum":0.19,"stefon diggs":0.19,"michael penix":0.19,"eli raridon":0.19,"terrance ferguson":0.18,"caleb douglas":0.18,"jakobi lane":0.18,"brenton strange":0.18,"jake ferguson":0.18,"dallas goedert":0.18,"geno smith":0.18,"jk dobbins":0.17,"emmett johnson":0.17,"marshawn lloyd":0.17,"pat bryant":0.17,"wandale robinson":0.17,"germie bernard":0.17,"juwan johnson":0.17,"eli stowers":0.16,"kenny gainwell":0.16,"rachaad white":0.16,"oronde gadsden":0.16,"deebo samuel":0.16,"courtland sutton":0.16,"jakobi meyers":0.15,"chig okonkwo":0.15,"travis kelce":0.15,"tank bigsby":0.15,"jordan mason":0.15,"tyjae spears":0.14,"khalil shakir":0.14,"antonio williams":0.14,"chris bell":0.14,"shedeur sanders":0.14,"mark andrews":0.14,"dalton schultz":0.13,"romeo doubs":0.13,"tua tagovailoa":0.13,"mac jones":0.13,"michael mayer":0.13,"zach charbonnet":0.13,"mike washington":0.13,"keaton mitchell":0.12,"kaelon black":0.12,"aaron rodgers":0.12,"carson beck":0.12,"jalen mcmillan":0.12,"tre harris":0.12,"nicholas singleton":0.12,"woody marks":0.11,"aj barner":0.11,"oscar delp":0.11,"ricky pearsall":0.11,"jayden higgins":0.11,"aaron jones":0.11,"tony pollard":0.1,"jacoby brissett":0.1,"zachariah branch":0.1,"elijah sarratt":0.1,"drew allar":0.1,"chris rodriguez":0.09,"kaytron allen":0.09,"dylan sampson":0.09,"tyler allgeier":0.09,"braelon allen":0.09,"malik washington":0.09,"dontayvion wicks":0.08,"rashid shaheed":0.08,"ted hurst":0.08,"max klare":0.08,"brian robinson":0.08,"ray davis":0.07,"adam randall":0.07,"demond claiborne":0.07,"cyrus allen":0.07,"adonai mitchell":0.07,"tj hockenson":0.07,"hunter henry":0.06,"pat freiermuth":0.06,"malachi fields":0.06,"jaylin noel":0.06,"kayshon boutte":0.06,"david njoku":0.06,"cade otton":0.05,"gunnar helm":0.05,"greg dulcich":0.05,"mike gesicki":0.05,"kalif raymond":0.05,"jordan james":0.05,"keenan allen":0.05,"tre tucker":0.05,"ryan flournoy":0.05,"jj mccarthy":0.04,"deshaun watson":0.04,"jalen nailor":0.04,"elijah arroyo":0.04,"jerry jeudy":0.04,"tank dell":0.04,"brandon aiyuk":0.04,"mason taylor":0.04,"seth mcgowan":0.04,"cade klubnik":0.04,"alvin kamara":0.04,"marlin klein":0.04,"evan engram":0.04,"devaughn vele":0.04,"jauan jennings":0.03,"george holani":0.03,"isaac teslaa":0.03,"kirk cousins":0.03,"matt hibner":0.03,"darren waller":0.03,"keon coleman":0.03,"kimani vidal":0.03,"troy franklin":0.03,"dj giddens":0.03,"tanner koziol":0.03,"kevin coleman":0.03,"brenen thompson":0.03,"calvin ridley":0.03,"tory horton":0.03,"elic ayomanor":0.03,"skyler bell":0.03,"jack bech":0.03,"chris brazzell":0.03,"najee harris":0.03,"tyrone tracy":0.03,"anthony richardson":0.03,"bryce lance":0.03,"erick all":0.02,"jake tonges":0.02,"justin fields":0.02,"justin joly":0.02,"kaleb johnson":0.02,"kendre miller":0.02,"kyle williams":0.02,"marcus mariota":0.02,"charlie kolar":0.02,"demario douglas":0.02,"devin singletary":0.02,"samaje perine":0.02,"rashod bateman":0.02,"jaylen wright":0.02,"ollie gordon":0.02,"colby parkinson":0.02,"jalen royals":0.02,"darnell washington":0.02,"eli heidenreich":0.02,"isiah pacheco":0.02,"james conner":0.02,"tyreek hill":0.02,"cj daniels":0.02,"cole kmet":0.02,"cole payton":0.02,"garrett nussmeier":0.02,"jack endries":0.02,"jalen milroe":0.02,"malik benson":0.02,"mitchell evans":0.01,"sam roush":0.01,"taylen green":0.01,"tez johnson":0.01,"zavion thomas":0.01,"cooper kupp":0.01,"jalon daniels":0.01,"roman wilson":0.01,"spencer rattler":0.01,"emari demercado":0.01,"drew lock":0.01,"sean tucker":0.01,"tahj brooks":0.01,"sione vaki":0.01} },
     { asOf: "2026-09-22", values: {"josh allen":3,"jaxon smith-njigba":3,"jahmyr gibbs":3,"bijan robinson":3,"jamarr chase":2.91,"malik nabers":2.83,"puka nacua":2.74,"ashton jeanty":2.65,"caleb williams":2.5,"drake maye":2.43,"jeremiyah love":2.37,"brock bowers":2.3,"amon-ra st brown":2.23,"trey mcbride":2.17,"lamar jackson":2.1,"justin jefferson":2,"ceedee lamb":1.94,"patrick mahomes":1.87,"drake london":1.81,"joe burrow":1.74,"jalen hurts":1.67,"tetairoa mcmillan":1.61,"jaxson dart":1.55,"colston loveland":1.5,"chris olave":1.5,"jonathan taylor":1.5,"kenneth walker":1.5,"trevor lawrence":1.5,"brock purdy":1.5,"justin herbert":1.5,"jayden daniels":1.5,"omarion hampton":1.45,"james cook":1.4,"garrett wilson":1.38,"devon achane":1.36,"nico collins":1.33,"george pickens":1.31,"zay flowers":1.29,"ladd mcconkey":1.25,"devonta smith":1.23,"jordyn tyson":1.21,"parker washington":1.18,"tyler warren":1.16,"jordan love":1.14,"emeka egbuka":1.12,"carnell tate":1.1,"breece hall":1.07,"chase brown":1.05,"christian mccaffrey":1.03,"luther burden":1,"bo nix":0.98,"makai lemon":0.95,"jaylen waddle":0.93,"tee higgins":0.91,"bucky irving":0.89,"fernando mendoza":0.86,"dak prescott":0.84,"jared goff":0.82,"quinshon judkins":0.8,"treveyon henderson":0.77,"sam laporta":0.75,"dalton kincaid":0.74,"tucker kraft":0.73,"matthew golden":0.72,"christian watson":0.72,"tyler shough":0.71,"jameson williams":0.7,"kc concepcion":0.69,"javonte williams":0.68,"saquon barkley":0.67,"jadarian price":0.67,"kyren williams":0.66,"derrick henry":0.65,"cam skattebo":0.64,"dandre swift":0.63,"bryce young":0.62,"brian thomas":0.62,"bhayshul tuten":0.61,"harold fannin":0.6,"jalen coker":0.59,"rome odunze":0.58,"aj brown":0.57,"denzel boston":0.57,"baker mayfield":0.56,"kyler murray":0.55,"sam darnold":0.54,"cj stroud":0.53,"rashee rice":0.52,"kenyon sadiq":0.52,"daniel jones":0.5,"matthew stafford":0.49,"josh downs":0.47,"isaiah likely":0.46,"cam ward":0.45,"jordan addison":0.44,"mike evans":0.42,"malik willis":0.41,"dk metcalf":0.4,"george kittle":0.39,"chuba hubbard":0.37,"kyle pitts":0.36,"dj moore":0.35,"ty simpson":0.33,"marvin harrison":0.32,"david montgomery":0.31,"travis etienne":0.3,"michael wilson":0.29,"alec pierce":0.28,"omar cooper":0.27,"terry mclaurin":0.27,"davante adams":0.26,"kyle monangai":0.25,"jaylen warren":0.24,"josh jacobs":0.23,"jonah coleman":0.22,"jonathon brooks":0.21,"rj harvey":0.21,"terrance ferguson":0.2,"germie bernard":0.2,"antonio williams":0.2,"travis hunter":0.19,"dezhaun stribling":0.19,"caleb douglas":0.19,"blake corum":0.19,"rhamondre stevenson":0.19,"michael penix":0.19,"stefon diggs":0.18,"oronde gadsden":0.18,"xavier worthy":0.18,"eli raridon":0.18,"brenton strange":0.18,"jake ferguson":0.18,"emmett johnson":0.17,"chris godwin":0.17,"jacory croskey-merritt":0.17,"pat bryant":0.17,"jakobi lane":0.17,"quentin johnston":0.17,"michael pittman":0.16,"geno smith":0.16,"juwan johnson":0.16,"deebo samuel":0.16,"eli stowers":0.16,"travis kelce":0.16,"chig okonkwo":0.15,"rico dowdle":0.15,"rachaad white":0.15,"kaelon black":0.15,"dallas goedert":0.15,"jk dobbins":0.14,"jayden reed":0.14,"khalil shakir":0.14,"chris bell":0.14,"dalton schultz":0.14,"mark andrews":0.14,"shedeur sanders":0.14,"mac jones":0.14,"woody marks":0.13,"dontayvion wicks":0.13,"adonai mitchell":0.13,"wandale robinson":0.13,"courtland sutton":0.13,"jakobi meyers":0.13,"romeo doubs":0.13,"michael mayer":0.13,"mike washington":0.12,"zach charbonnet":0.12,"tua tagovailoa":0.12,"keaton mitchell":0.12,"aaron jones":0.12,"marshawn lloyd":0.12,"kenny gainwell":0.12,"tank bigsby":0.12,"tyjae spears":0.11,"nicholas singleton":0.11,"jalen mcmillan":0.11,"carson beck":0.11,"jacoby brissett":0.11,"aaron rodgers":0.11,"ricky pearsall":0.11,"ted hurst":0.11,"jayden higgins":0.1,"oscar delp":0.1,"jordan mason":0.1,"aj barner":0.1,"tre harris":0.1,"zachariah branch":0.1,"drew allar":0.09,"kaytron allen":0.09,"tony pollard":0.09,"tyler allgeier":0.09,"braelon allen":0.09,"brian robinson":0.09,"ray davis":0.08,"elijah sarratt":0.08,"tre tucker":0.08,"malik washington":0.08,"dylan sampson":0.08,"pat freiermuth":0.08,"deshaun watson":0.07,"max klare":0.07,"adam randall":0.07,"demond claiborne":0.07,"chris rodriguez":0.07,"rashid shaheed":0.07,"tj hockenson":0.06,"hunter henry":0.06,"gunnar helm":0.06,"cyrus allen":0.06,"devaughn vele":0.06,"malachi fields":0.06,"jaylin noel":0.05,"kayshon boutte":0.05,"cade otton":0.05,"seth mcgowan":0.05,"kalif raymond":0.05,"ryan flournoy":0.05,"jalen nailor":0.05,"jj mccarthy":0.05,"alvin kamara":0.04,"elijah arroyo":0.04,"jerry jeudy":0.04,"tank dell":0.04,"brandon aiyuk":0.04,"jordan james":0.04,"cade klubnik":0.04,"marlin klein":0.04,"mason taylor":0.04,"isaac teslaa":0.04,"kirk cousins":0.03,"marcus mariota":0.03,"darren waller":0.03,"keon coleman":0.03,"jauan jennings":0.03,"matt hibner":0.03,"evan engram":0.03,"greg dulcich":0.03,"mike gesicki":0.03,"keenan allen":0.03,"kimani vidal":0.03,"troy franklin":0.03,"dj giddens":0.03,"tanner koziol":0.03,"kevin coleman":0.03,"brenen thompson":0.03,"calvin ridley":0.03,"tory horton":0.03,"elic ayomanor":0.03,"skyler bell":0.03,"jack bech":0.03,"chris brazzell":0.02,"anthony richardson":0.02,"bryce lance":0.02,"erick all":0.02,"justin fields":0.02,"justin joly":0.02,"kaleb johnson":0.02,"kendre miller":0.02,"kyle williams":0.02,"demario douglas":0.02,"devin singletary":0.02,"samaje perine":0.02,"rashod bateman":0.02,"jaylen wright":0.02,"ollie gordon":0.02,"najee harris":0.02,"tyrone tracy":0.02,"jalen royals":0.02,"darnell washington":0.02,"eli heidenreich":0.02,"isiah pacheco":0.02,"james conner":0.02,"tyreek hill":0.02,"cole kmet":0.02,"cole payton":0.02,"garrett nussmeier":0.02,"jack endries":0.02,"jalen milroe":0.02,"malik benson":0.01,"mitchell evans":0.01,"taylen green":0.01,"tez johnson":0.01,"zavion thomas":0.01,"jalon daniels":0.01,"roman wilson":0.01,"emari demercado":0.01,"drew lock":0.01,"sean tucker":0.01,"tahj brooks":0.01,"sione vaki":0.01} },
+    { asOf: "2026-09-23", values: {"josh allen":3,"jaxon smith-njigba":3,"jahmyr gibbs":3,"bijan robinson":3,"jamarr chase":2.91,"malik nabers":2.83,"puka nacua":2.74,"ashton jeanty":2.65,"caleb williams":2.5,"drake maye":2.43,"jeremiyah love":2.37,"brock bowers":2.3,"amon-ra st brown":2.23,"trey mcbride":2.17,"lamar jackson":2.1,"justin jefferson":2,"ceedee lamb":1.94,"patrick mahomes":1.87,"joe burrow":1.81,"drake london":1.74,"jalen hurts":1.67,"tetairoa mcmillan":1.61,"colston loveland":1.55,"jayden daniels":1.5,"jonathan taylor":1.49,"kenneth walker":1.48,"chris olave":1.46,"trevor lawrence":1.45,"brock purdy":1.44,"justin herbert":1.42,"omarion hampton":1.41,"james cook":1.4,"garrett wilson":1.38,"devon achane":1.36,"nico collins":1.34,"george pickens":1.33,"zay flowers":1.31,"jaxson dart":1.29,"ladd mcconkey":1.25,"devonta smith":1.23,"parker washington":1.21,"jordyn tyson":1.18,"tyler warren":1.16,"jordan love":1.14,"emeka egbuka":1.12,"luther burden":1.1,"carnell tate":1.07,"chase brown":1.05,"breece hall":1.03,"christian mccaffrey":1,"bo nix":0.98,"makai lemon":0.96,"jaylen waddle":0.94,"tee higgins":0.92,"bucky irving":0.91,"fernando mendoza":0.89,"dak prescott":0.87,"jared goff":0.85,"treveyon henderson":0.83,"quinshon judkins":0.81,"christian watson":0.79,"matthew golden":0.77,"sam laporta":0.75,"dalton kincaid":0.74,"tucker kraft":0.73,"tyler shough":0.72,"jameson williams":0.71,"kc concepcion":0.7,"javonte williams":0.7,"saquon barkley":0.69,"jadarian price":0.68,"kyren williams":0.67,"derrick henry":0.66,"dandre swift":0.65,"bryce young":0.64,"brian thomas":0.63,"bhayshul tuten":0.62,"harold fannin":0.61,"jalen coker":0.61,"rome odunze":0.6,"denzel boston":0.59,"aj brown":0.58,"cam skattebo":0.57,"baker mayfield":0.56,"kyler murray":0.55,"sam darnold":0.54,"cj stroud":0.53,"rashee rice":0.52,"kenyon sadiq":0.52,"daniel jones":0.5,"matthew stafford":0.49,"josh downs":0.47,"isaiah likely":0.46,"cam ward":0.45,"jordan addison":0.44,"mike evans":0.42,"malik willis":0.41,"george kittle":0.4,"chuba hubbard":0.39,"kyle pitts":0.37,"dj moore":0.36,"dk metcalf":0.35,"ty simpson":0.33,"marvin harrison":0.32,"david montgomery":0.31,"travis etienne":0.3,"michael wilson":0.29,"alec pierce":0.28,"omar cooper":0.27,"terry mclaurin":0.27,"davante adams":0.26,"kyle monangai":0.25,"jaylen warren":0.24,"josh jacobs":0.23,"jonah coleman":0.22,"jonathon brooks":0.21,"rj harvey":0.21,"terrance ferguson":0.2,"germie bernard":0.2,"antonio williams":0.2,"travis hunter":0.19,"dezhaun stribling":0.19,"caleb douglas":0.19,"blake corum":0.19,"rhamondre stevenson":0.19,"michael penix":0.19,"stefon diggs":0.18,"oronde gadsden":0.18,"xavier worthy":0.18,"eli raridon":0.18,"brenton strange":0.18,"jake ferguson":0.18,"emmett johnson":0.17,"chris godwin":0.17,"jacory croskey-merritt":0.17,"pat bryant":0.17,"jakobi lane":0.17,"quentin johnston":0.17,"michael pittman":0.16,"geno smith":0.16,"juwan johnson":0.16,"deebo samuel":0.16,"eli stowers":0.16,"travis kelce":0.16,"chig okonkwo":0.15,"rico dowdle":0.15,"rachaad white":0.15,"kaelon black":0.15,"jayden reed":0.15,"khalil shakir":0.14,"chris bell":0.14,"dalton schultz":0.14,"dallas goedert":0.14,"mark andrews":0.14,"mac jones":0.14,"shedeur sanders":0.14,"jk dobbins":0.14,"woody marks":0.13,"dontayvion wicks":0.13,"adonai mitchell":0.13,"wandale robinson":0.13,"courtland sutton":0.13,"jakobi meyers":0.13,"romeo doubs":0.13,"michael mayer":0.13,"mike washington":0.12,"zach charbonnet":0.12,"tua tagovailoa":0.12,"keaton mitchell":0.12,"aaron jones":0.12,"marshawn lloyd":0.12,"kenny gainwell":0.12,"tank bigsby":0.12,"tyjae spears":0.11,"nicholas singleton":0.11,"jalen mcmillan":0.11,"carson beck":0.11,"jacoby brissett":0.11,"aaron rodgers":0.11,"ricky pearsall":0.11,"ted hurst":0.11,"jayden higgins":0.1,"oscar delp":0.1,"jordan mason":0.1,"aj barner":0.1,"tre harris":0.1,"zachariah branch":0.1,"drew allar":0.09,"kaytron allen":0.09,"tony pollard":0.09,"tyler allgeier":0.09,"braelon allen":0.09,"brian robinson":0.09,"ray davis":0.08,"elijah sarratt":0.08,"tre tucker":0.08,"malik washington":0.08,"dylan sampson":0.08,"pat freiermuth":0.08,"deshaun watson":0.07,"max klare":0.07,"adam randall":0.07,"demond claiborne":0.07,"chris rodriguez":0.07,"rashid shaheed":0.07,"tj hockenson":0.06,"hunter henry":0.06,"gunnar helm":0.06,"cyrus allen":0.06,"devaughn vele":0.06,"malachi fields":0.06,"jaylin noel":0.05,"kayshon boutte":0.05,"cade otton":0.05,"seth mcgowan":0.05,"kalif raymond":0.05,"ryan flournoy":0.05,"jalen nailor":0.05,"jameis winston":0.05,"marcus mariota":0.05,"jj mccarthy":0.04,"cade klubnik":0.04,"alvin kamara":0.04,"marlin klein":0.04,"elijah arroyo":0.04,"tank dell":0.04,"brandon aiyuk":0.04,"jordan james":0.04,"isaac teslaa":0.04,"mason taylor":0.04,"kirk cousins":0.03,"darren waller":0.03,"keon coleman":0.03,"jerry jeudy":0.03,"jauan jennings":0.03,"matt hibner":0.03,"evan engram":0.03,"greg dulcich":0.03,"mike gesicki":0.03,"keenan allen":0.03,"kimani vidal":0.03,"troy franklin":0.03,"dj giddens":0.03,"tanner koziol":0.03,"kevin coleman":0.03,"brenen thompson":0.03,"calvin ridley":0.03,"tory horton":0.03,"elic ayomanor":0.03,"skyler bell":0.03,"jack bech":0.03,"chris brazzell":0.02,"anthony richardson":0.02,"bryce lance":0.02,"erick all":0.02,"justin fields":0.02,"justin joly":0.02,"kaleb johnson":0.02,"kendre miller":0.02,"kyle williams":0.02,"demario douglas":0.02,"devin singletary":0.02,"samaje perine":0.02,"rashod bateman":0.02,"jaylen wright":0.02,"ollie gordon":0.02,"drew lock":0.02,"tyson bagent":0.02,"will shipley":0.02,"najee harris":0.02,"chris brooks":0.02,"tyrone tracy":0.02,"jalen royals":0.02,"darnell washington":0.02,"eli heidenreich":0.02,"isiah pacheco":0.02,"james conner":0.02,"tyreek hill":0.02,"cole kmet":0.02,"cole payton":0.02,"garrett nussmeier":0.02,"jack endries":0.01,"jalen milroe":0.01,"malik benson":0.01,"mitchell evans":0.01,"taylen green":0.01,"tez johnson":0.01,"zavion thomas":0.01,"jalon daniels":0.01,"roman wilson":0.01,"emari demercado":0.01,"sean tucker":0.01,"tahj brooks":0.01,"sione vaki":0.01,"carson wentz":0.01} },
   ];
 
   // The value table in force at a given moment. Anything at or after the
@@ -25501,10 +25756,12 @@
     return sbHouseScore(playerId, (window.__sleeperProjectionStats || {})[playerId], dict);
   }
 
-  window.__gcSelectedEventId = window.__gcSelectedEventId || null;
-  window.__gcStatsTeam = window.__gcStatsTeam || null;   // 'away' | 'home'
+  window.__gcOpenEventId = window.__gcOpenEventId || null;  // the game whose panel is open, if any
+  window.__gcStatsTeam = window.__gcStatsTeam || null;      // 'away' | 'home'
   window.__gcExpandedPlayer = window.__gcExpandedPlayer || null;
-  window.__gcHeroData = window.__gcHeroData || null;
+  window.__gcOpenData = window.__gcOpenData || null;
+  window.__gcFeedFilter = window.__gcFeedFilter || 'all';   // 'all' | 'mine'
+  window.__gcFeedRows = window.__gcFeedRows || [];
 
   // One persistent interval, started once per page. Tying the refresh to
   // the tab's click handler meant a click listener getting orphaned -- or
@@ -25680,7 +25937,6 @@
     `;
   }
 
-  // ---- Rail -----------------------------------------------------------
   function gcKickoffLabel(g) {
     if (!g.when) return '';
     const d = new Date(g.when);
@@ -25711,15 +25967,6 @@
   // ESPN packs down, distance and ball spot into one string
   // ("1st & 10 at NE 46"). The broadcast layout wants them apart: the down
   // and distance on the left, the spot on the right.
-  function gcDownText(g) {
-    if (!g.downDistance) return '';
-    return g.downDistance.split(/\s+at\s+/i)[0].toUpperCase();
-  }
-  function gcBallSpotText(g) {
-    if (!g.downDistance) return '';
-    const parts = g.downDistance.split(/\s+at\s+/i);
-    return parts.length > 1 ? parts[1] : '';
-  }
 
   function gcBallIconHtml(g, side) {
     if (g.state !== 'in' || !g.possession) return '';
@@ -25727,52 +25974,7 @@
     return team && team.id === g.possession ? '<span class="gc-ball">&#127944;</span>' : '';
   }
 
-  function gcRenderRail(games, dict) {
-    const el = document.getElementById('gcRail');
-    if (!el) return;
-    if (!games.length) { el.innerHTML = '<div class="ld-loading">No NFL games scheduled this week.</div>'; return; }
 
-    const livePill = document.getElementById('gcLivePill');
-    if (livePill) livePill.hidden = !games.some(g => g.state === 'in');
-
-    el.innerHTML = games.map(g => {
-      const exp = gcGameExposure(g, dict);
-      // A finished game dims whoever lost, the way a scoreboard does.
-      const loserCls = (side) => (g.state === 'post' && !side.winner && (g.away.winner || g.home.winner)) ? ' gc-loser' : '';
-      const teamRow = (side, which) => `
-        <div class="gc-card-row${loserCls(side)}">
-          <div class="gc-card-team">
-            <img src="${sbTeamLogoUrl(side.abbr)}" alt="" loading="lazy" onerror="this.remove()">
-            <span class="gc-card-abbr">${sbFieldEsc(side.abbr)}${gcBallIconHtml(g, which)}</span>
-            <span class="gc-card-rec">${sbFieldEsc(side.record || '')}</span>
-          </div>
-          <div class="gc-card-score">${side.score != null ? side.score : ''}</div>
-        </div>`;
-      return `
-      <div class="gc-card${g.eventId === window.__gcSelectedEventId ? ' active' : ''}" data-gc-event="${sbFieldEsc(g.eventId)}">
-        <div class="gc-card-exposure">${gcExposureHtml(exp)}</div>
-        <div class="gc-card-top">
-          <span class="gc-card-state${g.state === 'in' ? ' gc-live' : ''}">${gcStateLabel(g)}</span>
-          <span class="gc-card-net">${sbFieldEsc(g.broadcast || '')}</span>
-        </div>
-        ${teamRow(g.away, 'away')}
-        ${teamRow(g.home, 'home')}
-        ${g.state === 'in' && g.downDistance ? `<div class="gc-card-kick">${sbFieldEsc(g.downDistance)}</div>` : ''}
-      </div>`;
-    }).join('');
-
-    gcUpdateRailArrows();
-  }
-
-  function gcUpdateRailArrows() {
-    const rail = document.getElementById('gcRail');
-    const left = document.getElementById('gcRailLeft');
-    const right = document.getElementById('gcRailRight');
-    if (!rail || !left || !right) return;
-    const overflowing = rail.scrollWidth > rail.clientWidth + 4;
-    left.hidden = !overflowing || rail.scrollLeft <= 4;
-    right.hidden = !overflowing || rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 4;
-  }
 
   // ---- Hero panel -----------------------------------------------------
   // Where the ball is, as a 0-100 percentage measured from the AWAY
@@ -25782,20 +25984,6 @@
   // it measures from, so the down-and-distance text ("2nd & 7 at NE 35")
   // is parsed first -- it names the team whose side of the field the ball
   // is on, which is unambiguous. yardLine is only the fallback.
-  function gcBallPercent(g) {
-    if (g.downDistance) {
-      const m = /at\s+([A-Z]{2,3})\s+(\d+)/.exec(g.downDistance);
-      if (m) {
-        const abbr = ESPN_TEAM_ABBR_FIX[m[1]] || m[1];
-        const yards = Number(m[2]);
-        if (abbr === g.away.abbr) return yards;
-        if (abbr === g.home.abbr) return 100 - yards;
-      }
-      if (/at\s+50\b/.test(g.downDistance)) return 50;
-    }
-    if (g.yardLine != null && g.yardLine >= 0 && g.yardLine <= 100) return g.yardLine;
-    return null;
-  }
 
   // Where the ball was before the last play, as a 0-100 field percentage.
   // Taken from the yardage in ESPN's own last-play text when it states one
@@ -25803,138 +25991,13 @@
   // from the spot this game was last drawn at, which covers plays whose
   // text has no yardage (penalties, sacks worded differently, kicks).
   window.__gcPrevSpot = window.__gcPrevSpot || {};
-  function gcPreviousSpot(g, spot, awayHasBall) {
-    const remembered = window.__gcPrevSpot[g.eventId];
-    window.__gcPrevSpot[g.eventId] = spot;
-
-    if (g.lastPlay) {
-      const m = /\bfor (-?\d+) yard/i.exec(g.lastPlay);
-      if (m) {
-        const gained = Number(m[1]);
-        // A drive moves toward the opponent's end zone, so undoing the play
-        // means stepping back the other way.
-        const from = awayHasBall ? spot - gained : spot + gained;
-        if (from >= 0 && from <= 100 && Math.abs(gained) > 0) return from;
-      }
-      if (/\bno gain\b/i.test(g.lastPlay)) return null;
-    }
-    if (remembered != null && Math.abs(remembered - spot) > 0.5) return remembered;
-    return null;
-  }
 
   // A shallow arc from the previous spot to the current one. Drawn as an
   // SVG overlay rather than a border-radius box so it reads as a single
   // curved path at any width, and stays out of the way of the yard lines.
-  function gcLastPlayArcHtml(fromPct, toPct) {
-    const lift = Math.min(34, Math.max(12, Math.abs(toPct - fromPct) * 1.6));
-    return `<svg class="gc-field-arc" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M ${fromPct} 62 Q ${(fromPct + toPct) / 2} ${62 - lift} ${toPct} 62" />
-    </svg>`;
-  }
 
-  function gcFieldHtml(g) {
-    const spot = gcBallPercent(g);
-    // Yard numbers every 10 yards between the two end zones. The drawn
-    // field reserves 10% at each end for an end zone, so real yard N maps
-    // to 10% + N * 0.8%.
-    const toPct = (yard) => 10 + (yard * 0.8);
-    let marks = '';
-    for (let y = 10; y <= 90; y += 10) {
-      marks += `<div class="gc-field-yl${y === 50 ? ' gc-field-50' : ''}" style="left:${toPct(y)}%"></div>`;
-      const label = y === 50 ? '50' : (y < 50 ? y : 100 - y);
-      marks += `<div class="gc-field-num" style="left:${toPct(y)}%">${label}</div>`;
-    }
-    let live = '';
-    if (g.state === 'in' && spot != null) {
-      // The possessing team drives toward the other end zone, so the
-      // first-down marker sits `distance` yards ahead in that direction.
-      const awayHasBall = g.possession && g.away.id === g.possession;
-      const fd = g.distance != null
-        ? Math.max(0, Math.min(100, awayHasBall ? spot + g.distance : spot - g.distance))
-        : null;
-      // Where the ball came from on the last play, drawn as an arc from
-      // there to the current spot.
-      const from = gcPreviousSpot(g, spot, awayHasBall);
-      live = `
-        ${from != null ? gcLastPlayArcHtml(toPct(from), toPct(spot)) : ''}
-        <div class="gc-field-los" style="left:${toPct(spot)}%"></div>
-        ${fd != null ? `<div class="gc-field-fd" style="left:${toPct(fd)}%"></div>` : ''}
-        <div class="gc-field-spot" style="left:${toPct(spot)}%"></div>`;
-    }
-    return `
-      <div class="gc-field-stage">
-        <div class="gc-field">
-          <div class="gc-field-ez gc-field-ez-left"><img src="${sbTeamLogoUrl(g.away.abbr)}" alt="${sbFieldEsc(g.away.abbr)}" loading="lazy" onerror="this.outerHTML='<span>${sbFieldEsc(g.away.abbr)}</span>'"></div>
-          <div class="gc-field-ez gc-field-ez-right"><img src="${sbTeamLogoUrl(g.home.abbr)}" alt="${sbFieldEsc(g.home.abbr)}" loading="lazy" onerror="this.outerHTML='<span>${sbFieldEsc(g.home.abbr)}</span>'"></div>
-          ${marks}
-          ${live}
-        </div>
-      </div>
-      <div class="gc-field-caption">
-        <span>${sbFieldEsc(g.away.abbr)}</span>
-        <span>${g.state === 'in' && g.downDistance ? sbFieldEsc(g.downDistance) : ''}</span>
-        <span>${sbFieldEsc(g.home.abbr)}</span>
-      </div>`;
-  }
 
-  function gcLinescoreHtml(g) {
-    const cols = Math.max(g.away.linescores.length, g.home.linescores.length);
-    if (!cols) return '';
-    const headers = [];
-    for (let i = 0; i < cols; i++) headers.push(i < 4 ? String(i + 1) : 'OT');
-    const rowFor = (side) => `<tr>
-      <td class="gc-ls-team">${sbFieldEsc(side.abbr)}</td>
-      ${headers.map((_, i) => `<td>${side.linescores[i] != null ? side.linescores[i] : '-'}</td>`).join('')}
-      <td class="gc-ls-total">${side.score != null ? side.score : '-'}</td>
-    </tr>`;
-    return `<table class="gc-linescore">
-      <thead><tr><th></th>${headers.map(h => `<th>${h}</th>`).join('')}<th>T</th></tr></thead>
-      <tbody>${rowFor(g.away)}${rowFor(g.home)}</tbody>
-    </table>`;
-  }
 
-  function gcHeroHtml(g, dict) {
-    const stateCls = g.state === 'in' ? '' : (g.state === 'post' ? ' gc-state-post' : ' gc-state-pre');
-    const venueBits = [g.broadcast, g.venue, g.weather].filter(Boolean).join(' · ');
-    const side = (team, which) => `
-      <div class="gc-hero-team">
-        <img src="${sbTeamLogoUrl(team.abbr)}" alt="" loading="lazy" onerror="this.remove()">
-        <div>
-          <div class="gc-hero-abbr">${sbFieldEsc(team.abbr)}${gcBallIconHtml(g, which)}</div>
-          <div class="gc-hero-rec">${sbFieldEsc(team.record || '')}</div>
-        </div>
-        <div class="gc-hero-pts">${team.score != null ? team.score : '—'}</div>
-      </div>`;
-    return `
-      <div class="gc-hero">
-        <div class="gc-hero-topline">
-          <span class="gc-hero-down">${g.state === 'in' ? sbFieldEsc(gcDownText(g)) : ''}</span>
-          <span class="gc-hero-topright">
-            ${g.state === 'in' && g.isRedZone ? '<span class="gc-redzone">RED ZONE</span>' : ''}
-            ${g.state === 'in' && gcBallSpotText(g) ? `<span class="gc-ballspot">Ball on ${sbFieldEsc(gcBallSpotText(g))}</span>` : ''}
-          </span>
-        </div>
-        <div class="gc-hero-grid">
-          <div class="gc-hero-center">
-            <div class="gc-hero-score">
-              ${side(g.away, 'away')}
-              <span class="gc-hero-at">@</span>
-              ${side(g.home, 'home')}
-            </div>
-            <div class="gc-hero-meta">
-              <div class="gc-hero-state${stateCls}">${gcStateLabel(g)}${g.state === 'in' ? '<span class="gc-hero-livedot"></span>' : ''}</div>
-              ${venueBits ? `<div class="gc-hero-venue">${sbFieldEsc(venueBits)}</div>` : ''}
-              ${gcLinescoreHtml(g)}
-            </div>
-          </div>
-          <div class="gc-hero-field">${gcFieldHtml(g)}</div>
-        </div>
-        ${g.lastPlay ? `<div class="gc-lastplay">
-          <div class="gc-lastplay-label">LAST PLAY</div>
-          <div class="gc-lastplay-text">${sbFieldEsc(g.lastPlay)}</div>
-        </div>` : ''}
-      </div>`;
-  }
 
   // ---- Fantasy stats column -------------------------------------------
   // Your real weekly exposure to one player: leagues where he's started
@@ -26142,39 +26205,6 @@
     }).join('')}</div>`;
   }
 
-  // ---- Play-by-play column --------------------------------------------
-  // Real ESPN plays, newest first, with the fantasy points the play was
-  // worth on the standard full-PPR line (a real game has no single
-  // league's scoring settings to use).
-  async function gcPlayByPlayHtml(game, dict) {
-    const plays = await getEspnPlayByPlay(game.eventId);
-    if (!plays.length) return '<div class="gc-empty">No plays yet.</div>';
-
-    const shortNameMap = {};
-    Object.keys(dict).forEach(id => {
-      const p = dict[id];
-      if (!p || !GC_FANTASY_POS.includes(p.position)) return;
-      if (p.team !== game.away.abbr && p.team !== game.home.abbr) return;
-      const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-      shortNameMap[sbEspnShortName(full)] = id;
-    });
-
-    return plays.slice().reverse().map(play => {
-      let fp = 0;
-      sbParsePlayEvents(play.text).forEach(ev => {
-        if (!shortNameMap[ev.name]) return;
-        fp += sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING) || 0;
-      });
-      const scoreText = (play.awayScore != null && play.homeScore != null)
-        ? `${game.away.abbr} ${play.awayScore} - ${play.homeScore} ${game.home.abbr}` : '';
-      const meta = [play.period ? `Q${play.period}` : '', play.clock, play.downDistance, scoreText].filter(Boolean);
-      return `<div class="gc-play${fp >= 6 ? ' gc-play-scoring' : ''}">
-        <div class="gc-play-meta">${meta.map(m => `<span>${sbFieldEsc(m)}</span>`).join('')}</div>
-        <div class="gc-play-text">${sbFieldEsc(play.text)}</div>
-        ${fp > 0 ? `<div class="gc-play-fp">+${fp.toFixed(1)} fantasy pts</div>` : ''}
-      </div>`;
-    }).join('');
-  }
 
   // ---- League breakdown column ----------------------------------------
   // Every one of your leagues with a starter in THIS game and nobody
@@ -26261,10 +26291,230 @@
     </span>`;
   }
 
+  // ---- Scoreboard grid -------------------------------------------------
+  // Every game at once, as a grid, because the question this page answers
+  // is "what is happening" and not "what is happening in the one game I
+  // scrolled to". A card opens in place: its panel spans the whole column
+  // and pushes the rest of the grid down, so nothing you were reading
+  // moves off screen.
+  function gcRenderGrid(games, dict) {
+    const el = document.getElementById('gcGrid');
+    if (!el) return;
+    if (!games.length) { el.innerHTML = '<div class="ld-loading">No NFL games scheduled this week.</div>'; return; }
+
+    const livePill = document.getElementById('gcLivePill');
+    if (livePill) livePill.hidden = !games.some(g => g.state === 'in');
+
+    const cardHtml = (g) => {
+      const exp = gcGameExposure(g, dict);
+      // A finished game dims whoever lost, the way a scoreboard does.
+      const loserCls = (side) => (g.state === 'post' && !side.winner && (g.away.winner || g.home.winner)) ? ' gc-loser' : '';
+      const teamRow = (side, which) => `
+        <div class="gc-card-row${loserCls(side)}">
+          <div class="gc-card-team">
+            <img src="${sbTeamLogoUrl(side.abbr)}" alt="" loading="lazy" onerror="this.remove()">
+            <span class="gc-card-abbr">${sbFieldEsc(side.abbr)}${gcBallIconHtml(g, which)}</span>
+            <span class="gc-card-rec">${sbFieldEsc(side.record || '')}</span>
+          </div>
+          <div class="gc-card-score">${side.score != null ? side.score : ''}</div>
+        </div>`;
+      return `
+      <div class="gc-card${g.eventId === window.__gcOpenEventId ? ' active' : ''}" data-gc-event="${sbFieldEsc(g.eventId)}">
+        <div class="gc-card-exposure">${gcExposureHtml(exp)}</div>
+        <div class="gc-card-top">
+          <span class="gc-card-state${g.state === 'in' ? ' gc-live' : ''}">${gcStateLabel(g)}</span>
+          <span class="gc-card-net">${sbFieldEsc(g.broadcast || '')}</span>
+        </div>
+        ${teamRow(g.away, 'away')}
+        ${teamRow(g.home, 'home')}
+        ${g.state === 'in' && g.downDistance ? `<div class="gc-card-kick">${sbFieldEsc(g.downDistance)}</div>` : ''}
+      </div>`;
+    };
+
+    const open = games.find(g => g.eventId === window.__gcOpenEventId);
+    el.innerHTML = games.map(g =>
+      cardHtml(g) + (open && g.eventId === open.eventId ? gcInlineHtml(open, dict) : '')
+    ).join('');
+  }
+
+  // The drop-down under an opened game: your leagues with a stake in it,
+  // and the box score. Both were full columns of their own before, which
+  // is why the page could only ever show you one game.
+  function gcInlineHtml(game, dict) {
+    const d = window.__gcOpenData;
+    const ready = d && d.game && d.game.eventId === game.eventId;
+    const stats = ready
+      ? gcStatsHtml(game, window.__gcStatsTeam || 'away', dict, d.statsMap, d.projMap)
+      : '<div class="ld-loading">Loading box score&hellip;</div>';
+    const leagues = ready
+      ? gcLeagueBreakdownHtml(game, dict, d.statsMap, d.projMap)
+      : '<div class="ld-loading">Loading&hellip;</div>';
+    return `<div class="gc-inline" data-gc-inline="${sbFieldEsc(game.eventId)}">
+      <div class="gc-inline-head">
+        <span class="gc-inline-title">${sbFieldEsc(game.away.abbr)} at ${sbFieldEsc(game.home.abbr)}</span>
+        <span class="gc-inline-spacer"></span>
+        ${gcTeamSwitchHtml(game, window.__gcStatsTeam || 'away', 'gc-stats-team')}
+        <span class="gc-inline-close" data-gc-close="1">&#10005;</span>
+      </div>
+      <div class="gc-inline-section">
+        <div class="gc-inline-label">YOUR LEAGUES IN THIS GAME &middot; CLOSEST MATCHUP FIRST</div>
+        <div class="gc-inline-scroll" id="gcLeaguesBody">${leagues}</div>
+      </div>
+      <div class="gc-inline-section">
+        <div class="gc-inline-label">FANTASY STATS &middot; ${GC_SCORING_LABEL.toUpperCase()} &middot; TAP A PLAYER FOR MATCHUP IMPACT</div>
+        <div class="gc-inline-scroll" id="gcStatsBody">${stats}</div>
+      </div>
+    </div>`;
+  }
+
+  // ---- Around the league ----------------------------------------------
+  // One feed, every game. Each play carries the fantasy points it was
+  // worth on the house line, who they went to, and where you are exposed
+  // to that player -- started for you, started against you, or neither.
+  //
+  // A finished game's plays never change again, so they are cached for
+  // the life of the page and only live games are re-fetched. Without that
+  // this column would pull a dozen ESPN summaries every twenty seconds
+  // for games that ended on Sunday afternoon.
+  window.__gcFinalPbpCache = window.__gcFinalPbpCache || {};
+  const GC_FEED_MAX = 60;
+
+  async function gcFeedPlays(games, dict) {
+    const live = games.filter(g => g.state === 'in');
+    // Nothing live: show the most recent finished games instead of an
+    // empty column, which is what a Tuesday looks like.
+    const targets = live.length ? live : games.filter(g => g.state === 'post').slice(-6);
+
+    const perGame = await Promise.all(targets.map(async (g) => {
+      if (g.state === 'post' && window.__gcFinalPbpCache[g.eventId]) {
+        return { game: g, plays: window.__gcFinalPbpCache[g.eventId] };
+      }
+      const plays = await getEspnPlayByPlay(g.eventId).catch(() => []);
+      if (g.state === 'post') window.__gcFinalPbpCache[g.eventId] = plays;
+      return { game: g, plays };
+    }));
+
+    const out = [];
+    perGame.forEach(({ game, plays }) => {
+      // ESPN names players by short name; the map is built per game so a
+      // "J.Jones" in one broadcast can never be matched to the other
+      // J.Jones playing somewhere else at the same time.
+      const shortNameMap = {};
+      Object.keys(dict).forEach(id => {
+        const p = dict[id];
+        if (!p || !GC_FANTASY_POS.includes(p.position)) return;
+        if (p.team !== game.away.abbr && p.team !== game.home.abbr) return;
+        const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+        shortNameMap[sbEspnShortName(full)] = id;
+      });
+      // Only the tail of each game is ever shown, so there is no reason to
+      // score the whole afternoon's worth of plays on every refresh.
+      plays.slice(-GC_FEED_MAX).forEach(play => {
+        const players = [];
+        sbParsePlayEvents(play.text).forEach(ev => {
+          const pid = shortNameMap[ev.name];
+          if (!pid) return;
+          const fp = sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING) || 0;
+          const existing = players.find(x => x.id === pid);
+          if (existing) existing.fp += fp;
+          else players.push({ id: pid, fp });
+        });
+        out.push({ game, play, players });
+      });
+    });
+
+    // Newest first across every game. wallclock is ESPN's own timestamp
+    // for the play; sequence is the fallback inside one game.
+    out.sort((a, b) => {
+      const at = a.play.wallclock ? Date.parse(a.play.wallclock) : NaN;
+      const bt = b.play.wallclock ? Date.parse(b.play.wallclock) : NaN;
+      if (!isNaN(at) && !isNaN(bt) && at !== bt) return bt - at;
+      return (b.play.seq || 0) - (a.play.seq || 0);
+    });
+    return out.slice(0, GC_FEED_MAX);
+  }
+
+  function gcFeedHtml(rows) {
+    if (!rows.length) return '<div class="gc-empty">No plays yet. The feed fills in once a game kicks off.</div>';
+
+    // One exposure lookup per player per render, not per play: the same
+    // running back turns up in fifteen plays and the answer cannot change
+    // between them.
+    const expCache = new Map();
+    const expOf = (pid) => {
+      if (!expCache.has(pid)) expCache.set(pid, gcRootingDelta(pid));
+      return expCache.get(pid);
+    };
+    const dict = window.__sleeperPlayerDict || {};
+    const nameOf = (pid) => {
+      const p = dict[pid];
+      if (!p) return pid;
+      const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+      const parts = String(full).split(' ');
+      return parts.length > 1 ? `${parts[0][0]}. ${parts.slice(1).join(' ')}` : full;
+    };
+
+    const mineOnly = window.__gcFeedFilter === 'mine';
+    const items = [];
+    rows.forEach(({ game, play, players }) => {
+      // Net across your leagues: a play worth 6 points to a player you
+      // start in three leagues and face in one is worth +12 to you, not
+      // +6. That is the number that actually decides your Sunday.
+      let net = 0, anyFor = false, anyAgainst = false;
+      const chips = players.map(pl => {
+        const exp = expOf(pl.id);
+        const forN = exp.forLeagues.length, againstN = exp.againstLeagues.length;
+        if (forN) anyFor = true;
+        if (againstN) anyAgainst = true;
+        net += pl.fp * (forN - againstN);
+        const fpCls = pl.fp > 0 ? ' is-pos' : (pl.fp < 0 ? ' is-neg' : '');
+        const tip = [
+          forN ? `For you: ${exp.forLeagues.join(', ')}` : '',
+          againstN ? `Against you: ${exp.againstLeagues.join(', ')}` : '',
+        ].filter(Boolean).join('\n');
+        return `<span class="gc-feed-player"${tip ? ` title="${sbFieldEsc(tip)}"` : ''}>` +
+          `<span>${sbFieldEsc(nameOf(pl.id))}</span>` +
+          `<span class="gc-feed-fp${fpCls}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</span>` +
+          (forN ? `<span class="gc-feed-exp-for">&#9650;${forN}</span>` : '') +
+          (againstN ? `<span class="gc-feed-exp-against">&#9660;${againstN}</span>` : '') +
+        `</span>`;
+      });
+
+      if (mineOnly && !anyFor && !anyAgainst) return;
+
+      const scoreText = (play.awayScore != null && play.homeScore != null)
+        ? `${game.away.abbr} ${play.awayScore}&ndash;${play.homeScore} ${game.home.abbr}` : '';
+      const meta = [play.period ? `Q${play.period}` : '', play.clock, play.downDistance].filter(Boolean);
+      const netCls = Math.abs(net) < 0.05 ? 'is-flat' : (net > 0 ? 'is-pos' : 'is-neg');
+      const rowCls = anyFor ? ' is-mine' : (anyAgainst ? ' is-against' : '');
+
+      items.push(`<div class="gc-feed-item${rowCls}">
+        <div class="gc-feed-top">
+          <span class="gc-feed-game" data-gc-open="${sbFieldEsc(game.eventId)}">${sbFieldEsc(game.away.abbr)} @ ${sbFieldEsc(game.home.abbr)}</span>
+          ${meta.map(m => `<span>${sbFieldEsc(m)}</span>`).join('')}
+          <span class="gc-feed-spacer"></span>
+          <span>${scoreText}</span>
+        </div>
+        <div class="gc-feed-text">${sbFieldEsc(play.text)}</div>
+        ${chips.length ? `<div class="gc-feed-players">${chips.join('')}</div>` : ''}
+        ${chips.length && (anyFor || anyAgainst)
+          ? `<div class="gc-feed-net ${netCls}">${net > 0 ? '+' : ''}${net.toFixed(1)} net across your leagues</div>`
+          : ''}
+      </div>`);
+    });
+
+    return items.length ? items.join('')
+      : '<div class="gc-empty">No plays involving your players yet.</div>';
+  }
+
   // ---- Orchestration ---------------------------------------------------
+  // Two independent passes. The grid draws from the scoreboard endpoint
+  // and never waits on anything else; the feed and an opened game's box
+  // score fill in behind it. Nothing here re-renders a half that did not
+  // change.
   async function renderRealGameCast() {
-    const rail = document.getElementById('gcRail');
-    if (!rail) return;
+    const grid = document.getElementById('gcGrid');
+    if (!grid) return;
     if (!window.getNflState) return;
     const { week, season } = await window.getNflState();
 
@@ -26273,29 +26523,16 @@
       window.sleeperGetPlayerDict ? window.sleeperGetPlayerDict() : {},
     ]);
     const sorted = gcSortGames(games);
+    window.__gcSortedGames = sorted;
 
-    // Default to whatever is live (that's what you opened this for),
-    // otherwise the first game on the rail.
-    if (!window.__gcSelectedEventId || !sorted.some(g => g.eventId === window.__gcSelectedEventId)) {
-      const live = sorted.find(g => g.state === 'in');
-      window.__gcSelectedEventId = (live || sorted[0] || {}).eventId || null;
-      window.__gcStatsTeam = null;
+    // An opened game that is no longer on the slate closes itself.
+    if (window.__gcOpenEventId && !sorted.some(g => g.eventId === window.__gcOpenEventId)) {
+      window.__gcOpenEventId = null;
     }
-
-    gcRenderRail(sorted, dict);
+    gcRenderGrid(sorted, dict);
 
     const view = document.querySelector('[data-view="gamecast"]');
     if (!view || !view.classList.contains('is-active')) return;
-
-    const game = sorted.find(g => g.eventId === window.__gcSelectedEventId);
-    const hero = document.getElementById('gcHero');
-    const cols = document.getElementById('gcColumns');
-    if (!game) {
-      if (hero) hero.innerHTML = '';
-      if (cols) cols.innerHTML = '<div class="ld-loading">Pick a game above.</div>';
-      return;
-    }
-    if (hero) hero.innerHTML = gcHeroHtml(game, dict);
 
     const [statsMap, projMap, espnGameData] = await Promise.all([
       window.sleeperGetWeekStats ? window.sleeperGetWeekStats(season, week) : {},
@@ -26312,104 +26549,123 @@
     ]);
     window.__gcEspnGameData = espnGameData;
     window.__gcWeek = week;
-    window.__gcHeroData = { game, dict, statsMap, projMap };
 
-    if (!window.__gcStatsTeam) window.__gcStatsTeam = 'away';
-
-    if (cols) {
-      cols.innerHTML = `
-        <div class="gc-columns">
-          <div class="gc-panel">
-            <div class="gc-panel-head">
-              <span class="gc-panel-title">Fantasy Stats</span>
-              ${gcTeamSwitchHtml(game, window.__gcStatsTeam, 'gc-stats-team')}
-            </div>
-            <div class="gc-panel-sub">${GC_SCORING_LABEL} &middot; tap a player for matchup impact</div>
-            <div class="gc-panel-scroll" id="gcStatsBody">${gcStatsHtml(game, window.__gcStatsTeam, dict, statsMap, projMap)}</div>
-          </div>
-          <div class="gc-panel">
-            <div class="gc-panel-head"><span class="gc-panel-title">Play By Play</span></div>
-            <div class="gc-panel-sub">Newest first</div>
-            <div class="gc-panel-scroll" id="gcPbpBody"><div class="ld-loading">Loading plays&hellip;</div></div>
-          </div>
-          <div class="gc-panel gc-col-leagues">
-            <div class="gc-panel-head"><span class="gc-panel-title">Your Leagues In This Game</span></div>
-            <div class="gc-panel-sub">Only leagues with a starter here &middot; closest matchup first</div>
-            <div class="gc-panel-scroll" id="gcLeaguesBody">${gcLeagueBreakdownHtml(game, dict, statsMap, projMap)}</div>
-          </div>
-        </div>`;
-
-      // Plays load after the panel frame is up so the other two columns
-      // never wait on ESPN's summary endpoint.
-      gcPlayByPlayHtml(game, dict).then(html => {
-        const body = document.getElementById('gcPbpBody');
-        if (body) body.innerHTML = html;
-      }).catch(() => {
-        const body = document.getElementById('gcPbpBody');
-        if (body) body.innerHTML = '<div class="gc-empty">Could not load live plays.</div>';
-      });
+    const open = sorted.find(g => g.eventId === window.__gcOpenEventId);
+    if (open) {
+      window.__gcOpenData = { game: open, dict, statsMap, projMap };
+      if (!window.__gcStatsTeam) window.__gcStatsTeam = 'away';
+      gcRefreshInlineBodies();
+    } else {
+      window.__gcOpenData = null;
     }
+
+    gcFeedPlays(sorted, dict).then(rows => {
+      window.__gcFeedRows = rows;
+      // This column refreshes under you every twenty seconds. Reading it
+      // back to Sunday morning only to be thrown to the top mid-sentence
+      // is the whole column failing at its job, so hold the scroll.
+      gcKeepScroll('gcFeed', (feed) => { feed.innerHTML = gcFeedHtml(rows); });
+      const sub = document.getElementById('gcFeedSub');
+      if (sub) {
+        const liveCount = sorted.filter(g => g.state === 'in').length;
+        sub.textContent = liveCount
+          ? `Newest first, across ${liveCount} live game${liveCount === 1 ? '' : 's'}.`
+          : 'Newest first. Nothing is live, so this is the last of the finished games.';
+      }
+    }).catch(() => {
+      const feed = document.getElementById('gcFeed');
+      if (feed) feed.innerHTML = '<div class="gc-empty">Could not load live plays.</div>';
+    });
   }
   window.renderRealGameCast = renderRealGameCast;
 
+  // Redraw just the two bodies inside an opened game, so changing the team
+  // switch or expanding a player never touches the grid or the feed.
+  function gcRefreshInlineBodies() {
+    const cur = window.__gcOpenData;
+    if (!cur) return;
+    gcKeepScroll('gcStatsBody', (el) => {
+      el.innerHTML = gcStatsHtml(cur.game, window.__gcStatsTeam || 'away', cur.dict, cur.statsMap, cur.projMap);
+    });
+    gcKeepScroll('gcLeaguesBody', (el) => {
+      el.innerHTML = gcLeagueBreakdownHtml(cur.game, cur.dict, cur.statsMap, cur.projMap);
+    });
+  }
+  // Redraw a scrolling panel in place, leaving the reader where they were.
+  function gcKeepScroll(id, write) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const top = el.scrollTop;
+    write(el);
+    if (top) el.scrollTop = top;
+  }
   function gcRefreshStatsBody() {
-    const cur = window.__gcHeroData;
+    const cur = window.__gcOpenData;
     const body = document.getElementById('gcStatsBody');
     if (!cur || !body) return;
-    body.innerHTML = gcStatsHtml(cur.game, window.__gcStatsTeam, cur.dict, cur.statsMap, cur.projMap);
+    body.innerHTML = gcStatsHtml(cur.game, window.__gcStatsTeam || 'away', cur.dict, cur.statsMap, cur.projMap);
   }
 
   (function initGcClicks() {
-    const rail = document.getElementById('gcRail');
-    const cols = document.getElementById('gcColumns');
+    const grid = document.getElementById('gcGrid');
+    const feed = document.getElementById('gcFeed');
+    const feedFilter = document.getElementById('gcFeedFilter');
 
-    if (rail) {
-      rail.addEventListener('click', (e) => {
+    const openGame = (eventId) => {
+      window.__gcOpenEventId = window.__gcOpenEventId === eventId ? null : eventId;
+      window.__gcStatsTeam = null;
+      window.__gcExpandedPlayer = null;
+      window.__gcOpenData = null;
+      renderRealGameCast();
+    };
+
+    if (grid) {
+      grid.addEventListener('click', (e) => {
+        if (e.target.closest('[data-gc-close]')) { openGame(window.__gcOpenEventId); return; }
+
+        // Inside an open panel: the team switch, a league row and a player
+        // row all act without closing or redrawing anything else.
+        const statsBtn = e.target.closest('[data-gc-stats-team]');
+        if (statsBtn) {
+          window.__gcStatsTeam = statsBtn.dataset.gcStatsTeam;
+          window.__gcExpandedPlayer = null;
+          statsBtn.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === statsBtn));
+          gcRefreshStatsBody();
+          return;
+        }
+        const lgRow = e.target.closest('.gc-lg-row');
+        if (lgRow && lgRow.dataset.gcLeagueId) { goToLeagueMatchup(lgRow.dataset.gcLeagueId); return; }
+        const statRow = e.target.closest('.gc-stat-row');
+        if (statRow && statRow.dataset.gcPlayer) {
+          window.__gcExpandedPlayer = window.__gcExpandedPlayer === statRow.dataset.gcPlayer ? null : statRow.dataset.gcPlayer;
+          gcRefreshStatsBody();
+          return;
+        }
+        if (e.target.closest('.gc-inline')) return;
+
         const card = e.target.closest('.gc-card');
-        if (!card || !card.dataset.gcEvent) return;
-        if (card.dataset.gcEvent === window.__gcSelectedEventId) return;
-        window.__gcSelectedEventId = card.dataset.gcEvent;
-        // A new game means the old team/player selections are meaningless.
-        window.__gcStatsTeam = null;
-        window.__gcExpandedPlayer = null;
-        renderRealGameCast();
+        if (card && card.dataset.gcEvent) openGame(card.dataset.gcEvent);
       });
-      rail.addEventListener('scroll', gcUpdateRailArrows, { passive: true });
     }
-    const scrollRail = (dir) => {
-      const el = document.getElementById('gcRail');
-      if (el) el.scrollBy({ left: dir * Math.max(220, el.clientWidth * 0.8), behavior: 'smooth' });
-    };
-    const leftBtn = document.getElementById('gcRailLeft');
-    const rightBtn = document.getElementById('gcRailRight');
-    if (leftBtn) leftBtn.addEventListener('click', () => scrollRail(-1));
-    if (rightBtn) rightBtn.addEventListener('click', () => scrollRail(1));
-    window.addEventListener('resize', gcUpdateRailArrows);
 
-    // One delegated handler bound to both the hero and the body containers.
-    const onPanelClick = (e) => {
-      const statsBtn = e.target.closest('[data-gc-stats-team]');
-      if (statsBtn) {
-        window.__gcStatsTeam = statsBtn.dataset.gcStatsTeam;
-        window.__gcExpandedPlayer = null;
-        statsBtn.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === statsBtn));
-        gcRefreshStatsBody();
-        return;
-      }
-      const lgRow = e.target.closest('.gc-lg-row');
-      if (lgRow && lgRow.dataset.gcLeagueId) {
-        goToLeagueMatchup(lgRow.dataset.gcLeagueId);
-        return;
-      }
-      const row = e.target.closest('.gc-stat-row');
-      if (row && row.dataset.gcPlayer) {
-        window.__gcExpandedPlayer = window.__gcExpandedPlayer === row.dataset.gcPlayer ? null : row.dataset.gcPlayer;
-        gcRefreshStatsBody();
-      }
-    };
-    if (cols) cols.addEventListener('click', onPanelClick);
-    const heroEl = document.getElementById('gcHero');
-    if (heroEl) heroEl.addEventListener('click', onPanelClick);
+    // A game tag in the feed opens that game's panel on the left.
+    if (feed) {
+      feed.addEventListener('click', (e) => {
+        const tag = e.target.closest('[data-gc-open]');
+        if (tag) openGame(tag.dataset.gcOpen);
+      });
+    }
+
+    if (feedFilter) {
+      feedFilter.addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-gc-feed]');
+        if (!chip) return;
+        feedFilter.querySelectorAll('.ww-toggle').forEach(c => c.classList.toggle('active', c === chip));
+        window.__gcFeedFilter = chip.dataset.gcFeed;
+        // Filtering is a view of rows already in hand -- no refetch.
+        gcKeepScroll('gcFeed', (body) => { body.innerHTML = gcFeedHtml(window.__gcFeedRows || []); });
+      });
+    }
   })();
 
   // The persistent interval declared above already keeps GameCast fresh
@@ -27784,10 +28040,15 @@
     const expStr = p.years_exp === 0 ? 'Rookie' : (p.years_exp != null ? `${pmOrdinal(p.years_exp)} year` : '&mdash;');
     const statusStr = p.injury_status || p.status || '&mdash;';
 
+    // Exact age where the rankings have one; Sleeper's whole number only
+    // for a player they do not cover.
+    const exactAge = ppAgeForPlayerId(playerId, dict);
+    const ageStr = exactAge != null ? exactAge.toFixed(1) : (p.age || '&mdash;');
+
     let html = `
       <div class="pm-section-label">BIO</div>
       <div class="ld-stats">
-        <div class="ld-stat-cell"><div class="ld-stat-label">AGE</div><div class="ld-stat-value">${p.age || '&mdash;'}</div></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">AGE</div><div class="ld-stat-value">${ageStr}</div></div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell"><div class="ld-stat-label">HT / WT</div><div class="ld-stat-value">${heightStr} / ${weightStr}</div></div>
         <div class="ld-stat-divider"></div>
@@ -27881,6 +28142,8 @@
         <div class="ld-stat-cell"><div class="ld-stat-label">OVERALL RANK</div><div class="ld-stat-value">${rank ? '#' + rank + ' of ' + total : '&mdash;'}</div></div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell"><div class="ld-stat-label">POSITION RANK</div><div class="ld-stat-value">${posRankText}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">ARCHETYPE</div><div class="ld-stat-value">${ppArchetypeForPlayerId(playerId, dict) || '&mdash;'}</div></div>
       </div>
       <div class="pm-note">Austin's own hand-curated dynasty rankings &mdash; the same source Trade Calc's "Austin's Rankings" toggle uses. A comparison against consensus/expert rankings is planned but not built yet.</div>
     `;
@@ -28773,14 +29036,23 @@
     };
     // A slot is better when it is LOWER, so it is negated: one click still
     // puts the 1.01 on top, like every other column's "best first".
-    const ttSlotKey = (slot) => (slot == null ? TT_MISSING : -slot);
+    //
+    // The round (and the draft year, for a pick two classes out) has to be
+    // part of the key, or a 2.01 sorts level with a 1.01 and the column
+    // reads 1.01, 2.01, 1.05. Ordered the way you'd actually read a draft:
+    // soonest year first, then round, then slot within the round -- 1.01,
+    // 1.05, 1.12, 2.01, 2.08, 3.04.
+    const ttSlotKey = (slot, round, season) => {
+      if (slot == null) return TT_MISSING;
+      return -((Number(season) || 0) * 10000 + (Number(round) || 1) * 100 + slot);
+    };
 
     const TT_RACE_KEYS = {
       league: r => r.entry.league.name.toLowerCase(),
       record: r => ttWinPct(r.entry.roster),
       pf: r => pfOf(r.entry.roster),
       ppts: r => pptsOf(r.entry.roster),
-      slot: r => ttSlotKey(r.slot),
+      slot: r => ttSlotKey(r.slot, 1, r.season),
       playoff: r => ttOddsOf(r.entry, r.entry.roster.roster_id, 'playoff'),
       bye: r => ttOddsOf(r.entry, r.entry.roster.roster_id, 'bye'),
       p101: r => r.fc ? r.fc.p101 : TT_MISSING,
@@ -28807,7 +29079,7 @@
       },
       pfrank: p => -ldRankOf(p.entry.allRosters || [], pfOf, p.pick.fromRosterId),
       pptsrank: p => -ldRankOf(p.entry.allRosters || [], pptsOf, p.pick.fromRosterId),
-      slot: p => ttSlotKey(p.slot),
+      slot: p => ttSlotKey(p.slot, p.pick.round, p.pick.season),
       playoff: p => ttOddsOf(p.entry, p.pick.fromRosterId, 'playoff'),
       bye: p => ttOddsOf(p.entry, p.pick.fromRosterId, 'bye'),
       p101: p => p.fc ? p.fc.p101 : TT_MISSING,
@@ -28816,8 +29088,10 @@
     };
 
     let ttRaceRows = [], ttPickRows = [];
-    let ttRaceSort = { key: 'gap', dir: 'desc' };
-    let ttPickSort = { key: 'pick', dir: 'desc' };
+    // Both tables open on the pick itself, earliest first -- the question
+    // either one answers is "which pick am I getting, and how early".
+    let ttRaceSort = { key: 'slot', dir: 'desc' };
+    let ttPickSort = { key: 'slot', dir: 'desc' };
 
     function ttSortRows(rows, keys, state) {
       const valueOf = keys[state.key];
@@ -28962,6 +29236,7 @@
         const nextSeason = (Number(entry.league.season) || new Date().getFullYear()) + 1;
         return {
           entry, order, gap,
+          season: nextSeason,
           slot: order ? order.slots[entry.roster.roster_id] : null,
           fc: ttForecast(entry, nextSeason, 1, entry.roster.roster_id),
         };
@@ -29018,6 +29293,292 @@
       tab.addEventListener('click', () => { renderRealTankingTracker().catch(() => {}); });
     });
   })();
+
+  // ---- Rankings -------------------------------------------------------
+  // The whole Pure Potential board, the table every value on this site is
+  // priced off, shown as its own page rather than only ever reaching you
+  // one player at a time through a modal.
+  //
+  // It can also be wound back. Every superseded edition is kept in
+  // PP_VALUE_HISTORY with the date it was in force (that is what lets a
+  // trade be priced at what it was worth the day it was made), so the
+  // same page will show you what the board said on any of those dates --
+  // and a player's movement is measured against the edition immediately
+  // before whichever one you are looking at.
+  (function initRankingsPage() {
+    const body = document.getElementById('rkBody');
+    const searchEl = document.getElementById('rkSearch');
+    const posFilterEl = document.getElementById('rkPosFilter');
+    const editionEl = document.getElementById('rkEdition');
+    const noteEl = document.getElementById('rkNote');
+    if (!body || !editionEl) return;
+
+    let rkQuery = '';
+    let rkPos = 'ALL';
+    let rkEditionIdx = -1;   // -1 = the live table
+    let rkSort = 'value';
+    let rkDict = null;
+
+    // Oldest first, live table last -- the same order PP_VALUE_HISTORY is
+    // kept in, so "the edition before this one" is just index - 1.
+    function rkEditions() {
+      const list = PP_VALUE_HISTORY.map(h => ({ asOf: h.asOf, values: h.values }));
+      list.push({ asOf: PP_VALUE_CURRENT_ASOF, values: PP_PLAYER_VALUES, isCurrent: true });
+      return list;
+    }
+
+    function rkFmtDate(iso) {
+      const d = new Date(iso + 'T00:00:00Z');
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+    }
+
+    // Tier bands are value bands, not gaps: a tier is everything worth at
+    // least X, so which tier a player is in means something on its own
+    // rather than depending on who happens to sit next to him.
+    const RK_TIER_FLOORS = [2.50, 2.00, 1.50, 1.00, 0.75, 0.50, 0.30, 0.15, 0.08, 0.04, 0];
+    function rkTierOf(value) {
+      for (let i = 0; i < RK_TIER_FLOORS.length; i++) {
+        if (value >= RK_TIER_FLOORS[i]) return i + 1;
+      }
+      return RK_TIER_FLOORS.length;
+    }
+    function rkPosRanks(values) {
+      const nameToPos = rkDict ? ppBuildNameToPos(rkDict) : {};
+      const byPos = {};
+      Object.keys(values).forEach(k => {
+        const pos = nameToPos[k];
+        if (!pos) return;
+        (byPos[pos] = byPos[pos] || []).push(k);
+      });
+      const out = {};
+      Object.entries(byPos).forEach(([pos, keys]) => {
+        keys.sort((a, b) => values[b] - values[a]);
+        keys.forEach((k, i) => { out[k] = pos + (i + 1); });
+      });
+      return out;
+    }
+
+    function rkTitleCase(key) {
+      return key.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : w).join(' ');
+    }
+    function rkInitials(name) {
+      const parts = String(name || '').trim().split(/\s+/);
+      return ((parts[0] || '')[0] || '').toUpperCase() + ((parts[1] || '')[0] || '').toUpperCase();
+    }
+
+    // What a player gained or lost between two boards.
+    //
+    // Three different nothings, and they do not mean the same thing. No
+    // older board at all (you are looking at the first rankings on file)
+    // is a blank: there is nothing this could be measured against. An
+    // older board that did not carry him is NEW -- he came from nowhere,
+    // not from zero, and showing a player who simply was not ranked yet
+    // as the week's biggest riser would be the page's most-read lie. And
+    // a player who did not move is a dash.
+    function rkDeltaCell(delta, hasReference) {
+      if (!hasReference) return '<span class="mv-delta is-flat">&mdash;</span>';
+      if (delta == null) return '<span class="mv-delta is-new">NEW</span>';
+      if (Math.abs(delta) < 0.005) return '<span class="mv-delta is-flat">&mdash;</span>';
+      const cls = delta > 0 ? 'is-up' : 'is-down';
+      return `<span class="mv-delta ${cls}">${delta > 0 ? '+' : '&minus;'}${Math.abs(delta).toFixed(2)}</span>`;
+    }
+
+    function rkMoveHtml(key, rank, prevRanks) {
+      if (!prevRanks) return '';
+      const was = prevRanks[key];
+      if (was == null) return '<span class="rk-move is-new">NEW</span>';
+      const delta = was - rank;
+      if (delta === 0) return '';
+      return delta > 0
+        ? `<span class="rk-move is-up">&#9650;${delta}</span>`
+        : `<span class="rk-move is-down">&#9660;${-delta}</span>`;
+    }
+
+    function rkRender() {
+      const editions = rkEditions();
+      const idx = rkEditionIdx < 0 ? editions.length - 1 : rkEditionIdx;
+      const edition = editions[idx];
+      const prev = idx > 0 ? editions[idx - 1] : null;
+      const first = idx > 0 ? editions[0] : null;
+      const values = edition.values;
+
+      // Stable sort over the table's own insertion order, which is the
+      // order the export ranked them -- so players tied on value keep the
+      // order the rankings themselves gave them instead of an arbitrary one.
+      const keys = Object.keys(values).sort((a, b) => values[b] - values[a]);
+      const prevRanks = prev
+        ? (() => {
+            const pk = Object.keys(prev.values).sort((a, b) => prev.values[b] - prev.values[a]);
+            const m = {};
+            pk.forEach((k, i) => { m[k] = i + 1; });
+            return m;
+          })()
+        : null;
+
+      const posRank = rkPosRanks(values);
+      const nameToPlayer = rkDict ? ppBuildNameToPlayer(rkDict) : {};
+      const nameToPos = rkDict ? ppBuildNameToPos(rkDict) : {};
+
+      // Rank is the player's place on the whole board, so it is worked out
+      // before anything is filtered out -- hiding every QB does not make
+      // the best RB the number 1 player.
+      const visible = [];
+      keys.forEach((key, i) => {
+        const joined = nameToPlayer[key];
+        const player = joined ? joined.p : null;
+        const name = player
+          ? (player.full_name || [player.first_name, player.last_name].filter(Boolean).join(' '))
+          : rkTitleCase(key);
+        const pos = nameToPos[key] || (player && player.position) || '';
+        if (rkPos !== 'ALL' && pos !== rkPos) return;
+        if (rkQuery && key.indexOf(rkQuery) === -1) return;
+        // Both deltas are differences between two tables that already
+        // exist -- nothing modelled. They move with the edition you are
+        // looking at: on a past board, "since last" is that board against
+        // the one before IT, not against today.
+        const wasLast = prev && prev.values[key] != null ? prev.values[key] : null;
+        const wasFirst = first && first.values[key] != null ? first.values[key] : null;
+        const dLast = wasLast == null ? null : Math.round((values[key] - wasLast) * 100) / 100;
+        const dFirst = wasFirst == null ? null : Math.round((values[key] - wasFirst) * 100) / 100;
+        visible.push({ key, i, rank: i + 1, value: values[key], joined, player, name, pos,
+                       tier: rkTierOf(values[key]), dLast, dFirst });
+      });
+
+      // Sorted by a delta, this is the old Movers page: the board reordered
+      // by what changed. Tier bands only mean something in value order, so
+      // they are not drawn in any other one.
+      // The first board on file has nothing behind it, so there is no
+      // change to sort by and the page stays in value order.
+      const byDelta = rkSort !== 'value' && !!prev;
+      if (byDelta) {
+        const which = rkSort.indexOf('season') === 0 ? 'dFirst' : 'dLast';
+        const wantUp = rkSort.indexOf('Up') > 0;
+        // A player with no reading on the column being sorted has no place
+        // in an order built on it, so he drops out rather than sorting as
+        // zero, and a riser list holds only actual risers.
+        for (let i = visible.length - 1; i >= 0; i--) {
+          const d = visible[i][which];
+          if (d == null || (wantUp ? !(d > 0) : !(d < 0))) visible.splice(i, 1);
+        }
+        visible.sort((a, b) => (wantUp ? b[which] - a[which] : a[which] - b[which]) || a.rank - b.rank);
+      }
+      // Tier counts are counts of what you can actually see: under a
+      // position filter "12 PLAYERS" means twelve of them, not twelve
+      // players of whom you are shown three.
+      const tierCounts = {};
+      visible.forEach(r => { tierCounts[r.tier] = (tierCounts[r.tier] || 0) + 1; });
+
+      const html = [];
+      let shownTier = null;
+      const shown = visible.length;
+      visible.forEach(row => {
+        const { key, i, rank, value, joined, player, name, pos, tier } = row;
+
+        if (!byDelta && tier !== shownTier) {
+          shownTier = tier;
+          const top = Math.max.apply(null, visible.filter(r => r.tier === tier).map(r => r.value));
+          const count = tierCounts[tier];
+          html.push(
+            `<tr class="rk-tier"><td colspan="9"><div class="rk-tier-inner">` +
+              `<span class="rk-tier-name">TIER ${tier}</span>` +
+              `<span class="rk-tier-rule"></span>` +
+              `<span class="rk-tier-count">${count} PLAYER${count === 1 ? '' : 'S'}</span>` +
+              `<span class="rk-tier-chip">Base 1 Value ${top.toFixed(2)}</span>` +
+            `</div></td></tr>`);
+        }
+
+        const team = player && player.team ? player.team : '';
+        const logo = sbTeamLogoUrl(team);
+        const shot = joined ? sbHeadshotUrl(joined.id) : '';
+        const arch = PP_PLAYER_ARCHETYPES[key] || '';
+        const tone = PP_ARCHETYPE_TONE[arch] || '';
+        const age = PP_PLAYER_AGES[key];
+        const posCls = ['QB', 'RB', 'WR', 'TE'].includes(pos) ? ' sb-pos-' + pos.toLowerCase() : '';
+
+        html.push(
+          `<tr class="rk-row"${joined ? ` data-player-id="${joined.id}" data-name="${sbFieldEsc(name)}" data-team="${sbFieldEsc(team)}" data-pos="${sbFieldEsc(pos)}"` : ''}>` +
+            `<td class="rk-rank">${rank}</td>` +
+            `<td class="rk-player-cell"><div class="rk-player">` +
+              `<span class="rk-shot">${rkInitials(name)}${shot ? `<img src="${shot}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>` +
+              `<span class="rk-name">${sbFieldEsc(name)}</span>` +
+              rkMoveHtml(key, rank, prevRanks) +
+            `</div></td>` +
+            `<td>${team ? `<span class="rk-team">${logo ? `<img src="${logo}" alt="" loading="lazy" onerror="this.remove()">` : ''}${sbFieldEsc(team)}</span>` : '<span class="rk-age">&mdash;</span>'}</td>` +
+            `<td class="rk-arch-cell">${arch
+              ? `<span class="rk-arch"><span class="rk-dot tone-${tone}"></span>${sbFieldEsc(arch)}</span>`
+              : '<span class="rk-arch is-blank">Unlabelled</span>'}</td>` +
+            `<td><span class="rk-pos${posCls}">${sbFieldEsc(posRank[key] || pos || '')}</span></td>` +
+            `<td class="rk-age">${age != null ? age.toFixed(1) : '&mdash;'}</td>` +
+            `<td class="mv-cell">${rkDeltaCell(row.dLast, !!prev)}</td>` +
+            `<td class="mv-cell">${rkDeltaCell(row.dFirst, !!first)}</td>` +
+            `<td class="rk-value">${value.toFixed(2)}</td>` +
+          `</tr>`);
+      });
+
+      body.innerHTML = shown
+        ? html.join('')
+        : `<tr><td colspan="9" class="rb-empty">${byDelta ? 'Nobody moved that way on this board.' : 'No player matches that search.'}</td></tr>`;
+
+      const against = prev
+        ? `<b>Since last</b> is against <b>${rkFmtDate(prev.asOf)}</b>, <b>Since Wk 1</b> against <b>${first ? rkFmtDate(first.asOf) : rkFmtDate(prev.asOf)}</b>. ` +
+          'A player the older board did not carry reads NEW, not a gain from zero.'
+        : 'This is the earliest board on file, so there is nothing behind it to measure change against.';
+      noteEl.innerHTML = (edition.isCurrent
+        ? `<b>${shown} of ${keys.length} players</b>, live since <b>${rkFmtDate(edition.asOf)}</b>. `
+        : `What the board said on <b>${rkFmtDate(edition.asOf)}</b> &mdash; the values a trade made that week is priced at, while the rest of the site prices today's rosters at the live table. `) + against;
+    }
+
+    function rkBuildEditionPicker() {
+      const editions = rkEditions();
+      editionEl.innerHTML = editions.map((e, i) =>
+        `<option value="${i === editions.length - 1 ? -1 : i}">${e.isCurrent ? 'Current' : rkFmtDate(e.asOf)}</option>`
+      ).reverse().join('');
+      editionEl.value = String(rkEditionIdx);
+    }
+
+    editionEl.addEventListener('change', () => { rkEditionIdx = Number(editionEl.value); rkRender(); });
+    const sortEl = document.getElementById('rkSort');
+    if (sortEl) sortEl.addEventListener('change', () => { rkSort = sortEl.value; rkRender(); });
+    searchEl.addEventListener('input', () => { rkQuery = ppNormalizeName(searchEl.value); rkRender(); });
+    posFilterEl.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-rk-pos]');
+      if (!chip) return;
+      posFilterEl.querySelectorAll('.ww-pos-chip').forEach(c => c.classList.toggle('active', c === chip));
+      rkPos = chip.dataset.rkPos;
+      rkRender();
+    });
+    body.addEventListener('click', (e) => {
+      const row = e.target.closest('tr.rk-row[data-player-id]');
+      if (row && window.openPlayerModalForId) {
+        window.openPlayerModalForId(row.dataset.playerId, row.dataset.name, row.dataset.team, row.dataset.pos);
+      }
+    });
+
+    // Drawn once with what is already in the file, then again once the
+    // Sleeper player pool lands -- that is the only thing headshots, real
+    // current teams and positional ranks need, and waiting on a 10MB
+    // download before showing any of the board would be the wrong trade.
+    let rkStarted = false;
+    function renderRealRankings() {
+      rkBuildEditionPicker();
+      rkRender();
+      if (!rkStarted && window.sleeperGetPlayerDict) {
+        rkStarted = true;
+        window.sleeperGetPlayerDict().then(dict => {
+          rkDict = dict;
+          rkRender();
+        }).catch(() => {});
+      }
+    }
+    window.renderRealRankings = renderRealRankings;
+
+    document.querySelectorAll('.section-tab').forEach(tab => {
+      if (tab.dataset.section !== 'rankings') return;
+      tab.addEventListener('click', () => renderRealRankings());
+    });
+  })();
+
 
   // ---- The ticker ------------------------------------------------------
   // The strip under the site nav, on every page. What it carries depends on
