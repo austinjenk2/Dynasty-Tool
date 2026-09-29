@@ -956,23 +956,6 @@
   .gc-rail-spacer { flex: 1; }
   .gc-rail-hint { font-size: 11px; color: var(--faint); }
 
-  .gc-rail-wrap { position: relative; margin-bottom: 18px; }
-  .gc-rail {
-    display: flex; gap: 10px; overflow-x: auto; scroll-behavior: smooth;
-    padding: 2px 2px 10px;
-    scrollbar-width: thin;
-  }
-  .gc-rail-arrow {
-    position: absolute; top: 50%; transform: translateY(-60%);
-    width: 30px; height: 30px; border-radius: 50%; z-index: 3;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--surface); border: 1px solid var(--border);
-    color: var(--ink); font-size: 15px; font-weight: 800; cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.14);
-  }
-  .gc-rail-arrow:hover { background: var(--border-soft); }
-  .gc-rail-arrow-left { left: -6px; }
-  .gc-rail-arrow-right { right: -6px; }
 
   .gc-card {
     flex: 0 0 208px; cursor: pointer;
@@ -1069,46 +1052,6 @@
      the field rather than drifting out of line with it. */
   .gc-hero-field { padding-left: 3%; padding-right: 5.5%; }
   @media (max-width: 760px) { .gc-hero-field { padding-left: 4%; padding-right: 4%; } }
-  .gc-field-stage { perspective: 620px; }
-  .gc-field {
-    position: relative; height: 172px; border-radius: 4px; overflow: hidden;
-    transform: rotateX(34deg); transform-style: preserve-3d;
-    background: repeating-linear-gradient(to right, #2d8449 0 10%, #348e50 10% 20%);
-    box-shadow: 0 14px 28px -12px rgba(0,0,0,0.45);
-  }
-  .gc-field-ez { position: absolute; top: 0; bottom: 0; width: 10%; background: rgba(0,0,0,0.32); display: flex; align-items: center; justify-content: center; }
-  .gc-field-ez-left { left: 0; }
-  .gc-field-ez-right { right: 0; }
-  .gc-field-ez span { color: rgba(255,255,255,0.92); font-size: 12px; font-weight: 800; letter-spacing: 1px; }
-  /* Logo sits in the end zone like a painted field mark; the abbreviation
-     underneath it is the fallback when the logo image fails to load. */
-  .gc-field-ez img { width: 34px; height: 34px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.55)); }
-  .gc-field-yl { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.5); }
-  .gc-field-yl.gc-field-50 { width: 2px; background: rgba(255,255,255,0.85); }
-  .gc-field-num { position: absolute; top: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 800; font-style: italic; }
-  .gc-field-los { position: absolute; top: 0; bottom: 0; width: 2.5px; background: #3fc7ff; box-shadow: 0 0 7px rgba(63,199,255,0.9); transition: left 1.2s cubic-bezier(0.22,1,0.36,1); }
-  /* First-down marker, dashed the way a broadcast draws it so it reads as
-     a different kind of line from the solid line of scrimmage. */
-  .gc-field-fd {
-    position: absolute; top: 0; bottom: 0; width: 0;
-    border-left: 2.5px dashed #ffb020;
-    filter: drop-shadow(0 0 4px rgba(255,176,32,0.85));
-    transition: left 1.2s cubic-bezier(0.22,1,0.36,1);
-  }
-  /* Last play, drawn as an arc from where the ball was to where it is. */
-  .gc-field-arc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-  .gc-field-arc path {
-    fill: none; stroke: #3fc7ff; stroke-width: 1.6; stroke-dasharray: 4 3;
-    stroke-linecap: round; vector-effect: non-scaling-stroke;
-    filter: drop-shadow(0 0 3px rgba(63,199,255,0.8));
-  }
-  .gc-field-spot {
-    position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%;
-    background: #3fc7ff; border: 2px solid #fff;
-    transform: translate(-50%, -50%);
-    transition: left 1.2s cubic-bezier(0.22,1,0.36,1);
-  }
-  .gc-field-caption { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-top: 10px; }
 
   .gc-lastplay { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
   .gc-lastplay-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.7px; color: var(--faint); margin-bottom: 4px; }
@@ -1824,6 +1767,68 @@
   .ldst-pct.is-bad { color: var(--red); }
   .ldst-slot { font-weight: 700; color: var(--navy); }
   .ldst-blank { color: var(--faint); }
+
+  /* ---- GameCast ------------------------------------------------------
+     Every score on the left, everything happening in the league on the
+     right. The two halves are independent: opening a game's box score
+     does not disturb the feed, and a new play does not redraw the grid.
+
+     What used to be here -- a 3D field with a moving line of scrimmage, a
+     drive arc and a per-game hero -- is gone. It animated on every tick of
+     a page that re-renders every twenty seconds, and it showed one game at
+     a time, which is the opposite of what this page is for. */
+  .gc-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .gc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; }
+  .gc-grid .gc-card { width: auto; min-width: 0; margin: 0; flex: none; scroll-snap-align: none; }
+  /* The open game's panel spans the whole left half rather than living
+     inside a 300px card, which is the only way a box score fits. */
+  .gc-inline { grid-column: 1 / -1; background: var(--surface); border: 1px solid var(--navy); border-radius: 8px; padding: 12px 14px; }
+  .gc-inline-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .gc-inline-title { font-family: 'Source Serif 4', serif; font-size: 14px; font-weight: 700; color: var(--ink); }
+  .gc-inline-spacer { flex: 1; }
+  .gc-inline-close { cursor: pointer; font-size: 13px; color: var(--faint); padding: 0 4px; }
+  .gc-inline-close:hover { color: var(--ink); }
+  .gc-inline-section { margin-top: 10px; }
+  .gc-inline-label { font-size: 9px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 6px; }
+  .gc-inline-scroll { max-height: 240px; overflow-y: auto; }
+
+  .gc-feed-col { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; position: sticky; top: 12px; }
+  .gc-feed { max-height: calc(100vh - 200px); overflow-y: auto; margin-top: 8px; }
+  .gc-feed-item { padding: 8px 0; border-bottom: 1px solid var(--border-soft); }
+  .gc-feed-item:last-child { border-bottom: none; }
+  /* A play one of your players was involved in is the reason this column
+     exists, so it is marked on the row rather than left to be found. */
+  .gc-feed-item.is-mine { border-left: 2px solid var(--green); padding-left: 8px; margin-left: -10px; }
+  .gc-feed-item.is-against { border-left: 2px solid var(--red); padding-left: 8px; margin-left: -10px; }
+  .gc-feed-top { display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); }
+  .gc-feed-game { color: var(--ink); font-weight: 800; cursor: pointer; }
+  .gc-feed-game:hover { color: var(--navy); }
+  .gc-feed-spacer { flex: 1; }
+  .gc-feed-text { font-size: 12px; color: var(--muted); line-height: 1.45; margin-top: 3px; }
+  .gc-feed-players { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+  .gc-feed-player {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 2px 9px;
+  }
+  .gc-feed-fp { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .gc-feed-fp.is-pos { color: var(--green); }
+  .gc-feed-fp.is-neg { color: var(--red); }
+  .gc-feed-exp-for { color: var(--green); font-size: 10px; }
+  .gc-feed-exp-against { color: var(--red); font-size: 10px; }
+  .gc-feed-net { margin-top: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px; }
+  .gc-feed-net.is-pos { color: var(--green); }
+  .gc-feed-net.is-neg { color: var(--red); }
+  .gc-feed-net.is-flat { color: var(--faint); }
+
+  @media (max-width: 1000px) {
+    .gc-split { grid-template-columns: 1fr; }
+    .gc-feed-col { position: static; }
+    .gc-feed { max-height: 420px; }
+  }
+  @media (max-width: 560px) {
+    .gc-grid { grid-template-columns: 1fr; }
+  }
 
   /* ---- Rankings ----------------------------------------------------
      The whole board in one table: where a player ranks, what he is, and
@@ -6249,15 +6254,22 @@
       <span class="gc-rail-title">NFL Scores</span>
       <span class="gc-live-pill" id="gcLivePill" hidden><span class="gc-live-dot"></span>LIVE</span>
       <span class="gc-rail-spacer"></span>
-      <span class="gc-rail-hint">Green = your starters in this game &middot; red = starters against you</span>
+      <span class="gc-rail-hint">Green = your starters in this game &middot; red = starters against you &middot; tap a game for your leagues and its box score</span>
     </div>
-    <div class="gc-rail-wrap">
-      <button type="button" class="gc-rail-arrow gc-rail-arrow-left" id="gcRailLeft" hidden>&#8249;</button>
-      <div class="gc-rail" id="gcRail"><div class="ld-loading">Loading this week's games&hellip;</div></div>
-      <button type="button" class="gc-rail-arrow gc-rail-arrow-right" id="gcRailRight" hidden>&#8250;</button>
+    <div class="gc-split">
+      <div class="gc-grid" id="gcGrid"><div class="ld-loading">Loading this week&rsquo;s games&hellip;</div></div>
+      <div class="gc-feed-col">
+        <div class="gc-panel-head">
+          <span class="gc-panel-title">Around The League</span>
+          <span class="ww-toggle-group" id="gcFeedFilter">
+            <span class="ww-toggle active" data-gc-feed="all">Every play</span>
+            <span class="ww-toggle" data-gc-feed="mine">Mine only</span>
+          </span>
+        </div>
+        <div class="gc-panel-sub" id="gcFeedSub">Newest first, every game at once.</div>
+        <div class="gc-feed" id="gcFeed"><div class="ld-loading">Loading plays&hellip;</div></div>
+      </div>
     </div>
-    <div id="gcHero"></div>
-    <div id="gcColumns"></div>
   </div>
 
       <div data-view="rooting">
@@ -13105,7 +13117,7 @@
   // GameCast keys a game on, so callers pass that rather than team codes.
   function goToGameCast(eventId) {
     if (!eventId) return;
-    window.__gcSelectedEventId = String(eventId);
+    window.__gcOpenEventId = String(eventId);
     goToSection('gamecast');
     if (window.renderRealGameCast) { try { window.renderRealGameCast(); } catch (e) {} }
   }
@@ -25785,10 +25797,12 @@
     return sbHouseScore(playerId, (window.__sleeperProjectionStats || {})[playerId], dict);
   }
 
-  window.__gcSelectedEventId = window.__gcSelectedEventId || null;
-  window.__gcStatsTeam = window.__gcStatsTeam || null;   // 'away' | 'home'
+  window.__gcOpenEventId = window.__gcOpenEventId || null;  // the game whose panel is open, if any
+  window.__gcStatsTeam = window.__gcStatsTeam || null;      // 'away' | 'home'
   window.__gcExpandedPlayer = window.__gcExpandedPlayer || null;
-  window.__gcHeroData = window.__gcHeroData || null;
+  window.__gcOpenData = window.__gcOpenData || null;
+  window.__gcFeedFilter = window.__gcFeedFilter || 'all';   // 'all' | 'mine'
+  window.__gcFeedRows = window.__gcFeedRows || [];
 
   // One persistent interval, started once per page. Tying the refresh to
   // the tab's click handler meant a click listener getting orphaned -- or
@@ -25964,7 +25978,6 @@
     `;
   }
 
-  // ---- Rail -----------------------------------------------------------
   function gcKickoffLabel(g) {
     if (!g.when) return '';
     const d = new Date(g.when);
@@ -25995,15 +26008,6 @@
   // ESPN packs down, distance and ball spot into one string
   // ("1st & 10 at NE 46"). The broadcast layout wants them apart: the down
   // and distance on the left, the spot on the right.
-  function gcDownText(g) {
-    if (!g.downDistance) return '';
-    return g.downDistance.split(/\s+at\s+/i)[0].toUpperCase();
-  }
-  function gcBallSpotText(g) {
-    if (!g.downDistance) return '';
-    const parts = g.downDistance.split(/\s+at\s+/i);
-    return parts.length > 1 ? parts[1] : '';
-  }
 
   function gcBallIconHtml(g, side) {
     if (g.state !== 'in' || !g.possession) return '';
@@ -26011,52 +26015,7 @@
     return team && team.id === g.possession ? '<span class="gc-ball">&#127944;</span>' : '';
   }
 
-  function gcRenderRail(games, dict) {
-    const el = document.getElementById('gcRail');
-    if (!el) return;
-    if (!games.length) { el.innerHTML = '<div class="ld-loading">No NFL games scheduled this week.</div>'; return; }
 
-    const livePill = document.getElementById('gcLivePill');
-    if (livePill) livePill.hidden = !games.some(g => g.state === 'in');
-
-    el.innerHTML = games.map(g => {
-      const exp = gcGameExposure(g, dict);
-      // A finished game dims whoever lost, the way a scoreboard does.
-      const loserCls = (side) => (g.state === 'post' && !side.winner && (g.away.winner || g.home.winner)) ? ' gc-loser' : '';
-      const teamRow = (side, which) => `
-        <div class="gc-card-row${loserCls(side)}">
-          <div class="gc-card-team">
-            <img src="${sbTeamLogoUrl(side.abbr)}" alt="" loading="lazy" onerror="this.remove()">
-            <span class="gc-card-abbr">${sbFieldEsc(side.abbr)}${gcBallIconHtml(g, which)}</span>
-            <span class="gc-card-rec">${sbFieldEsc(side.record || '')}</span>
-          </div>
-          <div class="gc-card-score">${side.score != null ? side.score : ''}</div>
-        </div>`;
-      return `
-      <div class="gc-card${g.eventId === window.__gcSelectedEventId ? ' active' : ''}" data-gc-event="${sbFieldEsc(g.eventId)}">
-        <div class="gc-card-exposure">${gcExposureHtml(exp)}</div>
-        <div class="gc-card-top">
-          <span class="gc-card-state${g.state === 'in' ? ' gc-live' : ''}">${gcStateLabel(g)}</span>
-          <span class="gc-card-net">${sbFieldEsc(g.broadcast || '')}</span>
-        </div>
-        ${teamRow(g.away, 'away')}
-        ${teamRow(g.home, 'home')}
-        ${g.state === 'in' && g.downDistance ? `<div class="gc-card-kick">${sbFieldEsc(g.downDistance)}</div>` : ''}
-      </div>`;
-    }).join('');
-
-    gcUpdateRailArrows();
-  }
-
-  function gcUpdateRailArrows() {
-    const rail = document.getElementById('gcRail');
-    const left = document.getElementById('gcRailLeft');
-    const right = document.getElementById('gcRailRight');
-    if (!rail || !left || !right) return;
-    const overflowing = rail.scrollWidth > rail.clientWidth + 4;
-    left.hidden = !overflowing || rail.scrollLeft <= 4;
-    right.hidden = !overflowing || rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 4;
-  }
 
   // ---- Hero panel -----------------------------------------------------
   // Where the ball is, as a 0-100 percentage measured from the AWAY
@@ -26066,20 +26025,6 @@
   // it measures from, so the down-and-distance text ("2nd & 7 at NE 35")
   // is parsed first -- it names the team whose side of the field the ball
   // is on, which is unambiguous. yardLine is only the fallback.
-  function gcBallPercent(g) {
-    if (g.downDistance) {
-      const m = /at\s+([A-Z]{2,3})\s+(\d+)/.exec(g.downDistance);
-      if (m) {
-        const abbr = ESPN_TEAM_ABBR_FIX[m[1]] || m[1];
-        const yards = Number(m[2]);
-        if (abbr === g.away.abbr) return yards;
-        if (abbr === g.home.abbr) return 100 - yards;
-      }
-      if (/at\s+50\b/.test(g.downDistance)) return 50;
-    }
-    if (g.yardLine != null && g.yardLine >= 0 && g.yardLine <= 100) return g.yardLine;
-    return null;
-  }
 
   // Where the ball was before the last play, as a 0-100 field percentage.
   // Taken from the yardage in ESPN's own last-play text when it states one
@@ -26087,138 +26032,13 @@
   // from the spot this game was last drawn at, which covers plays whose
   // text has no yardage (penalties, sacks worded differently, kicks).
   window.__gcPrevSpot = window.__gcPrevSpot || {};
-  function gcPreviousSpot(g, spot, awayHasBall) {
-    const remembered = window.__gcPrevSpot[g.eventId];
-    window.__gcPrevSpot[g.eventId] = spot;
-
-    if (g.lastPlay) {
-      const m = /\bfor (-?\d+) yard/i.exec(g.lastPlay);
-      if (m) {
-        const gained = Number(m[1]);
-        // A drive moves toward the opponent's end zone, so undoing the play
-        // means stepping back the other way.
-        const from = awayHasBall ? spot - gained : spot + gained;
-        if (from >= 0 && from <= 100 && Math.abs(gained) > 0) return from;
-      }
-      if (/\bno gain\b/i.test(g.lastPlay)) return null;
-    }
-    if (remembered != null && Math.abs(remembered - spot) > 0.5) return remembered;
-    return null;
-  }
 
   // A shallow arc from the previous spot to the current one. Drawn as an
   // SVG overlay rather than a border-radius box so it reads as a single
   // curved path at any width, and stays out of the way of the yard lines.
-  function gcLastPlayArcHtml(fromPct, toPct) {
-    const lift = Math.min(34, Math.max(12, Math.abs(toPct - fromPct) * 1.6));
-    return `<svg class="gc-field-arc" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M ${fromPct} 62 Q ${(fromPct + toPct) / 2} ${62 - lift} ${toPct} 62" />
-    </svg>`;
-  }
 
-  function gcFieldHtml(g) {
-    const spot = gcBallPercent(g);
-    // Yard numbers every 10 yards between the two end zones. The drawn
-    // field reserves 10% at each end for an end zone, so real yard N maps
-    // to 10% + N * 0.8%.
-    const toPct = (yard) => 10 + (yard * 0.8);
-    let marks = '';
-    for (let y = 10; y <= 90; y += 10) {
-      marks += `<div class="gc-field-yl${y === 50 ? ' gc-field-50' : ''}" style="left:${toPct(y)}%"></div>`;
-      const label = y === 50 ? '50' : (y < 50 ? y : 100 - y);
-      marks += `<div class="gc-field-num" style="left:${toPct(y)}%">${label}</div>`;
-    }
-    let live = '';
-    if (g.state === 'in' && spot != null) {
-      // The possessing team drives toward the other end zone, so the
-      // first-down marker sits `distance` yards ahead in that direction.
-      const awayHasBall = g.possession && g.away.id === g.possession;
-      const fd = g.distance != null
-        ? Math.max(0, Math.min(100, awayHasBall ? spot + g.distance : spot - g.distance))
-        : null;
-      // Where the ball came from on the last play, drawn as an arc from
-      // there to the current spot.
-      const from = gcPreviousSpot(g, spot, awayHasBall);
-      live = `
-        ${from != null ? gcLastPlayArcHtml(toPct(from), toPct(spot)) : ''}
-        <div class="gc-field-los" style="left:${toPct(spot)}%"></div>
-        ${fd != null ? `<div class="gc-field-fd" style="left:${toPct(fd)}%"></div>` : ''}
-        <div class="gc-field-spot" style="left:${toPct(spot)}%"></div>`;
-    }
-    return `
-      <div class="gc-field-stage">
-        <div class="gc-field">
-          <div class="gc-field-ez gc-field-ez-left"><img src="${sbTeamLogoUrl(g.away.abbr)}" alt="${sbFieldEsc(g.away.abbr)}" loading="lazy" onerror="this.outerHTML='<span>${sbFieldEsc(g.away.abbr)}</span>'"></div>
-          <div class="gc-field-ez gc-field-ez-right"><img src="${sbTeamLogoUrl(g.home.abbr)}" alt="${sbFieldEsc(g.home.abbr)}" loading="lazy" onerror="this.outerHTML='<span>${sbFieldEsc(g.home.abbr)}</span>'"></div>
-          ${marks}
-          ${live}
-        </div>
-      </div>
-      <div class="gc-field-caption">
-        <span>${sbFieldEsc(g.away.abbr)}</span>
-        <span>${g.state === 'in' && g.downDistance ? sbFieldEsc(g.downDistance) : ''}</span>
-        <span>${sbFieldEsc(g.home.abbr)}</span>
-      </div>`;
-  }
 
-  function gcLinescoreHtml(g) {
-    const cols = Math.max(g.away.linescores.length, g.home.linescores.length);
-    if (!cols) return '';
-    const headers = [];
-    for (let i = 0; i < cols; i++) headers.push(i < 4 ? String(i + 1) : 'OT');
-    const rowFor = (side) => `<tr>
-      <td class="gc-ls-team">${sbFieldEsc(side.abbr)}</td>
-      ${headers.map((_, i) => `<td>${side.linescores[i] != null ? side.linescores[i] : '-'}</td>`).join('')}
-      <td class="gc-ls-total">${side.score != null ? side.score : '-'}</td>
-    </tr>`;
-    return `<table class="gc-linescore">
-      <thead><tr><th></th>${headers.map(h => `<th>${h}</th>`).join('')}<th>T</th></tr></thead>
-      <tbody>${rowFor(g.away)}${rowFor(g.home)}</tbody>
-    </table>`;
-  }
 
-  function gcHeroHtml(g, dict) {
-    const stateCls = g.state === 'in' ? '' : (g.state === 'post' ? ' gc-state-post' : ' gc-state-pre');
-    const venueBits = [g.broadcast, g.venue, g.weather].filter(Boolean).join(' · ');
-    const side = (team, which) => `
-      <div class="gc-hero-team">
-        <img src="${sbTeamLogoUrl(team.abbr)}" alt="" loading="lazy" onerror="this.remove()">
-        <div>
-          <div class="gc-hero-abbr">${sbFieldEsc(team.abbr)}${gcBallIconHtml(g, which)}</div>
-          <div class="gc-hero-rec">${sbFieldEsc(team.record || '')}</div>
-        </div>
-        <div class="gc-hero-pts">${team.score != null ? team.score : '—'}</div>
-      </div>`;
-    return `
-      <div class="gc-hero">
-        <div class="gc-hero-topline">
-          <span class="gc-hero-down">${g.state === 'in' ? sbFieldEsc(gcDownText(g)) : ''}</span>
-          <span class="gc-hero-topright">
-            ${g.state === 'in' && g.isRedZone ? '<span class="gc-redzone">RED ZONE</span>' : ''}
-            ${g.state === 'in' && gcBallSpotText(g) ? `<span class="gc-ballspot">Ball on ${sbFieldEsc(gcBallSpotText(g))}</span>` : ''}
-          </span>
-        </div>
-        <div class="gc-hero-grid">
-          <div class="gc-hero-center">
-            <div class="gc-hero-score">
-              ${side(g.away, 'away')}
-              <span class="gc-hero-at">@</span>
-              ${side(g.home, 'home')}
-            </div>
-            <div class="gc-hero-meta">
-              <div class="gc-hero-state${stateCls}">${gcStateLabel(g)}${g.state === 'in' ? '<span class="gc-hero-livedot"></span>' : ''}</div>
-              ${venueBits ? `<div class="gc-hero-venue">${sbFieldEsc(venueBits)}</div>` : ''}
-              ${gcLinescoreHtml(g)}
-            </div>
-          </div>
-          <div class="gc-hero-field">${gcFieldHtml(g)}</div>
-        </div>
-        ${g.lastPlay ? `<div class="gc-lastplay">
-          <div class="gc-lastplay-label">LAST PLAY</div>
-          <div class="gc-lastplay-text">${sbFieldEsc(g.lastPlay)}</div>
-        </div>` : ''}
-      </div>`;
-  }
 
   // ---- Fantasy stats column -------------------------------------------
   // Your real weekly exposure to one player: leagues where he's started
@@ -26426,39 +26246,6 @@
     }).join('')}</div>`;
   }
 
-  // ---- Play-by-play column --------------------------------------------
-  // Real ESPN plays, newest first, with the fantasy points the play was
-  // worth on the standard full-PPR line (a real game has no single
-  // league's scoring settings to use).
-  async function gcPlayByPlayHtml(game, dict) {
-    const plays = await getEspnPlayByPlay(game.eventId);
-    if (!plays.length) return '<div class="gc-empty">No plays yet.</div>';
-
-    const shortNameMap = {};
-    Object.keys(dict).forEach(id => {
-      const p = dict[id];
-      if (!p || !GC_FANTASY_POS.includes(p.position)) return;
-      if (p.team !== game.away.abbr && p.team !== game.home.abbr) return;
-      const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-      shortNameMap[sbEspnShortName(full)] = id;
-    });
-
-    return plays.slice().reverse().map(play => {
-      let fp = 0;
-      sbParsePlayEvents(play.text).forEach(ev => {
-        if (!shortNameMap[ev.name]) return;
-        fp += sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING) || 0;
-      });
-      const scoreText = (play.awayScore != null && play.homeScore != null)
-        ? `${game.away.abbr} ${play.awayScore} - ${play.homeScore} ${game.home.abbr}` : '';
-      const meta = [play.period ? `Q${play.period}` : '', play.clock, play.downDistance, scoreText].filter(Boolean);
-      return `<div class="gc-play${fp >= 6 ? ' gc-play-scoring' : ''}">
-        <div class="gc-play-meta">${meta.map(m => `<span>${sbFieldEsc(m)}</span>`).join('')}</div>
-        <div class="gc-play-text">${sbFieldEsc(play.text)}</div>
-        ${fp > 0 ? `<div class="gc-play-fp">+${fp.toFixed(1)} fantasy pts</div>` : ''}
-      </div>`;
-    }).join('');
-  }
 
   // ---- League breakdown column ----------------------------------------
   // Every one of your leagues with a starter in THIS game and nobody
@@ -26545,10 +26332,230 @@
     </span>`;
   }
 
+  // ---- Scoreboard grid -------------------------------------------------
+  // Every game at once, as a grid, because the question this page answers
+  // is "what is happening" and not "what is happening in the one game I
+  // scrolled to". A card opens in place: its panel spans the whole column
+  // and pushes the rest of the grid down, so nothing you were reading
+  // moves off screen.
+  function gcRenderGrid(games, dict) {
+    const el = document.getElementById('gcGrid');
+    if (!el) return;
+    if (!games.length) { el.innerHTML = '<div class="ld-loading">No NFL games scheduled this week.</div>'; return; }
+
+    const livePill = document.getElementById('gcLivePill');
+    if (livePill) livePill.hidden = !games.some(g => g.state === 'in');
+
+    const cardHtml = (g) => {
+      const exp = gcGameExposure(g, dict);
+      // A finished game dims whoever lost, the way a scoreboard does.
+      const loserCls = (side) => (g.state === 'post' && !side.winner && (g.away.winner || g.home.winner)) ? ' gc-loser' : '';
+      const teamRow = (side, which) => `
+        <div class="gc-card-row${loserCls(side)}">
+          <div class="gc-card-team">
+            <img src="${sbTeamLogoUrl(side.abbr)}" alt="" loading="lazy" onerror="this.remove()">
+            <span class="gc-card-abbr">${sbFieldEsc(side.abbr)}${gcBallIconHtml(g, which)}</span>
+            <span class="gc-card-rec">${sbFieldEsc(side.record || '')}</span>
+          </div>
+          <div class="gc-card-score">${side.score != null ? side.score : ''}</div>
+        </div>`;
+      return `
+      <div class="gc-card${g.eventId === window.__gcOpenEventId ? ' active' : ''}" data-gc-event="${sbFieldEsc(g.eventId)}">
+        <div class="gc-card-exposure">${gcExposureHtml(exp)}</div>
+        <div class="gc-card-top">
+          <span class="gc-card-state${g.state === 'in' ? ' gc-live' : ''}">${gcStateLabel(g)}</span>
+          <span class="gc-card-net">${sbFieldEsc(g.broadcast || '')}</span>
+        </div>
+        ${teamRow(g.away, 'away')}
+        ${teamRow(g.home, 'home')}
+        ${g.state === 'in' && g.downDistance ? `<div class="gc-card-kick">${sbFieldEsc(g.downDistance)}</div>` : ''}
+      </div>`;
+    };
+
+    const open = games.find(g => g.eventId === window.__gcOpenEventId);
+    el.innerHTML = games.map(g =>
+      cardHtml(g) + (open && g.eventId === open.eventId ? gcInlineHtml(open, dict) : '')
+    ).join('');
+  }
+
+  // The drop-down under an opened game: your leagues with a stake in it,
+  // and the box score. Both were full columns of their own before, which
+  // is why the page could only ever show you one game.
+  function gcInlineHtml(game, dict) {
+    const d = window.__gcOpenData;
+    const ready = d && d.game && d.game.eventId === game.eventId;
+    const stats = ready
+      ? gcStatsHtml(game, window.__gcStatsTeam || 'away', dict, d.statsMap, d.projMap)
+      : '<div class="ld-loading">Loading box score&hellip;</div>';
+    const leagues = ready
+      ? gcLeagueBreakdownHtml(game, dict, d.statsMap, d.projMap)
+      : '<div class="ld-loading">Loading&hellip;</div>';
+    return `<div class="gc-inline" data-gc-inline="${sbFieldEsc(game.eventId)}">
+      <div class="gc-inline-head">
+        <span class="gc-inline-title">${sbFieldEsc(game.away.abbr)} at ${sbFieldEsc(game.home.abbr)}</span>
+        <span class="gc-inline-spacer"></span>
+        ${gcTeamSwitchHtml(game, window.__gcStatsTeam || 'away', 'gc-stats-team')}
+        <span class="gc-inline-close" data-gc-close="1">&#10005;</span>
+      </div>
+      <div class="gc-inline-section">
+        <div class="gc-inline-label">YOUR LEAGUES IN THIS GAME &middot; CLOSEST MATCHUP FIRST</div>
+        <div class="gc-inline-scroll" id="gcLeaguesBody">${leagues}</div>
+      </div>
+      <div class="gc-inline-section">
+        <div class="gc-inline-label">FANTASY STATS &middot; ${GC_SCORING_LABEL.toUpperCase()} &middot; TAP A PLAYER FOR MATCHUP IMPACT</div>
+        <div class="gc-inline-scroll" id="gcStatsBody">${stats}</div>
+      </div>
+    </div>`;
+  }
+
+  // ---- Around the league ----------------------------------------------
+  // One feed, every game. Each play carries the fantasy points it was
+  // worth on the house line, who they went to, and where you are exposed
+  // to that player -- started for you, started against you, or neither.
+  //
+  // A finished game's plays never change again, so they are cached for
+  // the life of the page and only live games are re-fetched. Without that
+  // this column would pull a dozen ESPN summaries every twenty seconds
+  // for games that ended on Sunday afternoon.
+  window.__gcFinalPbpCache = window.__gcFinalPbpCache || {};
+  const GC_FEED_MAX = 60;
+
+  async function gcFeedPlays(games, dict) {
+    const live = games.filter(g => g.state === 'in');
+    // Nothing live: show the most recent finished games instead of an
+    // empty column, which is what a Tuesday looks like.
+    const targets = live.length ? live : games.filter(g => g.state === 'post').slice(-6);
+
+    const perGame = await Promise.all(targets.map(async (g) => {
+      if (g.state === 'post' && window.__gcFinalPbpCache[g.eventId]) {
+        return { game: g, plays: window.__gcFinalPbpCache[g.eventId] };
+      }
+      const plays = await getEspnPlayByPlay(g.eventId).catch(() => []);
+      if (g.state === 'post') window.__gcFinalPbpCache[g.eventId] = plays;
+      return { game: g, plays };
+    }));
+
+    const out = [];
+    perGame.forEach(({ game, plays }) => {
+      // ESPN names players by short name; the map is built per game so a
+      // "J.Jones" in one broadcast can never be matched to the other
+      // J.Jones playing somewhere else at the same time.
+      const shortNameMap = {};
+      Object.keys(dict).forEach(id => {
+        const p = dict[id];
+        if (!p || !GC_FANTASY_POS.includes(p.position)) return;
+        if (p.team !== game.away.abbr && p.team !== game.home.abbr) return;
+        const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+        shortNameMap[sbEspnShortName(full)] = id;
+      });
+      // Only the tail of each game is ever shown, so there is no reason to
+      // score the whole afternoon's worth of plays on every refresh.
+      plays.slice(-GC_FEED_MAX).forEach(play => {
+        const players = [];
+        sbParsePlayEvents(play.text).forEach(ev => {
+          const pid = shortNameMap[ev.name];
+          if (!pid) return;
+          const fp = sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING) || 0;
+          const existing = players.find(x => x.id === pid);
+          if (existing) existing.fp += fp;
+          else players.push({ id: pid, fp });
+        });
+        out.push({ game, play, players });
+      });
+    });
+
+    // Newest first across every game. wallclock is ESPN's own timestamp
+    // for the play; sequence is the fallback inside one game.
+    out.sort((a, b) => {
+      const at = a.play.wallclock ? Date.parse(a.play.wallclock) : NaN;
+      const bt = b.play.wallclock ? Date.parse(b.play.wallclock) : NaN;
+      if (!isNaN(at) && !isNaN(bt) && at !== bt) return bt - at;
+      return (b.play.seq || 0) - (a.play.seq || 0);
+    });
+    return out.slice(0, GC_FEED_MAX);
+  }
+
+  function gcFeedHtml(rows) {
+    if (!rows.length) return '<div class="gc-empty">No plays yet. The feed fills in once a game kicks off.</div>';
+
+    // One exposure lookup per player per render, not per play: the same
+    // running back turns up in fifteen plays and the answer cannot change
+    // between them.
+    const expCache = new Map();
+    const expOf = (pid) => {
+      if (!expCache.has(pid)) expCache.set(pid, gcRootingDelta(pid));
+      return expCache.get(pid);
+    };
+    const dict = window.__sleeperPlayerDict || {};
+    const nameOf = (pid) => {
+      const p = dict[pid];
+      if (!p) return pid;
+      const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+      const parts = String(full).split(' ');
+      return parts.length > 1 ? `${parts[0][0]}. ${parts.slice(1).join(' ')}` : full;
+    };
+
+    const mineOnly = window.__gcFeedFilter === 'mine';
+    const items = [];
+    rows.forEach(({ game, play, players }) => {
+      // Net across your leagues: a play worth 6 points to a player you
+      // start in three leagues and face in one is worth +12 to you, not
+      // +6. That is the number that actually decides your Sunday.
+      let net = 0, anyFor = false, anyAgainst = false;
+      const chips = players.map(pl => {
+        const exp = expOf(pl.id);
+        const forN = exp.forLeagues.length, againstN = exp.againstLeagues.length;
+        if (forN) anyFor = true;
+        if (againstN) anyAgainst = true;
+        net += pl.fp * (forN - againstN);
+        const fpCls = pl.fp > 0 ? ' is-pos' : (pl.fp < 0 ? ' is-neg' : '');
+        const tip = [
+          forN ? `For you: ${exp.forLeagues.join(', ')}` : '',
+          againstN ? `Against you: ${exp.againstLeagues.join(', ')}` : '',
+        ].filter(Boolean).join('\n');
+        return `<span class="gc-feed-player"${tip ? ` title="${sbFieldEsc(tip)}"` : ''}>` +
+          `<span>${sbFieldEsc(nameOf(pl.id))}</span>` +
+          `<span class="gc-feed-fp${fpCls}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</span>` +
+          (forN ? `<span class="gc-feed-exp-for">&#9650;${forN}</span>` : '') +
+          (againstN ? `<span class="gc-feed-exp-against">&#9660;${againstN}</span>` : '') +
+        `</span>`;
+      });
+
+      if (mineOnly && !anyFor && !anyAgainst) return;
+
+      const scoreText = (play.awayScore != null && play.homeScore != null)
+        ? `${game.away.abbr} ${play.awayScore}&ndash;${play.homeScore} ${game.home.abbr}` : '';
+      const meta = [play.period ? `Q${play.period}` : '', play.clock, play.downDistance].filter(Boolean);
+      const netCls = Math.abs(net) < 0.05 ? 'is-flat' : (net > 0 ? 'is-pos' : 'is-neg');
+      const rowCls = anyFor ? ' is-mine' : (anyAgainst ? ' is-against' : '');
+
+      items.push(`<div class="gc-feed-item${rowCls}">
+        <div class="gc-feed-top">
+          <span class="gc-feed-game" data-gc-open="${sbFieldEsc(game.eventId)}">${sbFieldEsc(game.away.abbr)} @ ${sbFieldEsc(game.home.abbr)}</span>
+          ${meta.map(m => `<span>${sbFieldEsc(m)}</span>`).join('')}
+          <span class="gc-feed-spacer"></span>
+          <span>${scoreText}</span>
+        </div>
+        <div class="gc-feed-text">${sbFieldEsc(play.text)}</div>
+        ${chips.length ? `<div class="gc-feed-players">${chips.join('')}</div>` : ''}
+        ${chips.length && (anyFor || anyAgainst)
+          ? `<div class="gc-feed-net ${netCls}">${net > 0 ? '+' : ''}${net.toFixed(1)} net across your leagues</div>`
+          : ''}
+      </div>`);
+    });
+
+    return items.length ? items.join('')
+      : '<div class="gc-empty">No plays involving your players yet.</div>';
+  }
+
   // ---- Orchestration ---------------------------------------------------
+  // Two independent passes. The grid draws from the scoreboard endpoint
+  // and never waits on anything else; the feed and an opened game's box
+  // score fill in behind it. Nothing here re-renders a half that did not
+  // change.
   async function renderRealGameCast() {
-    const rail = document.getElementById('gcRail');
-    if (!rail) return;
+    const grid = document.getElementById('gcGrid');
+    if (!grid) return;
     if (!window.getNflState) return;
     const { week, season } = await window.getNflState();
 
@@ -26557,29 +26564,16 @@
       window.sleeperGetPlayerDict ? window.sleeperGetPlayerDict() : {},
     ]);
     const sorted = gcSortGames(games);
+    window.__gcSortedGames = sorted;
 
-    // Default to whatever is live (that's what you opened this for),
-    // otherwise the first game on the rail.
-    if (!window.__gcSelectedEventId || !sorted.some(g => g.eventId === window.__gcSelectedEventId)) {
-      const live = sorted.find(g => g.state === 'in');
-      window.__gcSelectedEventId = (live || sorted[0] || {}).eventId || null;
-      window.__gcStatsTeam = null;
+    // An opened game that is no longer on the slate closes itself.
+    if (window.__gcOpenEventId && !sorted.some(g => g.eventId === window.__gcOpenEventId)) {
+      window.__gcOpenEventId = null;
     }
-
-    gcRenderRail(sorted, dict);
+    gcRenderGrid(sorted, dict);
 
     const view = document.querySelector('[data-view="gamecast"]');
     if (!view || !view.classList.contains('is-active')) return;
-
-    const game = sorted.find(g => g.eventId === window.__gcSelectedEventId);
-    const hero = document.getElementById('gcHero');
-    const cols = document.getElementById('gcColumns');
-    if (!game) {
-      if (hero) hero.innerHTML = '';
-      if (cols) cols.innerHTML = '<div class="ld-loading">Pick a game above.</div>';
-      return;
-    }
-    if (hero) hero.innerHTML = gcHeroHtml(game, dict);
 
     const [statsMap, projMap, espnGameData] = await Promise.all([
       window.sleeperGetWeekStats ? window.sleeperGetWeekStats(season, week) : {},
@@ -26596,104 +26590,123 @@
     ]);
     window.__gcEspnGameData = espnGameData;
     window.__gcWeek = week;
-    window.__gcHeroData = { game, dict, statsMap, projMap };
 
-    if (!window.__gcStatsTeam) window.__gcStatsTeam = 'away';
-
-    if (cols) {
-      cols.innerHTML = `
-        <div class="gc-columns">
-          <div class="gc-panel">
-            <div class="gc-panel-head">
-              <span class="gc-panel-title">Fantasy Stats</span>
-              ${gcTeamSwitchHtml(game, window.__gcStatsTeam, 'gc-stats-team')}
-            </div>
-            <div class="gc-panel-sub">${GC_SCORING_LABEL} &middot; tap a player for matchup impact</div>
-            <div class="gc-panel-scroll" id="gcStatsBody">${gcStatsHtml(game, window.__gcStatsTeam, dict, statsMap, projMap)}</div>
-          </div>
-          <div class="gc-panel">
-            <div class="gc-panel-head"><span class="gc-panel-title">Play By Play</span></div>
-            <div class="gc-panel-sub">Newest first</div>
-            <div class="gc-panel-scroll" id="gcPbpBody"><div class="ld-loading">Loading plays&hellip;</div></div>
-          </div>
-          <div class="gc-panel gc-col-leagues">
-            <div class="gc-panel-head"><span class="gc-panel-title">Your Leagues In This Game</span></div>
-            <div class="gc-panel-sub">Only leagues with a starter here &middot; closest matchup first</div>
-            <div class="gc-panel-scroll" id="gcLeaguesBody">${gcLeagueBreakdownHtml(game, dict, statsMap, projMap)}</div>
-          </div>
-        </div>`;
-
-      // Plays load after the panel frame is up so the other two columns
-      // never wait on ESPN's summary endpoint.
-      gcPlayByPlayHtml(game, dict).then(html => {
-        const body = document.getElementById('gcPbpBody');
-        if (body) body.innerHTML = html;
-      }).catch(() => {
-        const body = document.getElementById('gcPbpBody');
-        if (body) body.innerHTML = '<div class="gc-empty">Could not load live plays.</div>';
-      });
+    const open = sorted.find(g => g.eventId === window.__gcOpenEventId);
+    if (open) {
+      window.__gcOpenData = { game: open, dict, statsMap, projMap };
+      if (!window.__gcStatsTeam) window.__gcStatsTeam = 'away';
+      gcRefreshInlineBodies();
+    } else {
+      window.__gcOpenData = null;
     }
+
+    gcFeedPlays(sorted, dict).then(rows => {
+      window.__gcFeedRows = rows;
+      // This column refreshes under you every twenty seconds. Reading it
+      // back to Sunday morning only to be thrown to the top mid-sentence
+      // is the whole column failing at its job, so hold the scroll.
+      gcKeepScroll('gcFeed', (feed) => { feed.innerHTML = gcFeedHtml(rows); });
+      const sub = document.getElementById('gcFeedSub');
+      if (sub) {
+        const liveCount = sorted.filter(g => g.state === 'in').length;
+        sub.textContent = liveCount
+          ? `Newest first, across ${liveCount} live game${liveCount === 1 ? '' : 's'}.`
+          : 'Newest first. Nothing is live, so this is the last of the finished games.';
+      }
+    }).catch(() => {
+      const feed = document.getElementById('gcFeed');
+      if (feed) feed.innerHTML = '<div class="gc-empty">Could not load live plays.</div>';
+    });
   }
   window.renderRealGameCast = renderRealGameCast;
 
+  // Redraw just the two bodies inside an opened game, so changing the team
+  // switch or expanding a player never touches the grid or the feed.
+  function gcRefreshInlineBodies() {
+    const cur = window.__gcOpenData;
+    if (!cur) return;
+    gcKeepScroll('gcStatsBody', (el) => {
+      el.innerHTML = gcStatsHtml(cur.game, window.__gcStatsTeam || 'away', cur.dict, cur.statsMap, cur.projMap);
+    });
+    gcKeepScroll('gcLeaguesBody', (el) => {
+      el.innerHTML = gcLeagueBreakdownHtml(cur.game, cur.dict, cur.statsMap, cur.projMap);
+    });
+  }
+  // Redraw a scrolling panel in place, leaving the reader where they were.
+  function gcKeepScroll(id, write) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const top = el.scrollTop;
+    write(el);
+    if (top) el.scrollTop = top;
+  }
   function gcRefreshStatsBody() {
-    const cur = window.__gcHeroData;
+    const cur = window.__gcOpenData;
     const body = document.getElementById('gcStatsBody');
     if (!cur || !body) return;
-    body.innerHTML = gcStatsHtml(cur.game, window.__gcStatsTeam, cur.dict, cur.statsMap, cur.projMap);
+    body.innerHTML = gcStatsHtml(cur.game, window.__gcStatsTeam || 'away', cur.dict, cur.statsMap, cur.projMap);
   }
 
   (function initGcClicks() {
-    const rail = document.getElementById('gcRail');
-    const cols = document.getElementById('gcColumns');
+    const grid = document.getElementById('gcGrid');
+    const feed = document.getElementById('gcFeed');
+    const feedFilter = document.getElementById('gcFeedFilter');
 
-    if (rail) {
-      rail.addEventListener('click', (e) => {
+    const openGame = (eventId) => {
+      window.__gcOpenEventId = window.__gcOpenEventId === eventId ? null : eventId;
+      window.__gcStatsTeam = null;
+      window.__gcExpandedPlayer = null;
+      window.__gcOpenData = null;
+      renderRealGameCast();
+    };
+
+    if (grid) {
+      grid.addEventListener('click', (e) => {
+        if (e.target.closest('[data-gc-close]')) { openGame(window.__gcOpenEventId); return; }
+
+        // Inside an open panel: the team switch, a league row and a player
+        // row all act without closing or redrawing anything else.
+        const statsBtn = e.target.closest('[data-gc-stats-team]');
+        if (statsBtn) {
+          window.__gcStatsTeam = statsBtn.dataset.gcStatsTeam;
+          window.__gcExpandedPlayer = null;
+          statsBtn.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === statsBtn));
+          gcRefreshStatsBody();
+          return;
+        }
+        const lgRow = e.target.closest('.gc-lg-row');
+        if (lgRow && lgRow.dataset.gcLeagueId) { goToLeagueMatchup(lgRow.dataset.gcLeagueId); return; }
+        const statRow = e.target.closest('.gc-stat-row');
+        if (statRow && statRow.dataset.gcPlayer) {
+          window.__gcExpandedPlayer = window.__gcExpandedPlayer === statRow.dataset.gcPlayer ? null : statRow.dataset.gcPlayer;
+          gcRefreshStatsBody();
+          return;
+        }
+        if (e.target.closest('.gc-inline')) return;
+
         const card = e.target.closest('.gc-card');
-        if (!card || !card.dataset.gcEvent) return;
-        if (card.dataset.gcEvent === window.__gcSelectedEventId) return;
-        window.__gcSelectedEventId = card.dataset.gcEvent;
-        // A new game means the old team/player selections are meaningless.
-        window.__gcStatsTeam = null;
-        window.__gcExpandedPlayer = null;
-        renderRealGameCast();
+        if (card && card.dataset.gcEvent) openGame(card.dataset.gcEvent);
       });
-      rail.addEventListener('scroll', gcUpdateRailArrows, { passive: true });
     }
-    const scrollRail = (dir) => {
-      const el = document.getElementById('gcRail');
-      if (el) el.scrollBy({ left: dir * Math.max(220, el.clientWidth * 0.8), behavior: 'smooth' });
-    };
-    const leftBtn = document.getElementById('gcRailLeft');
-    const rightBtn = document.getElementById('gcRailRight');
-    if (leftBtn) leftBtn.addEventListener('click', () => scrollRail(-1));
-    if (rightBtn) rightBtn.addEventListener('click', () => scrollRail(1));
-    window.addEventListener('resize', gcUpdateRailArrows);
 
-    // One delegated handler bound to both the hero and the body containers.
-    const onPanelClick = (e) => {
-      const statsBtn = e.target.closest('[data-gc-stats-team]');
-      if (statsBtn) {
-        window.__gcStatsTeam = statsBtn.dataset.gcStatsTeam;
-        window.__gcExpandedPlayer = null;
-        statsBtn.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === statsBtn));
-        gcRefreshStatsBody();
-        return;
-      }
-      const lgRow = e.target.closest('.gc-lg-row');
-      if (lgRow && lgRow.dataset.gcLeagueId) {
-        goToLeagueMatchup(lgRow.dataset.gcLeagueId);
-        return;
-      }
-      const row = e.target.closest('.gc-stat-row');
-      if (row && row.dataset.gcPlayer) {
-        window.__gcExpandedPlayer = window.__gcExpandedPlayer === row.dataset.gcPlayer ? null : row.dataset.gcPlayer;
-        gcRefreshStatsBody();
-      }
-    };
-    if (cols) cols.addEventListener('click', onPanelClick);
-    const heroEl = document.getElementById('gcHero');
-    if (heroEl) heroEl.addEventListener('click', onPanelClick);
+    // A game tag in the feed opens that game's panel on the left.
+    if (feed) {
+      feed.addEventListener('click', (e) => {
+        const tag = e.target.closest('[data-gc-open]');
+        if (tag) openGame(tag.dataset.gcOpen);
+      });
+    }
+
+    if (feedFilter) {
+      feedFilter.addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-gc-feed]');
+        if (!chip) return;
+        feedFilter.querySelectorAll('.ww-toggle').forEach(c => c.classList.toggle('active', c === chip));
+        window.__gcFeedFilter = chip.dataset.gcFeed;
+        // Filtering is a view of rows already in hand -- no refetch.
+        gcKeepScroll('gcFeed', (body) => { body.innerHTML = gcFeedHtml(window.__gcFeedRows || []); });
+      });
+    }
   })();
 
   // The persistent interval declared above already keeps GameCast fresh
