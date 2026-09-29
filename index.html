@@ -1805,7 +1805,6 @@
   .gc-feed-game:hover { color: var(--navy); }
   .gc-feed-spacer { flex: 1; }
   .gc-feed-text { font-size: 12px; color: var(--muted); line-height: 1.45; margin-top: 3px; }
-  .gc-feed-players { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
   .gc-feed-player {
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 11px; font-weight: 700; color: var(--ink);
@@ -1816,6 +1815,20 @@
   .gc-feed-fp.is-neg { color: var(--red); }
   .gc-feed-exp-for { color: var(--green); font-size: 10px; }
   .gc-feed-exp-against { color: var(--red); font-size: 10px; }
+  .gc-feed-logo { width: 15px; height: 15px; object-fit: contain; vertical-align: -3px; margin-right: 2px; }
+  /* One player, his points, and every matchup of yours the play moved. */
+  .gc-feed-block { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+  .gc-feed-lgs { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+  .gc-feed-lg {
+    font-size: 10px; font-weight: 700; border-radius: 4px; padding: 1px 6px;
+    border: 1px solid var(--border); color: var(--muted); cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .gc-feed-lg b { font-weight: 800; }
+  .gc-feed-lg.is-good { color: var(--green); border-color: var(--green); background: var(--green-bg); }
+  .gc-feed-lg.is-bad { color: var(--red); border-color: var(--red); background: var(--red-bg); }
+  .gc-feed-lg.is-flat { color: var(--faint); }
+  .gc-feed-nostake { font-size: 10px; color: var(--faint); }
   .gc-feed-net { margin-top: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px; }
   .gc-feed-net.is-pos { color: var(--green); }
   .gc-feed-net.is-neg { color: var(--red); }
@@ -3246,6 +3259,9 @@
   .ld-stat-cell-wide { flex: 1.8; }
   .ld-stat-divider { width: 1px; background: var(--border); margin: 10px 0; }
   @media (max-width: 980px) { .ld-stat-divider { width: auto; height: 1px; margin: 0; } }
+  /* The line a share is read against, printed under it rather than left
+     for you to work out from the league size. */
+  .ld-stat-note { font-size: 10px; font-weight: 700; color: var(--faint); margin-top: 1px; }
   .ld-stat-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
   .ld-stat-value { font-family: 'Source Serif 4', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 2px; }
   .ld-firsts { display: flex; gap: 10px; margin-top: 2px; }
@@ -5495,6 +5511,12 @@
         </div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell">
+          <div class="ld-stat-label">VALUE SHARE</div>
+          <div class="ld-stat-value" id="ldValueShare">&mdash;</div>
+          <div class="ld-stat-note" id="ldValueShareAvg"></div>
+        </div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell">
           <div class="ld-stat-label">SEED</div>
           <div class="ld-stat-value" id="ldSeed">2nd</div>
         </div>
@@ -5502,11 +5524,6 @@
         <div class="ld-stat-cell">
           <div class="ld-stat-label">PF RANK</div>
           <div class="ld-stat-value" id="ldPfRank">4th</div>
-        </div>
-        <div class="ld-stat-divider"></div>
-        <div class="ld-stat-cell">
-          <div class="ld-stat-label">MAX PF</div>
-          <div class="ld-stat-value" id="ldMaxPf">&mdash;</div>
         </div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell">
@@ -6288,6 +6305,7 @@
           <div class="rg-sort-toggle" id="rgSortToggle">
             <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="value">Leagues</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="leagues">$</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-sort="swing" title="How much your win probability actually moves per point this player scores, added up across every matchup he is in">Swing</button>
           </div>
           <div class="rg-sort-toggle" id="rgPosToggle">
             <button type="button" class="rg-sort-toggle-btn active" data-rg-pos="ALL">All</button>
@@ -18005,6 +18023,19 @@
         // the win-count delta above uses, just weighted by real dollars
         // instead of by 1 per league.
         const dollarNet = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
+        // Leverage: what a point of his is really worth to you once you
+        // weigh each matchup by how much it can still move. A league count
+        // treats a coin flip and a game you have already won as one apiece;
+        // this does not, which is the difference between "you are in three
+        // of his matchups" and "root for him".
+        const lev = (typeof sbPlayerLeverage === 'function' && r.el.dataset.playerId)
+          ? sbPlayerLeverage(r.el.dataset.playerId)
+          : { perPoint: 0, leagues: [] };
+        // Blacklisted leagues are off this page entirely, so they are off
+        // this number too.
+        const swingNet = lev.leagues
+          .filter(l => !rgBlacklist.has(l.name))
+          .reduce((sum, l) => sum + l.perPoint, 0);
         // Raw numbers (not the formatted display text below) so anything
         // reading a player's rooting impact off this row -- the Weekly
         // Schedule's exposure preview, the Rooting Guide's own 1-on-1
@@ -18012,12 +18043,22 @@
         // parsing "+$325" back out of a string.
         r.el.dataset.delta = String(delta);
         r.el.dataset.dollar = String(dollarNet);
+        r.el.dataset.swing = swingNet.toFixed(3);
         const deltaEl = r.el.querySelector('.rg-delta');
         const noteEl = r.el.querySelector('.rg-note');
         deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
         // In $ mode the badge shows real dollars at stake instead of a
         // league count, so it reads "+$325" rather than "+3".
-        if (rgSortCriterion === 'leagues') {
+        if (rgSortCriterion === 'swing') {
+          // Win probability per fantasy point, summed over his matchups.
+          // A player in two dead-rubber leagues reads near zero however
+          // many leagues that is.
+          const txt = `${swingNet > 0 ? '+' : (swingNet < 0 ? '\u2212' : '')}${Math.abs(swingNet).toFixed(2)}%`;
+          deltaEl.textContent = txt;
+          if (swingNet > 0.005) deltaEl.classList.add('rg-delta-pos');
+          else if (swingNet < -0.005) deltaEl.classList.add('rg-delta-neg');
+          else deltaEl.classList.add('rg-delta-even');
+        } else if (rgSortCriterion === 'leagues') {
           if (dollarNet > 0) { deltaEl.textContent = '+$' + dollarNet; deltaEl.classList.add('rg-delta-pos'); }
           else if (dollarNet < 0) { deltaEl.textContent = '-$' + Math.abs(dollarNet); deltaEl.classList.add('rg-delta-neg'); }
           else { deltaEl.textContent = '$0'; deltaEl.classList.add('rg-delta-even'); }
@@ -18027,17 +18068,32 @@
           else { deltaEl.textContent = '0'; deltaEl.classList.add('rg-delta-even'); }
         }
         const noteParts = [];
-        if (f.length) noteParts.push(f.length + ' <span class="rg-note-for">for</span>');
-        if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
+        if (rgSortCriterion === 'swing') {
+          // The matchups doing the work, loudest first -- a player can be
+          // "in five leagues" and have all of his leverage in one.
+          const live = lev.leagues.filter(l => !rgBlacklist.has(l.name) && Math.abs(l.perPoint) >= 0.005);
+          if (live.length) {
+            noteParts.push(live.slice(0, 2).map(l =>
+              `<span class="${l.perPoint > 0 ? 'rg-note-for' : 'rg-note-vs'}">${l.name} ${l.winPct}%</span>`
+            ).join(' &middot; '));
+            if (live.length > 2) noteParts.push(`+${live.length - 2}`);
+          } else {
+            noteParts.push('<span class="rg-note-vs">nothing left to swing</span>');
+          }
+        } else {
+          if (f.length) noteParts.push(f.length + ' <span class="rg-note-for">for</span>');
+          if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
+        }
         noteEl.innerHTML = noteParts.join(' &middot; ');
         const proj = Number(r.el.dataset.proj) || 0;
-        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, proj };
+        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, swingNet, proj };
         // In $ mode, which bucket a player belongs in is decided by real
         // dollars at stake, not league count -- a player can be a league-count
         // "against" but still help you overall once you weigh in that your
         // for-leagues carry more money than your against-leagues (and vice
         // versa), so re-bucket by dollarNet's sign instead of delta's.
-        const bucketKey = rgSortCriterion === 'leagues' ? dollarNet : delta;
+        const bucketKey = rgSortCriterion === 'swing' ? (Math.abs(swingNet) < 0.005 ? 0 : swingNet)
+          : (rgSortCriterion === 'leagues' ? dollarNet : delta);
         if (bucketKey > 0) buckets.for.push(bucket);
         else if (bucketKey < 0) buckets.against.push(bucket);
         else buckets.even.push(bucket);
@@ -18046,7 +18102,12 @@
       // projected for more points -- live, since this re-runs on every
       // sync poll and dataset.proj gets refreshed with it -- instead of
       // whatever arbitrary order the players happened to be built in.
-      if (rgSortCriterion === 'leagues') {
+      if (rgSortCriterion === 'swing') {
+        // Most win probability to gain first on one side, most to lose
+        // first on the other.
+        buckets.for.sort((a, b) => (b.swingNet - a.swingNet) || (b.proj - a.proj));
+        buckets.against.sort((a, b) => (a.swingNet - b.swingNet) || (b.proj - a.proj));
+      } else if (rgSortCriterion === 'leagues') {
         // Most real dollars in your favor first for Root For, most real
         // dollars against you first for Root Against.
         buckets.for.sort((a, b) => (b.dollarNet - a.dollarNet) || (b.proj - a.proj));
@@ -19736,7 +19797,6 @@
       const ldRecordEl = document.getElementById('ldRecord');
       const ldSeedEl = document.getElementById('ldSeed');
       const ldPfRankEl = document.getElementById('ldPfRank');
-      const ldMaxPfEl = document.getElementById('ldMaxPf');
       const ldVsTopEl = document.getElementById('ldVsTop');
       const ldFavoredTagEl = document.getElementById('ldFavoredTag');
       const ldProjMineEl = document.getElementById('ldProjMine');
@@ -19752,13 +19812,6 @@
 
         const pfRank = ldRankOf(allRosters, pfOf, activeRoster.roster_id);
         if (ldPfRankEl) ldPfRankEl.textContent = ldOrdinal(pfRank);
-        if (ldMaxPfEl) {
-          // Sleeper's own "points possible" (ppts) -- what this roster
-          // would have scored if it started its optimal lineup every
-          // week, same fpts/fpts_decimal-style pair as points-for.
-          const maxPf = (s.ppts || 0) + (s.ppts_decimal || 0) / 100;
-          ldMaxPfEl.textContent = maxPf ? maxPf.toFixed(1) : '—';
-        }
         if (ldVsTopEl) {
           const topPf = Math.max(...allRosters.map(pfOf));
           const myPf = pfOf(activeRoster);
@@ -19848,13 +19901,40 @@
       }
 
       const ldValueEl = document.getElementById('ldValue');
+      const ldValueShareEl = document.getElementById('ldValueShare');
+      const ldValueShareAvgEl = document.getElementById('ldValueShareAvg');
       if (ldValueEl) {
         if (getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league)) {
-          const totalValue = ppRosterValue(activeRoster, dict) +
-            ppPicksOwnedBy(entry, activeRoster.roster_id).reduce((sum, p) => sum + window.ppPickValueFuture(entry, p), 0);
+          // Players plus picks, the same total every other value readout
+          // on this site uses -- a roster that traded its whole draft for
+          // win-now players and one that did the reverse are not
+          // comparable on players alone.
+          const valueOf = (r) => ppRosterValue(r, dict) +
+            ppPicksOwnedBy(entry, r.roster_id).reduce((sum, p) => sum + window.ppPickValueFuture(entry, p), 0);
+          const totalValue = valueOf(activeRoster);
           ldValueEl.textContent = totalValue.toFixed(2);
+
+          // Share of everything owned in this league. The raw value moves
+          // whenever the rankings move, which makes "is 41.2 a lot?" an
+          // unanswerable question; a share of the league cannot, so it is
+          // the honest way to ask how far ahead this roster actually is.
+          const leagueValue = allRosters.reduce((sum, r) => sum + valueOf(r), 0);
+          if (ldValueShareEl) {
+            ldValueShareEl.textContent = leagueValue > 0
+              ? `${(totalValue / leagueValue * 100).toFixed(1)}%` : '—';
+          }
+          if (ldValueShareAvgEl) {
+            // What an exactly average roster in a league this size holds:
+            // 8.3% in a 12-teamer, 10% in a 10. That is the line this
+            // number is above or below, so it is printed with it.
+            const teams = allRosters.length;
+            ldValueShareAvgEl.textContent = teams && leagueValue > 0
+              ? `avg ${(100 / teams).toFixed(1)}%` : '';
+          }
         } else {
           ldValueEl.textContent = '—';
+          if (ldValueShareEl) ldValueShareEl.textContent = '—';
+          if (ldValueShareAvgEl) ldValueShareAvgEl.textContent = '';
         }
       }
 
@@ -26291,6 +26371,136 @@
     </span>`;
   }
 
+  // ---- Leverage --------------------------------------------------------
+  // What one fantasy point is actually worth to you, right now.
+  //
+  // A player's league count says how many matchups he is in. It does not
+  // say how much any of them care. If you start him in a matchup you are
+  // 95% to win and face him in one sitting at 50%, the league count reads
+  // +1 -- root for him -- and it is wrong: the 95% matchup is already
+  // decided, so his points there buy you almost nothing, while every point
+  // he scores against you in the coin flip costs you real win probability.
+  // Leverage is that difference, measured rather than guessed.
+  //
+  // For one matchup it is the slope of the win-probability curve at the
+  // current score: how far your chances move per point. That slope is at
+  // its steepest at 50-50 and flattens to nothing at the edges, which is
+  // exactly the behaviour above. Summed across every league a player is
+  // in, signed by which side he is on, it is a single number that says
+  // both which way to root and how much to care.
+  const SB_LEVERAGE_STEP = 1;   // one fantasy point, the unit being priced
+
+  // The displayed win probability rounds to whole percent and clamps to
+  // 1-99: right for a scoreboard, useless for a slope, because anything
+  // smaller than half a percent rounds to no change at all. This is the
+  // same curve unrounded and unclamped.
+  function sbWinProbRaw(myTotal, oppTotal, sigma) {
+    const diff = Number(myTotal) - Number(oppTotal);
+    if (!Number.isFinite(diff)) return 50;
+    if (sigma === 0) return diff > 0 ? 100 : (diff < 0 ? 0 : 50);
+    const sd = (sigma != null && Number.isFinite(sigma) && sigma > 0) ? sigma : SB_SIGMA_FALLBACK;
+    return sbNormalCdf(diff / sd) * 100;
+  }
+
+  // A league's live spread, worked out once per render rather than once
+  // per player per play.
+  window.__sbSigmaCache = window.__sbSigmaCache || { at: 0, byLeague: {} };
+  function sbLiveSigmaFor(entry, espnGameData, week) {
+    const cache = window.__sbSigmaCache;
+    if (Date.now() - cache.at > 10000) { cache.at = Date.now(); cache.byLeague = {}; }
+    const id = entry.league.league_id;
+    if (cache.byLeague[id] !== undefined) return cache.byLeague[id];
+    let sigma = null;
+    try {
+      sigma = sbMatchupSigma(entry.myMatchup, entry.oppMatchup, null, entry.league, espnGameData, week);
+    } catch (err) { sigma = null; }
+    cache.byLeague[id] = sigma;
+    return sigma;
+  }
+
+  // What adding `points` to one side of this matchup does to your win
+  // probability. Exact, not a derivative: a 6-point touchdown is priced as
+  // six points, not as six times what the first one was worth, which
+  // matters precisely where the curve is steepest.
+  function sbSwingFor(entry, points, onMySide, sigma) {
+    const my = (entry.myMatchup && entry.myMatchup.points) || 0;
+    const opp = (entry.oppMatchup && entry.oppMatchup.points) || 0;
+    const now = sbWinProbRaw(my, opp, sigma);
+    const after = onMySide
+      ? sbWinProbRaw(my + points, opp, sigma)
+      : sbWinProbRaw(my, opp + points, sigma);
+    return after - now;
+  }
+
+  // Every league a player is in, with what a point of his is worth there.
+  // Positive means his points help you, negative means they cost you --
+  // which for a player on your opponent's roster is automatic.
+  function sbPlayerLeverage(playerId, opts) {
+    const o = opts || {};
+    const espnGameData = o.espnGameData || window.__gcEspnGameData || null;
+    const week = o.week != null ? o.week : window.__gcWeek;
+    const leagues = [];
+    let perPoint = 0;
+    (typeof gcVisibleLeagueEntries === 'function' ? gcVisibleLeagueEntries() : []).forEach(e => {
+      if (!e.myMatchup || !e.oppMatchup) return;
+      const mine = gcSideIds(e.myMatchup, e.league);
+      const onMySide = mine.includes(playerId);
+      const onOppSide = !onMySide && gcSideIds(e.oppMatchup, e.league).includes(playerId);
+      if (!onMySide && !onOppSide) return;
+      const sigma = sbLiveSigmaFor(e, espnGameData, week);
+      // sbSwingFor already signs this: points added to your opponent's
+      // side lower your win probability, so a player you are facing comes
+      // back negative without anything here flipping him. A settled
+      // matchup has a sigma of zero, cannot move, and contributes nothing
+      // -- which is the whole point of measuring it this way.
+      const lev = sbSwingFor(e, SB_LEVERAGE_STEP, onMySide, sigma);
+      leagues.push({
+        name: e.league.name,
+        leagueId: e.league.league_id,
+        onMySide,
+        perPoint: lev,
+        winPct: Math.round(sbWinProbRaw((e.myMatchup.points || 0), (e.oppMatchup.points || 0), sigma)),
+        sigma,
+      });
+      perPoint += lev;
+    });
+    // Loudest matchup first: the one this player is doing the most to.
+    leagues.sort((a, b) => Math.abs(b.perPoint) - Math.abs(a.perPoint));
+    return { perPoint, leagues };
+  }
+  window.sbPlayerLeverage = sbPlayerLeverage;
+
+  // What a play that just happened did to each of your matchups -- the
+  // same curve, but priced at the points the play was actually worth in
+  // that league's own scoring rather than at one generic point.
+  function sbPlayImpact(playerId, stats, opts) {
+    const o = opts || {};
+    const espnGameData = o.espnGameData || window.__gcEspnGameData || null;
+    const week = o.week != null ? o.week : window.__gcWeek;
+    const out = [];
+    (typeof gcVisibleLeagueEntries === 'function' ? gcVisibleLeagueEntries() : []).forEach(e => {
+      if (!e.myMatchup || !e.oppMatchup) return;
+      const onMySide = gcSideIds(e.myMatchup, e.league).includes(playerId);
+      const onOppSide = !onMySide && gcSideIds(e.oppMatchup, e.league).includes(playerId);
+      if (!onMySide && !onOppSide) return;
+      // Scored in this league's settings, not on the house line: the same
+      // catch is worth 1.0 more in full PPR than in half, and this league
+      // is the one whose matchup is being decided.
+      const pts = sbCustomScoreFor(stats, e.league.scoring_settings) || 0;
+      const sigma = sbLiveSigmaFor(e, espnGameData, week);
+      out.push({
+        name: e.league.name,
+        leagueId: e.league.league_id,
+        onMySide,
+        pts,
+        swing: sbSwingFor(e, pts, onMySide, sigma),
+      });
+    });
+    out.sort((a, b) => Math.abs(b.swing) - Math.abs(a.swing));
+    return out;
+  }
+  window.sbPlayImpact = sbPlayImpact;
+
   // ---- Scoreboard grid -------------------------------------------------
   // Every game at once, as a grid, because the question this page answers
   // is "what is happening" and not "what is happening in the one game I
@@ -26416,8 +26626,16 @@
           if (!pid) return;
           const fp = sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING) || 0;
           const existing = players.find(x => x.id === pid);
-          if (existing) existing.fp += fp;
-          else players.push({ id: pid, fp });
+          // The raw stat line rides along, not just the house-line points:
+          // each of your leagues scores the same play in its own settings.
+          if (existing) {
+            existing.fp += fp;
+            Object.entries(ev.stats || {}).forEach(([k, v]) => {
+              existing.stats[k] = (existing.stats[k] || 0) + v;
+            });
+          } else {
+            players.push({ id: pid, fp, stats: Object.assign({}, ev.stats) });
+          }
         });
         out.push({ game, play, players });
       });
@@ -26437,14 +26655,6 @@
   function gcFeedHtml(rows) {
     if (!rows.length) return '<div class="gc-empty">No plays yet. The feed fills in once a game kicks off.</div>';
 
-    // One exposure lookup per player per render, not per play: the same
-    // running back turns up in fifteen plays and the answer cannot change
-    // between them.
-    const expCache = new Map();
-    const expOf = (pid) => {
-      if (!expCache.has(pid)) expCache.set(pid, gcRootingDelta(pid));
-      return expCache.get(pid);
-    };
     const dict = window.__sleeperPlayerDict || {};
     const nameOf = (pid) => {
       const p = dict[pid];
@@ -26457,27 +26667,38 @@
     const mineOnly = window.__gcFeedFilter === 'mine';
     const items = [];
     rows.forEach(({ game, play, players }) => {
-      // Net across your leagues: a play worth 6 points to a player you
-      // start in three leagues and face in one is worth +12 to you, not
-      // +6. That is the number that actually decides your Sunday.
-      let net = 0, anyFor = false, anyAgainst = false;
-      const chips = players.map(pl => {
-        const exp = expOf(pl.id);
-        const forN = exp.forLeagues.length, againstN = exp.againstLeagues.length;
-        if (forN) anyFor = true;
-        if (againstN) anyAgainst = true;
-        net += pl.fp * (forN - againstN);
+      // Every league this play touched, and what it did to that matchup.
+      // Priced on the real curve: a touchdown in a 50-50 game is worth
+      // several points of win probability, the same touchdown in a game
+      // you are 95% to win is worth almost nothing, and the page should
+      // not pretend otherwise.
+      let anyFor = false, anyAgainst = false, netSwing = 0;
+      const blocks = players.map(pl => {
+        const impacts = sbPlayImpact(pl.id, pl.stats, { espnGameData: window.__gcEspnGameData, week: window.__gcWeek });
+        impacts.forEach(i => {
+          if (i.onMySide) anyFor = true; else anyAgainst = true;
+          netSwing += i.swing;
+        });
         const fpCls = pl.fp > 0 ? ' is-pos' : (pl.fp < 0 ? ' is-neg' : '');
-        const tip = [
-          forN ? `For you: ${exp.forLeagues.join(', ')}` : '',
-          againstN ? `Against you: ${exp.againstLeagues.join(', ')}` : '',
-        ].filter(Boolean).join('\n');
-        return `<span class="gc-feed-player"${tip ? ` title="${sbFieldEsc(tip)}"` : ''}>` +
-          `<span>${sbFieldEsc(nameOf(pl.id))}</span>` +
-          `<span class="gc-feed-fp${fpCls}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</span>` +
-          (forN ? `<span class="gc-feed-exp-for">&#9650;${forN}</span>` : '') +
-          (againstN ? `<span class="gc-feed-exp-against">&#9660;${againstN}</span>` : '') +
-        `</span>`;
+        const chips = impacts.map(i => {
+          // Green when the play helped you in that league, red when it
+          // cost you -- which is the sign of the swing, not of the play.
+          const cls = i.swing > 0.05 ? ' is-good' : (i.swing < -0.05 ? ' is-bad' : ' is-flat');
+          const sign = i.swing > 0 ? '+' : (i.swing < 0 ? '\u2212' : '');
+          const mag = Math.abs(i.swing);
+          const shown = mag >= 0.05 ? `${sign}${mag.toFixed(1)}%` : '0.0%';
+          return `<span class="gc-feed-lg${cls}" data-gc-league-id="${sbFieldEsc(i.leagueId)}" ` +
+            `title="${sbFieldEsc(`${i.name} — ${i.onMySide ? 'your starter' : 'started against you'}, ${i.pts.toFixed(1)} pts in this league's scoring`)}">` +
+            `${sbFieldEsc(i.name)} <b>${shown}</b></span>`;
+        }).join('');
+        return `<div class="gc-feed-block">` +
+          `<span class="gc-feed-player">` +
+            `<span>${sbFieldEsc(nameOf(pl.id))}</span>` +
+            `<span class="gc-feed-fp${fpCls}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</span>` +
+          `</span>` +
+          (chips ? `<span class="gc-feed-lgs">${chips}</span>`
+                 : '<span class="gc-feed-nostake">no stake</span>') +
+        `</div>`;
       });
 
       if (mineOnly && !anyFor && !anyAgainst) return;
@@ -26485,20 +26706,24 @@
       const scoreText = (play.awayScore != null && play.homeScore != null)
         ? `${game.away.abbr} ${play.awayScore}&ndash;${play.homeScore} ${game.home.abbr}` : '';
       const meta = [play.period ? `Q${play.period}` : '', play.clock, play.downDistance].filter(Boolean);
-      const netCls = Math.abs(net) < 0.05 ? 'is-flat' : (net > 0 ? 'is-pos' : 'is-neg');
-      const rowCls = anyFor ? ' is-mine' : (anyAgainst ? ' is-against' : '');
+      const netCls = Math.abs(netSwing) < 0.05 ? 'is-flat' : (netSwing > 0 ? 'is-pos' : 'is-neg');
+      const rowCls = (anyFor || anyAgainst) ? (netSwing >= 0 ? ' is-mine' : ' is-against') : '';
+      const logo = (abbr) => {
+        const url = sbTeamLogoUrl(abbr);
+        return url ? `<img class="gc-feed-logo" src="${url}" alt="" loading="lazy" onerror="this.remove()">` : '';
+      };
 
       items.push(`<div class="gc-feed-item${rowCls}">
         <div class="gc-feed-top">
-          <span class="gc-feed-game" data-gc-open="${sbFieldEsc(game.eventId)}">${sbFieldEsc(game.away.abbr)} @ ${sbFieldEsc(game.home.abbr)}</span>
+          <span class="gc-feed-game" data-gc-open="${sbFieldEsc(game.eventId)}">${logo(game.away.abbr)}${logo(game.home.abbr)}${sbFieldEsc(game.away.abbr)} @ ${sbFieldEsc(game.home.abbr)}</span>
           ${meta.map(m => `<span>${sbFieldEsc(m)}</span>`).join('')}
           <span class="gc-feed-spacer"></span>
           <span>${scoreText}</span>
         </div>
         <div class="gc-feed-text">${sbFieldEsc(play.text)}</div>
-        ${chips.length ? `<div class="gc-feed-players">${chips.join('')}</div>` : ''}
-        ${chips.length && (anyFor || anyAgainst)
-          ? `<div class="gc-feed-net ${netCls}">${net > 0 ? '+' : ''}${net.toFixed(1)} net across your leagues</div>`
+        ${blocks.join('')}
+        ${(anyFor || anyAgainst)
+          ? `<div class="gc-feed-net ${netCls}">${netSwing > 0 ? '+' : (netSwing < 0 ? '\u2212' : '')}${Math.abs(netSwing).toFixed(1)}% win probability across your matchups</div>`
           : ''}
       </div>`);
     });
@@ -26651,6 +26876,9 @@
     // A game tag in the feed opens that game's panel on the left.
     if (feed) {
       feed.addEventListener('click', (e) => {
+        // A league chip goes to that matchup; the game tag opens the game.
+        const lg = e.target.closest('.gc-feed-lg[data-gc-league-id]');
+        if (lg && typeof goToLeagueMatchup === 'function') { goToLeagueMatchup(lg.dataset.gcLeagueId); return; }
         const tag = e.target.closest('[data-gc-open]');
         if (tag) openGame(tag.dataset.gcOpen);
       });
@@ -29520,13 +29748,12 @@
         ? html.join('')
         : `<tr><td colspan="9" class="rb-empty">${byDelta ? 'Nobody moved that way on this board.' : 'No player matches that search.'}</td></tr>`;
 
-      const against = prev
-        ? `<b>Since last</b> is against <b>${rkFmtDate(prev.asOf)}</b>, <b>Since Wk 1</b> against <b>${first ? rkFmtDate(first.asOf) : rkFmtDate(prev.asOf)}</b>. ` +
-          'A player the older board did not carry reads NEW, not a gain from zero.'
-        : 'This is the earliest board on file, so there is nothing behind it to measure change against.';
-      noteEl.innerHTML = (edition.isCurrent
-        ? `<b>${shown} of ${keys.length} players</b>, live since <b>${rkFmtDate(edition.asOf)}</b>. `
-        : `What the board said on <b>${rkFmtDate(edition.asOf)}</b> &mdash; the values a trade made that week is priced at, while the rest of the site prices today's rosters at the live table. `) + against;
+      // Just the dates the two change columns are measured against --
+      // everything else that used to be here was explaining the page to
+      // someone who is already looking at it.
+      noteEl.innerHTML = prev
+        ? `Since last: <b>${rkFmtDate(prev.asOf)}</b> &middot; Since Wk 1: <b>${first ? rkFmtDate(first.asOf) : rkFmtDate(prev.asOf)}</b>`
+        : 'The earliest board on file &mdash; nothing behind it to measure change against.';
     }
 
     function rkBuildEditionPicker() {
