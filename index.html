@@ -1925,12 +1925,16 @@
     font-variant-numeric: tabular-nums;
   }
   .rk-table tbody tr.rk-row { cursor: pointer; }
-  .rk-table tbody tr.rk-row:hover td { background: var(--bg); }
+  /* Every row on the same cardstock -- a board you read straight down
+     should not have bands of shading in it. Hover is carried by the name
+     alone, which is enough to say the row is clickable without turning
+     the row into a different colour from its neighbours. */
+  .rk-table tbody tr.rk-row:hover .rk-name { color: var(--navy); }
 
   /* A tier band. Full width, its own rule, and the value that opens the
      tier on the right -- the number is what defines the band, so it is
      printed rather than implied. */
-  .rk-table tr.rk-tier td { background: var(--bg); border-bottom: 1px solid var(--border); padding: 12px 10px 10px; }
+  .rk-table tr.rk-tier td { border-bottom: 1px solid var(--border); padding: 14px 10px 10px; }
   .rk-tier-inner { display: flex; align-items: center; gap: 14px; }
   .rk-tier-name { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; color: var(--ink); white-space: nowrap; }
   .rk-tier-rule { flex: 1; height: 1px; background: var(--border); }
@@ -1941,16 +1945,20 @@
     padding: 3px 10px; white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
-  /* A real cliff inside a tier: the drop from the player above to the one
-     below, printed where it falls. */
-  .rk-table tr.rk-gap td { padding: 4px 10px; border-bottom: none; }
-  .rk-gap-inner { display: flex; align-items: center; gap: 12px; }
-  .rk-gap-rule { flex: 1; height: 1px; background: var(--red); opacity: 0.35; }
-  .rk-gap-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.6px; color: var(--red); white-space: nowrap; }
 
   @media (max-width: 700px) {
     .rk-table th.rk-th-arch, .rk-table td.rk-arch-cell { display: none; }
   }
+
+  /* ---- Movers -------------------------------------------------------
+     Two deltas per player and nothing else competing with them, so the
+     only colour on the page is the direction each one moved. */
+  .mv-delta { font-family: 'Source Serif 4', serif; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .mv-delta.is-up { color: var(--green); }
+  .mv-delta.is-down { color: var(--red); }
+  .mv-delta.is-flat { color: var(--faint); }
+  .mv-delta.is-new { font-family: inherit; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--navy); }
+  .mv-table td.mv-cell { text-align: right; }
 
   /* ---- Season schedule -------------------------------------------- */
   .ldsch-summary {
@@ -4668,6 +4676,7 @@
     <a class="section-tab" data-section="trades">Trade History</a>
     <a class="section-tab" data-section="records">Results</a>
     <a class="section-tab" data-section="rankings">Rankings</a>
+    <a class="section-tab" data-section="movers">Movers</a>
     <a class="section-tab" data-section="calculator">Trade Calc</a>
     <a class="section-tab" data-section="tanking">Tanking Tracker</a>
     <a class="section-tab" data-section="settings">Settings</a>
@@ -12364,6 +12373,57 @@
           </tr>
         </thead>
         <tbody id="rkBody"><tr><td colspan="7" class="rb-empty">Loading rankings...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div data-view="movers">
+    <div class="page-title">
+      <h1>Movers</h1>
+      <p>What the board changed its mind about. <b>Since last update</b> is this edition against the one before it; <b>since Week 1</b> is this edition against the first set of rankings on file. Both are in Base 1 Value, the same unit the rankings use &mdash; a move of 0.50 is half a first-round pick's worth of opinion.</p>
+    </div>
+
+    <div class="rk-toolbar">
+      <div class="rk-search"><span>&#128269;</span><input type="text" id="mvSearch" placeholder="Search any player..."></div>
+      <div class="ww-pos-filter" id="mvPosFilter">
+        <span class="ww-pos-chip active" data-mv-pos="ALL">All</span>
+        <span class="ww-pos-chip" data-mv-pos="QB">QB</span>
+        <span class="ww-pos-chip" data-mv-pos="RB">RB</span>
+        <span class="ww-pos-chip" data-mv-pos="WR">WR</span>
+        <span class="ww-pos-chip" data-mv-pos="TE">TE</span>
+      </div>
+      <label class="rk-edition">
+        <span>SORT</span>
+        <select id="mvSort">
+          <option value="last">Since last update</option>
+          <option value="season">Since Week 1</option>
+        </select>
+      </label>
+      <label class="rk-edition">
+        <span>SHOW</span>
+        <select id="mvDir">
+          <option value="all">Everyone who moved</option>
+          <option value="up">Risers only</option>
+          <option value="down">Fallers only</option>
+        </select>
+      </label>
+    </div>
+
+    <p class="rk-note" id="mvNote"></p>
+
+    <div class="rb-table-wrap">
+      <table class="rb-table rk-table mv-table">
+        <thead>
+          <tr>
+            <th class="rk-th-rank">RANK</th>
+            <th class="rk-th-player">PLAYER</th>
+            <th>TEAM</th>
+            <th>POS</th>
+            <th class="rk-th-value">VALUE</th>
+            <th class="rk-th-value">SINCE LAST</th>
+            <th class="rk-th-value">SINCE WK 1</th>
+          </tr>
+        </thead>
+        <tbody id="mvBody"><tr><td colspan="7" class="rb-empty">Loading movers...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -23258,22 +23318,55 @@
     const sortedKeys = Object.keys(PP_PLAYER_VALUES).sort((a, b) => PP_PLAYER_VALUES[b] - PP_PLAYER_VALUES[a]);
     return sortedKeys.indexOf(key) + 1;
   }
-  // Name -> position, built once from the full Sleeper player pool, so a
-  // positional rank (e.g. "RB6 of 45") can be worked out among just the
-  // other PP_PLAYER_VALUES entries at the same position -- PP_PLAYER_VALUES
-  // itself only stores name -> value, no position.
+  // Name -> the Sleeper player that name means, built once from the full
+  // player pool, so a positional rank ("RB6 of 45") can be worked out
+  // among just the other PP_PLAYER_VALUES entries at the same position --
+  // PP_PLAYER_VALUES itself only stores name -> value, no position.
+  //
+  // Names are not unique in Sleeper's pool: there is a cornerback called
+  // Lamar Jackson, a safety called Chris Olave's namesake, a practice
+  // squad full of them. Keying on the name alone meant whichever one the
+  // pool happened to list last won, which is how the quarterback with the
+  // second-highest value in the game came to be ranked among cornerbacks.
+  // So: only ever the four positions these rankings are about, and when a
+  // name still collides, the one who is actually on an NFL roster, then
+  // Sleeper's own search_rank, which orders by who you probably meant.
+  const PP_RANKED_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
+  let ppNameToPlayerCache = null;
+  function ppBuildNameToPlayer(dict) {
+    if (ppNameToPlayerCache) return ppNameToPlayerCache;
+    const map = {};
+    const score = (p) => (p.team ? 0 : 1e6) + (p.search_rank != null ? p.search_rank : 999999);
+    Object.entries(dict || {}).forEach(([id, p]) => {
+      if (!p || !p.position || !PP_RANKED_POSITIONS.includes(p.position)) return;
+      const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+      if (!name) return;
+      const key = ppNormalizeName(name).replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
+      const prev = map[key];
+      if (!prev || score(p) < score(prev.p)) map[key] = { id, p };
+    });
+    ppNameToPlayerCache = map;
+    return map;
+  }
   let ppNameToPosCache = null;
   function ppBuildNameToPos(dict) {
     if (ppNameToPosCache) return ppNameToPosCache;
     const map = {};
-    Object.values(dict || {}).forEach(p => {
-      if (!p) return;
-      const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-      if (!name || !p.position) return;
-      map[ppNormalizeName(name)] = p.position;
-    });
+    Object.entries(ppBuildNameToPlayer(dict)).forEach(([key, v]) => { map[key] = v.p.position; });
     ppNameToPosCache = map;
     return map;
+  }
+  // The rankings carry an age to one decimal -- 24.6, not 24 -- which for
+  // a dynasty asset is most of the information. Sleeper's own age is a
+  // whole number, so prefer the export's and fall back to Sleeper's only
+  // for someone the rankings do not cover.
+  function ppAgeForPlayerId(playerId, dict) {
+    const key = ppKeyForPlayerId(playerId, dict);
+    return key && PP_PLAYER_AGES[key] != null ? PP_PLAYER_AGES[key] : null;
+  }
+  function ppArchetypeForPlayerId(playerId, dict) {
+    const key = ppKeyForPlayerId(playerId, dict);
+    return key ? (PP_PLAYER_ARCHETYPES[key] || null) : null;
   }
   function ppPositionalRankForPlayerId(playerId, dict) {
     const p = dict && dict[playerId];
@@ -27975,10 +28068,15 @@
     const expStr = p.years_exp === 0 ? 'Rookie' : (p.years_exp != null ? `${pmOrdinal(p.years_exp)} year` : '&mdash;');
     const statusStr = p.injury_status || p.status || '&mdash;';
 
+    // Exact age where the rankings have one; Sleeper's whole number only
+    // for a player they do not cover.
+    const exactAge = ppAgeForPlayerId(playerId, dict);
+    const ageStr = exactAge != null ? exactAge.toFixed(1) : (p.age || '&mdash;');
+
     let html = `
       <div class="pm-section-label">BIO</div>
       <div class="ld-stats">
-        <div class="ld-stat-cell"><div class="ld-stat-label">AGE</div><div class="ld-stat-value">${p.age || '&mdash;'}</div></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">AGE</div><div class="ld-stat-value">${ageStr}</div></div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell"><div class="ld-stat-label">HT / WT</div><div class="ld-stat-value">${heightStr} / ${weightStr}</div></div>
         <div class="ld-stat-divider"></div>
@@ -28072,6 +28170,8 @@
         <div class="ld-stat-cell"><div class="ld-stat-label">OVERALL RANK</div><div class="ld-stat-value">${rank ? '#' + rank + ' of ' + total : '&mdash;'}</div></div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell"><div class="ld-stat-label">POSITION RANK</div><div class="ld-stat-value">${posRankText}</div></div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell"><div class="ld-stat-label">ARCHETYPE</div><div class="ld-stat-value">${ppArchetypeForPlayerId(playerId, dict) || '&mdash;'}</div></div>
       </div>
       <div class="pm-note">Austin's own hand-curated dynasty rankings &mdash; the same source Trade Calc's "Austin's Rankings" toggle uses. A comparison against consensus/expert rankings is planned but not built yet.</div>
     `;
@@ -29245,7 +29345,6 @@
     let rkPos = 'ALL';
     let rkEditionIdx = -1;   // -1 = the live table
     let rkDict = null;
-    let rkNameToPlayer = null;
 
     // Oldest first, live table last -- the same order PP_VALUE_HISTORY is
     // kept in, so "the edition before this one" is just index - 1.
@@ -29261,30 +29360,6 @@
       return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
     }
 
-    // Name -> Sleeper player, so a ranking row can carry a headshot, the
-    // player's real current team and his position. The rankings list has
-    // no player_id to join on, so this is the join: normalized name, the
-    // same key the value table itself uses.
-    function rkBuildNameToPlayer(dict) {
-      if (rkNameToPlayer) return rkNameToPlayer;
-      const map = {};
-      Object.entries(dict || {}).forEach(([id, p]) => {
-        if (!p || !p.position || !['QB', 'RB', 'WR', 'TE'].includes(p.position)) return;
-        const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-        if (!name) return;
-        const key = ppNormalizeName(name).replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
-        const prev = map[key];
-        // Names collide (two Michael Carters, a practice-squad namesake).
-        // Prefer whoever is actually on a roster, then Sleeper's own
-        // search_rank, which orders by how likely you meant that player.
-        if (!prev) { map[key] = { id, p }; return; }
-        const score = (x) => (x.p.team ? 0 : 1000000) + (x.p.search_rank != null ? x.p.search_rank : 999999);
-        if (score({ id, p }) < score(prev)) map[key] = { id, p };
-      });
-      rkNameToPlayer = map;
-      return map;
-    }
-
     // Tier bands are value bands, not gaps: a tier is everything worth at
     // least X, so which tier a player is in means something on its own
     // rather than depending on who happens to sit next to him.
@@ -29295,11 +29370,6 @@
       }
       return RK_TIER_FLOORS.length;
     }
-    // A drop this big between two players next to each other is a cliff
-    // worth drawing. Deep in the board consecutive values differ by a
-    // hundredth, so this only ever fires where there is a real one.
-    const RK_GAP_MIN = 0.10;
-
     function rkPosRanks(values) {
       const nameToPos = rkDict ? ppBuildNameToPos(rkDict) : {};
       const byPos = {};
@@ -29356,9 +29426,8 @@
         : null;
 
       const posRank = rkPosRanks(values);
-      const nameToPlayer = rkDict ? rkBuildNameToPlayer(rkDict) : {};
+      const nameToPlayer = rkDict ? ppBuildNameToPlayer(rkDict) : {};
       const nameToPos = rkDict ? ppBuildNameToPos(rkDict) : {};
-      const filtering = !!rkQuery || rkPos !== 'ALL';
 
       // Rank is the player's place on the whole board, so it is worked out
       // before anything is filtered out -- hiding every QB does not make
@@ -29398,18 +29467,6 @@
               `<span class="rk-tier-count">${count} PLAYER${count === 1 ? '' : 'S'}</span>` +
               `<span class="rk-tier-chip">Base 1 Value ${top.toFixed(2)}</span>` +
             `</div></td></tr>`);
-        } else if (!filtering && i > 0) {
-          // Only meaningful on the unfiltered board: with rows hidden, the
-          // player above is no longer the player above.
-          const drop = values[keys[i - 1]] - value;
-          if (drop >= RK_GAP_MIN) {
-            html.push(
-              `<tr class="rk-gap"><td colspan="7"><div class="rk-gap-inner">` +
-                `<span class="rk-gap-rule"></span>` +
-                `<span class="rk-gap-label">VALUE GAP &middot; ${drop.toFixed(2)}</span>` +
-                `<span class="rk-gap-rule"></span>` +
-              `</div></td></tr>`);
-          }
         }
 
         const team = player && player.team ? player.team : '';
@@ -29483,7 +29540,6 @@
         rkStarted = true;
         window.sleeperGetPlayerDict().then(dict => {
           rkDict = dict;
-          rkNameToPlayer = null;
           rkRender();
         }).catch(() => {});
       }
@@ -29493,6 +29549,147 @@
     document.querySelectorAll('.section-tab').forEach(tab => {
       if (tab.dataset.section !== 'rankings') return;
       tab.addEventListener('click', () => renderRealRankings());
+    });
+  })();
+
+  // ---- Movers ---------------------------------------------------------
+  // The same board as the Rankings page, read as change instead of state:
+  // what each player gained or lost in Base 1 Value since the edition
+  // before this one, and since the first set of rankings on file.
+  //
+  // Both numbers are differences between two tables that already exist --
+  // nothing here is modelled or estimated. A player the older table did
+  // not carry has no difference to show and says so, rather than being
+  // treated as having come from zero, which would read as a huge riser
+  // when really he was simply not ranked yet.
+  (function initMoversPage() {
+    const body = document.getElementById('mvBody');
+    const searchEl = document.getElementById('mvSearch');
+    const posFilterEl = document.getElementById('mvPosFilter');
+    const sortEl = document.getElementById('mvSort');
+    const dirEl = document.getElementById('mvDir');
+    const noteEl = document.getElementById('mvNote');
+    if (!body || !sortEl) return;
+
+    let mvQuery = '';
+    let mvPos = 'ALL';
+    let mvSort = 'last';
+    let mvDir = 'all';
+    let mvDict = null;
+    let mvStarted = false;
+
+    function mvFmtDate(iso) {
+      const d = new Date(iso + 'T00:00:00Z');
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    }
+    function mvDeltaCell(delta) {
+      if (delta == null) return '<span class="mv-delta is-new">NEW</span>';
+      if (Math.abs(delta) < 0.005) return '<span class="mv-delta is-flat">&mdash;</span>';
+      const cls = delta > 0 ? 'is-up' : 'is-down';
+      return `<span class="mv-delta ${cls}">${delta > 0 ? '+' : '&minus;'}${Math.abs(delta).toFixed(2)}</span>`;
+    }
+
+    function mvRender() {
+      const prevEdition = PP_VALUE_HISTORY.length ? PP_VALUE_HISTORY[PP_VALUE_HISTORY.length - 1] : null;
+      const firstEdition = PP_VALUE_HISTORY.length ? PP_VALUE_HISTORY[0] : null;
+      const values = PP_PLAYER_VALUES;
+      const nameToPlayer = mvDict ? ppBuildNameToPlayer(mvDict) : {};
+      const nameToPos = mvDict ? ppBuildNameToPos(mvDict) : {};
+
+      const keys = Object.keys(values).sort((a, b) => values[b] - values[a]);
+      const rows = [];
+      keys.forEach((key, i) => {
+        const joined = nameToPlayer[key];
+        const player = joined ? joined.p : null;
+        const name = player
+          ? (player.full_name || [player.first_name, player.last_name].filter(Boolean).join(' '))
+          : key.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : w).join(' ');
+        const pos = nameToPos[key] || (player && player.position) || '';
+        if (mvPos !== 'ALL' && pos !== mvPos) return;
+        if (mvQuery && key.indexOf(mvQuery) === -1) return;
+
+        const wasLast = prevEdition && prevEdition.values[key] != null ? prevEdition.values[key] : null;
+        const wasFirst = firstEdition && firstEdition.values[key] != null ? firstEdition.values[key] : null;
+        const dLast = wasLast == null ? null : Math.round((values[key] - wasLast) * 100) / 100;
+        const dFirst = wasFirst == null ? null : Math.round((values[key] - wasFirst) * 100) / 100;
+
+        const sortDelta = mvSort === 'season' ? dFirst : dLast;
+        if (mvDir === 'up' && !(sortDelta > 0)) return;
+        if (mvDir === 'down' && !(sortDelta < 0)) return;
+        rows.push({ key, rank: i + 1, value: values[key], joined, player, name, pos, dLast, dFirst, sortDelta });
+      });
+
+      // A player with no reading on the column being sorted has no place
+      // in an order built on it, so he sinks rather than sorting as zero.
+      rows.sort((a, b) => {
+        const av = a.sortDelta, bv = b.sortDelta;
+        if (av == null && bv == null) return a.rank - b.rank;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        if (bv !== av) return bv - av;
+        return a.rank - b.rank;
+      });
+
+      body.innerHTML = rows.length ? rows.map(r => {
+        const team = r.player && r.player.team ? r.player.team : '';
+        const logo = sbTeamLogoUrl(team);
+        const shot = r.joined ? sbHeadshotUrl(r.joined.id) : '';
+        const parts = String(r.name).trim().split(/\s+/);
+        const initials = ((parts[0] || '')[0] || '').toUpperCase() + ((parts[1] || '')[0] || '').toUpperCase();
+        const posCls = ['QB', 'RB', 'WR', 'TE'].includes(r.pos) ? ' sb-pos-' + r.pos.toLowerCase() : '';
+        return `<tr class="rk-row"${r.joined ? ` data-player-id="${r.joined.id}" data-name="${sbFieldEsc(r.name)}" data-team="${sbFieldEsc(team)}" data-pos="${sbFieldEsc(r.pos)}"` : ''}>` +
+          `<td class="rk-rank">${r.rank}</td>` +
+          `<td class="rk-player-cell"><div class="rk-player">` +
+            `<span class="rk-shot">${initials}${shot ? `<img src="${shot}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>` +
+            `<span class="rk-name">${sbFieldEsc(r.name)}</span>` +
+          `</div></td>` +
+          `<td>${team ? `<span class="rk-team">${logo ? `<img src="${logo}" alt="" loading="lazy" onerror="this.remove()">` : ''}${sbFieldEsc(team)}</span>` : '<span class="rk-age">&mdash;</span>'}</td>` +
+          `<td><span class="rk-pos${posCls}">${sbFieldEsc(r.pos || '')}</span></td>` +
+          `<td class="rk-value">${r.value.toFixed(2)}</td>` +
+          `<td class="mv-cell">${mvDeltaCell(r.dLast)}</td>` +
+          `<td class="mv-cell">${mvDeltaCell(r.dFirst)}</td>` +
+        `</tr>`;
+      }).join('') : '<tr><td colspan="7" class="rb-empty">Nobody matches that.</td></tr>';
+
+      const up = rows.filter(r => r.sortDelta > 0).length;
+      const down = rows.filter(r => r.sortDelta < 0).length;
+      noteEl.innerHTML =
+        `<b>Since last</b> is ${PP_VALUE_CURRENT_ASOF ? mvFmtDate(PP_VALUE_CURRENT_ASOF) : 'today'} against ` +
+        `${prevEdition ? mvFmtDate(prevEdition.asOf) : 'the previous board'}; <b>Since Wk 1</b> is against ` +
+        `${firstEdition ? mvFmtDate(firstEdition.asOf) : 'the first board'}, the earliest rankings on file. ` +
+        `${rows.length} shown &mdash; <b>${up} up</b>, <b>${down} down</b>. A player the older board did not carry reads NEW, not a gain from zero.`;
+    }
+
+    sortEl.addEventListener('change', () => { mvSort = sortEl.value; mvRender(); });
+    dirEl.addEventListener('change', () => { mvDir = dirEl.value; mvRender(); });
+    searchEl.addEventListener('input', () => { mvQuery = ppNormalizeName(searchEl.value); mvRender(); });
+    posFilterEl.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-mv-pos]');
+      if (!chip) return;
+      posFilterEl.querySelectorAll('.ww-pos-chip').forEach(c => c.classList.toggle('active', c === chip));
+      mvPos = chip.dataset.mvPos;
+      mvRender();
+    });
+    body.addEventListener('click', (e) => {
+      const row = e.target.closest('tr.rk-row[data-player-id]');
+      if (row && window.openPlayerModalForId) {
+        window.openPlayerModalForId(row.dataset.playerId, row.dataset.name, row.dataset.team, row.dataset.pos);
+      }
+    });
+
+    function renderRealMovers() {
+      mvRender();
+      if (!mvStarted && window.sleeperGetPlayerDict) {
+        mvStarted = true;
+        window.sleeperGetPlayerDict().then(dict => { mvDict = dict; mvRender(); }).catch(() => {});
+      }
+    }
+    window.renderRealMovers = renderRealMovers;
+
+    document.querySelectorAll('.section-tab').forEach(tab => {
+      if (tab.dataset.section !== 'movers') return;
+      tab.addEventListener('click', () => renderRealMovers());
     });
   })();
 
