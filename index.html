@@ -1825,6 +1825,133 @@
   .ldst-slot { font-weight: 700; color: var(--navy); }
   .ldst-blank { color: var(--faint); }
 
+  /* ---- Rankings ----------------------------------------------------
+     The whole board in one table: where a player ranks, what he is, and
+     what he is worth. Reads top to bottom like a printed ranking sheet --
+     tier bands across the full width, and the big drops between players
+     called out where they happen instead of left for you to spot in the
+     value column. */
+  .rk-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .rk-search {
+    flex: 1;
+    min-width: 200px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--faint);
+    font-size: 13px;
+  }
+  .rk-search input {
+    border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 13px; color: var(--ink); width: 100%;
+  }
+  .rk-search input::placeholder { color: var(--faint); }
+  .rk-edition {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .rk-edition span { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
+  .rk-edition select {
+    border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--ink); cursor: pointer;
+  }
+  .rk-note { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+  .rk-note b { color: var(--ink); }
+
+  .rk-table th.rk-th-player, .rk-table th.rk-th-arch { text-align: left; }
+  .rk-table th.rk-th-rank, .rk-table th.rk-th-value { text-align: right; }
+  .rk-table td.rk-rank {
+    text-align: right;
+    width: 46px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .rk-table td.rk-player-cell, .rk-table td.rk-arch-cell { text-align: left; }
+  .rk-player { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .rk-shot {
+    position: relative;
+    flex-shrink: 0;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    font-size: 10px; font-weight: 800; color: var(--muted);
+  }
+  .rk-shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .rk-name { font-weight: 700; font-size: 13.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+  /* How far a player moved since the edition before this one -- the only
+     thing on the row that is about change rather than state, so it is the
+     only thing coloured green or red. */
+  .rk-move { flex-shrink: 0; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .rk-move.is-up { color: var(--green); }
+  .rk-move.is-down { color: var(--red); }
+  .rk-move.is-new { color: var(--navy); letter-spacing: 0.4px; }
+  .rk-team { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+  .rk-team img { width: 20px; height: 20px; object-fit: contain; }
+  .rk-arch { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; color: var(--ink); }
+  .rk-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--faint); }
+  .rk-dot.tone-elite { background: var(--navy); }
+  .rk-dot.tone-starter { background: var(--blue); }
+  .rk-dot.tone-young { background: var(--green); }
+  .rk-dot.tone-vet { background: var(--gold); }
+  .rk-dot.tone-depth { background: var(--red); }
+  .rk-dot.tone-bench { background: var(--faint); }
+  .rk-arch.is-blank { color: var(--faint); font-weight: 400; }
+  .rk-pos { font-size: 11.5px; font-weight: 800; color: var(--muted); }
+  .rk-pos.sb-pos-qb { color: var(--red); }
+  .rk-pos.sb-pos-rb { color: var(--green); }
+  .rk-pos.sb-pos-wr { color: var(--blue); }
+  .rk-pos.sb-pos-te { color: var(--gold); }
+  .rk-age { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .rk-value {
+    text-align: right;
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .rk-table tbody tr.rk-row { cursor: pointer; }
+  .rk-table tbody tr.rk-row:hover td { background: var(--bg); }
+
+  /* A tier band. Full width, its own rule, and the value that opens the
+     tier on the right -- the number is what defines the band, so it is
+     printed rather than implied. */
+  .rk-table tr.rk-tier td { background: var(--bg); border-bottom: 1px solid var(--border); padding: 12px 10px 10px; }
+  .rk-tier-inner { display: flex; align-items: center; gap: 14px; }
+  .rk-tier-name { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; color: var(--ink); white-space: nowrap; }
+  .rk-tier-rule { flex: 1; height: 1px; background: var(--border); }
+  .rk-tier-count { font-size: 10px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); white-space: nowrap; }
+  .rk-tier-chip {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 3px 10px; white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  /* A real cliff inside a tier: the drop from the player above to the one
+     below, printed where it falls. */
+  .rk-table tr.rk-gap td { padding: 4px 10px; border-bottom: none; }
+  .rk-gap-inner { display: flex; align-items: center; gap: 12px; }
+  .rk-gap-rule { flex: 1; height: 1px; background: var(--red); opacity: 0.35; }
+  .rk-gap-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.6px; color: var(--red); white-space: nowrap; }
+
+  @media (max-width: 700px) {
+    .rk-table th.rk-th-arch, .rk-table td.rk-arch-cell { display: none; }
+  }
+
   /* ---- Season schedule -------------------------------------------- */
   .ldsch-summary {
     display: flex;
@@ -4540,6 +4667,7 @@
     <a class="section-tab" data-section="exposures">Exposures</a>
     <a class="section-tab" data-section="trades">Trade History</a>
     <a class="section-tab" data-section="records">Results</a>
+    <a class="section-tab" data-section="rankings">Rankings</a>
     <a class="section-tab" data-section="calculator">Trade Calc</a>
     <a class="section-tab" data-section="tanking">Tanking Tracker</a>
     <a class="section-tab" data-section="settings">Settings</a>
@@ -12197,6 +12325,46 @@
           <tbody id="ttPicksBody"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+  <div data-view="rankings">
+    <div class="page-title">
+      <h1>Rankings</h1>
+      <p>The Pure Potential board every value on this site is priced off. <b>Base 1 Value</b> is a relative trade scale, not points: a 1.00 is worth exactly one first-round pick in a vacuum, so a 2.00 is worth two of them and a 0.10 is a throw-in. Ages are as of the current export.</p>
+    </div>
+
+    <div class="rk-toolbar">
+      <div class="rk-search"><span>&#128269;</span><input type="text" id="rkSearch" placeholder="Search any player..."></div>
+      <div class="ww-pos-filter" id="rkPosFilter">
+        <span class="ww-pos-chip active" data-rk-pos="ALL">All</span>
+        <span class="ww-pos-chip" data-rk-pos="QB">QB</span>
+        <span class="ww-pos-chip" data-rk-pos="RB">RB</span>
+        <span class="ww-pos-chip" data-rk-pos="WR">WR</span>
+        <span class="ww-pos-chip" data-rk-pos="TE">TE</span>
+      </div>
+      <label class="rk-edition">
+        <span>AS OF</span>
+        <select id="rkEdition"></select>
+      </label>
+    </div>
+
+    <p class="rk-note" id="rkNote"></p>
+
+    <div class="rb-table-wrap">
+      <table class="rb-table rk-table">
+        <thead>
+          <tr>
+            <th class="rk-th-rank">RANK</th>
+            <th class="rk-th-player">PLAYER</th>
+            <th>TEAM</th>
+            <th class="rk-th-arch">ARCHETYPE</th>
+            <th>POS</th>
+            <th>AGE</th>
+            <th class="rk-th-value">VALUE</th>
+          </tr>
+        </thead>
+        <tbody id="rkBody"><tr><td colspan="7" class="rb-empty">Loading rankings...</td></tr></tbody>
+      </table>
     </div>
   </div>
   <div data-view="settings">
@@ -23287,6 +23455,28 @@
   // good roster that stays good from a good roster that is about to fall
   // over, which is what decides a pick two drafts out.
   const PP_PLAYER_AGES = {"jaxon smith-njigba":24.6,"josh allen":30.4,"jahmyr gibbs":24.5,"bijan robinson":24.7,"jamarr chase":26.6,"puka nacua":25.3,"ashton jeanty":22.8,"jeremiyah love":21.3,"brock bowers":23.8,"malik nabers":23.2,"trey mcbride":26.9,"lamar jackson":29.7,"caleb williams":24.9,"amon-ra st brown":26.9,"ceedee lamb":27.5,"patrick mahomes":31.0,"drake london":25.2,"justin jefferson":27.3,"joe burrow":29.8,"jayden daniels":25.8,"kenneth walker":25.9,"tetairoa mcmillan":23.5,"brock purdy":26.8,"chris olave":26.3,"jonathan taylor":27.7,"trevor lawrence":27.0,"jalen hurts":28.1,"drake maye":24.1,"garrett wilson":26.2,"zay flowers":26.0,"colston loveland":22.5,"james cook":27.0,"justin herbert":28.6,"nico collins":27.5,"george pickens":25.6,"parker washington":24.5,"ladd mcconkey":24.9,"luther burden":22.8,"jordyn tyson":22.1,"jaxson dart":23.4,"tyler shough":27.0,"jordan love":27.9,"carnell tate":21.7,"devonta smith":27.9,"christian mccaffrey":30.3,"chase brown":26.5,"christian watson":27.4,"tee higgins":27.7,"dak prescott":33.2,"omarion hampton":23.5,"devon achane":25.0,"makai lemon":22.3,"matthew golden":23.2,"emeka egbuka":24.0,"tyler warren":24.4,"dalton kincaid":27.0,"bucky irving":24.1,"bo nix":26.6,"fernando mendoza":23.0,"jared goff":32.0,"breece hall":25.3,"sam laporta":25.7,"kc concepcion":22.0,"jaylen waddle":27.8,"tucker kraft":25.9,"javonte williams":26.4,"saquon barkley":29.6,"kyren williams":26.1,"derrick henry":32.7,"kenyon sadiq":21.6,"bryce young":25.2,"treveyon henderson":23.9,"jadarian price":23.0,"dandre swift":27.7,"bhayshul tuten":23.6,"cam skattebo":24.6,"jameson williams":25.5,"jalen coker":24.9,"denzel boston":22.8,"michael wilson":26.6,"quinshon judkins":22.9,"harold fannin":22.2,"josh downs":25.1,"dj moore":29.5,"rashee rice":26.4,"sam darnold":29.3,"cj stroud":25.0,"kyler murray":29.1,"aj brown":29.3,"jordan addison":24.7,"rome odunze":24.3,"matthew stafford":38.6,"george kittle":33.0,"chuba hubbard":27.3,"baker mayfield":31.5,"daniel jones":29.3,"isaiah likely":26.4,"ty simpson":23.8,"mike evans":33.1,"brian thomas":24.0,"malik willis":27.4,"marvin harrison":24.1,"dk metcalf":28.8,"terrance ferguson":23.6,"alec pierce":26.4,"david montgomery":29.3,"jonah coleman":23.1,"cam ward":24.3,"davante adams":33.8,"omar cooper":22.8,"terry mclaurin":31.0,"jaylen warren":27.9,"josh jacobs":28.6,"jonathon brooks":23.2,"chris bell":22.3,"antonio williams":22.2,"travis hunter":23.4,"dezhaun stribling":23.8,"adonai mitchell":24.0,"kyle monangai":24.3,"blake corum":25.8,"michael penix":26.4,"rj harvey":25.7,"travis etienne":27.7,"caleb douglas":23.1,"germie bernard":22.8,"kyle pitts":26.0,"stefon diggs":32.8,"juwan johnson":30.0,"eli raridon":22.6,"brenton strange":25.8,"rhamondre stevenson":28.6,"jacory croskey-merritt":25.5,"emmett johnson":23.0,"deebo samuel":30.7,"geno smith":36.0,"pat bryant":23.8,"jakobi lane":22.4,"oronde gadsden":23.3,"eli stowers":23.5,"travis kelce":37.0,"xavier worthy":23.4,"quentin johnston":25.1,"dalton schultz":30.2,"chig okonkwo":27.1,"rico dowdle":28.3,"rachaad white":27.7,"mac jones":28.1,"jacoby brissett":33.8,"dontayvion wicks":25.3,"chris godwin":30.6,"kaelon black":25.0,"woody marks":25.8,"mike washington":23.2,"michael mayer":25.2,"jake ferguson":27.7,"jayden reed":26.4,"khalil shakir":26.7,"zach charbonnet":25.7,"dallas goedert":31.7,"mark andrews":31.1,"jk dobbins":27.8,"romeo doubs":26.5,"wandale robinson":25.7,"jakobi meyers":29.9,"michael pittman":29.0,"keaton mitchell":24.7,"aaron jones":31.8,"carson beck":23.9,"aaron rodgers":42.8,"shedeur sanders":24.6,"ricky pearsall":26.1,"ted hurst":22.2,"jayden higgins":23.8,"malik washington":25.7,"braelon allen":22.7,"courtland sutton":31.0,"jalen mcmillan":24.8,"kenny gainwell":27.5,"tank bigsby":24.1,"tyjae spears":25.3,"nicholas singleton":22.7,"oscar delp":23.2,"tua tagovailoa":28.6,"jordan mason":27.4,"tony pollard":29.4,"aj barner":24.4,"tre harris":24.6,"zachariah branch":22.5,"drew allar":22.6,"brian robinson":27.5,"kaytron allen":23.7,"tyler allgeier":26.5,"ray davis":26.9,"tre tucker":25.6,"dylan sampson":22.0,"pat freiermuth":27.9,"deshaun watson":31.0,"adam randall":22.2,"demond claiborne":23.0,"chris rodriguez":27.0,"rashid shaheed":28.1,"elijah sarratt":23.3,"hunter henry":31.8,"cade otton":27.5,"tj hockenson":29.2,"gunnar helm":24.1,"max klare":23.2,"cyrus allen":23.6,"devaughn vele":28.8,"jaylin noel":24.1,"seth mcgowan":24.9,"ryan flournoy":26.9,"kalif raymond":32.1,"malachi fields":23.1,"jameis winston":32.7,"marcus mariota":32.9,"jj mccarthy":23.7,"cade klubnik":23.0,"alvin kamara":31.2,"isaac teslaa":24.6,"kirk cousins":38.1,"darren waller":34.0,"marlin klein":24.0,"keon coleman":23.4,"mason taylor":22.4,"rashod bateman":26.8,"kaleb johnson":23.1,"kayshon boutte":24.4,"marshawn lloyd":25.7,"brandon aiyuk":28.5,"ollie gordon":22.7,"jaylen wright":23.5,"jordan james":22.5,"elijah arroyo":23.5,"tank dell":26.9,"jalen nailor":27.6,"jauan jennings":29.2,"jalon daniels":23.9,"jerry jeudy":27.4,"greg dulcich":26.5,"mike gesicki":31.0,"roman wilson":25.3,"matt hibner":24.6,"keenan allen":34.4,"kimani vidal":25.1,"troy franklin":23.6,"dj giddens":23.1,"tanner koziol":22.7,"brenen thompson":23.2,"tory horton":23.8,"elic ayomanor":23.3,"skyler bell":24.2,"chris brazzell":23.0,"tyreek hill":32.6,"anthony richardson":24.4,"justin fields":27.6,"justin joly":22.2,"kendre miller":24.3,"kyle williams":23.9,"demario douglas":25.8,"tyrone tracy":26.9,"bryce lance":24.1,"evan engram":32.1,"isaiah davis":24.6,"emanuel wilson":27.4,"konata mumpfield":23.9,"jordan watkins":24.6,"samaje perine":31.0,"tyler goodson":25.9,"kevin coleman":23.1,"jack bech":23.8,"erick all":26.0,"calvin ridley":31.8,"drew lock":29.9,"tyson bagent":26.3,"will shipley":24.1,"sione vaki":25.2,"najee harris":28.6,"chris brooks":26.7,"jalen royals":23.6,"eli heidenreich":23.3,"isiah pacheco":27.6,"james conner":31.4,"taylen green":23.9,"cole payton":23.9,"garrett nussmeier":24.6,"cole kmet":27.6,"jack endries":22.5,"jalen milroe":23.8,"malik benson":24.0,"mitchell evans":23.5,"tez johnson":24.4,"zavion thomas":22.6,"sean tucker":24.9,"tahj brooks":24.4,"carson wentz":33.7};
+  // ---- Player archetypes ----------------------------------------------
+  // Also from the Pure Potential export: the one-word read on what a
+  // player IS -- a Cornerstone you build around, a Handcuff you hold in
+  // case, a Stopgap you start until something better shows up. Shown on
+  // the Rankings page beside the value, because two players can be worth
+  // the same 0.15 for completely different reasons.
+  //
+  // Not everyone is labelled. A player the export left blank is shown as
+  // unlabelled rather than guessed at.
+  const PP_PLAYER_ARCHETYPES = {"jaxon smith-njigba":"Cornerstone","josh allen":"Cornerstone","jahmyr gibbs":"Cornerstone","bijan robinson":"Cornerstone","jamarr chase":"Cornerstone","puka nacua":"Cornerstone","ashton jeanty":"Cornerstone","jeremiyah love":"Blue Chip","brock bowers":"Cornerstone","malik nabers":"Cornerstone","trey mcbride":"Cornerstone","lamar jackson":"Cornerstone","caleb williams":"Cornerstone","amon-ra st brown":"Cornerstone","ceedee lamb":"Cornerstone","patrick mahomes":"Cornerstone","drake london":"Cornerstone","justin jefferson":"Cornerstone","joe burrow":"Cornerstone","jayden daniels":"Cornerstone","kenneth walker":"Anchor","tetairoa mcmillan":"Blue Chip","brock purdy":"Anchor","chris olave":"Anchor","jonathan taylor":"Anchor","trevor lawrence":"Anchor","jalen hurts":"Anchor","drake maye":"Anchor","garrett wilson":"Anchor","zay flowers":"Anchor","colston loveland":"Blue Chip","james cook":"Anchor","justin herbert":"Anchor","nico collins":"Anchor","george pickens":"Anchor","parker washington":"Potential Star","ladd mcconkey":"Potential Star","luther burden":"Wild Card","jordyn tyson":"Prospect","jaxson dart":"Blue Chip","tyler shough":"Anchor","jordan love":"Anchor","carnell tate":"Prospect","devonta smith":"Anchor","christian mccaffrey":"Elite Veteran","chase brown":"Anchor","christian watson":"Building Block","tee higgins":"Building Block","dak prescott":"Building Block","omarion hampton":"Potential Star","devon achane":"Anchor","makai lemon":"Prospect","matthew golden":"Potential Star","emeka egbuka":"Potential Star","tyler warren":"Potential Star","dalton kincaid":"Building Block","bucky irving":"Potential Star","bo nix":"Building Block","fernando mendoza":"Prospect","jared goff":"Building Block","breece hall":"Anchor","sam laporta":"Building Block","kc concepcion":"Prospect","jaylen waddle":"Building Block","tucker kraft":"Building Block","javonte williams":"Building Block","saquon barkley":"Elite Veteran","kyren williams":"Building Block","derrick henry":"Elite Veteran","kenyon sadiq":"Potential Star","bryce young":"Potential Star","treveyon henderson":"Wild Card","jadarian price":"Potential Star","dandre swift":"Useful Veteran","bhayshul tuten":"Potential Star","cam skattebo":"Potential Star","jameson williams":"Building Block","jalen coker":"Potential Star","denzel boston":"Prospect","michael wilson":"Upside Flex","quinshon judkins":"Potential Star","harold fannin":"Potential Star","josh downs":"Potential Star","dj moore":"Useful Veteran","rashee rice":"Wild Card","sam darnold":"Building Block","cj stroud":"Upside Flex","kyler murray":"Wild Card","aj brown":"Useful Veteran","jordan addison":"Upside Flex","rome odunze":"Upside Flex","matthew stafford":"Elite Veteran","george kittle":"Elite Veteran","chuba hubbard":"Useful Veteran","baker mayfield":"Useful Veteran","daniel jones":"Useful Veteran","isaiah likely":"Upside Flex","ty simpson":"Prospect","mike evans":"Elite Veteran","brian thomas":"Upside Flex","malik willis":"Wild Card","marvin harrison":"Upside Flex","dk metcalf":"Useful Veteran","terrance ferguson":"Dart Throw","alec pierce":"Upside Flex","david montgomery":"Useful Veteran","jonah coleman":"Prospect","cam ward":"Upside Flex","davante adams":"Elite Veteran","omar cooper":"Prospect","terry mclaurin":"Useful Veteran","jaylen warren":"Useful Veteran","josh jacobs":"Useful Veteran","jonathon brooks":"Upside Flex","chris bell":"Prospect","antonio williams":"Prospect","travis hunter":"Developmental","dezhaun stribling":"Prospect","adonai mitchell":"Developmental","kyle monangai":"Flex Filler","blake corum":"Handcuff","michael penix":"Dart Throw","rj harvey":"Upside Flex","travis etienne":"Useful Veteran","caleb douglas":"Prospect","germie bernard":"Prospect","kyle pitts":"Upside Flex","stefon diggs":"Stopgap","juwan johnson":"Stopgap","eli raridon":"Prospect","brenton strange":"Flex Filler","rhamondre stevenson":"Useful Veteran","jacory croskey-merritt":"Flex Filler","emmett johnson":"Handcuff","deebo samuel":"Stopgap","geno smith":"Stopgap","pat bryant":"Developmental","jakobi lane":"Prospect","oronde gadsden":"Wild Card","eli stowers":"Prospect","travis kelce":"Stopgap","xavier worthy":"Flex Filler","quentin johnston":"Flex Filler","dalton schultz":"Stopgap","chig okonkwo":"Flex Filler","rico dowdle":"Stopgap","rachaad white":"Stopgap","mac jones":"Handcuff","jacoby brissett":"Stopgap","dontayvion wicks":"Developmental","chris godwin":"Stopgap","kaelon black":"Handcuff","woody marks":"Handcuff","mike washington":"Handcuff","michael mayer":"Developmental","jake ferguson":"Flex Filler","jayden reed":"Flex Filler","khalil shakir":"Flex Filler","zach charbonnet":"Handcuff","dallas goedert":"Stopgap","mark andrews":"Stopgap","jk dobbins":"Stopgap","romeo doubs":"Flex Filler","wandale robinson":"Flex Filler","jakobi meyers":"Stopgap","michael pittman":"Stopgap","keaton mitchell":"Handcuff","aaron jones":"Stopgap","carson beck":"Prospect","aaron rodgers":"Stopgap","shedeur sanders":"Dart Throw","ricky pearsall":"Dart Throw","ted hurst":"Prospect","jayden higgins":"Developmental","malik washington":"Stopgap","braelon allen":"Handcuff","courtland sutton":"Stopgap","jalen mcmillan":"Developmental","kenny gainwell":"Handcuff","tank bigsby":"Handcuff","tyjae spears":"Handcuff","nicholas singleton":"Prospect","oscar delp":"Prospect","tua tagovailoa":"Flex Filler","jordan mason":"Stopgap","tony pollard":"Stopgap","aj barner":"Developmental","tre harris":"Developmental","zachariah branch":"Prospect","drew allar":"Prospect","brian robinson":"Handcuff","kaytron allen":"Prospect","tyler allgeier":"Handcuff","ray davis":"Handcuff","tre tucker":"Stopgap","dylan sampson":"Handcuff","pat freiermuth":"Flex Filler","deshaun watson":"Dart Throw","adam randall":"Prospect","demond claiborne":"Prospect","chris rodriguez":"Handcuff","rashid shaheed":"Flex Filler","elijah sarratt":"Prospect","hunter henry":"Stopgap","cade otton":"Stopgap","tj hockenson":"Stopgap","gunnar helm":"Developmental","max klare":"Prospect","cyrus allen":"Prospect","devaughn vele":"Stopgap","jaylin noel":"Developmental","seth mcgowan":"Handcuff","ryan flournoy":"Stopgap","kalif raymond":"Stopgap","malachi fields":"Prospect","jameis winston":"Stopgap","marcus mariota":"Stopgap","jj mccarthy":"Dart Throw","cade klubnik":"Prospect","alvin kamara":"Stopgap","isaac teslaa":"Developmental","kirk cousins":"Stopgap","darren waller":"Stopgap","marlin klein":"Prospect","keon coleman":"Developmental","mason taylor":"Developmental","kayshon boutte":"Developmental","marshawn lloyd":"Handcuff","brandon aiyuk":"Dart Throw","jordan james":"Handcuff","elijah arroyo":"Developmental","tank dell":"Dart Throw","jalen nailor":"Stopgap","jauan jennings":"Stopgap","jerry jeudy":"Stopgap","greg dulcich":"Dart Throw","mike gesicki":"Stopgap","matt hibner":"Prospect","keenan allen":"Stopgap","kimani vidal":"Stash","troy franklin":"Developmental","dj giddens":"Stash","tanner koziol":"Prospect","brenen thompson":"Prospect","tory horton":"Developmental","elic ayomanor":"Developmental","skyler bell":"Prospect","chris brazzell":"Prospect","justin fields":"Handcuff","tyrone tracy":"Stash","bryce lance":"Prospect","evan engram":"Stopgap","kevin coleman":"Prospect","jack bech":"Developmental","erick all":"Developmental","calvin ridley":"Stash","najee harris":"Stash"};
+  // Each archetype's dot colour, grouped by what the label is really
+  // saying rather than one colour per label -- sixteen distinct hues
+  // would be a code to memorize, six families you can read at a glance.
+  const PP_ARCHETYPE_TONE = {
+    "Cornerstone": "elite", "Blue Chip": "elite",
+    "Anchor": "starter", "Building Block": "starter", "Potential Star": "starter",
+    "Prospect": "young", "Developmental": "young", "Wild Card": "young",
+    "Elite Veteran": "vet", "Useful Veteran": "vet", "Stopgap": "vet",
+    "Upside Flex": "depth", "Flex Filler": "depth", "Dart Throw": "depth",
+    "Handcuff": "bench", "Stash": "bench",
+  };
+
   // ---- What the rankings used to say --------------------------------
   // PP_PLAYER_VALUES above is what a player is worth TODAY. These are what
   // it said on the dates it said it, oldest first, recovered from this
@@ -29029,6 +29219,280 @@
     document.querySelectorAll('.section-tab').forEach(tab => {
       if (tab.dataset.section !== 'tanking') return;
       tab.addEventListener('click', () => { renderRealTankingTracker().catch(() => {}); });
+    });
+  })();
+
+  // ---- Rankings -------------------------------------------------------
+  // The whole Pure Potential board, the table every value on this site is
+  // priced off, shown as its own page rather than only ever reaching you
+  // one player at a time through a modal.
+  //
+  // It can also be wound back. Every superseded edition is kept in
+  // PP_VALUE_HISTORY with the date it was in force (that is what lets a
+  // trade be priced at what it was worth the day it was made), so the
+  // same page will show you what the board said on any of those dates --
+  // and a player's movement is measured against the edition immediately
+  // before whichever one you are looking at.
+  (function initRankingsPage() {
+    const body = document.getElementById('rkBody');
+    const searchEl = document.getElementById('rkSearch');
+    const posFilterEl = document.getElementById('rkPosFilter');
+    const editionEl = document.getElementById('rkEdition');
+    const noteEl = document.getElementById('rkNote');
+    if (!body || !editionEl) return;
+
+    let rkQuery = '';
+    let rkPos = 'ALL';
+    let rkEditionIdx = -1;   // -1 = the live table
+    let rkDict = null;
+    let rkNameToPlayer = null;
+
+    // Oldest first, live table last -- the same order PP_VALUE_HISTORY is
+    // kept in, so "the edition before this one" is just index - 1.
+    function rkEditions() {
+      const list = PP_VALUE_HISTORY.map(h => ({ asOf: h.asOf, values: h.values }));
+      list.push({ asOf: PP_VALUE_CURRENT_ASOF, values: PP_PLAYER_VALUES, isCurrent: true });
+      return list;
+    }
+
+    function rkFmtDate(iso) {
+      const d = new Date(iso + 'T00:00:00Z');
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+    }
+
+    // Name -> Sleeper player, so a ranking row can carry a headshot, the
+    // player's real current team and his position. The rankings list has
+    // no player_id to join on, so this is the join: normalized name, the
+    // same key the value table itself uses.
+    function rkBuildNameToPlayer(dict) {
+      if (rkNameToPlayer) return rkNameToPlayer;
+      const map = {};
+      Object.entries(dict || {}).forEach(([id, p]) => {
+        if (!p || !p.position || !['QB', 'RB', 'WR', 'TE'].includes(p.position)) return;
+        const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+        if (!name) return;
+        const key = ppNormalizeName(name).replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
+        const prev = map[key];
+        // Names collide (two Michael Carters, a practice-squad namesake).
+        // Prefer whoever is actually on a roster, then Sleeper's own
+        // search_rank, which orders by how likely you meant that player.
+        if (!prev) { map[key] = { id, p }; return; }
+        const score = (x) => (x.p.team ? 0 : 1000000) + (x.p.search_rank != null ? x.p.search_rank : 999999);
+        if (score({ id, p }) < score(prev)) map[key] = { id, p };
+      });
+      rkNameToPlayer = map;
+      return map;
+    }
+
+    // Tier bands are value bands, not gaps: a tier is everything worth at
+    // least X, so which tier a player is in means something on its own
+    // rather than depending on who happens to sit next to him.
+    const RK_TIER_FLOORS = [2.50, 2.00, 1.50, 1.00, 0.75, 0.50, 0.30, 0.15, 0.08, 0.04, 0];
+    function rkTierOf(value) {
+      for (let i = 0; i < RK_TIER_FLOORS.length; i++) {
+        if (value >= RK_TIER_FLOORS[i]) return i + 1;
+      }
+      return RK_TIER_FLOORS.length;
+    }
+    // A drop this big between two players next to each other is a cliff
+    // worth drawing. Deep in the board consecutive values differ by a
+    // hundredth, so this only ever fires where there is a real one.
+    const RK_GAP_MIN = 0.10;
+
+    function rkPosRanks(values) {
+      const nameToPos = rkDict ? ppBuildNameToPos(rkDict) : {};
+      const byPos = {};
+      Object.keys(values).forEach(k => {
+        const pos = nameToPos[k];
+        if (!pos) return;
+        (byPos[pos] = byPos[pos] || []).push(k);
+      });
+      const out = {};
+      Object.entries(byPos).forEach(([pos, keys]) => {
+        keys.sort((a, b) => values[b] - values[a]);
+        keys.forEach((k, i) => { out[k] = pos + (i + 1); });
+      });
+      return out;
+    }
+
+    function rkTitleCase(key) {
+      return key.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : w).join(' ');
+    }
+    function rkInitials(name) {
+      const parts = String(name || '').trim().split(/\s+/);
+      return ((parts[0] || '')[0] || '').toUpperCase() + ((parts[1] || '')[0] || '').toUpperCase();
+    }
+
+    function rkMoveHtml(key, rank, prevRanks) {
+      if (!prevRanks) return '';
+      const was = prevRanks[key];
+      if (was == null) return '<span class="rk-move is-new">NEW</span>';
+      const delta = was - rank;
+      if (delta === 0) return '';
+      return delta > 0
+        ? `<span class="rk-move is-up">&#9650;${delta}</span>`
+        : `<span class="rk-move is-down">&#9660;${-delta}</span>`;
+    }
+
+    function rkRender() {
+      const editions = rkEditions();
+      const idx = rkEditionIdx < 0 ? editions.length - 1 : rkEditionIdx;
+      const edition = editions[idx];
+      const prev = idx > 0 ? editions[idx - 1] : null;
+      const values = edition.values;
+
+      // Stable sort over the table's own insertion order, which is the
+      // order the export ranked them -- so players tied on value keep the
+      // order the rankings themselves gave them instead of an arbitrary one.
+      const keys = Object.keys(values).sort((a, b) => values[b] - values[a]);
+      const prevRanks = prev
+        ? (() => {
+            const pk = Object.keys(prev.values).sort((a, b) => prev.values[b] - prev.values[a]);
+            const m = {};
+            pk.forEach((k, i) => { m[k] = i + 1; });
+            return m;
+          })()
+        : null;
+
+      const posRank = rkPosRanks(values);
+      const nameToPlayer = rkDict ? rkBuildNameToPlayer(rkDict) : {};
+      const nameToPos = rkDict ? ppBuildNameToPos(rkDict) : {};
+      const filtering = !!rkQuery || rkPos !== 'ALL';
+
+      // Rank is the player's place on the whole board, so it is worked out
+      // before anything is filtered out -- hiding every QB does not make
+      // the best RB the number 1 player.
+      const visible = [];
+      keys.forEach((key, i) => {
+        const joined = nameToPlayer[key];
+        const player = joined ? joined.p : null;
+        const name = player
+          ? (player.full_name || [player.first_name, player.last_name].filter(Boolean).join(' '))
+          : rkTitleCase(key);
+        const pos = nameToPos[key] || (player && player.position) || '';
+        if (rkPos !== 'ALL' && pos !== rkPos) return;
+        if (rkQuery && key.indexOf(rkQuery) === -1) return;
+        visible.push({ key, i, rank: i + 1, value: values[key], joined, player, name, pos, tier: rkTierOf(values[key]) });
+      });
+      // Tier counts are counts of what you can actually see: under a
+      // position filter "12 PLAYERS" means twelve of them, not twelve
+      // players of whom you are shown three.
+      const tierCounts = {};
+      visible.forEach(r => { tierCounts[r.tier] = (tierCounts[r.tier] || 0) + 1; });
+
+      const html = [];
+      let shownTier = null;
+      const shown = visible.length;
+      visible.forEach(row => {
+        const { key, i, rank, value, joined, player, name, pos, tier } = row;
+
+        if (tier !== shownTier) {
+          shownTier = tier;
+          const top = Math.max.apply(null, visible.filter(r => r.tier === tier).map(r => r.value));
+          const count = tierCounts[tier];
+          html.push(
+            `<tr class="rk-tier"><td colspan="7"><div class="rk-tier-inner">` +
+              `<span class="rk-tier-name">TIER ${tier}</span>` +
+              `<span class="rk-tier-rule"></span>` +
+              `<span class="rk-tier-count">${count} PLAYER${count === 1 ? '' : 'S'}</span>` +
+              `<span class="rk-tier-chip">Base 1 Value ${top.toFixed(2)}</span>` +
+            `</div></td></tr>`);
+        } else if (!filtering && i > 0) {
+          // Only meaningful on the unfiltered board: with rows hidden, the
+          // player above is no longer the player above.
+          const drop = values[keys[i - 1]] - value;
+          if (drop >= RK_GAP_MIN) {
+            html.push(
+              `<tr class="rk-gap"><td colspan="7"><div class="rk-gap-inner">` +
+                `<span class="rk-gap-rule"></span>` +
+                `<span class="rk-gap-label">VALUE GAP &middot; ${drop.toFixed(2)}</span>` +
+                `<span class="rk-gap-rule"></span>` +
+              `</div></td></tr>`);
+          }
+        }
+
+        const team = player && player.team ? player.team : '';
+        const logo = sbTeamLogoUrl(team);
+        const shot = joined ? sbHeadshotUrl(joined.id) : '';
+        const arch = PP_PLAYER_ARCHETYPES[key] || '';
+        const tone = PP_ARCHETYPE_TONE[arch] || '';
+        const age = PP_PLAYER_AGES[key];
+        const posCls = ['QB', 'RB', 'WR', 'TE'].includes(pos) ? ' sb-pos-' + pos.toLowerCase() : '';
+
+        html.push(
+          `<tr class="rk-row"${joined ? ` data-player-id="${joined.id}" data-name="${sbFieldEsc(name)}" data-team="${sbFieldEsc(team)}" data-pos="${sbFieldEsc(pos)}"` : ''}>` +
+            `<td class="rk-rank">${rank}</td>` +
+            `<td class="rk-player-cell"><div class="rk-player">` +
+              `<span class="rk-shot">${rkInitials(name)}${shot ? `<img src="${shot}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>` +
+              `<span class="rk-name">${sbFieldEsc(name)}</span>` +
+              rkMoveHtml(key, rank, prevRanks) +
+            `</div></td>` +
+            `<td>${team ? `<span class="rk-team">${logo ? `<img src="${logo}" alt="" loading="lazy" onerror="this.remove()">` : ''}${sbFieldEsc(team)}</span>` : '<span class="rk-age">&mdash;</span>'}</td>` +
+            `<td class="rk-arch-cell">${arch
+              ? `<span class="rk-arch"><span class="rk-dot tone-${tone}"></span>${sbFieldEsc(arch)}</span>`
+              : '<span class="rk-arch is-blank">Unlabelled</span>'}</td>` +
+            `<td><span class="rk-pos${posCls}">${sbFieldEsc(posRank[key] || pos || '')}</span></td>` +
+            `<td class="rk-age">${age != null ? age.toFixed(1) : '&mdash;'}</td>` +
+            `<td class="rk-value">${value.toFixed(2)}</td>` +
+          `</tr>`);
+      });
+
+      body.innerHTML = shown
+        ? html.join('')
+        : '<tr><td colspan="7" class="rb-empty">No player matches that search.</td></tr>';
+
+      noteEl.innerHTML = edition.isCurrent
+        ? `<b>${keys.length} players</b>, live since <b>${rkFmtDate(edition.asOf)}</b>. Movement is against the ${prev ? rkFmtDate(prev.asOf) : 'previous'} board.`
+        : `What the board said on <b>${rkFmtDate(edition.asOf)}</b> &mdash; the values a trade made that week is priced at. The rest of the site prices today's rosters at the live table.`;
+    }
+
+    function rkBuildEditionPicker() {
+      const editions = rkEditions();
+      editionEl.innerHTML = editions.map((e, i) =>
+        `<option value="${i === editions.length - 1 ? -1 : i}">${e.isCurrent ? 'Current' : rkFmtDate(e.asOf)}</option>`
+      ).reverse().join('');
+      editionEl.value = String(rkEditionIdx);
+    }
+
+    editionEl.addEventListener('change', () => { rkEditionIdx = Number(editionEl.value); rkRender(); });
+    searchEl.addEventListener('input', () => { rkQuery = ppNormalizeName(searchEl.value); rkRender(); });
+    posFilterEl.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-rk-pos]');
+      if (!chip) return;
+      posFilterEl.querySelectorAll('.ww-pos-chip').forEach(c => c.classList.toggle('active', c === chip));
+      rkPos = chip.dataset.rkPos;
+      rkRender();
+    });
+    body.addEventListener('click', (e) => {
+      const row = e.target.closest('tr.rk-row[data-player-id]');
+      if (row && window.openPlayerModalForId) {
+        window.openPlayerModalForId(row.dataset.playerId, row.dataset.name, row.dataset.team, row.dataset.pos);
+      }
+    });
+
+    // Drawn once with what is already in the file, then again once the
+    // Sleeper player pool lands -- that is the only thing headshots, real
+    // current teams and positional ranks need, and waiting on a 10MB
+    // download before showing any of the board would be the wrong trade.
+    let rkStarted = false;
+    function renderRealRankings() {
+      rkBuildEditionPicker();
+      rkRender();
+      if (!rkStarted && window.sleeperGetPlayerDict) {
+        rkStarted = true;
+        window.sleeperGetPlayerDict().then(dict => {
+          rkDict = dict;
+          rkNameToPlayer = null;
+          rkRender();
+        }).catch(() => {});
+      }
+    }
+    window.renderRealRankings = renderRealRankings;
+
+    document.querySelectorAll('.section-tab').forEach(tab => {
+      if (tab.dataset.section !== 'rankings') return;
+      tab.addEventListener('click', () => renderRealRankings());
     });
   })();
 
