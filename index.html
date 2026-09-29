@@ -1955,15 +1955,14 @@
     .rk-table th.rk-th-arch, .rk-table td.rk-arch-cell { display: none; }
   }
 
-  /* ---- Movers -------------------------------------------------------
-     Two deltas per player and nothing else competing with them, so the
-     only colour on the page is the direction each one moved. */
+  /* What each player has gained or lost, sat next to what he is worth.
+     The only colour in the table is the direction he moved. */
   .mv-delta { font-family: 'Source Serif 4', serif; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .mv-delta.is-up { color: var(--green); }
   .mv-delta.is-down { color: var(--red); }
   .mv-delta.is-flat { color: var(--faint); }
   .mv-delta.is-new { font-family: inherit; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--navy); }
-  .mv-table td.mv-cell { text-align: right; }
+  .rk-table td.mv-cell { text-align: right; width: 68px; }
 
   /* ---- Season schedule -------------------------------------------- */
   .ldsch-summary {
@@ -4681,7 +4680,6 @@
     <a class="section-tab" data-section="trades">Trade History</a>
     <a class="section-tab" data-section="records">Results</a>
     <a class="section-tab" data-section="rankings">Rankings</a>
-    <a class="section-tab" data-section="movers">Movers</a>
     <a class="section-tab" data-section="calculator">Trade Calc</a>
     <a class="section-tab" data-section="tanking">Tanking Tracker</a>
     <a class="section-tab" data-section="settings">Settings</a>
@@ -12364,6 +12362,16 @@
         <span class="ww-pos-chip" data-rk-pos="TE">TE</span>
       </div>
       <label class="rk-edition">
+        <span>SORT</span>
+        <select id="rkSort">
+          <option value="value">Value</option>
+          <option value="lastUp">Risers &middot; since last</option>
+          <option value="lastDown">Fallers &middot; since last</option>
+          <option value="seasonUp">Risers &middot; since Wk 1</option>
+          <option value="seasonDown">Fallers &middot; since Wk 1</option>
+        </select>
+      </label>
+      <label class="rk-edition">
         <span>AS OF</span>
         <select id="rkEdition"></select>
       </label>
@@ -12381,61 +12389,12 @@
             <th class="rk-th-arch">ARCHETYPE</th>
             <th>POS</th>
             <th>AGE</th>
-            <th class="rk-th-value">VALUE</th>
-          </tr>
-        </thead>
-        <tbody id="rkBody"><tr><td colspan="7" class="rb-empty">Loading rankings...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-  <div data-view="movers">
-    <div class="page-title">
-      <h1>Movers</h1>
-      <p>What the board changed its mind about. <b>Since last update</b> is this edition against the one before it; <b>since Week 1</b> is this edition against the first set of rankings on file. Both are in Base 1 Value, the same unit the rankings use &mdash; a move of 0.50 is half a first-round pick's worth of opinion.</p>
-    </div>
-
-    <div class="rk-toolbar">
-      <div class="rk-search"><span>&#128269;</span><input type="text" id="mvSearch" placeholder="Search any player..."></div>
-      <div class="ww-pos-filter" id="mvPosFilter">
-        <span class="ww-pos-chip active" data-mv-pos="ALL">All</span>
-        <span class="ww-pos-chip" data-mv-pos="QB">QB</span>
-        <span class="ww-pos-chip" data-mv-pos="RB">RB</span>
-        <span class="ww-pos-chip" data-mv-pos="WR">WR</span>
-        <span class="ww-pos-chip" data-mv-pos="TE">TE</span>
-      </div>
-      <label class="rk-edition">
-        <span>SORT</span>
-        <select id="mvSort">
-          <option value="last">Since last update</option>
-          <option value="season">Since Week 1</option>
-        </select>
-      </label>
-      <label class="rk-edition">
-        <span>SHOW</span>
-        <select id="mvDir">
-          <option value="all">Everyone who moved</option>
-          <option value="up">Risers only</option>
-          <option value="down">Fallers only</option>
-        </select>
-      </label>
-    </div>
-
-    <p class="rk-note" id="mvNote"></p>
-
-    <div class="rb-table-wrap">
-      <table class="rb-table rk-table mv-table">
-        <thead>
-          <tr>
-            <th class="rk-th-rank">RANK</th>
-            <th class="rk-th-player">PLAYER</th>
-            <th>TEAM</th>
-            <th>POS</th>
-            <th class="rk-th-value">VALUE</th>
             <th class="rk-th-value">SINCE LAST</th>
             <th class="rk-th-value">SINCE WK 1</th>
+            <th class="rk-th-value">VALUE</th>
           </tr>
         </thead>
-        <tbody id="mvBody"><tr><td colspan="7" class="rb-empty">Loading movers...</td></tr></tbody>
+        <tbody id="rkBody"><tr><td colspan="9" class="rb-empty">Loading rankings...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -29357,6 +29316,7 @@
     let rkQuery = '';
     let rkPos = 'ALL';
     let rkEditionIdx = -1;   // -1 = the live table
+    let rkSort = 'value';
     let rkDict = null;
 
     // Oldest first, live table last -- the same order PP_VALUE_HISTORY is
@@ -29407,6 +29367,23 @@
       return ((parts[0] || '')[0] || '').toUpperCase() + ((parts[1] || '')[0] || '').toUpperCase();
     }
 
+    // What a player gained or lost between two boards.
+    //
+    // Three different nothings, and they do not mean the same thing. No
+    // older board at all (you are looking at the first rankings on file)
+    // is a blank: there is nothing this could be measured against. An
+    // older board that did not carry him is NEW -- he came from nowhere,
+    // not from zero, and showing a player who simply was not ranked yet
+    // as the week's biggest riser would be the page's most-read lie. And
+    // a player who did not move is a dash.
+    function rkDeltaCell(delta, hasReference) {
+      if (!hasReference) return '<span class="mv-delta is-flat">&mdash;</span>';
+      if (delta == null) return '<span class="mv-delta is-new">NEW</span>';
+      if (Math.abs(delta) < 0.005) return '<span class="mv-delta is-flat">&mdash;</span>';
+      const cls = delta > 0 ? 'is-up' : 'is-down';
+      return `<span class="mv-delta ${cls}">${delta > 0 ? '+' : '&minus;'}${Math.abs(delta).toFixed(2)}</span>`;
+    }
+
     function rkMoveHtml(key, rank, prevRanks) {
       if (!prevRanks) return '';
       const was = prevRanks[key];
@@ -29423,6 +29400,7 @@
       const idx = rkEditionIdx < 0 ? editions.length - 1 : rkEditionIdx;
       const edition = editions[idx];
       const prev = idx > 0 ? editions[idx - 1] : null;
+      const first = idx > 0 ? editions[0] : null;
       const values = edition.values;
 
       // Stable sort over the table's own insertion order, which is the
@@ -29455,8 +29433,36 @@
         const pos = nameToPos[key] || (player && player.position) || '';
         if (rkPos !== 'ALL' && pos !== rkPos) return;
         if (rkQuery && key.indexOf(rkQuery) === -1) return;
-        visible.push({ key, i, rank: i + 1, value: values[key], joined, player, name, pos, tier: rkTierOf(values[key]) });
+        // Both deltas are differences between two tables that already
+        // exist -- nothing modelled. They move with the edition you are
+        // looking at: on a past board, "since last" is that board against
+        // the one before IT, not against today.
+        const wasLast = prev && prev.values[key] != null ? prev.values[key] : null;
+        const wasFirst = first && first.values[key] != null ? first.values[key] : null;
+        const dLast = wasLast == null ? null : Math.round((values[key] - wasLast) * 100) / 100;
+        const dFirst = wasFirst == null ? null : Math.round((values[key] - wasFirst) * 100) / 100;
+        visible.push({ key, i, rank: i + 1, value: values[key], joined, player, name, pos,
+                       tier: rkTierOf(values[key]), dLast, dFirst });
       });
+
+      // Sorted by a delta, this is the old Movers page: the board reordered
+      // by what changed. Tier bands only mean something in value order, so
+      // they are not drawn in any other one.
+      // The first board on file has nothing behind it, so there is no
+      // change to sort by and the page stays in value order.
+      const byDelta = rkSort !== 'value' && !!prev;
+      if (byDelta) {
+        const which = rkSort.indexOf('season') === 0 ? 'dFirst' : 'dLast';
+        const wantUp = rkSort.indexOf('Up') > 0;
+        // A player with no reading on the column being sorted has no place
+        // in an order built on it, so he drops out rather than sorting as
+        // zero, and a riser list holds only actual risers.
+        for (let i = visible.length - 1; i >= 0; i--) {
+          const d = visible[i][which];
+          if (d == null || (wantUp ? !(d > 0) : !(d < 0))) visible.splice(i, 1);
+        }
+        visible.sort((a, b) => (wantUp ? b[which] - a[which] : a[which] - b[which]) || a.rank - b.rank);
+      }
       // Tier counts are counts of what you can actually see: under a
       // position filter "12 PLAYERS" means twelve of them, not twelve
       // players of whom you are shown three.
@@ -29469,12 +29475,12 @@
       visible.forEach(row => {
         const { key, i, rank, value, joined, player, name, pos, tier } = row;
 
-        if (tier !== shownTier) {
+        if (!byDelta && tier !== shownTier) {
           shownTier = tier;
           const top = Math.max.apply(null, visible.filter(r => r.tier === tier).map(r => r.value));
           const count = tierCounts[tier];
           html.push(
-            `<tr class="rk-tier"><td colspan="7"><div class="rk-tier-inner">` +
+            `<tr class="rk-tier"><td colspan="9"><div class="rk-tier-inner">` +
               `<span class="rk-tier-name">TIER ${tier}</span>` +
               `<span class="rk-tier-rule"></span>` +
               `<span class="rk-tier-count">${count} PLAYER${count === 1 ? '' : 'S'}</span>` +
@@ -29504,17 +29510,23 @@
               : '<span class="rk-arch is-blank">Unlabelled</span>'}</td>` +
             `<td><span class="rk-pos${posCls}">${sbFieldEsc(posRank[key] || pos || '')}</span></td>` +
             `<td class="rk-age">${age != null ? age.toFixed(1) : '&mdash;'}</td>` +
+            `<td class="mv-cell">${rkDeltaCell(row.dLast, !!prev)}</td>` +
+            `<td class="mv-cell">${rkDeltaCell(row.dFirst, !!first)}</td>` +
             `<td class="rk-value">${value.toFixed(2)}</td>` +
           `</tr>`);
       });
 
       body.innerHTML = shown
         ? html.join('')
-        : '<tr><td colspan="7" class="rb-empty">No player matches that search.</td></tr>';
+        : `<tr><td colspan="9" class="rb-empty">${byDelta ? 'Nobody moved that way on this board.' : 'No player matches that search.'}</td></tr>`;
 
-      noteEl.innerHTML = edition.isCurrent
-        ? `<b>${keys.length} players</b>, live since <b>${rkFmtDate(edition.asOf)}</b>. Movement is against the ${prev ? rkFmtDate(prev.asOf) : 'previous'} board.`
-        : `What the board said on <b>${rkFmtDate(edition.asOf)}</b> &mdash; the values a trade made that week is priced at. The rest of the site prices today's rosters at the live table.`;
+      const against = prev
+        ? `<b>Since last</b> is against <b>${rkFmtDate(prev.asOf)}</b>, <b>Since Wk 1</b> against <b>${first ? rkFmtDate(first.asOf) : rkFmtDate(prev.asOf)}</b>. ` +
+          'A player the older board did not carry reads NEW, not a gain from zero.'
+        : 'This is the earliest board on file, so there is nothing behind it to measure change against.';
+      noteEl.innerHTML = (edition.isCurrent
+        ? `<b>${shown} of ${keys.length} players</b>, live since <b>${rkFmtDate(edition.asOf)}</b>. `
+        : `What the board said on <b>${rkFmtDate(edition.asOf)}</b> &mdash; the values a trade made that week is priced at, while the rest of the site prices today's rosters at the live table. `) + against;
     }
 
     function rkBuildEditionPicker() {
@@ -29526,6 +29538,8 @@
     }
 
     editionEl.addEventListener('change', () => { rkEditionIdx = Number(editionEl.value); rkRender(); });
+    const sortEl = document.getElementById('rkSort');
+    if (sortEl) sortEl.addEventListener('change', () => { rkSort = sortEl.value; rkRender(); });
     searchEl.addEventListener('input', () => { rkQuery = ppNormalizeName(searchEl.value); rkRender(); });
     posFilterEl.addEventListener('click', (e) => {
       const chip = e.target.closest('[data-rk-pos]');
@@ -29565,146 +29579,6 @@
     });
   })();
 
-  // ---- Movers ---------------------------------------------------------
-  // The same board as the Rankings page, read as change instead of state:
-  // what each player gained or lost in Base 1 Value since the edition
-  // before this one, and since the first set of rankings on file.
-  //
-  // Both numbers are differences between two tables that already exist --
-  // nothing here is modelled or estimated. A player the older table did
-  // not carry has no difference to show and says so, rather than being
-  // treated as having come from zero, which would read as a huge riser
-  // when really he was simply not ranked yet.
-  (function initMoversPage() {
-    const body = document.getElementById('mvBody');
-    const searchEl = document.getElementById('mvSearch');
-    const posFilterEl = document.getElementById('mvPosFilter');
-    const sortEl = document.getElementById('mvSort');
-    const dirEl = document.getElementById('mvDir');
-    const noteEl = document.getElementById('mvNote');
-    if (!body || !sortEl) return;
-
-    let mvQuery = '';
-    let mvPos = 'ALL';
-    let mvSort = 'last';
-    let mvDir = 'all';
-    let mvDict = null;
-    let mvStarted = false;
-
-    function mvFmtDate(iso) {
-      const d = new Date(iso + 'T00:00:00Z');
-      if (isNaN(d.getTime())) return iso;
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-    }
-    function mvDeltaCell(delta) {
-      if (delta == null) return '<span class="mv-delta is-new">NEW</span>';
-      if (Math.abs(delta) < 0.005) return '<span class="mv-delta is-flat">&mdash;</span>';
-      const cls = delta > 0 ? 'is-up' : 'is-down';
-      return `<span class="mv-delta ${cls}">${delta > 0 ? '+' : '&minus;'}${Math.abs(delta).toFixed(2)}</span>`;
-    }
-
-    function mvRender() {
-      const prevEdition = PP_VALUE_HISTORY.length ? PP_VALUE_HISTORY[PP_VALUE_HISTORY.length - 1] : null;
-      const firstEdition = PP_VALUE_HISTORY.length ? PP_VALUE_HISTORY[0] : null;
-      const values = PP_PLAYER_VALUES;
-      const nameToPlayer = mvDict ? ppBuildNameToPlayer(mvDict) : {};
-      const nameToPos = mvDict ? ppBuildNameToPos(mvDict) : {};
-
-      const keys = Object.keys(values).sort((a, b) => values[b] - values[a]);
-      const rows = [];
-      keys.forEach((key, i) => {
-        const joined = nameToPlayer[key];
-        const player = joined ? joined.p : null;
-        const name = player
-          ? (player.full_name || [player.first_name, player.last_name].filter(Boolean).join(' '))
-          : key.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : w).join(' ');
-        const pos = nameToPos[key] || (player && player.position) || '';
-        if (mvPos !== 'ALL' && pos !== mvPos) return;
-        if (mvQuery && key.indexOf(mvQuery) === -1) return;
-
-        const wasLast = prevEdition && prevEdition.values[key] != null ? prevEdition.values[key] : null;
-        const wasFirst = firstEdition && firstEdition.values[key] != null ? firstEdition.values[key] : null;
-        const dLast = wasLast == null ? null : Math.round((values[key] - wasLast) * 100) / 100;
-        const dFirst = wasFirst == null ? null : Math.round((values[key] - wasFirst) * 100) / 100;
-
-        const sortDelta = mvSort === 'season' ? dFirst : dLast;
-        if (mvDir === 'up' && !(sortDelta > 0)) return;
-        if (mvDir === 'down' && !(sortDelta < 0)) return;
-        rows.push({ key, rank: i + 1, value: values[key], joined, player, name, pos, dLast, dFirst, sortDelta });
-      });
-
-      // A player with no reading on the column being sorted has no place
-      // in an order built on it, so he sinks rather than sorting as zero.
-      rows.sort((a, b) => {
-        const av = a.sortDelta, bv = b.sortDelta;
-        if (av == null && bv == null) return a.rank - b.rank;
-        if (av == null) return 1;
-        if (bv == null) return -1;
-        if (bv !== av) return bv - av;
-        return a.rank - b.rank;
-      });
-
-      body.innerHTML = rows.length ? rows.map(r => {
-        const team = r.player && r.player.team ? r.player.team : '';
-        const logo = sbTeamLogoUrl(team);
-        const shot = r.joined ? sbHeadshotUrl(r.joined.id) : '';
-        const parts = String(r.name).trim().split(/\s+/);
-        const initials = ((parts[0] || '')[0] || '').toUpperCase() + ((parts[1] || '')[0] || '').toUpperCase();
-        const posCls = ['QB', 'RB', 'WR', 'TE'].includes(r.pos) ? ' sb-pos-' + r.pos.toLowerCase() : '';
-        return `<tr class="rk-row"${r.joined ? ` data-player-id="${r.joined.id}" data-name="${sbFieldEsc(r.name)}" data-team="${sbFieldEsc(team)}" data-pos="${sbFieldEsc(r.pos)}"` : ''}>` +
-          `<td class="rk-rank">${r.rank}</td>` +
-          `<td class="rk-player-cell"><div class="rk-player">` +
-            `<span class="rk-shot">${initials}${shot ? `<img src="${shot}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>` +
-            `<span class="rk-name">${sbFieldEsc(r.name)}</span>` +
-          `</div></td>` +
-          `<td>${team ? `<span class="rk-team">${logo ? `<img src="${logo}" alt="" loading="lazy" onerror="this.remove()">` : ''}${sbFieldEsc(team)}</span>` : '<span class="rk-age">&mdash;</span>'}</td>` +
-          `<td><span class="rk-pos${posCls}">${sbFieldEsc(r.pos || '')}</span></td>` +
-          `<td class="rk-value">${r.value.toFixed(2)}</td>` +
-          `<td class="mv-cell">${mvDeltaCell(r.dLast)}</td>` +
-          `<td class="mv-cell">${mvDeltaCell(r.dFirst)}</td>` +
-        `</tr>`;
-      }).join('') : '<tr><td colspan="7" class="rb-empty">Nobody matches that.</td></tr>';
-
-      const up = rows.filter(r => r.sortDelta > 0).length;
-      const down = rows.filter(r => r.sortDelta < 0).length;
-      noteEl.innerHTML =
-        `<b>Since last</b> is ${PP_VALUE_CURRENT_ASOF ? mvFmtDate(PP_VALUE_CURRENT_ASOF) : 'today'} against ` +
-        `${prevEdition ? mvFmtDate(prevEdition.asOf) : 'the previous board'}; <b>Since Wk 1</b> is against ` +
-        `${firstEdition ? mvFmtDate(firstEdition.asOf) : 'the first board'}, the earliest rankings on file. ` +
-        `${rows.length} shown &mdash; <b>${up} up</b>, <b>${down} down</b>. A player the older board did not carry reads NEW, not a gain from zero.`;
-    }
-
-    sortEl.addEventListener('change', () => { mvSort = sortEl.value; mvRender(); });
-    dirEl.addEventListener('change', () => { mvDir = dirEl.value; mvRender(); });
-    searchEl.addEventListener('input', () => { mvQuery = ppNormalizeName(searchEl.value); mvRender(); });
-    posFilterEl.addEventListener('click', (e) => {
-      const chip = e.target.closest('[data-mv-pos]');
-      if (!chip) return;
-      posFilterEl.querySelectorAll('.ww-pos-chip').forEach(c => c.classList.toggle('active', c === chip));
-      mvPos = chip.dataset.mvPos;
-      mvRender();
-    });
-    body.addEventListener('click', (e) => {
-      const row = e.target.closest('tr.rk-row[data-player-id]');
-      if (row && window.openPlayerModalForId) {
-        window.openPlayerModalForId(row.dataset.playerId, row.dataset.name, row.dataset.team, row.dataset.pos);
-      }
-    });
-
-    function renderRealMovers() {
-      mvRender();
-      if (!mvStarted && window.sleeperGetPlayerDict) {
-        mvStarted = true;
-        window.sleeperGetPlayerDict().then(dict => { mvDict = dict; mvRender(); }).catch(() => {});
-      }
-    }
-    window.renderRealMovers = renderRealMovers;
-
-    document.querySelectorAll('.section-tab').forEach(tab => {
-      if (tab.dataset.section !== 'movers') return;
-      tab.addEventListener('click', () => renderRealMovers());
-    });
-  })();
 
   // ---- The ticker ------------------------------------------------------
   // The strip under the site nav, on every page. What it carries depends on
