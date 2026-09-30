@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navigation Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f2e9d5; --surface: #fff9ea; --border: #d5c7a8; --border-soft: #e4d9c0;
+    --ink: #1d3557; --muted: #4a5f7f; --faint: #6f7f96;
+    --red: #c8322d; --navy: #2a5a8f; --green: #2f7d4f; --green-bg: #e6f0e4;
+    --gold: #b07a12; --blue: #31648f; --red-bg: #f7e6dd;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 60px; }
+
+  .mock-note {
+    background: var(--ink); color: #fff9ea; padding: 10px 20px;
+    font-size: 12.5px; line-height: 1.5;
+  }
+  .mock-note b { color: #fff; }
+
+  h2.sec { font-family: 'Source Serif 4', serif; font-size: 17px; margin: 34px 0 4px; }
+  p.sub { margin: 0 0 14px; font-size: 12.5px; color: var(--muted); }
+
+  /* ---- shared chrome ---- */
+  .bar { background: var(--surface); border: 1px solid var(--border); border-radius: 10px 10px 0 0; border-bottom: none; }
+  .brandrow { display: flex; align-items: center; gap: 14px; padding: 0 16px; }
+  .brand { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 16px; padding: 12px 0; white-space: nowrap; }
+  .brand .dot { color: var(--red); }
+  .section-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+  .section-tab {
+    display: inline-flex; align-items: center; padding: 12px 14px;
+    font-size: 14.5px; font-weight: 600; color: var(--muted);
+    border-bottom: 2.5px solid transparent; white-space: nowrap; cursor: pointer;
+  }
+  .section-tab:hover:not(.active) { color: var(--ink); }
+  .section-tab.active { color: var(--ink); border-bottom-color: var(--red); }
+  .spacer { flex: 1; }
+  .modechip {
+    font-size: 11px; font-weight: 700; letter-spacing: .4px; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px;
+  }
+
+  /* second row: subsections */
+  .subbar {
+    background: var(--bg); border: 1px solid var(--border); border-top: none;
+    padding: 8px 16px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  }
+  .sub {
+    font-size: 12.5px; font-weight: 700; color: var(--muted);
+    padding: 5px 11px; border-radius: 20px; border: 1px solid transparent; cursor: pointer;
+  }
+  .sub:hover { color: var(--ink); }
+  .sub.active { background: var(--ink); color: #fff9ea; }
+  .subbar .crumb { font-size: 10.5px; font-weight: 700; letter-spacing: .5px; color: var(--faint); margin-right: 4px; }
+
+  .stage {
+    background: var(--surface); border: 1px solid var(--border); border-top: none;
+    border-radius: 0 0 10px 10px; padding: 22px 18px 26px; min-height: 210px;
+  }
+  .stage h1 { font-family: 'Source Serif 4', serif; font-size: 20px; margin: 0 0 3px; }
+  .stage p.d { margin: 0; font-size: 13px; color: var(--muted); }
+  .fake { margin-top: 16px; display: grid; gap: 8px; }
+  .fakerow { height: 34px; border: 1px solid var(--border-soft); border-radius: 6px; background: var(--bg); }
+  .fakerow.w1 { width: 100%; } .fakerow.w2 { width: 86%; } .fakerow.w3 { width: 93%; }
+
+  /* ---- landing card grid (option B) ---- */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 12px; margin-top: 18px; }
+  .card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 13px 14px; cursor: pointer;
+  }
+  .card:hover { border-color: var(--navy); }
+  .card .t { font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 14.5px; margin-bottom: 2px; }
+  .card .s { font-size: 11.5px; color: var(--faint); line-height: 1.45; }
+  .card .stat { margin-top: 9px; font-size: 11px; font-weight: 700; color: var(--green); }
+  .card .stat.warn { color: var(--red); }
+
+  .callout {
+    margin-top: 12px; padding: 11px 13px; background: var(--surface);
+    border: 1px solid var(--border); border-left: 3px solid var(--navy); border-radius: 6px;
+    font-size: 12.5px; color: var(--muted); line-height: 1.55;
+  }
+  .callout b { color: var(--ink); }
+  table.names { border-collapse: collapse; margin-top: 10px; font-size: 12.5px; width: 100%; }
+  table.names th { text-align: left; font-size: 9.5px; letter-spacing: .5px; color: var(--faint); padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  table.names td { padding: 7px 10px; border-bottom: 1px solid var(--border-soft); color: var(--muted); }
+  table.names td:first-child { font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .pick { color: var(--green); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="mock-note">
+  <b>Navigation mockup — not the real app.</b>
+  Nothing here is wired to data; the tabs and cards click so you can feel the shape.
+  Two options below for what a section does when you click it. Everything is your grouping, with name options at the bottom.
+</div>
+
+<div class="wrap">
+
+<h2 class="sec">Option A · Section tabs on top, subsections underneath</h2>
+<p class="sub">Clicking a section drops you straight into its first page. The second row is always visible, so every page in the section is one click from every other.</p>
+
+<div class="bar">
+  <div class="brandrow">
+    <div class="brand">Fantasy Desk<span class="dot">.</span></div>
+    <div class="section-tabs" id="tabsA">
+      <span class="section-tab" data-s="dash">Dashboard</span>
+      <span class="section-tab active" data-s="manage">Team Management</span>
+      <span class="section-tab" data-s="season">Season</span>
+      <span class="section-tab" data-s="gameday">Game Day</span>
+      <span class="section-tab" data-s="values">Values</span>
+      <span class="section-tab" data-s="settings">Settings</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="modechip">DYNASTY</div>
+  </div>
+</div>
+<div class="subbar" id="subA"></div>
+<div class="stage" id="stageA"></div>
+
+<h2 class="sec">Option B · Section tabs on top, each section opens a landing page</h2>
+<p class="sub">Clicking a section shows its pages as cards, each carrying a live number, so the landing page itself tells you where to go. The subsection row appears once you are inside a page.</p>
+
+<div class="bar">
+  <div class="brandrow">
+    <div class="brand">Fantasy Desk<span class="dot">.</span></div>
+    <div class="section-tabs" id="tabsB">
+      <span class="section-tab" data-s="dash">Dashboard</span>
+      <span class="section-tab" data-s="manage">Team Management</span>
+      <span class="section-tab active" data-s="season">Season</span>
+      <span class="section-tab" data-s="gameday">Game Day</span>
+      <span class="section-tab" data-s="values">Values</span>
+      <span class="section-tab" data-s="settings">Settings</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="modechip">DYNASTY</div>
+  </div>
+</div>
+<div class="subbar" id="subB"></div>
+<div class="stage" id="stageB"></div>
+
+<h2 class="sec">The grouping</h2>
+<table class="names">
+  <tr><th>Section</th><th>Pages in it</th><th>Other names it could have</th></tr>
+  <tr><td>Dashboard</td><td>Dashboard (the page you land on after picking Dynasty or Redraft)</td><td>Home, Desk</td></tr>
+  <tr><td>Team Management</td><td>Leagues · Waiver Radar · Draft Room</td><td><span class="pick">Manage</span>, Roster Moves, My Teams</td></tr>
+  <tr><td>Season</td><td>Exposures · Trade History · Results · Tanking Tracker · <i>Playoff Picture</i></td><td><span class="pick">Season</span>, Portfolio, The Book, Standing</td></tr>
+  <tr><td>Game Day</td><td>Matchup Hub · GameCast · Weekly Sweats</td><td><span class="pick">Game Day</span>, Sunday, Live</td></tr>
+  <tr><td>Values</td><td>Rankings · Trade Calc</td><td><span class="pick">Values</span>, Market, Board</td></tr>
+  <tr><td>Settings</td><td>Settings</td><td>—</td></tr>
+</table>
+
+<div class="callout">
+  <b>Two things to decide.</b>
+  &nbsp;1 — Option A or B (or A with B available by clicking the section name you are already on).
+  &nbsp;2 — You said Trade Calc twice, once under Team Management and once under Values. It is in Values here, since it prices players off the rankings sitting next to it.
+</div>
+
+</div>
+
+<script>
+const SECTIONS = {
+  dash:     { label: 'Dashboard', pages: [
+    { id:'dashboard', t:'Dashboard', s:'Your whole portfolio at a glance — records, value, this week.', stat:'18 leagues · 11-7' } ] },
+  manage:   { label: 'Team Management', pages: [
+    { id:'leagues', t:'Leagues', s:'Every league, its record, and this week’s matchup.', stat:'18 leagues' },
+    { id:'waiver',  t:'Waiver Radar', s:'Free agents worth a claim across all of them at once.', stat:'12 worth a look' },
+    { id:'draft',   t:'Draft Room', s:'Live and upcoming rookie drafts, and your picks in each.', stat:'2 drafting now' } ] },
+  season:   { label: 'Season', pages: [
+    { id:'exposures', t:'Exposures', s:'Who you actually own, and how much of him.', stat:'184 players' },
+    { id:'trades',    t:'Trade History', s:'Every deal, and how it has aged since.', stat:'31 trades' },
+    { id:'records',   t:'Results', s:'Week by week, league by league.', stat:'Week 4' },
+    { id:'tanking',   t:'Tanking Tracker', s:'The race to the 1.01 and the picks you hold.', stat:'3 in the top 3' },
+    { id:'playoff',   t:'Playoff Picture', s:'Who is in, who is out, what has to happen.', stat:'coming' } ] },
+  gameday:  { label: 'Game Day', pages: [
+    { id:'lineups',  t:'Matchup Hub', s:'Every matchup you have this week, side by side.', stat:'9 of 18 leading', warn:false },
+    { id:'gamecast', t:'GameCast', s:'Every NFL game, and every play that touches you.', stat:'4 games live' },
+    { id:'rooting',  t:'Weekly Sweats', s:'Who to root for, and how badly.', stat:'+71 top score' } ] },
+  values:   { label: 'Values', pages: [
+    { id:'rankings', t:'Rankings', s:'The board every value on this site is priced off.', stat:'297 players' },
+    { id:'calc',     t:'Trade Calc', s:'Price any deal against that board.', stat:'' } ] },
+  settings: { label: 'Settings', pages: [
+    { id:'settings', t:'Settings', s:'Account, leagues, money, ticker.', stat:'' } ] },
+};
+
+function build(tabsId, subId, stageId, mode) {
+  const tabs = document.getElementById(tabsId);
+  const sub = document.getElementById(subId);
+  const stage = document.getElementById(stageId);
+  let active = tabs.querySelector('.section-tab.active').dataset.s;
+  let page = mode === 'A' ? SECTIONS[active].pages[0].id : null;
+
+  function draw() {
+    const sec = SECTIONS[active];
+    tabs.querySelectorAll('.section-tab').forEach(t => t.classList.toggle('active', t.dataset.s === active));
+
+    if (mode === 'B' && page === null) {
+      sub.innerHTML = '<span class="crumb">' + sec.label.toUpperCase() + '</span>';
+      stage.innerHTML = '<h1>' + sec.label + '</h1><p class="d">Pick a page. Each card carries the number you would have opened it to check.</p>'
+        + '<div class="cards">' + sec.pages.map(p =>
+            '<div class="card" data-p="' + p.id + '"><div class="t">' + p.t + '</div><div class="s">' + p.s + '</div>'
+            + (p.stat ? '<div class="stat' + (p.warn ? ' warn' : '') + '">' + p.stat + '</div>' : '') + '</div>').join('')
+        + '</div>';
+      stage.querySelectorAll('.card').forEach(c =>
+        c.addEventListener('click', () => { page = c.dataset.p; draw(); }));
+      return;
+    }
+
+    const cur = sec.pages.find(p => p.id === page) || sec.pages[0];
+    sub.innerHTML = '<span class="crumb">' + sec.label.toUpperCase() + '</span>'
+      + sec.pages.map(p => '<span class="sub' + (p.id === cur.id ? ' active' : '') + '" data-p="' + p.id + '">' + p.t + '</span>').join('');
+    sub.querySelectorAll('.sub').forEach(b =>
+      b.addEventListener('click', () => { page = b.dataset.p; draw(); }));
+    stage.innerHTML = '<h1>' + cur.t + '</h1><p class="d">' + cur.s + '</p>'
+      + '<div class="fake"><div class="fakerow w1"></div><div class="fakerow w2"></div><div class="fakerow w3"></div><div class="fakerow w2"></div></div>';
+  }
+
+  tabs.querySelectorAll('.section-tab').forEach(t => t.addEventListener('click', () => {
+    active = t.dataset.s;
+    page = mode === 'A' ? SECTIONS[active].pages[0].id : null;
+    draw();
+  }));
+  draw();
+}
+build('tabsA', 'subA', 'stageA', 'A');
+build('tabsB', 'subB', 'stageB', 'B');
+</script>
+</body>
+</html>

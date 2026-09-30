@@ -83,6 +83,34 @@
     letter-spacing: -0.2px;
   }
 
+  /* ---------- Subsection bar ----------
+     The pages inside whichever section is open. Always visible while you
+     are in that section, so every page in it is one click from every
+     other -- fourteen tabs across the top was one flat list of everything
+     the site can do, which is a menu, not navigation. */
+  .subsection-bar {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    padding: 8px 22px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .subsection-bar[hidden] { display: none; }
+  .sub-crumb {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.6px;
+    color: var(--faint); margin-right: 6px; white-space: nowrap;
+  }
+  .sub-tab {
+    font-size: 12.5px; font-weight: 700; color: var(--muted);
+    padding: 5px 11px; border-radius: 20px;
+    border: 1px solid transparent; white-space: nowrap; cursor: pointer;
+  }
+  .sub-tab:hover:not(.active) { color: var(--ink); border-color: var(--border); }
+  .sub-tab.active { background: var(--ink); color: var(--surface); }
+  @media (max-width: 760px) {
+    .subsection-bar { padding: 8px 14px; overflow-x: auto; flex-wrap: nowrap; }
+    .subsection-bar::-webkit-scrollbar { display: none; }
+  }
+
   /* ---------- Section tabs (moved up next to brand) ---------- */
   .section-tabs { display: flex; gap: 6px; }
   .section-tab {
@@ -1805,7 +1833,6 @@
   .gc-feed-game:hover { color: var(--navy); }
   .gc-feed-spacer { flex: 1; }
   .gc-feed-text { font-size: 12px; color: var(--muted); line-height: 1.45; margin-top: 3px; }
-  .gc-feed-players { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
   .gc-feed-player {
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 11px; font-weight: 700; color: var(--ink);
@@ -1816,6 +1843,32 @@
   .gc-feed-fp.is-neg { color: var(--red); }
   .gc-feed-exp-for { color: var(--green); font-size: 10px; }
   .gc-feed-exp-against { color: var(--red); font-size: 10px; }
+  .gc-feed-logo { width: 15px; height: 15px; object-fit: contain; vertical-align: -3px; margin-right: 2px; }
+  /* One player, his points, and every matchup of yours the play moved. */
+  .gc-feed-block { display: block; margin-top: 6px; padding-left: 2px; }
+  .gc-feed-who { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .gc-feed-shot {
+    position: relative; flex-shrink: 0;
+    width: 22px; height: 22px; border-radius: 50%; overflow: hidden;
+    background: var(--bg); border: 1px solid var(--border);
+  }
+  .gc-feed-shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .gc-feed-name { font-size: 12px; font-weight: 800; color: var(--ink); }
+  .gc-feed-did { font-size: 11px; font-weight: 700; color: var(--muted); }
+  /* His day so far, not just this play -- four catches for 52 reads very
+     differently from the 7-yard catch that got him there. */
+  .gc-feed-day { font-size: 10.5px; color: var(--faint); margin: 1px 0 0 28px; }
+  .gc-feed-lgs { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 0 28px; }
+  .gc-feed-nostake { font-size: 10px; color: var(--faint); margin-left: 28px; }
+  .gc-feed-lg {
+    font-size: 10px; font-weight: 700; border-radius: 4px; padding: 1px 6px;
+    border: 1px solid var(--border); color: var(--muted); cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .gc-feed-lg b { font-weight: 800; }
+  .gc-feed-lg.is-good { color: var(--green); border-color: var(--green); background: var(--green-bg); }
+  .gc-feed-lg.is-bad { color: var(--red); border-color: var(--red); background: var(--red-bg); }
+  .gc-feed-lg.is-flat { color: var(--faint); }
   .gc-feed-net { margin-top: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px; }
   .gc-feed-net.is-pos { color: var(--green); }
   .gc-feed-net.is-neg { color: var(--red); }
@@ -2306,6 +2359,41 @@
   .rg-panel-even .rg-panel-head { color: var(--gold); }
   .rg-list { display: flex; flex-direction: column; gap: 6px; max-height: 460px; overflow-y: auto; }
   .rg-panel-even .rg-list { max-height: none; }
+
+  /* The Rooting Score key. On only while that mode is, because it is
+     explaining that mode and nothing else. */
+  .rg-key {
+    margin-top: 12px; padding: 12px 14px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .rg-key[hidden] { display: none; }
+  .rg-key-title { font-family: 'Source Serif 4', serif; font-size: 13.5px; font-weight: 700; color: var(--ink); margin-bottom: 5px; }
+  .rg-key-line { margin: 0 0 7px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+  /* Numbers in their own column, every line of text starting at the same
+     left edge as the paragraph above -- an indented list inside a small
+     card reads as a stray block of text pushed off the wall. */
+  .rg-key-steps { margin: 0 0 9px; padding: 0; list-style: none; font-size: 12px; color: var(--muted); line-height: 1.55; counter-reset: rgkey; }
+  .rg-key-steps li { display: flex; gap: 7px; margin-bottom: 3px; }
+  .rg-key-steps li::before {
+    counter-increment: rgkey;
+    content: counter(rgkey);
+    flex-shrink: 0;
+    width: 15px;
+    font-weight: 800;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .rg-key-steps b { color: var(--ink); }
+  .rg-key-scale { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .rg-key-chip {
+    font-family: 'Source Serif 4', serif; font-size: 13px; font-weight: 700;
+    border-radius: 4px; padding: 1px 7px; border: 1px solid var(--border);
+  }
+  .rg-key-neg { color: var(--red); border-color: var(--red); background: var(--red-bg); }
+  .rg-key-pos { color: var(--green); border-color: var(--green); background: var(--green-bg); }
+  .rg-key-zero { color: var(--faint); }
+  .rg-key-cap { font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; color: var(--faint); margin-right: 6px; }
+  .rg-key-hint { font-size: 10.5px; color: var(--faint); font-style: italic; margin-left: auto; }
 
   .rg-row { border: 1px solid var(--border-soft); border-radius: 6px; cursor: pointer; }
   .rg-row:hover { border-color: var(--border); }
@@ -3246,6 +3334,9 @@
   .ld-stat-cell-wide { flex: 1.8; }
   .ld-stat-divider { width: 1px; background: var(--border); margin: 10px 0; }
   @media (max-width: 980px) { .ld-stat-divider { width: auto; height: 1px; margin: 0; } }
+  /* The line a share is read against, printed under it rather than left
+     for you to work out from the league size. */
+  .ld-stat-note { font-size: 10px; font-weight: 700; color: var(--faint); margin-top: 1px; }
   .ld-stat-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--faint); }
   .ld-stat-value { font-family: 'Source Serif 4', serif; font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 2px; }
   .ld-firsts { display: flex; gap: 10px; margin-top: 2px; }
@@ -4668,23 +4759,9 @@
 
 <nav class="site-nav">
   <div class="brand"><span class="brand-mark"></span><span class="brand-name">Fantasy Desk</span></div>
-  <div class="section-tabs" id="sectionNav">
-    <a class="section-tab active" data-section="dashboard">Dashboard</a>
-    <a class="section-tab" data-section="leagues">Leagues</a>
-    <a class="section-tab" data-section="lineups">Matchup Hub</a>
-    <a class="section-tab" data-section="gamecast">GameCast</a>
-    <a class="section-tab" data-section="rooting">Weekly Sweats</a>
-    <a class="section-tab" data-section="waiver">Waiver Radar</a>
-    <a class="section-tab" data-section="draft">Draft Room</a>
-    <a class="section-tab" data-section="exposures">Exposures</a>
-    <a class="section-tab" data-section="trades">Trade History</a>
-    <a class="section-tab" data-section="records">Results</a>
-    <a class="section-tab" data-section="rankings">Rankings</a>
-    <a class="section-tab" data-section="calculator">Trade Calc</a>
-    <a class="section-tab" data-section="tanking">Tanking Tracker</a>
-    <a class="section-tab" data-section="settings">Settings</a>
-  </div>
+  <div class="section-tabs" id="sectionNav"></div>
 </nav>
+<div class="subsection-bar" id="subsectionNav" hidden></div>
 
 <div class="mode-chooser" id="modeChooser" hidden>
   <div class="mc-eyebrow">FANTASY DESK</div>
@@ -4757,7 +4834,7 @@
   <div data-view="dashboard" class="is-active">
     <div class="page-title page-title-flex">
       <div>
-        <h1>Dashboard</h1>
+        <h1>The Desk</h1>
         <p>Portfolio-wide summary across all connected leagues.</p>
       </div>
       <div class="mode-toggle-btn" id="modeToggleBtn" hidden></div>
@@ -5495,6 +5572,12 @@
         </div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell">
+          <div class="ld-stat-label">VALUE SHARE</div>
+          <div class="ld-stat-value" id="ldValueShare">&mdash;</div>
+          <div class="ld-stat-note" id="ldValueShareAvg"></div>
+        </div>
+        <div class="ld-stat-divider"></div>
+        <div class="ld-stat-cell">
           <div class="ld-stat-label">SEED</div>
           <div class="ld-stat-value" id="ldSeed">2nd</div>
         </div>
@@ -5502,11 +5585,6 @@
         <div class="ld-stat-cell">
           <div class="ld-stat-label">PF RANK</div>
           <div class="ld-stat-value" id="ldPfRank">4th</div>
-        </div>
-        <div class="ld-stat-divider"></div>
-        <div class="ld-stat-cell">
-          <div class="ld-stat-label">MAX PF</div>
-          <div class="ld-stat-value" id="ldMaxPf">&mdash;</div>
         </div>
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell">
@@ -5703,7 +5781,7 @@
     <div class="sb-page">
       <div class="sb-subtabs" id="sbSubtabs">
         <div class="sb-subtabs-left">
-          <h1 style="margin:0">Matchup Hub</h1>
+          <h1 style="margin:0">The Slate</h1>
           <div class="sb-view-toggle" id="sbViewToggle">
             <button type="button" class="sb-view-toggle-btn is-active" data-sbv="scoreboard">Standard View</button>
             <button type="button" class="sb-view-toggle-btn" data-sbv="field">Field View</button>
@@ -6258,7 +6336,7 @@
       <div class="gc-grid" id="gcGrid"><div class="ld-loading">Loading this week&rsquo;s games&hellip;</div></div>
       <div class="gc-feed-col">
         <div class="gc-panel-head">
-          <span class="gc-panel-title">Around The League</span>
+          <span class="gc-panel-title">Play By Play</span>
           <span class="ww-toggle-group" id="gcFeedFilter">
             <span class="ww-toggle active" data-gc-feed="all">Every play</span>
             <span class="ww-toggle" data-gc-feed="mine">Mine only</span>
@@ -6280,13 +6358,32 @@
             </span>
           </div>
           <p>Your starters versus your opponents across all scheduled matchups. Tap a player for the league list.</p>
+          <div class="rg-key" id="rgScoreKey">
+            <div class="rg-key-title">How the Rooting Score works</div>
+            <p class="rg-key-line">Not every matchup cares the same amount. A game you are 95% to win is
+              already decided &mdash; points there barely move anything. A coin flip moves a lot. The score
+              measures that instead of counting leagues.</p>
+            <ol class="rg-key-steps">
+              <li><b>Where is each matchup headed?</b> Your projected final against your opponent&rsquo;s, plus how much is still unplayed.</li>
+              <li><b>What does one of his points do to it?</b> Slide that projection by a point and see how far your win probability moves. Steep at 50/50, flat at 95/5, zero once a matchup is settled.</li>
+              <li><b>Add up his matchups</b>, plus where he starts for you, minus where he starts against you &mdash; each league weighted half by your buy-in, half by simply being a league.</li>
+            </ol>
+            <div class="rg-key-scale">
+              <span class="rg-key-chip rg-key-neg">&minus;100</span><span class="rg-key-cap">root hard against</span>
+              <span class="rg-key-chip rg-key-zero">0</span><span class="rg-key-cap">neutral</span>
+              <span class="rg-key-chip rg-key-pos">+100</span><span class="rg-key-cap">root hard for</span>
+              <span class="rg-key-hint">Hover any player&rsquo;s score for his own numbers.</span>
+            </div>
+          </div>
         </div>
 
         <div class="rg-leagues-dropdown" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div class="exp-search" id="rgSearchWrap" style="max-width:220px"><input type="text" id="rgSearchInput" placeholder="Search player..."></div>
           <div class="rg-leagues-toggle" id="rgLeaguesBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="rgLeaguesCount">(18 of 18)</span></div>
           <div class="rg-sort-toggle" id="rgSortToggle">
-            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="value">Leagues</button>
+            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="score" title="-100 to +100. Zero is neutral, positive means root for him, negative means root against, and the size is how much it matters. Hover any player&#39;s score to see exactly how his was built.">Rooting Score</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-sort="swing" title="The same thing in its raw unit: win probability per point he scores, added up across every matchup he is in">Swing %</button>
+            <button type="button" class="rg-sort-toggle-btn" data-rg-sort="value">Leagues</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="leagues">$</button>
           </div>
           <div class="rg-sort-toggle" id="rgPosToggle">
@@ -7238,7 +7335,7 @@
       </div>
   <div data-view="waiver">
     <div class="page-title">
-      <h1>Waiver Manager</h1>
+      <h1>The Wire</h1>
       <p>Budgets, trending adds and the best free agents across all your leagues.</p>
     </div>
 
@@ -9177,7 +9274,7 @@
   </div>
   <div data-view="exposures" id="exposuresView">
     <div class="page-title">
-      <h1>Exposures</h1>
+      <h1>Holdings</h1>
       <p>How concentrated you are on every ranked player, across all 18 leagues — including ones you don't roster.</p>
     </div>
 
@@ -11840,7 +11937,7 @@
   </div>
   <div data-view="trades">
     <div class="page-title">
-      <h1>Trade History</h1>
+      <h1>Ledger</h1>
       <p>Every trade you've made, across all of your leagues.</p>
     </div>
 
@@ -11892,7 +11989,7 @@
         <div class="trade-card" data-league="PURPLE PEOPLE" data-date="2026-08-29" data-ts="1787961600000" data-players="CeeDee Lamb,Rhamondre Stevenson,A.J. Brown,Breece Hall">
           <div class="trade-card-head">
             <div class="trade-card-title">PURPLE PEOPLE &middot; Aug 29, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 5pt Pass TD &middot; Full PPR &middot; 0.75 TEP</div>
           <div class="trade-card-with">with <b>PaulPatterson</b></div>
@@ -11928,7 +12025,7 @@
         <div class="trade-card" data-league="Blockbuster Dynasty" data-date="2026-08-27" data-ts="1787788800000" data-players="Ashton Jeanty">
           <div class="trade-card-head">
             <div class="trade-card-title">Blockbuster Dynasty &middot; Aug 27, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Tiered PPR (RB 0.5, WR 1, TE 1.5)</div>
           <div class="trade-card-with">with <b>Heerag</b></div>
@@ -11960,7 +12057,7 @@
         <div class="trade-card" data-league="Grandpa Phil" data-date="2026-08-26" data-ts="1787702400000" data-players="Jordyn Tyson,Elijah Sarratt,Dalton Schultz,Makai Lemon">
           <div class="trade-card-head">
             <div class="trade-card-title">Grandpa Phil &middot; Aug 26, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>PaulPatterson</b></div>
@@ -11992,7 +12089,7 @@
         <div class="trade-card" data-league="Degens from Up Country" data-date="2026-08-23" data-ts="1787443200000" data-players="Matt Hibner">
           <div class="trade-card-head">
             <div class="trade-card-title">Degens from Up Country &middot; Aug 23, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Prophet93</b></div>
@@ -12016,7 +12113,7 @@
         <div class="trade-card" data-league="Degens from Up Country" data-date="2026-08-21" data-ts="1787270400000" data-players="Stefon Diggs,Marquise Brown,Malachi Fields">
           <div class="trade-card-head">
             <div class="trade-card-title">Degens from Up Country &middot; Aug 21, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Prophet93</b></div>
@@ -12044,7 +12141,7 @@
         <div class="trade-card" data-league="The Doctor's" data-date="2026-08-20" data-ts="1787184000000" data-players="Jordyn Tyson,KC Concepcion">
           <div class="trade-card-head">
             <div class="trade-card-title">The Doctor's &middot; Aug 20, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Maxminette</b></div>
@@ -12080,7 +12177,7 @@
         <div class="trade-card" data-league="Empire Entertainment" data-date="2026-07-30" data-ts="1785369600000" data-players="Chris Olave,Rome Odunze">
           <div class="trade-card-head">
             <div class="trade-card-title">Empire Entertainment &middot; Jul 30, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; Non-TEP</div>
           <div class="trade-card-with">with <b>okNikolai</b></div>
@@ -12108,7 +12205,7 @@
         <div class="trade-card" data-league="OTTOMAN" data-date="2026-07-18" data-ts="1784332800000" data-players="Bo Nix,Kyler Murray">
           <div class="trade-card-head">
             <div class="trade-card-title">OTTOMAN &middot; Jul 18, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>carsonfrye12</b></div>
@@ -12136,7 +12233,7 @@
         <div class="trade-card" data-league="StatChasers BestBall & Chill 5.0" data-date="2026-06-12" data-ts="1781222400000" data-players="Isaiah Likely,Jonnu Smith">
           <div class="trade-card-head">
             <div class="trade-card-title">StatChasers BestBall & Chill 5.0 &middot; Jun 12, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 1.0 TEP</div>
           <div class="trade-card-with">with <b>WesB69</b></div>
@@ -12164,7 +12261,7 @@
         <div class="trade-card" data-league="Blitz Dynasty Football" data-date="2026-05-05" data-ts="1777939200000" data-players="Kyren Williams">
           <div class="trade-card-head">
             <div class="trade-card-title">Blitz Dynasty Football &middot; May 5, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>KingProfitVII</b></div>
@@ -12215,13 +12312,13 @@
       <div class="insight-hint" id="insightHint">Every trade you have made, added up &mdash; by player and by manager.</div>
       <div class="trade-boards" id="tradePlayerBoards" hidden></div>
       <div class="trade-boards" id="tradeBoards" hidden></div>
-      <div class="insight-empty" id="insightEmpty" hidden>Open Trade History once and your trades will load here.</div>
+      <div class="insight-empty" id="insightEmpty" hidden>Open the Ledger once and your trades will load here.</div>
     </div>
   </div>
   <div data-view="records">
     <div class="page-title" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
       <div>
-        <h1>Results</h1>
+        <h1>Record</h1>
         <p>Every league's season in one grid &mdash; finish, PF rank, points, playoffs, weekly results, and bracket rounds. Records and points update as soon as a week's games go final on Monday night. Net settles after a season ends, so it reads $0 until then.</p>
       </div>
       <span class="week-dropdown" id="rbYearDropdown">
@@ -12233,7 +12330,7 @@
   </div>
   <div data-view="calculator">
     <div class="page-title">
-      <h1>Trade Calc</h1>
+      <h1>Trade Desk</h1>
       <p>Build a trade and see who wins it, using real dynasty player values. Pick a league and every draft pick is priced as that league's own pick from that team &mdash; where it is actually projected to land, and how wide that range still is &mdash; instead of one flat number per round.</p>
     </div>
 
@@ -12348,7 +12445,7 @@
   </div>
   <div data-view="rankings">
     <div class="page-title">
-      <h1>Rankings</h1>
+      <h1>The Board</h1>
       <p>The Pure Potential board every value on this site is priced off. <b>Base 1 Value</b> is a relative trade scale, not points: a 1.00 is worth exactly one first-round pick in a vacuum, so a 2.00 is worth two of them and a 0.10 is a throw-in. Ages are as of the current export.</p>
     </div>
 
@@ -12398,6 +12495,18 @@
       </table>
     </div>
   </div>
+  <div data-view="playoff">
+    <div class="page-title">
+      <h1>Playoff Picture</h1>
+      <p>Not built yet. This is where every league&rsquo;s race goes &mdash; who is in, who is out, what still has to happen and which weeks decide it.</p>
+    </div>
+    <div class="rb-table-wrap">
+      <div class="rb-empty">
+        The playoff and bye odds this page will be built on already exist &mdash; they run on Standings inside a
+        league and on the Tanking Tracker, out of one simulation of the rest of the season.
+      </div>
+    </div>
+  </div>
   <div data-view="settings">
     <div class="page-title">
       <h1>Settings</h1>
@@ -12444,7 +12553,7 @@
       <div class="settings-row">
         <div>
           <div class="settings-label">Include co-managed leagues</div>
-          <div class="settings-sub">Count leagues where you're a co-manager (not the primary owner) toward your Exposures and roster data. Turn this off if you only want leagues you own counted.</div>
+          <div class="settings-sub">Count leagues where you're a co-manager (not the primary owner) toward your Holdings and roster data. Turn this off if you only want leagues you own counted.</div>
         </div>
         <label class="toggle-switch">
           <input type="checkbox" id="coManagedToggle" checked>
@@ -12468,7 +12577,7 @@
 
     <div class="settings-panel">
       <div class="settings-label">Blacklisted Leagues</div>
-      <div class="settings-sub">Turn a league off entirely and it disappears everywhere in the app -- Leagues, Exposures, Scoreboard, Trades, Waiver Radar, Weekly Sweats, Draft Room, Dashboard, the league count up top, all of it -- as if it were never connected. Turn it back on here to bring it back.</div>
+      <div class="settings-sub">Turn a league off entirely and it disappears everywhere in the app -- Leagues, Holdings, The Slate, Ledger, The Wire, Weekly Sweats, Draft Room, The Desk, the league count up top, all of it -- as if it were never connected. Turn it back on here to bring it back.</div>
       <div class="rg-leagues-chips" id="blacklistChips" style="margin-top:12px"></div>
     </div>
 
@@ -12999,24 +13108,128 @@
   }
   window.deskFlushView = deskFlushView;
 
-  const sectionTabs = document.querySelectorAll('.section-tab');
+  // ---- Navigation -----------------------------------------------------
+  // Six sections across the top, and the pages inside whichever one is
+  // open on a second row underneath. Every page is still its own
+  // data-view exactly as before -- this changes how you reach them, not
+  // what they are.
+  //
+  // Trade Calc is in two sections on purpose. It is the tool you reach for
+  // mid-trade (Team Management) and the tool you reach for while reading
+  // the board (Values); making you remember which one it was filed under
+  // is the kind of thing navigation is supposed to prevent.
+  const DESK_SECTIONS = [
+    { id: 'dashboard', label: 'The Desk', pages: [
+      { view: 'dashboard', label: 'The Desk' },
+    ] },
+    { id: 'manage', label: 'Front Office', pages: [
+      { view: 'leagues', label: 'Leagues' },
+      { view: 'waiver', label: 'The Wire' },
+      { view: 'draft', label: 'Draft Room' },
+      { view: 'calculator', label: 'Trade Desk' },
+    ] },
+    { id: 'season', label: 'Almanac', pages: [
+      { view: 'exposures', label: 'Holdings' },
+      { view: 'trades', label: 'Ledger' },
+      { view: 'records', label: 'Record' },
+      { view: 'tanking', label: 'Tanking Tracker' },
+      { view: 'playoff', label: 'Playoff Picture' },
+    ] },
+    { id: 'gameday', label: 'Game Day', pages: [
+      { view: 'lineups', label: 'The Slate' },
+      { view: 'gamecast', label: 'Around the League' },
+      { view: 'rooting', label: 'Weekly Sweats' },
+    ] },
+    { id: 'values', label: 'Price Guide', pages: [
+      { view: 'rankings', label: 'The Board' },
+      { view: 'calculator', label: 'Trade Desk' },
+    ] },
+    { id: 'settings', label: 'Settings', pages: [
+      { view: 'settings', label: 'Settings' },
+    ] },
+  ];
+
+  const sectionNav = document.getElementById('sectionNav');
+  const subsectionNav = document.getElementById('subsectionNav');
   const views = document.querySelectorAll('[data-view]');
-  sectionTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      sectionTabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const target = tab.dataset.section;
-      views.forEach(v => v.classList.toggle('is-active', v.dataset.view === target));
-      deskFlushView(target);
+
+  // Which section a page belongs to. A page listed in two answers with the
+  // first, which only matters when something jumps straight to a view from
+  // outside the nav.
+  const deskSectionForView = {};
+  DESK_SECTIONS.forEach(sec => {
+    sec.pages.forEach(p => {
+      if (deskSectionForView[p.view] == null) deskSectionForView[p.view] = sec.id;
     });
   });
 
+  let deskActiveSection = 'dashboard';
+  let deskOpenView = 'dashboard';
+  // Where you were last time you were in each section, so coming back to
+  // Game Day mid-Sunday returns you to the page you were watching instead
+  // of to the front of the section.
+  const deskLastViewInSection = {};
+
+  function deskRenderNav() {
+    const sec = DESK_SECTIONS.find(x => x.id === deskActiveSection) || DESK_SECTIONS[0];
+    if (sectionNav) {
+      sectionNav.querySelectorAll('[data-nav-section]').forEach(t =>
+        t.classList.toggle('active', t.dataset.navSection === sec.id));
+    }
+    if (!subsectionNav) return;
+    // A section with one page has nothing to choose between, so it gets no
+    // second row rather than a row with one thing in it.
+    if (sec.pages.length < 2) {
+      subsectionNav.hidden = true;
+      subsectionNav.innerHTML = '';
+      return;
+    }
+    subsectionNav.hidden = false;
+    subsectionNav.innerHTML = `<span class="sub-crumb">${sec.label.toUpperCase()}</span>` +
+      sec.pages.map(p =>
+        `<span class="sub-tab${p.view === deskOpenView ? ' active' : ''}" data-nav-view="${p.view}">${p.label}</span>`
+      ).join('');
+  }
+
+  function deskShow(view, sectionId) {
+    deskOpenView = view;
+    deskActiveSection = sectionId || deskSectionForView[view] || deskActiveSection;
+    deskLastViewInSection[deskActiveSection] = view;
+    views.forEach(v => v.classList.toggle('is-active', v.dataset.view === view));
+    deskRenderNav();
+    deskFlushView(view);
+    // Pages used to hang their "render me when my tab is clicked" logic off
+    // the tab element itself. Tabs are rebuilt now, so they listen for this
+    // instead -- one event, fired wherever a view is opened from, including
+    // a jump straight to it from elsewhere in the app.
+    document.dispatchEvent(new CustomEvent('desk:view', { detail: view }));
+  }
+
+  if (sectionNav) {
+    sectionNav.innerHTML = DESK_SECTIONS.map(sec =>
+      `<a class="section-tab" data-nav-section="${sec.id}">${sec.label}</a>`).join('');
+    sectionNav.addEventListener('click', (e) => {
+      const tab = e.target.closest('[data-nav-section]');
+      if (!tab) return;
+      const sec = DESK_SECTIONS.find(x => x.id === tab.dataset.navSection);
+      if (!sec) return;
+      const last = deskLastViewInSection[sec.id];
+      deskShow((last && sec.pages.some(p => p.view === last)) ? last : sec.pages[0].view, sec.id);
+    });
+  }
+  if (subsectionNav) {
+    subsectionNav.addEventListener('click', (e) => {
+      const tab = e.target.closest('[data-nav-view]');
+      if (tab) deskShow(tab.dataset.navView, deskActiveSection);
+    });
+  }
+
   function goToSection(name) {
-    sectionTabs.forEach(t => t.classList.toggle('active', t.dataset.section === name));
-    views.forEach(v => v.classList.toggle('is-active', v.dataset.view === name));
-    deskFlushView(name);
+    deskShow(name, deskSectionForView[name]);
     window.scrollTo(0, 0);
   }
+  deskRenderNav();
+
   function goToLeagueDetail(name, targetRosterId) {
     goToSection('leagues');
     const listView = document.getElementById('leaguesListView');
@@ -13104,19 +13317,24 @@
       // whichever one matches the Rooting Guide's current $ / league-count
       // toggle, so this list agrees with it instead of always showing the
       // league-count number.
-      const isMoney = !!window.__rgMoneyMode;
-      const deltaNum = Number(row.dataset[isMoney ? 'dollar' : 'delta']);
+      const mode = window.__rgMode || (window.__rgMoneyMode ? 'leagues' : 'value');
+      const key = mode === 'score' ? 'score' : (mode === 'swing' ? 'swing' : (mode === 'leagues' ? 'dollar' : 'delta'));
+      const deltaNum = Number(row.dataset[key]);
       if (!deltaNum) return;
-      matches.push({ id: row.dataset.playerId, name: nameEl.textContent.trim(), delta: deltaNum, isMoney });
+      matches.push({ id: row.dataset.playerId, name: nameEl.textContent.trim(), delta: deltaNum, mode });
     });
     matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     return matches;
   }
-  // Formats one match's delta for display -- "+$325"/"-$50" in $ mode,
-  // "+4"/"-2" in league-count mode -- shared by every place that renders
-  // getRootingDeltasForTeams() results as a chip.
+  // Formats one match's number for display -- a signed Rooting Score,
+  // "+1.8%" of win probability per point, "+$325", or a league count --
+  // whichever the Weekly Sweats page is currently showing, so a chip
+  // anywhere else on the site never disagrees with it.
   function rgChipDeltaText(m) {
-    if (m.isMoney) return m.delta > 0 ? `+$${m.delta}` : `-$${Math.abs(m.delta)}`;
+    const mode = m.mode || (m.isMoney ? 'leagues' : 'value');
+    if (mode === 'score') return (m.delta > 0 ? '+' : '') + Math.round(m.delta);
+    if (mode === 'swing') return `${m.delta > 0 ? '+' : '\u2212'}${Math.abs(m.delta).toFixed(2)}%`;
+    if (mode === 'leagues') return m.delta > 0 ? `+$${m.delta}` : `-$${Math.abs(m.delta)}`;
     return m.delta > 0 ? `+${m.delta}` : `${m.delta}`;
   }
 
@@ -13207,17 +13425,35 @@
     const rows = await computeRootingRowsForWeek(week);
     const blacklist = window.__rgBlacklistSet || new Set();
     const dollarMap = window.__rgLeagueDollarMap ? window.__rgLeagueDollarMap() : {};
-    const isMoney = !!window.__rgMoneyMode;
+    let mode = window.__rgMode || (window.__rgMoneyMode ? 'leagues' : 'value');
+    // A Rooting Score is a reading of live matchups, so it only means
+    // anything for the week actually being played. Asked about some other
+    // week, this falls back to the league count rather than inventing a
+    // score out of projections for a week nobody has played yet.
+    if ((mode === 'score' || mode === 'swing') && week !== window.__sleeperLiveWeek) mode = 'value';
     const matches = [];
     rows.forEach(r => {
       if (!teamCodes.includes(r.team)) return;
       const f = r.for.filter(l => !blacklist.has(l));
       const a = r.against.filter(l => !blacklist.has(l));
-      const deltaNum = isMoney
-        ? f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0)
-        : f.length - a.length;
+      let deltaNum;
+      if (mode === 'score' || mode === 'swing') {
+        const lev = (typeof sbPlayerLeverage === 'function' && r.id)
+          ? sbPlayerLeverage(r.id) : { leagues: [] };
+        const levLeagues = lev.leagues.filter(l => !blacklist.has(l.name));
+        const weights = (typeof sbLeagueWeights === 'function')
+          ? sbLeagueWeights(levLeagues.map(l => l.name)) : {};
+        const net = levLeagues.reduce((sum, l) => sum + l.perPoint * (weights[l.name] != null ? weights[l.name] : 1), 0);
+        deltaNum = mode === 'score'
+          ? (typeof sbRootingScore === 'function' ? sbRootingScore(net) : 0)
+          : Number(net.toFixed(3));
+      } else if (mode === 'leagues') {
+        deltaNum = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
+      } else {
+        deltaNum = f.length - a.length;
+      }
       if (!deltaNum) return;
-      matches.push({ id: r.id, name: r.name, delta: deltaNum, isMoney });
+      matches.push({ id: r.id, name: r.name, delta: deltaNum, mode });
     });
     matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     return matches;
@@ -15080,7 +15316,7 @@
             data-ratio="${sbTradeRatio(gotValue, gaveValue)}" data-score="${sbTradeScore(gotValue, gaveValue)}">
             <div class="trade-card-head">
               <div class="trade-card-title">${entry.league.name} &middot; ${dateLabel}</div>
-              <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Calc">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+              <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
             </div>
             <div class="trade-card-meta">${entry.league.total_rosters || 12} Teams</div>
             <div class="trade-card-with">with <b>${sbFieldEsc(withName)}</b>${otherUsers.length > 1 ? ` &middot; ${sbFieldEsc(otherUsers.slice(1).map(u => u.display_name || u.username).join(', '))}` : ''}</div>
@@ -15128,9 +15364,8 @@
     }
     window.renderRealTrades = renderRealTrades;
 
-    document.querySelectorAll('.section-tab').forEach(tab => {
-      if (tab.dataset.section !== 'trades' && tab.dataset.section !== 'insights') return;
-      tab.addEventListener('click', () => { renderRealTrades(); });
+    document.addEventListener('desk:view', (e) => {
+      if (e.detail === 'trades' || e.detail === 'insights') renderRealTrades();
     });
   })();
 
@@ -17841,7 +18076,15 @@
     // dollars at stake, from the Net entered in Settings) -- only the
     // button labels were swapped, so "Leagues" (default) triggers the
     // 'value'-based ranking and "$" triggers the money-based one.
-    let rgSortCriterion = 'value';
+    let rgSortCriterion = 'score';
+    window.__rgMode = rgSortCriterion;
+    // The key explains the Rooting Score, so it is up exactly when that
+    // mode is and gone when you switch to one it does not describe.
+    function rgSyncScoreKey() {
+      const key = document.getElementById('rgScoreKey');
+      if (key) key.hidden = rgSortCriterion !== 'score';
+    }
+    rgSyncScoreKey();
     const rgSortToggle = document.getElementById('rgSortToggle');
     if (rgSortToggle) {
       rgSortToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(btn => {
@@ -17849,6 +18092,7 @@
           rgSortCriterion = btn.dataset.rgSort;
           rgSortToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
+          rgSyncScoreKey();
           recomputeRootingGuide();
           // 1-on-1 Slates reads its chip numbers off .rg-row's dataset,
           // which recomputeRootingGuide() just updated -- but the slate
@@ -17984,6 +18228,10 @@
       // Exposed so other places that read a player's rooting impact off
       // .rg-row (Weekly Schedule's exposure preview, the Rooting Guide's
       // own 1-on-1 Slates) know whether to show dollars or league count.
+      // Every other place that shows a rooting number off these rows --
+      // the Weekly Schedule's exposure chips, the 1-on-1 Slates, the
+      // ticker -- reads this to say the same thing this page is saying.
+      window.__rgMode = rgSortCriterion;
       window.__rgMoneyMode = rgSortCriterion === 'leagues';
       const buckets = { for: [], against: [], even: [] };
       rgRows.forEach(r => {
@@ -18005,6 +18253,24 @@
         // the win-count delta above uses, just weighted by real dollars
         // instead of by 1 per league.
         const dollarNet = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
+        // Leverage: what a point of his is really worth to you once you
+        // weigh each matchup by how much it can still move. A league count
+        // treats a coin flip and a game you have already won as one apiece;
+        // this does not, which is the difference between "you are in three
+        // of his matchups" and "root for him".
+        const lev = (typeof sbPlayerLeverage === 'function' && r.el.dataset.playerId)
+          ? sbPlayerLeverage(r.el.dataset.playerId)
+          : { perPoint: 0, leagues: [] };
+        // Blacklisted leagues are off this page entirely, so they are off
+        // this number too. What is left is weighted by what each league is
+        // actually worth to you -- half money, half bodies, see
+        // sbLeagueWeights -- so a $100 league outweighs a $50 one without
+        // two $50 leagues being outweighed by a single $100.
+        const levLeagues = lev.leagues.filter(l => !rgBlacklist.has(l.name));
+        const weights = (typeof sbLeagueWeights === 'function')
+          ? sbLeagueWeights(levLeagues.map(l => l.name)) : {};
+        const swingNet = levLeagues.reduce((sum, l) => sum + l.perPoint * (weights[l.name] != null ? weights[l.name] : 1), 0);
+        const rootScore = (typeof sbRootingScore === 'function') ? sbRootingScore(swingNet) : 50;
         // Raw numbers (not the formatted display text below) so anything
         // reading a player's rooting impact off this row -- the Weekly
         // Schedule's exposure preview, the Rooting Guide's own 1-on-1
@@ -18012,12 +18278,36 @@
         // parsing "+$325" back out of a string.
         r.el.dataset.delta = String(delta);
         r.el.dataset.dollar = String(dollarNet);
+        r.el.dataset.swing = swingNet.toFixed(3);
+        r.el.dataset.score = String(rootScore);
         const deltaEl = r.el.querySelector('.rg-delta');
         const noteEl = r.el.querySelector('.rg-note');
         deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
         // In $ mode the badge shows real dollars at stake instead of a
         // league count, so it reads "+$325" rather than "+3".
-        if (rgSortCriterion === 'leagues') {
+        if (rgSortCriterion === 'score') {
+          // -100 to +100, zero neutral. The number a person can act on
+          // without first being taught what a percentage point of win
+          // probability is worth.
+          deltaEl.textContent = (rootScore > 0 ? '+' : '') + rootScore;
+          if (rootScore > 2) deltaEl.classList.add('rg-delta-pos');
+          else if (rootScore < -2) deltaEl.classList.add('rg-delta-neg');
+          else deltaEl.classList.add('rg-delta-even');
+          deltaEl.title = (typeof sbRootingScoreExplain === 'function')
+            ? sbRootingScoreExplain(
+                (r.el.querySelector('.rg-name') || {}).textContent, levLeagues, weights, swingNet, rootScore)
+            : '';
+        } else if (rgSortCriterion === 'swing') {
+          // Win probability per fantasy point, summed over his matchups.
+          // A player in two dead-rubber leagues reads near zero however
+          // many leagues that is.
+          const txt = `${swingNet > 0 ? '+' : (swingNet < 0 ? '\u2212' : '')}${Math.abs(swingNet).toFixed(2)}%`;
+          deltaEl.textContent = txt;
+          if (swingNet > 0.005) deltaEl.classList.add('rg-delta-pos');
+          else if (swingNet < -0.005) deltaEl.classList.add('rg-delta-neg');
+          else deltaEl.classList.add('rg-delta-even');
+        } else if (rgSortCriterion === 'leagues') {
+          deltaEl.title = '';
           if (dollarNet > 0) { deltaEl.textContent = '+$' + dollarNet; deltaEl.classList.add('rg-delta-pos'); }
           else if (dollarNet < 0) { deltaEl.textContent = '-$' + Math.abs(dollarNet); deltaEl.classList.add('rg-delta-neg'); }
           else { deltaEl.textContent = '$0'; deltaEl.classList.add('rg-delta-even'); }
@@ -18026,18 +18316,23 @@
           else if (delta < 0) { deltaEl.textContent = String(delta); deltaEl.classList.add('rg-delta-neg'); }
           else { deltaEl.textContent = '0'; deltaEl.classList.add('rg-delta-even'); }
         }
+        // Counts only. Naming the leagues here ran the row off the side of
+        // the screen, and the league list is one click away on the player
+        // anyway, which is where it has always lived.
         const noteParts = [];
         if (f.length) noteParts.push(f.length + ' <span class="rg-note-for">for</span>');
         if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
         noteEl.innerHTML = noteParts.join(' &middot; ');
         const proj = Number(r.el.dataset.proj) || 0;
-        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, proj };
+        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, swingNet, proj };
         // In $ mode, which bucket a player belongs in is decided by real
         // dollars at stake, not league count -- a player can be a league-count
         // "against" but still help you overall once you weigh in that your
         // for-leagues carry more money than your against-leagues (and vice
         // versa), so re-bucket by dollarNet's sign instead of delta's.
-        const bucketKey = rgSortCriterion === 'leagues' ? dollarNet : delta;
+        const bucketKey = (rgSortCriterion === 'swing' || rgSortCriterion === 'score')
+          ? (Math.abs(swingNet) < 0.005 ? 0 : swingNet)
+          : (rgSortCriterion === 'leagues' ? dollarNet : delta);
         if (bucketKey > 0) buckets.for.push(bucket);
         else if (bucketKey < 0) buckets.against.push(bucket);
         else buckets.even.push(bucket);
@@ -18046,7 +18341,12 @@
       // projected for more points -- live, since this re-runs on every
       // sync poll and dataset.proj gets refreshed with it -- instead of
       // whatever arbitrary order the players happened to be built in.
-      if (rgSortCriterion === 'leagues') {
+      if (rgSortCriterion === 'swing' || rgSortCriterion === 'score') {
+        // Most win probability to gain first on one side, most to lose
+        // first on the other.
+        buckets.for.sort((a, b) => (b.swingNet - a.swingNet) || (b.proj - a.proj));
+        buckets.against.sort((a, b) => (a.swingNet - b.swingNet) || (b.proj - a.proj));
+      } else if (rgSortCriterion === 'leagues') {
         // Most real dollars in your favor first for Root For, most real
         // dollars against you first for Root Against.
         buckets.for.sort((a, b) => (b.dollarNet - a.dollarNet) || (b.proj - a.proj));
@@ -19736,7 +20036,6 @@
       const ldRecordEl = document.getElementById('ldRecord');
       const ldSeedEl = document.getElementById('ldSeed');
       const ldPfRankEl = document.getElementById('ldPfRank');
-      const ldMaxPfEl = document.getElementById('ldMaxPf');
       const ldVsTopEl = document.getElementById('ldVsTop');
       const ldFavoredTagEl = document.getElementById('ldFavoredTag');
       const ldProjMineEl = document.getElementById('ldProjMine');
@@ -19752,13 +20051,6 @@
 
         const pfRank = ldRankOf(allRosters, pfOf, activeRoster.roster_id);
         if (ldPfRankEl) ldPfRankEl.textContent = ldOrdinal(pfRank);
-        if (ldMaxPfEl) {
-          // Sleeper's own "points possible" (ppts) -- what this roster
-          // would have scored if it started its optimal lineup every
-          // week, same fpts/fpts_decimal-style pair as points-for.
-          const maxPf = (s.ppts || 0) + (s.ppts_decimal || 0) / 100;
-          ldMaxPfEl.textContent = maxPf ? maxPf.toFixed(1) : '—';
-        }
         if (ldVsTopEl) {
           const topPf = Math.max(...allRosters.map(pfOf));
           const myPf = pfOf(activeRoster);
@@ -19848,13 +20140,40 @@
       }
 
       const ldValueEl = document.getElementById('ldValue');
+      const ldValueShareEl = document.getElementById('ldValueShare');
+      const ldValueShareAvgEl = document.getElementById('ldValueShareAvg');
       if (ldValueEl) {
         if (getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league)) {
-          const totalValue = ppRosterValue(activeRoster, dict) +
-            ppPicksOwnedBy(entry, activeRoster.roster_id).reduce((sum, p) => sum + window.ppPickValueFuture(entry, p), 0);
+          // Players plus picks, the same total every other value readout
+          // on this site uses -- a roster that traded its whole draft for
+          // win-now players and one that did the reverse are not
+          // comparable on players alone.
+          const valueOf = (r) => ppRosterValue(r, dict) +
+            ppPicksOwnedBy(entry, r.roster_id).reduce((sum, p) => sum + window.ppPickValueFuture(entry, p), 0);
+          const totalValue = valueOf(activeRoster);
           ldValueEl.textContent = totalValue.toFixed(2);
+
+          // Share of everything owned in this league. The raw value moves
+          // whenever the rankings move, which makes "is 41.2 a lot?" an
+          // unanswerable question; a share of the league cannot, so it is
+          // the honest way to ask how far ahead this roster actually is.
+          const leagueValue = allRosters.reduce((sum, r) => sum + valueOf(r), 0);
+          if (ldValueShareEl) {
+            ldValueShareEl.textContent = leagueValue > 0
+              ? `${(totalValue / leagueValue * 100).toFixed(1)}%` : '—';
+          }
+          if (ldValueShareAvgEl) {
+            // What an exactly average roster in a league this size holds:
+            // 8.3% in a 12-teamer, 10% in a 10. That is the line this
+            // number is above or below, so it is printed with it.
+            const teams = allRosters.length;
+            ldValueShareAvgEl.textContent = teams && leagueValue > 0
+              ? `avg ${(100 / teams).toFixed(1)}%` : '';
+          }
         } else {
           ldValueEl.textContent = '—';
+          if (ldValueShareEl) ldValueShareEl.textContent = '—';
+          if (ldValueShareAvgEl) ldValueShareAvgEl.textContent = '';
         }
       }
 
@@ -20767,7 +21086,7 @@
         html += `<div class="rb-tank-section">
           <div class="rb-tank-head">
             <h2 class="rb-tank-title">Tanking &amp; Irrelevant</h2>
-            <p class="rb-tank-sub">${tanking.length} ${tanking.length === 1 ? 'league' : 'leagues'} you're tanking or have checked out of, kept out of the record above and totalled on their own. Change which leagues these are from the Matchup Hub's Tanking Teams list.</p>
+            <p class="rb-tank-sub">${tanking.length} ${tanking.length === 1 ? 'league' : 'leagues'} you're tanking or have checked out of, kept out of the record above and totalled on their own. Change which leagues these are from the The Slate's Tanking Teams list.</p>
           </div>
           ${rbTableHtml(tanking, 'Tanking Total')}
         </div>`;
@@ -21150,7 +21469,7 @@
       // Standings order and the draft order come off one sort, so the seed
       // shown beside a name and the slot shown at the end of its row are
       // always describing the same finish.
-      const outcome = ppSeasonOutcome(teams, playoffTeams);
+      const outcome = ppSeasonOutcome(teams, playoffTeams, ppDivisionMap(entry.league, rosters));
       const seedOf = {}, slotOf = {};
       outcome.standings.forEach((t, i) => { seedOf[t.id] = i + 1; });
       outcome.order.forEach((t, i) => { slotOf[t.id] = i + 1; });
@@ -21771,7 +22090,7 @@
         // A row is a link into that week's matchup in the Matchup Hub --
         // the schedule says what is coming, the Hub says who is in it.
         return `<tr class="${cls.trim()} is-linked" data-sch-week="${r.week}" ` +
-          `title="Open week ${r.week} in the Matchup Hub">` +
+          `title="Open week ${r.week} in The Slate">` +
           `<td class="ldsch-week">Wk ${r.week}</td>` +
           `<td>${oppHtml}</td>` +
           `<td>${ldschOddsCell(r.pct, r.pctKind)}</td>` +
@@ -23770,6 +24089,24 @@
   // would carry it is not trustworthy enough yet.
   const PP_FORECAST_YEARS_OUT = 0;
 
+  // Which division each roster is in, but only for a league actually
+  // running divisions -- returns null otherwise, which every caller reads
+  // as "seed on record alone".
+  function ppDivisionMap(league, rosters) {
+    const count = league && league.settings && Number(league.settings.divisions);
+    if (!count || count < 2 || !Array.isArray(rosters)) return null;
+    const map = {};
+    let tagged = 0;
+    rosters.forEach(r => {
+      const div = r && r.settings && r.settings.division;
+      if (div != null) { map[r.roster_id] = div; tagged++; }
+    });
+    // A half-tagged league would seed some teams as division winners and
+    // leave the rest unplaced, which is worse than not trying.
+    return tagged === rosters.length ? map : null;
+  }
+  window.ppDivisionMap = ppDivisionMap;
+
   // The league's own draft-order rule, applied to one finished (or
   // simulated-to-finish) season. Teams out of the playoffs draft first,
   // ordered by potential points from the bottom up; teams in the playoffs
@@ -23779,16 +24116,36 @@
   //
   // `teams` is [{ id, wins, pf, ppts }], and the returned array is
   // slot-ordered: index 0 holds the 1.01.
-  function ppDraftOrderFor(teams, playoffTeams) {
-    return ppSeasonOutcome(teams, playoffTeams).order;
+  function ppDraftOrderFor(teams, playoffTeams, divisionOf) {
+    return ppSeasonOutcome(teams, playoffTeams, divisionOf).order;
   }
 
   // The finish of one simulated season: the seeded standings, who made the
   // playoffs, and the resulting draft order. The standings sort is done
   // once and both answers read off it -- the draft order and the playoff
   // field can never disagree about who finished where.
-  function ppSeasonOutcome(teams, playoffTeams) {
-    const standings = teams.slice().sort((a, b) => b.wins - a.wins || b.pf - a.pf);
+  function ppSeasonOutcome(teams, playoffTeams, divisionOf) {
+    const byRecord = teams.slice().sort((a, b) => b.wins - a.wins || b.pf - a.pf);
+    // Divisions, where a league runs them: Sleeper seeds each division's
+    // winner ahead of every non-winner, so a 7-5 division winner is in and
+    // an 8-4 second-place team can be out. Seeding this purely on record
+    // gets those leagues wrong in both directions at once -- it drops a
+    // team that is actually locked in and floats one that is not.
+    //
+    // Only applied when the league genuinely has divisions and its rosters
+    // say which one they are in; every other league sorts on record and
+    // points exactly as before.
+    let standings = byRecord;
+    if (divisionOf) {
+      const seenDivision = new Set();
+      const winners = [], rest = [];
+      byRecord.forEach(t => {
+        const div = divisionOf[t.id];
+        if (div != null && !seenDivision.has(div)) { seenDivision.add(div); winners.push(t); }
+        else rest.push(t);
+      });
+      if (winners.length > 1) standings = winners.concat(rest);
+    }
     const inPlayoffs = new Set(standings.slice(0, playoffTeams).map(t => t.id));
     const missed = teams.filter(t => !inPlayoffs.has(t.id)).sort((a, b) => a.ppts - b.ppts || a.pf - b.pf);
     const made = teams.filter(t => inPlayoffs.has(t.id)).sort((a, b) => a.wins - b.wins || a.pf - b.pf);
@@ -24034,6 +24391,18 @@
     // pass rather than simulated separately. One simulation, one answer --
     // the pick model and the playoff odds can never tell different
     // stories about the same season.
+    // Does this league play the median? Sleeper's "league_average_match"
+    // gives every team a SECOND real result every week -- win or lose
+    // against that week's league median score, on top of the head-to-head
+    // -- and those wins are already inside the stored record this
+    // simulation starts from. Simulating the weeks ahead with only the
+    // head-to-head meant every team could earn at most one win a week
+    // from here while having banked up to two a week so far: the model
+    // quietly stopped the league's best teams pulling away and pushed
+    // every projected finish toward the middle, which is exactly the
+    // thing playoff odds are supposed to measure.
+    const hasMedian = !!(league.settings && league.settings.league_average_match);
+    const divisionOf = ppDivisionMap(league, rosters);
     const byeSlots = ppByeCountFor(playoffTeams);
     const playoffCounts = {}, byeCounts = {}, seedSum = {};
     model.forEach(m => { playoffCounts[m.id] = 0; byeCounts[m.id] = 0; seedSum[m.id] = 0; });
@@ -24046,6 +24415,9 @@
     const remainingIdx = remaining.map(pairs => pairs.map(([a, b]) => [idxOf[a], idxOf[b]]));
     const drawn = new Array(scratch.length).fill(0);
     const seasonMean = new Array(scratch.length).fill(0);
+    // Scratch space for the weekly median, sorted in place each week
+    // rather than allocated 1,500 times.
+    const medianScratch = new Array(scratch.length).fill(0);
     for (let sim = 0; sim < PP_SIM_RUNS; sim++) {
       for (let i = 0; i < scratch.length; i++) {
         const m = model[i], t = scratch[i];
@@ -24075,8 +24447,23 @@
           else if (sb > sa) scratch[ib].wins += 1;
           else { scratch[ia].wins += 0.5; scratch[ib].wins += 0.5; }
         }
+        if (hasMedian) {
+          // The median of this simulated week, and a second win for
+          // everyone who beat it -- the same second game the league
+          // actually plays.
+          for (let i = 0; i < scratch.length; i++) medianScratch[i] = drawn[i];
+          medianScratch.sort((a, b) => a - b);
+          const mid = medianScratch.length >> 1;
+          const median = medianScratch.length % 2
+            ? medianScratch[mid]
+            : (medianScratch[mid - 1] + medianScratch[mid]) / 2;
+          for (let i = 0; i < scratch.length; i++) {
+            if (drawn[i] > median) scratch[i].wins += 1;
+            else if (drawn[i] === median) scratch[i].wins += 0.5;
+          }
+        }
       }
-      const outcome = ppSeasonOutcome(scratch, playoffTeams);
+      const outcome = ppSeasonOutcome(scratch, playoffTeams, divisionOf);
       const order = outcome.order;
       for (let i = 0; i < order.length; i++) slotCounts[order[i].id][i]++;
       const standings = outcome.standings;
@@ -26276,7 +26663,7 @@
       const pctCls = r.winPct == null ? '' : (r.winPct >= 60 ? ' gc-lg-pct-safe' : (r.winPct <= 40 ? ' gc-lg-pct-long' : ' gc-lg-pct-close'));
       const pctHtml = r.winPct == null ? ''
         : `<span class="gc-lg-pct${pctCls}" title="Your win probability in this league's matchup">${r.winPct}%</span>`;
-      return `<div class="gc-lg-row" data-gc-league-id="${sbFieldEsc(r.leagueId || '')}" title="${sbFieldEsc(r.league)} &mdash; open this matchup in the Matchup Hub">
+      return `<div class="gc-lg-row" data-gc-league-id="${sbFieldEsc(r.leagueId || '')}" title="${sbFieldEsc(r.league)} &mdash; open this matchup in The Slate">
         ${pctHtml}
         <span class="gc-lg-name">${sbFieldEsc(r.league)}</span>
         <span class="gc-lg-players">${bits.join('<span class="gc-lg-sep"></span>')}</span>
@@ -26290,6 +26677,240 @@
       <button type="button" class="${active === 'home' ? 'active' : ''}" data-${attr}="home">${sbFieldEsc(game.home.abbr)}</button>
     </span>`;
   }
+
+  // ---- Leverage --------------------------------------------------------
+  // What one fantasy point is actually worth to you, right now.
+  //
+  // A player's league count says how many matchups he is in. It does not
+  // say how much any of them care. If you start him in a matchup you are
+  // 95% to win and face him in one sitting at 50%, the league count reads
+  // +1 -- root for him -- and it is wrong: the 95% matchup is already
+  // decided, so his points there buy you almost nothing, while every point
+  // he scores against you in the coin flip costs you real win probability.
+  // Leverage is that difference, measured rather than guessed.
+  //
+  // For one matchup it is the slope of the win-probability curve at the
+  // current score: how far your chances move per point. That slope is at
+  // its steepest at 50-50 and flattens to nothing at the edges, which is
+  // exactly the behaviour above. Summed across every league a player is
+  // in, signed by which side he is on, it is a single number that says
+  // both which way to root and how much to care.
+  const SB_LEVERAGE_STEP = 1;   // one fantasy point, the unit being priced
+
+  // The displayed win probability rounds to whole percent and clamps to
+  // 1-99: right for a scoreboard, useless for a slope, because anything
+  // smaller than half a percent rounds to no change at all. This is the
+  // same curve unrounded and unclamped.
+  function sbWinProbRaw(myTotal, oppTotal, sigma) {
+    const diff = Number(myTotal) - Number(oppTotal);
+    if (!Number.isFinite(diff)) return 50;
+    if (sigma === 0) return diff > 0 ? 100 : (diff < 0 ? 0 : 50);
+    const sd = (sigma != null && Number.isFinite(sigma) && sigma > 0) ? sigma : SB_SIGMA_FALLBACK;
+    return sbNormalCdf(diff / sd) * 100;
+  }
+
+  // A league's live state -- where the matchup is headed and how much
+  // spread is left -- worked out once per render rather than once per
+  // player per play.
+  //
+  // Headed, not standing: the baseline is each side's PROJECTED FINAL, the
+  // same number the Matchup Hub and the scoreboard cards read, not the
+  // points on the board right now. Built on points-so-far this was 0-0 in
+  // every league before kickoff, so every matchup on the Weekly Sweats
+  // page reported a dead-even 50% and every player's leverage came out
+  // identical -- which is what a coin flip looks like, and none of them
+  // were coin flips. A null projMap on purpose: that is what the Matchup
+  // Hub passes, so the two read the same projections and cannot disagree.
+  window.__sbLeverageCache = window.__sbLeverageCache || { at: 0, byLeague: {} };
+  function sbLiveStateFor(entry, espnGameData, week) {
+    const cache = window.__sbLeverageCache;
+    if (Date.now() - cache.at > 10000) { cache.at = Date.now(); cache.byLeague = {}; }
+    const id = entry.league.league_id;
+    if (cache.byLeague[id] !== undefined) return cache.byLeague[id];
+    let state = { margin: 0, sigma: null };
+    try {
+      const myProj = sbMatchupProjectedTotal(entry.myMatchup, null, entry.league, espnGameData, week);
+      const oppProj = sbMatchupProjectedTotal(entry.oppMatchup, null, entry.league, espnGameData, week);
+      state = {
+        margin: (Number.isFinite(myProj) && Number.isFinite(oppProj)) ? myProj - oppProj : 0,
+        sigma: sbMatchupSigma(entry.myMatchup, entry.oppMatchup, null, entry.league, espnGameData, week),
+      };
+    } catch (err) { /* a league we cannot price contributes nothing */ }
+    cache.byLeague[id] = state;
+    return state;
+  }
+
+  // What adding `points` to one side of this matchup does to your win
+  // probability. Exact, not a derivative: a 6-point touchdown is priced as
+  // six points, not as six times what the first one was worth, which
+  // matters precisely where the curve is steepest.
+  function sbSwingFor(state, points, onMySide) {
+    const margin = state.margin;
+    const now = sbWinProbRaw(margin, 0, state.sigma);
+    const after = sbWinProbRaw(margin + (onMySide ? points : -points), 0, state.sigma);
+    return after - now;
+  }
+
+  // ---- What each league is worth to you --------------------------------
+  // Money alone gets this wrong, and so does league count. Two examples,
+  // both from how anyone actually feels about it:
+  //
+  //   You have him in a $100 league and face him in a $50 one. Root for
+  //   him -- the money says so and so does the gut.
+  //
+  //   You have him in a $100 league and face him in TWO $50 leagues. The
+  //   money is exactly even, but almost everyone roots against him: two
+  //   Sundays ruined against one saved is a bad trade even at par.
+  //
+  // So the weight is half money, half bodies. Each league gets an equal
+  // share of one half of the weight and its share of the buy-in pool for
+  // the other. In the first case that comes out for him, in the second it
+  // comes out against, which is the answer both times. Set SB_MONEY_TILT
+  // to 1 for pure money or 0 for pure league count.
+  const SB_MONEY_TILT = 0.5;
+  function sbLeagueWeights(names) {
+    const n = names.length;
+    if (!n) return {};
+    const dollars = {};
+    let pool = 0;
+    names.forEach(name => {
+      const entry = Object.values(window.sleeperLeagueData || {})
+        .find(e => e && e.league && e.league.name === name);
+      const net = (entry && window.rbGetNet)
+        ? Math.abs(window.rbGetNet(entry.league.league_id, entry.league.season) || 0) : 0;
+      dollars[name] = net;
+      pool += net;
+    });
+    const out = {};
+    names.forEach(name => {
+      // No buy-ins entered anywhere means there is no money opinion to
+      // blend in, so every league counts the same -- which is the honest
+      // reading of "you told me nothing about the money".
+      const moneyShare = pool > 0 ? dollars[name] / pool : 1 / n;
+      // Weights average exactly 1, so a portfolio with equal buy-ins
+      // leaves every number below exactly where it would have been.
+      out[name] = n * ((1 - SB_MONEY_TILT) / n + SB_MONEY_TILT * moneyShare);
+    });
+    return out;
+  }
+  window.sbLeagueWeights = sbLeagueWeights;
+
+  // ---- Rooting score ---------------------------------------------------
+  // Leverage in win-percent-per-point is the honest unit, and "-2.34%" is
+  // not a thing anyone wants to read on a Sunday. This is the same number
+  // on a -100 to +100 dial, which is how you already think about it: zero
+  // is neutral, a positive number means root for him, a negative one means
+  // root against, and the size is how much to care. A minus sign says
+  // "against" faster than any number below fifty does.
+  //
+  // tanh does the squashing, so the scale never runs out of room -- a
+  // player who matters twice as much as anything you have seen still fits
+  // -- while staying nearly straight through the middle, where almost
+  // every player actually sits. SB_SCORE_FULL is the leverage that reads
+  // about 76: roughly a player starting for you in three coin flips.
+  const SB_SCORE_FULL = 4;
+  function sbRootingScore(perPoint) {
+    const t = Math.tanh((Number(perPoint) || 0) / SB_SCORE_FULL);
+    return Math.round(100 * t);
+  }
+  window.sbRootingScore = sbRootingScore;
+
+  // The whole derivation, in words, for the hover on a player's score:
+  // every matchup he is in, what a point of his does to it, what that
+  // league is weighted, and the two steps from there to the number.
+  function sbRootingScoreExplain(name, levLeagues, weights, net, score) {
+    const lines = [];
+    lines.push(`${name || 'This player'} — Rooting Score ${score > 0 ? '+' : ''}${score}`);
+    lines.push(score > 0 ? 'Root FOR him.' : (score < 0 ? 'Root AGAINST him.' : 'Neutral — nothing to gain either way.'));
+    lines.push('');
+    lines.push('Each matchup he is in, and what one point of his does to it:');
+    levLeagues.forEach(l => {
+      const w = weights[l.name] != null ? weights[l.name] : 1;
+      lines.push(`  ${l.name}` +
+        `\n      you are ${l.winPct}% to win it · ${l.onMySide ? 'he starts for you' : 'he starts against you'}` +
+        `\n      1 point of his = ${l.perPoint > 0 ? '+' : ''}${l.perPoint.toFixed(2)}% win probability` +
+        (Math.abs(w - 1) > 0.005 ? ` · this league weighted ${w.toFixed(2)}x` : ''));
+    });
+    if (!levLeagues.length) lines.push('  (none — he is not in any of your lineups this week)');
+    lines.push('');
+    lines.push(`Added up: ${net > 0 ? '+' : ''}${net.toFixed(2)}% win probability per point he scores.`);
+    lines.push(`On the -100 to +100 scale that is ${score > 0 ? '+' : ''}${score}.`);
+    lines.push('');
+    lines.push('A matchup already won or already lost barely moves, so a player in it');
+    lines.push('counts for almost nothing. A coin flip moves a lot, so he counts for a lot.');
+    lines.push('League weight is half your buy-in share, half an equal share per league.');
+    return lines.join('\n');
+  }
+  window.sbRootingScoreExplain = sbRootingScoreExplain;
+
+  // Every league a player is in, with what a point of his is worth there.
+  // Positive means his points help you, negative means they cost you --
+  // which for a player on your opponent's roster is automatic.
+  function sbPlayerLeverage(playerId, opts) {
+    const o = opts || {};
+    const espnGameData = o.espnGameData || window.__gcEspnGameData || null;
+    const week = o.week != null ? o.week : window.__gcWeek;
+    const leagues = [];
+    let perPoint = 0;
+    (typeof gcVisibleLeagueEntries === 'function' ? gcVisibleLeagueEntries() : []).forEach(e => {
+      if (!e.myMatchup || !e.oppMatchup) return;
+      const mine = gcSideIds(e.myMatchup, e.league);
+      const onMySide = mine.includes(playerId);
+      const onOppSide = !onMySide && gcSideIds(e.oppMatchup, e.league).includes(playerId);
+      if (!onMySide && !onOppSide) return;
+      const state = sbLiveStateFor(e, espnGameData, week);
+      // sbSwingFor already signs this: points added to your opponent's
+      // side lower your win probability, so a player you are facing comes
+      // back negative without anything here flipping him. A settled
+      // matchup has a sigma of zero, cannot move, and contributes nothing
+      // -- which is the whole point of measuring it this way.
+      const lev = sbSwingFor(state, SB_LEVERAGE_STEP, onMySide);
+      leagues.push({
+        name: e.league.name,
+        leagueId: e.league.league_id,
+        onMySide,
+        perPoint: lev,
+        winPct: Math.round(Math.min(99, Math.max(1, sbWinProbRaw(state.margin, 0, state.sigma)))),
+        sigma: state.sigma,
+      });
+      perPoint += lev;
+    });
+    // Loudest matchup first: the one this player is doing the most to.
+    leagues.sort((a, b) => Math.abs(b.perPoint) - Math.abs(a.perPoint));
+    return { perPoint, leagues };
+  }
+  window.sbPlayerLeverage = sbPlayerLeverage;
+
+  // What a play that just happened did to each of your matchups -- the
+  // same curve, but priced at the points the play was actually worth in
+  // that league's own scoring rather than at one generic point.
+  function sbPlayImpact(playerId, stats, opts) {
+    const o = opts || {};
+    const espnGameData = o.espnGameData || window.__gcEspnGameData || null;
+    const week = o.week != null ? o.week : window.__gcWeek;
+    const out = [];
+    (typeof gcVisibleLeagueEntries === 'function' ? gcVisibleLeagueEntries() : []).forEach(e => {
+      if (!e.myMatchup || !e.oppMatchup) return;
+      const onMySide = gcSideIds(e.myMatchup, e.league).includes(playerId);
+      const onOppSide = !onMySide && gcSideIds(e.oppMatchup, e.league).includes(playerId);
+      if (!onMySide && !onOppSide) return;
+      // Scored in this league's settings, not on the house line: the same
+      // catch is worth 1.0 more in full PPR than in half, and this league
+      // is the one whose matchup is being decided.
+      const pts = sbCustomScoreFor(stats, e.league.scoring_settings) || 0;
+      const state = sbLiveStateFor(e, espnGameData, week);
+      out.push({
+        name: e.league.name,
+        leagueId: e.league.league_id,
+        onMySide,
+        pts,
+        swing: sbSwingFor(state, pts, onMySide),
+      });
+    });
+    out.sort((a, b) => Math.abs(b.swing) - Math.abs(a.swing));
+    return out;
+  }
+  window.sbPlayImpact = sbPlayImpact;
 
   // ---- Scoreboard grid -------------------------------------------------
   // Every game at once, as a grid, because the question this page answers
@@ -26416,8 +27037,20 @@
           if (!pid) return;
           const fp = sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING) || 0;
           const existing = players.find(x => x.id === pid);
-          if (existing) existing.fp += fp;
-          else players.push({ id: pid, fp });
+          // The raw stat line rides along, not just the house-line points:
+          // each of your leagues scores the same play in its own settings.
+          if (existing) {
+            existing.fp += fp;
+            if (ev.desc) existing.descs.push(ev.desc);
+            Object.entries(ev.stats || {}).forEach(([k, v]) => {
+              existing.stats[k] = (existing.stats[k] || 0) + v;
+            });
+          } else {
+            // sbParsePlayEvents already puts what happened into words
+            // ("34-yd catch, TD"), so the row says it the same way the
+            // parser read it rather than reconstructing it from the stats.
+            players.push({ id: pid, fp, stats: Object.assign({}, ev.stats), descs: ev.desc ? [ev.desc] : [] });
+          }
         });
         out.push({ game, play, players });
       });
@@ -26434,17 +27067,10 @@
     return out.slice(0, GC_FEED_MAX);
   }
 
+
   function gcFeedHtml(rows) {
     if (!rows.length) return '<div class="gc-empty">No plays yet. The feed fills in once a game kicks off.</div>';
 
-    // One exposure lookup per player per render, not per play: the same
-    // running back turns up in fifteen plays and the answer cannot change
-    // between them.
-    const expCache = new Map();
-    const expOf = (pid) => {
-      if (!expCache.has(pid)) expCache.set(pid, gcRootingDelta(pid));
-      return expCache.get(pid);
-    };
     const dict = window.__sleeperPlayerDict || {};
     const nameOf = (pid) => {
       const p = dict[pid];
@@ -26457,27 +27083,50 @@
     const mineOnly = window.__gcFeedFilter === 'mine';
     const items = [];
     rows.forEach(({ game, play, players }) => {
-      // Net across your leagues: a play worth 6 points to a player you
-      // start in three leagues and face in one is worth +12 to you, not
-      // +6. That is the number that actually decides your Sunday.
-      let net = 0, anyFor = false, anyAgainst = false;
-      const chips = players.map(pl => {
-        const exp = expOf(pl.id);
-        const forN = exp.forLeagues.length, againstN = exp.againstLeagues.length;
-        if (forN) anyFor = true;
-        if (againstN) anyAgainst = true;
-        net += pl.fp * (forN - againstN);
+      // Every league this play touched, and what it did to that matchup.
+      // Priced on the real curve: a touchdown in a 50-50 game is worth
+      // several points of win probability, the same touchdown in a game
+      // you are 95% to win is worth almost nothing, and the page should
+      // not pretend otherwise.
+      let anyFor = false, anyAgainst = false, netSwing = 0;
+      const blocks = players.map(pl => {
+        const impacts = sbPlayImpact(pl.id, pl.stats, { espnGameData: window.__gcEspnGameData, week: window.__gcWeek });
+        impacts.forEach(i => {
+          if (i.onMySide) anyFor = true; else anyAgainst = true;
+          netSwing += i.swing;
+        });
         const fpCls = pl.fp > 0 ? ' is-pos' : (pl.fp < 0 ? ' is-neg' : '');
-        const tip = [
-          forN ? `For you: ${exp.forLeagues.join(', ')}` : '',
-          againstN ? `Against you: ${exp.againstLeagues.join(', ')}` : '',
-        ].filter(Boolean).join('\n');
-        return `<span class="gc-feed-player"${tip ? ` title="${sbFieldEsc(tip)}"` : ''}>` +
-          `<span>${sbFieldEsc(nameOf(pl.id))}</span>` +
-          `<span class="gc-feed-fp${fpCls}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</span>` +
-          (forN ? `<span class="gc-feed-exp-for">&#9650;${forN}</span>` : '') +
-          (againstN ? `<span class="gc-feed-exp-against">&#9660;${againstN}</span>` : '') +
-        `</span>`;
+        const p = dict[pl.id] || {};
+        const teamLogo = sbTeamLogoUrl(p.team);
+        const shot = sbHeadshotUrl(pl.id);
+        const onThisPlay = (pl.descs || []).join(' · ');
+        // His day so far, from Sleeper's own week stats -- the same numbers
+        // the box score shows, so the running total on a play matches what
+        // you get when you open the game.
+        const dayLine = gcStatLine((window.__gcStatsMap || {})[pl.id]);
+        const chips = impacts.map(i => {
+          // Green when the play helped you in that league, red when it
+          // cost you -- which is the sign of the swing, not of the play.
+          const cls = i.swing > 0.05 ? ' is-good' : (i.swing < -0.05 ? ' is-bad' : ' is-flat');
+          const sign = i.swing > 0 ? '+' : (i.swing < 0 ? '\u2212' : '');
+          const mag = Math.abs(i.swing);
+          const shown = mag >= 0.05 ? `${sign}${mag.toFixed(1)}%` : '0.0%';
+          return `<span class="gc-feed-lg${cls}" data-gc-league-id="${sbFieldEsc(i.leagueId)}" ` +
+            `title="${sbFieldEsc(`${i.name} — ${i.onMySide ? 'your starter' : 'started against you'}, ${i.pts.toFixed(1)} pts in this league's scoring`)}">` +
+            `${sbFieldEsc(i.name)} <b>${shown}</b></span>`;
+        }).join('');
+        return `<div class="gc-feed-block">` +
+          `<div class="gc-feed-who">` +
+            (teamLogo ? `<img class="gc-feed-logo" src="${teamLogo}" alt="" loading="lazy" onerror="this.remove()">` : '') +
+            `<span class="gc-feed-shot">${shot ? `<img src="${shot}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>` +
+            `<span class="gc-feed-name">${sbFieldEsc(nameOf(pl.id))}</span>` +
+            (onThisPlay ? `<span class="gc-feed-did">${sbFieldEsc(onThisPlay)}</span>` : '') +
+            `<span class="gc-feed-fp${fpCls}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</span>` +
+          `</div>` +
+          (dayLine ? `<div class="gc-feed-day">${sbFieldEsc(dayLine)}</div>` : '') +
+          (chips ? `<div class="gc-feed-lgs">${chips}</div>`
+                 : '<div class="gc-feed-nostake">no stake in any of your leagues</div>') +
+        `</div>`;
       });
 
       if (mineOnly && !anyFor && !anyAgainst) return;
@@ -26485,20 +27134,24 @@
       const scoreText = (play.awayScore != null && play.homeScore != null)
         ? `${game.away.abbr} ${play.awayScore}&ndash;${play.homeScore} ${game.home.abbr}` : '';
       const meta = [play.period ? `Q${play.period}` : '', play.clock, play.downDistance].filter(Boolean);
-      const netCls = Math.abs(net) < 0.05 ? 'is-flat' : (net > 0 ? 'is-pos' : 'is-neg');
-      const rowCls = anyFor ? ' is-mine' : (anyAgainst ? ' is-against' : '');
+      const netCls = Math.abs(netSwing) < 0.05 ? 'is-flat' : (netSwing > 0 ? 'is-pos' : 'is-neg');
+      const rowCls = (anyFor || anyAgainst) ? (netSwing >= 0 ? ' is-mine' : ' is-against') : '';
+      const logo = (abbr) => {
+        const url = sbTeamLogoUrl(abbr);
+        return url ? `<img class="gc-feed-logo" src="${url}" alt="" loading="lazy" onerror="this.remove()">` : '';
+      };
 
       items.push(`<div class="gc-feed-item${rowCls}">
         <div class="gc-feed-top">
-          <span class="gc-feed-game" data-gc-open="${sbFieldEsc(game.eventId)}">${sbFieldEsc(game.away.abbr)} @ ${sbFieldEsc(game.home.abbr)}</span>
+          <span class="gc-feed-game" data-gc-open="${sbFieldEsc(game.eventId)}">${logo(game.away.abbr)}${logo(game.home.abbr)}${sbFieldEsc(game.away.abbr)} @ ${sbFieldEsc(game.home.abbr)}</span>
           ${meta.map(m => `<span>${sbFieldEsc(m)}</span>`).join('')}
           <span class="gc-feed-spacer"></span>
           <span>${scoreText}</span>
         </div>
         <div class="gc-feed-text">${sbFieldEsc(play.text)}</div>
-        ${chips.length ? `<div class="gc-feed-players">${chips.join('')}</div>` : ''}
-        ${chips.length && (anyFor || anyAgainst)
-          ? `<div class="gc-feed-net ${netCls}">${net > 0 ? '+' : ''}${net.toFixed(1)} net across your leagues</div>`
+        ${blocks.join('')}
+        ${(anyFor || anyAgainst)
+          ? `<div class="gc-feed-net ${netCls}">${netSwing > 0 ? '+' : (netSwing < 0 ? '\u2212' : '')}${Math.abs(netSwing).toFixed(1)}% win probability across your matchups</div>`
           : ''}
       </div>`);
     });
@@ -26549,6 +27202,7 @@
     ]);
     window.__gcEspnGameData = espnGameData;
     window.__gcWeek = week;
+    window.__gcStatsMap = statsMap;
 
     const open = sorted.find(g => g.eventId === window.__gcOpenEventId);
     if (open) {
@@ -26651,6 +27305,9 @@
     // A game tag in the feed opens that game's panel on the left.
     if (feed) {
       feed.addEventListener('click', (e) => {
+        // A league chip goes to that matchup; the game tag opens the game.
+        const lg = e.target.closest('.gc-feed-lg[data-gc-league-id]');
+        if (lg && typeof goToLeagueMatchup === 'function') { goToLeagueMatchup(lg.dataset.gcLeagueId); return; }
         const tag = e.target.closest('[data-gc-open]');
         if (tag) openGame(tag.dataset.gcOpen);
       });
@@ -26671,9 +27328,8 @@
   // The persistent interval declared above already keeps GameCast fresh
   // on its own; this just triggers an immediate render on click instead
   // of waiting up to 20s for the next tick.
-  document.querySelectorAll('.section-tab').forEach(tab => {
-    if (tab.dataset.section !== 'gamecast') return;
-    tab.addEventListener('click', () => { renderRealGameCast(); });
+  document.addEventListener('desk:view', (e) => {
+    if (e.detail === 'gamecast') renderRealGameCast();
   });
 
   window.__sleeperScheduleCache = window.__sleeperScheduleCache || {};
@@ -28145,7 +28801,7 @@
         <div class="ld-stat-divider"></div>
         <div class="ld-stat-cell"><div class="ld-stat-label">ARCHETYPE</div><div class="ld-stat-value">${ppArchetypeForPlayerId(playerId, dict) || '&mdash;'}</div></div>
       </div>
-      <div class="pm-note">Austin's own hand-curated dynasty rankings &mdash; the same source Trade Calc's "Austin's Rankings" toggle uses. A comparison against consensus/expert rankings is planned but not built yet.</div>
+      <div class="pm-note">Austin's own hand-curated dynasty rankings &mdash; the same source Trade Desk's "Austin's Rankings" toggle uses. A comparison against consensus/expert rankings is planned but not built yet.</div>
     `;
   }
 
@@ -29288,9 +29944,8 @@
     // Rendered on demand as well as on sync, since the pick rows pull last
     // week's matchups per league and there is no reason to do that before
     // anyone has opened the page.
-    document.querySelectorAll('.section-tab').forEach(tab => {
-      if (tab.dataset.section !== 'tanking') return;
-      tab.addEventListener('click', () => { renderRealTankingTracker().catch(() => {}); });
+    document.addEventListener('desk:view', (e) => {
+      if (e.detail === 'tanking') renderRealTankingTracker().catch(() => {});
     });
   })();
 
@@ -29520,13 +30175,12 @@
         ? html.join('')
         : `<tr><td colspan="9" class="rb-empty">${byDelta ? 'Nobody moved that way on this board.' : 'No player matches that search.'}</td></tr>`;
 
-      const against = prev
-        ? `<b>Since last</b> is against <b>${rkFmtDate(prev.asOf)}</b>, <b>Since Wk 1</b> against <b>${first ? rkFmtDate(first.asOf) : rkFmtDate(prev.asOf)}</b>. ` +
-          'A player the older board did not carry reads NEW, not a gain from zero.'
-        : 'This is the earliest board on file, so there is nothing behind it to measure change against.';
-      noteEl.innerHTML = (edition.isCurrent
-        ? `<b>${shown} of ${keys.length} players</b>, live since <b>${rkFmtDate(edition.asOf)}</b>. `
-        : `What the board said on <b>${rkFmtDate(edition.asOf)}</b> &mdash; the values a trade made that week is priced at, while the rest of the site prices today's rosters at the live table. `) + against;
+      // Just the dates the two change columns are measured against --
+      // everything else that used to be here was explaining the page to
+      // someone who is already looking at it.
+      noteEl.innerHTML = prev
+        ? `Since last: <b>${rkFmtDate(prev.asOf)}</b> &middot; Since Wk 1: <b>${first ? rkFmtDate(first.asOf) : rkFmtDate(prev.asOf)}</b>`
+        : 'The earliest board on file &mdash; nothing behind it to measure change against.';
     }
 
     function rkBuildEditionPicker() {
@@ -29573,9 +30227,8 @@
     }
     window.renderRealRankings = renderRealRankings;
 
-    document.querySelectorAll('.section-tab').forEach(tab => {
-      if (tab.dataset.section !== 'rankings') return;
-      tab.addEventListener('click', () => renderRealRankings());
+    document.addEventListener('desk:view', (e) => {
+      if (e.detail === 'rankings') renderRealRankings();
     });
   })();
 
@@ -29866,9 +30519,16 @@
       return v ? v.split(' &middot; ').length : 0;
     }
 
-    function sweatRow(item, net, money) {
+    function sweatRow(item, net, mode) {
       const cls = net > 0 ? 'is-pos' : (net < 0 ? 'is-neg' : 'is-even');
-      const label = money
+      // Whatever the Weekly Sweats page is showing, the strip says the
+      // same thing -- a Rooting Score up there and a league count down
+      // here would be two answers to one question.
+      const label = mode === 'score'
+        ? (net > 0 ? `+${Math.round(net)} root for` : (net < 0 ? `${Math.round(net)} root against` : 'neutral'))
+        : mode === 'swing'
+        ? (net > 0 ? `+${net.toFixed(2)}% for you` : (net < 0 ? `${net.toFixed(2)}% against you` : 'even'))
+        : mode === 'leagues'
         ? (net > 0 ? `+$${net} for you` : (net < 0 ? `-$${Math.abs(net)} against you` : '$0'))
         : (net > 0 ? `+${net} for you` : (net < 0 ? `${net} against you` : 'even'));
       return `<div class="tk-item">${playerCell(item)}` +
@@ -29892,10 +30552,11 @@
       const els = topOf('.rg-panel-for').concat(topOf('.rg-panel-against'));
 
       if (els.length) {
-        // In $ mode the page ranks and labels by real money at stake, so the
-        // ticker says the same thing rather than quietly reverting to a
-        // league count the page isn't sorted by.
-        const money = !!window.__rgMoneyMode;
+        // The page ranks and labels by whichever mode is active, so the
+        // ticker reads the matching number off the same rows rather than
+        // quietly reverting to a league count the page isn't sorted by.
+        const mode = window.__rgMode || (window.__rgMoneyMode ? 'leagues' : 'value');
+        const dsKey = mode === 'score' ? 'score' : (mode === 'swing' ? 'swing' : (mode === 'leagues' ? 'dollar' : 'delta'));
         return els.map(el => {
           const d = el.dataset;
           const r = byId[d.playerId] || {};
@@ -29910,7 +30571,7 @@
             for: { length: rgLeagueCount(d.for) },
             against: { length: rgLeagueCount(d.against) },
           };
-          return sweatRow(item, Number(money ? d.dollar : d.delta) || 0, money);
+          return sweatRow(item, Number(d[dsKey]) || 0, mode);
         });
       }
 
@@ -29928,7 +30589,7 @@
         .sort((a, b) => b.delta - a.delta || tie(a, b)).slice(0, SWEAT_PER_SIDE);
       const againstSide = scored.filter(x => x.delta < 0)
         .sort((a, b) => a.delta - b.delta || tie(a, b)).slice(0, SWEAT_PER_SIDE);
-      return forSide.concat(againstSide).map(({ r, delta }) => sweatRow(r, delta, false));
+      return forSide.concat(againstSide).map(({ r, delta }) => sweatRow(r, delta, 'value'));
     }
 
     // The same sweats, but ranked by what they are actually doing today --
