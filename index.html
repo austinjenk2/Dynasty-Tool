@@ -13039,6 +13039,75 @@
   // view is which page this render paints, used only to put the page you
   // are on at the front of the queue. A wrong or missing name costs a few
   // milliseconds of ordering, never correctness.
+  // ---- Performance counters -------------------------------------------
+  // The site gets slower the longer it is left open, and a page that only
+  // misbehaves after an hour cannot be caught by reading the code. So it
+  // counts its own work: every named render, every sync, every model
+  // rebuild, and every long task the browser reports.
+  //
+  // Nothing here runs a timer or holds anything that grows without bound
+  // -- one number per operation, and the last 40 long tasks. Open the
+  // console and call deskPerf() to see it.
+  window.__deskPerf = window.__deskPerf || { ops: {}, longTasks: [], since: Date.now() };
+  function deskMark(name, ms) {
+    const o = window.__deskPerf.ops[name] || (window.__deskPerf.ops[name] = { calls: 0, total: 0, max: 0 });
+    o.calls++;
+    o.total += ms;
+    if (ms > o.max) o.max = ms;
+  }
+  function deskTimed(name, fn) {
+    const t0 = performance.now();
+    try { return fn(); } finally { deskMark(name, performance.now() - t0); }
+  }
+  async function deskTimedAsync(name, fn) {
+    const t0 = performance.now();
+    try { return await fn(); } finally { deskMark(name, performance.now() - t0); }
+  }
+  window.deskTimed = deskTimed;
+  window.deskTimedAsync = deskTimedAsync;
+
+  // A "long task" is the browser's own word for a block of main-thread
+  // work over 50ms -- which is exactly what being unresponsive is made of.
+  try {
+    if (window.PerformanceObserver && PerformanceObserver.supportedEntryTypes
+      && PerformanceObserver.supportedEntryTypes.indexOf('longtask') !== -1) {
+      new PerformanceObserver((list) => {
+        list.getEntries().forEach(e => {
+          const lt = window.__deskPerf.longTasks;
+          lt.push({ at: Math.round(e.startTime), ms: Math.round(e.duration) });
+          if (lt.length > 40) lt.shift();
+        });
+      }).observe({ entryTypes: ['longtask'] });
+    }
+  } catch (e) { /* not every browser reports these */ }
+
+  window.deskPerf = function deskPerf() {
+    const p = window.__deskPerf;
+    const mins = (Date.now() - p.since) / 60000;
+    const rows = Object.entries(p.ops).map(([name, o]) => ({
+      operation: name,
+      calls: o.calls,
+      'total (s)': +(o.total / 1000).toFixed(1),
+      'avg (ms)': Math.round(o.total / o.calls),
+      'worst (ms)': Math.round(o.max),
+      'per min (ms)': Math.round(o.total / Math.max(1, mins)),
+    })).sort((a, b) => b['total (s)'] - a['total (s)']);
+    console.log(`Open for ${mins.toFixed(1)} min. Main-thread time by operation:`);
+    console.table(rows);
+    const lt = p.longTasks;
+    if (lt.length) {
+      const worst = lt.slice().sort((a, b) => b.ms - a.ms).slice(0, 5);
+      console.log(`Long tasks (>50ms) still in the buffer: ${lt.length}. Worst:`, worst.map(x => x.ms + 'ms').join(', '));
+    } else {
+      console.log('No long tasks recorded -- if it feels slow anyway, it is memory or layout, not script.');
+    }
+    if (performance.memory) {
+      const mb = (b) => Math.round(b / 1048576) + 'MB';
+      console.log(`JS heap: ${mb(performance.memory.usedJSHeapSize)} used of ${mb(performance.memory.jsHeapSizeLimit)} limit.`);
+    }
+    return rows;
+  };
+
   function deskQueueRender(key, view, fn) {
     deskRenderQueue.set(key, { fn, view });
     if (!deskRenderScheduled) {
@@ -13057,11 +13126,14 @@
 
   function deskRunRender(key, entry) {
     deskRenderQueue.delete(key);
+    const t0 = performance.now();
     try {
       entry.fn();
     } catch (e) {
       // One page failing to repaint must not take the rest of the queue
       // down with it -- that would leave the whole site stale.
+    } finally {
+      deskMark('render:' + key, performance.now() - t0);
     }
   }
 
@@ -19070,6 +19142,8 @@
 
     let lastSyncedAt = null;
     let pollTimer = null;
+    let pollMissedWhileHidden = false;
+    let pollVisibilityBound = false;
 
     function setSyncState(state, message) {
       syncDot.classList.remove('sync-error', 'sync-pending');
@@ -19498,6 +19572,7 @@
     // sync already in flight is fetching the same numbers it wanted.
     let syncInFlight = false;
     async function loadSleeperData() {
+      const __syncT0 = performance.now();
       const saved = getSavedUser();
       if (!saved) return;
       if (syncInFlight) return;
@@ -19728,14 +19803,34 @@
         setSyncState('error', "Couldn't sync — check your connection");
       } finally {
         syncInFlight = false;
+        if (typeof deskMark === 'function') deskMark('sync:loadSleeperData', performance.now() - __syncT0);
       }
     }
 
+    // A backgrounded tab does not need any of this. Every sixty seconds
+    // this pulls rosters, matchups, users, transactions and traded picks
+    // for every league and then repaints every page in the app -- worth it
+    // while you are watching, pure waste while you are reading something
+    // else, and it was running the whole time either way. Chrome throttles
+    // the timer but still runs it, so an afternoon in another tab was an
+    // afternoon of syncs nobody saw.
+    //
+    // Skipped while hidden, and run once immediately on return so what you
+    // come back to is current rather than an hour old.
     function startPolling() {
       if (pollTimer) clearInterval(pollTimer);
       pollTimer = setInterval(() => {
+        if (document.hidden) { pollMissedWhileHidden = true; return; }
         if (getSavedUser()) loadSleeperData();
       }, 60000);
+      if (!pollVisibilityBound) {
+        pollVisibilityBound = true;
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden || !pollMissedWhileHidden) return;
+          pollMissedWhileHidden = false;
+          if (getSavedUser()) loadSleeperData();
+        });
+      }
     }
 
     const PLAYER_CACHE_KEY = 'dynastyToolSleeperPlayers';
@@ -24714,7 +24809,9 @@
         && window.__ppPickModel[entry.league.league_id]) continue;
       let current = null;
       try {
+        const __simT0 = performance.now();
         current = await ppSimulateSeason(entry, dict);
+        if (typeof deskMark === 'function') deskMark('sim:season', performance.now() - __simT0);
       } catch (err) {
         // Falling back to the flat round value is the right behaviour, but
         // doing it silently hid a real bug once already.
@@ -26158,6 +26255,10 @@
   if (!window.__gcRefreshTimerStarted) {
     window.__gcRefreshTimerStarted = true;
     setInterval(() => {
+      // Hidden tab: no fetches, no repaint. This one pulls an ESPN
+      // summary per live game every twenty seconds, which is the heaviest
+      // repeating job in the app.
+      if (document.hidden) return;
       const view = document.querySelector('[data-view="gamecast"]');
       if (view && view.classList.contains('is-active')) renderRealGameCast();
     }, 20000);
@@ -26843,6 +26944,42 @@
   }
   window.sbRootingScoreExplain = sbRootingScoreExplain;
 
+  // ---- Who is in what, worked out once -------------------------------
+  // Every league's two sides, as a map from player to the matchups he is
+  // in. Built once and reused, because gcSideIds is not a lookup: it
+  // rebuilds a lineup from the league's real slots, and in a best-ball
+  // league it sorts the whole roster to find the optimal one.
+  //
+  // Around the League was calling it twice per league per player per play.
+  // Sixty plays, two players each, eighteen leagues, both sides: roughly
+  // four thousand lineup rebuilds every twenty seconds, which is the page
+  // going unresponsive. Thirty-six now, and the plays just read the map.
+  window.__sbExposureIndex = window.__sbExposureIndex || { at: 0, map: null };
+  function sbExposureIndex(espnGameData, week) {
+    const cache = window.__sbExposureIndex;
+    if (cache.map && Date.now() - cache.at < 10000) return cache.map;
+    const map = new Map();
+    const add = (pid, row) => {
+      if (!pid) return;
+      const list = map.get(pid);
+      if (!list) { map.set(pid, [row]); return; }
+      // One league can only have him on one side; the first wins, which is
+      // your own, since your side is walked first.
+      if (list.some(x => x.entry.league.league_id === row.entry.league.league_id)) return;
+      list.push(row);
+    };
+    (typeof gcVisibleLeagueEntries === 'function' ? gcVisibleLeagueEntries() : []).forEach(entry => {
+      if (!entry.myMatchup || !entry.oppMatchup) return;
+      const state = sbLiveStateFor(entry, espnGameData, week);
+      gcSideIds(entry.myMatchup, entry.league).forEach(pid => add(pid, { entry, onMySide: true, state }));
+      gcSideIds(entry.oppMatchup, entry.league).forEach(pid => add(pid, { entry, onMySide: false, state }));
+    });
+    cache.at = Date.now();
+    cache.map = map;
+    return map;
+  }
+  window.sbExposureIndex = sbExposureIndex;
+
   // Every league a player is in, with what a point of his is worth there.
   // Positive means his points help you, negative means they cost you --
   // which for a player on your opponent's roster is automatic.
@@ -26852,13 +26989,7 @@
     const week = o.week != null ? o.week : window.__gcWeek;
     const leagues = [];
     let perPoint = 0;
-    (typeof gcVisibleLeagueEntries === 'function' ? gcVisibleLeagueEntries() : []).forEach(e => {
-      if (!e.myMatchup || !e.oppMatchup) return;
-      const mine = gcSideIds(e.myMatchup, e.league);
-      const onMySide = mine.includes(playerId);
-      const onOppSide = !onMySide && gcSideIds(e.oppMatchup, e.league).includes(playerId);
-      if (!onMySide && !onOppSide) return;
-      const state = sbLiveStateFor(e, espnGameData, week);
+    (sbExposureIndex(espnGameData, week).get(playerId) || []).forEach(({ entry: e, onMySide, state }) => {
       // sbSwingFor already signs this: points added to your opponent's
       // side lower your win probability, so a player you are facing comes
       // back negative without anything here flipping him. A settled
@@ -26889,16 +27020,11 @@
     const espnGameData = o.espnGameData || window.__gcEspnGameData || null;
     const week = o.week != null ? o.week : window.__gcWeek;
     const out = [];
-    (typeof gcVisibleLeagueEntries === 'function' ? gcVisibleLeagueEntries() : []).forEach(e => {
-      if (!e.myMatchup || !e.oppMatchup) return;
-      const onMySide = gcSideIds(e.myMatchup, e.league).includes(playerId);
-      const onOppSide = !onMySide && gcSideIds(e.oppMatchup, e.league).includes(playerId);
-      if (!onMySide && !onOppSide) return;
+    (sbExposureIndex(espnGameData, week).get(playerId) || []).forEach(({ entry: e, onMySide, state }) => {
       // Scored in this league's settings, not on the house line: the same
       // catch is worth 1.0 more in full PPR than in half, and this league
       // is the one whose matchup is being decided.
       const pts = sbCustomScoreFor(stats, e.league.scoring_settings) || 0;
-      const state = sbLiveStateFor(e, espnGameData, week);
       out.push({
         name: e.league.name,
         leagueId: e.league.league_id,
@@ -26998,6 +27124,10 @@
   // this column would pull a dozen ESPN summaries every twenty seconds
   // for games that ended on Sunday afternoon.
   window.__gcFinalPbpCache = window.__gcFinalPbpCache || {};
+  // Short-name maps live as long as the page does: a rostered player can
+  // change teams mid-week, which only ever adds a name that fails to
+  // match until the next reload, never a wrong one.
+  const gcShortNameCache = {};
   const GC_FEED_MAX = 60;
 
   async function gcFeedPlays(games, dict) {
@@ -27020,14 +27150,24 @@
       // ESPN names players by short name; the map is built per game so a
       // "J.Jones" in one broadcast can never be matched to the other
       // J.Jones playing somewhere else at the same time.
-      const shortNameMap = {};
-      Object.keys(dict).forEach(id => {
-        const p = dict[id];
-        if (!p || !GC_FANTASY_POS.includes(p.position)) return;
-        if (p.team !== game.away.abbr && p.team !== game.home.abbr) return;
-        const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-        shortNameMap[sbEspnShortName(full)] = id;
-      });
+      //
+      // Cached per matchup: building it walks all eleven thousand players
+      // Sleeper knows about, and it was being rebuilt for every game on
+      // every refresh -- a hundred and fifty thousand iterations every
+      // twenty seconds to produce an answer that cannot change, since the
+      // two teams in a game do not.
+      const nameKey = game.away.abbr + '@' + game.home.abbr;
+      let shortNameMap = gcShortNameCache[nameKey];
+      if (!shortNameMap) {
+        shortNameMap = gcShortNameCache[nameKey] = {};
+        Object.keys(dict).forEach(id => {
+          const p = dict[id];
+          if (!p || !GC_FANTASY_POS.includes(p.position)) return;
+          if (p.team !== game.away.abbr && p.team !== game.home.abbr) return;
+          const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+          shortNameMap[sbEspnShortName(full)] = id;
+        });
+      }
       // Only the tail of each game is ever shown, so there is no reason to
       // score the whole afternoon's worth of plays on every refresh.
       plays.slice(-GC_FEED_MAX).forEach(play => {
@@ -27166,6 +27306,7 @@
   // score fill in behind it. Nothing here re-renders a half that did not
   // change.
   async function renderRealGameCast() {
+    const __gcT0 = performance.now();
     const grid = document.getElementById('gcGrid');
     if (!grid) return;
     if (!window.getNflState) return;
@@ -27213,12 +27354,20 @@
       window.__gcOpenData = null;
     }
 
+    if (typeof deskMark === 'function') deskMark('render:gamecast', performance.now() - __gcT0);
     gcFeedPlays(sorted, dict).then(rows => {
       window.__gcFeedRows = rows;
       // This column refreshes under you every twenty seconds. Reading it
       // back to Sunday morning only to be thrown to the top mid-sentence
       // is the whole column failing at its job, so hold the scroll.
-      gcKeepScroll('gcFeed', (feed) => { feed.innerHTML = gcFeedHtml(rows); });
+      // Most refreshes add nothing: the same plays, re-rendered, which
+      // throws away and rebuilds sixty rows of headshots and team logos
+      // for no reason. Write only when the feed actually changed.
+      const sig = rows.length + '|' + rows.slice(0, 6).map(r => r.game.eventId + ':' + (r.play.seq || r.play.wallclock || '')).join(',');
+      if (sig !== window.__gcFeedSig) {
+        window.__gcFeedSig = sig;
+        gcKeepScroll('gcFeed', (feed) => { feed.innerHTML = gcFeedHtml(rows); });
+      }
       const sub = document.getElementById('gcFeedSub');
       if (sub) {
         const liveCount = sorted.filter(g => g.state === 'in').length;
@@ -27319,6 +27468,7 @@
         if (!chip) return;
         feedFilter.querySelectorAll('.ww-toggle').forEach(c => c.classList.toggle('active', c === chip));
         window.__gcFeedFilter = chip.dataset.gcFeed;
+        window.__gcFeedSig = null;   // a different view of the same rows
         // Filtering is a view of rows already in hand -- no refetch.
         gcKeepScroll('gcFeed', (body) => { body.innerHTML = gcFeedHtml(window.__gcFeedRows || []); });
       });
