@@ -26310,14 +26310,17 @@
   // Your real weekly exposure to one player: leagues where he's started
   // on your side vs. started against you -- the same for/against split
   // the Rooting Guide itself computes.
+  // Which of your leagues have this player, and on which side.
+  //
+  // Read off the shared exposure index rather than rebuilt per call. The
+  // box score asks this for every player on a team while deciding which
+  // rows are worth showing -- sixty-odd players, each of which used to
+  // rebuild both lineups in all eighteen leagues. That was the eight
+  // seconds between clicking a game and seeing it.
   function gcRootingDelta(playerId) {
     const forLeagues = [], againstLeagues = [];
-    gcVisibleLeagueEntries().forEach(e => {
-      const mine = gcSideIds(e.myMatchup, e.league);
-      const opp = gcSideIds(e.oppMatchup, e.league);
-      if (mine.includes(playerId)) forLeagues.push(e.league.name);
-      else if (opp.includes(playerId)) againstLeagues.push(e.league.name);
-    });
+    ((typeof sbExposureIndex === 'function' ? sbExposureIndex() : new Map()).get(playerId) || [])
+      .forEach(r => (r.onMySide ? forLeagues : againstLeagues).push(r.entry.league.name));
     return { delta: forLeagues.length - againstLeagues.length, forLeagues, againstLeagues };
   }
 
@@ -26343,13 +26346,11 @@
     const finished = sbGameFinishedForTeam(team, espnGameData);
     const elapsed = sbGameElapsedFraction(team, espnGameData);
 
-    gcVisibleLeagueEntries().forEach(e => {
-      const mine = gcSideIds(e.myMatchup, e.league);
-      const opp = gcSideIds(e.oppMatchup, e.league);
-      const onMySide = mine.includes(playerId);
-      const onOppSide = !onMySide && opp.includes(playerId);
-      if (!onMySide && !onOppSide) return;
-
+    // Off the shared index: this runs when you expand a player inside a
+    // box score, and rebuilding every league's lineups to answer "which
+    // matchups is he in" is a question already answered for the page.
+    ((typeof sbExposureIndex === 'function' ? sbExposureIndex() : new Map()).get(playerId) || [])
+      .forEach(({ entry: e, onMySide }) => {
       const myPts = e.myMatchup.points || 0;
       const oppPts = e.oppMatchup.points || 0;
       // Scored in this league's own settings -- a real matchup is at
@@ -26401,7 +26402,24 @@
     return groups.join('  |  ');
   }
 
+  // Every fantasy-relevant player on one NFL team. Finding them means
+  // walking all eleven thousand players Sleeper knows about, and the box
+  // score did that fresh on every draw and every team switch.
+  const gcTeamRosterCache = {};
+  function gcTeamRoster(abbr, dict) {
+    if (gcTeamRosterCache[abbr]) return gcTeamRosterCache[abbr];
+    const ids = Object.keys(dict)
+      .filter(id => dict[id] && dict[id].team === abbr && GC_FANTASY_POS.includes(dict[id].position));
+    gcTeamRosterCache[abbr] = ids;
+    return ids;
+  }
+
   function gcStatsHtml(game, whichTeam, dict, statsMap, projMap) {
+    const __t0 = performance.now();
+    try { return gcStatsHtmlInner(game, whichTeam, dict, statsMap, projMap); }
+    finally { if (typeof deskMark === 'function') deskMark('gamecast:boxScore', performance.now() - __t0); }
+  }
+  function gcStatsHtmlInner(game, whichTeam, dict, statsMap, projMap) {
     const abbr = whichTeam === 'home' ? game.home.abbr : game.away.abbr;
     const espnGameData = window.__gcEspnGameData || null;
     // Whether the stats feed returned anything at all -- see
@@ -26414,8 +26432,7 @@
     const finished = sbGameFinishedForTeam(abbr, espnGameData) || game.state === 'post';
     const elapsed = sbGameElapsedFraction(abbr, espnGameData);
 
-    const rows = Object.keys(dict)
-      .filter(id => dict[id] && dict[id].team === abbr && GC_FANTASY_POS.includes(dict[id].position))
+    const rows = gcTeamRoster(abbr, dict)
       .map(id => {
         const raw = statsMap[id] || null;
         // Live score, pregame projection and live projection are all on the
@@ -26518,24 +26535,50 @@
   // else's -- your side against your opponent's -- so you can see exactly
   // which of your matchups this one broadcast is deciding. Leagues with
   // no stake in the game are left out entirely.
+  // A league's live win probability. Priced from the projected finals on
+  // both sides, which is real work, and the answer is the same for every
+  // game panel you open in the same moment -- so it is worked out once and
+  // held for ten seconds, like the rest of the live state.
+  window.__gcWinPctCache = window.__gcWinPctCache || { at: 0, byLeague: {} };
+  function gcLeagueWinPct(entry, espnGameData, week) {
+    const cache = window.__gcWinPctCache;
+    if (Date.now() - cache.at > 10000) { cache.at = Date.now(); cache.byLeague = {}; }
+    const id = entry.league.league_id;
+    if (cache.byLeague[id] !== undefined) return cache.byLeague[id];
+    const pct = sbMatchupWinPct(entry.myMatchup, entry.oppMatchup, entry.league, null, espnGameData, week);
+    cache.byLeague[id] = pct;
+    return pct;
+  }
+
   function gcLeagueBreakdown(game, dict, statsMap, projMap) {
     const espnGameData = window.__gcEspnGameData || null;
     const week = window.__gcWeek != null ? window.__gcWeek : null;
     const teams = new Set([game.away.abbr, game.home.abbr]);
-    const inGame = (pid) => {
-      const p = dict && dict[pid];
-      return !!(p && p.team && teams.has(p.team));
-    };
     const entryFor = (pid) => {
       const p = dict[pid] || {};
       const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || pid;
       const scored = gcScoreStats(pid, statsMap[pid], dict);
       return { id: pid, name, pos: p.position || '', team: p.team || '', pts: scored };
     };
+    // Who is in this game, per league, off the shared index -- the same
+    // membership question the rest of the page already answered once.
+    const byLeague = new Map();
+    const index = (typeof sbExposureIndex === 'function') ? sbExposureIndex() : new Map();
+    index.forEach((rows, pid) => {
+      const p = dict && dict[pid];
+      if (!p || !p.team || !teams.has(p.team)) return;
+      rows.forEach(r => {
+        const id = r.entry.league.league_id;
+        let slot = byLeague.get(id);
+        if (!slot) { slot = { entry: r.entry, mine: [], opp: [] }; byLeague.set(id, slot); }
+        (r.onMySide ? slot.mine : slot.opp).push(pid);
+      });
+    });
     const out = [];
-    gcVisibleLeagueEntries().forEach(e => {
-      const mine = gcSideIds(e.myMatchup, e.league).filter(inGame).map(entryFor);
-      const opp = gcSideIds(e.oppMatchup, e.league).filter(inGame).map(entryFor);
+    byLeague.forEach(slot => {
+      const e = slot.entry;
+      const mine = slot.mine.map(entryFor);
+      const opp = slot.opp.map(entryFor);
       if (!mine.length && !opp.length) return;
       const oppName = (e.oppUser && (e.oppUser.display_name || e.oppUser.username)) || 'Opponent';
       const sumPts = (list) => list.reduce((t, x) => t + (x.pts || 0), 0);
@@ -26546,7 +26589,7 @@
       // panel quoting percentages the Matchup Hub disagreed with.
       let winPct = null;
       try {
-        winPct = sbMatchupWinPct(e.myMatchup, e.oppMatchup, e.league, null, espnGameData, week);
+        winPct = gcLeagueWinPct(e, espnGameData, week);
       } catch (err) { /* a league we can't price still belongs in the list */ }
       out.push({
         league: e.league.name, leagueId: e.league.league_id, mine, opp, oppName,
@@ -26777,6 +26820,7 @@
   function sbExposureIndex(espnGameData, week) {
     const cache = window.__sbExposureIndex;
     if (cache.map && Date.now() - cache.at < 10000) return cache.map;
+    const __t0 = performance.now();
     const map = new Map();
     const add = (pid, row) => {
       if (!pid) return;
@@ -26795,6 +26839,7 @@
     });
     cache.at = Date.now();
     cache.map = map;
+    if (typeof deskMark === 'function') deskMark('exposureIndex:build', performance.now() - __t0);
     return map;
   }
   window.sbExposureIndex = sbExposureIndex;
@@ -26907,6 +26952,11 @@
   // and the box score. Both were full columns of their own before, which
   // is why the page could only ever show you one game.
   function gcInlineHtml(game, dict) {
+    const __t0 = performance.now();
+    try { return gcInlineHtmlInner(game, dict); }
+    finally { if (typeof deskMark === 'function') deskMark('gamecast:openPanel', performance.now() - __t0); }
+  }
+  function gcInlineHtmlInner(game, dict) {
     const d = window.__gcOpenData;
     const ready = d && d.game && d.game.eventId === game.eventId;
     const stats = ready
@@ -27244,6 +27294,8 @@
     // half a minute. None of that can have changed since the render a few
     // seconds ago, and the panel is built from data already in hand.
     const openGame = (eventId) => {
+      const grid = document.getElementById('gcGrid');
+      if (!grid) return;
       window.__gcOpenEventId = window.__gcOpenEventId === eventId ? null : eventId;
       window.__gcStatsTeam = null;
       window.__gcExpandedPlayer = null;
@@ -27254,9 +27306,23 @@
         ? { game: open, dict: cache.dict, statsMap: cache.statsMap, projMap: cache.projMap }
         : null;
       if (open) window.__gcStatsTeam = 'away';
-      // The grid draws the open game's panel with it; the feed is a
-      // separate column and has no reason to be touched at all.
-      gcRenderGrid(cache.sorted, cache.dict);
+
+      // Insert or remove just the panel. Redrawing the whole grid to open
+      // one game means thirteen cards and twenty-six team logos thrown
+      // away and rebuilt, which the browser has to re-decode and re-lay
+      // out -- for cards whose contents did not change at all.
+      const existing = grid.querySelector('.gc-inline');
+      if (existing) existing.remove();
+      grid.querySelectorAll('.gc-card.active').forEach(c => c.classList.remove('active'));
+      if (open) {
+        const card = grid.querySelector(`.gc-card[data-gc-event="${open.eventId}"]`);
+        if (card) {
+          card.classList.add('active');
+          card.insertAdjacentHTML('afterend', gcInlineHtml(open, cache.dict));
+        } else {
+          gcRenderGrid(cache.sorted, cache.dict);
+        }
+      }
     };
 
     if (grid) {
