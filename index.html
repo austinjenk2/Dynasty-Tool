@@ -1692,6 +1692,38 @@
   .pp-seed-key { display: inline-flex; align-items: center; gap: 5px; }
   .pp-seed-dot { width: 8px; height: 8px; border-radius: 2px; }
 
+  /* ---- The card back --------------------------------------------------
+     Your team as the card face, narrow and dense; the week and the seed
+     distribution beside it, in the space a four-tile row used to leave
+     empty; the league underneath in agate. */
+  .pp-cardback { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 12px; margin-bottom: 12px; align-items: start; }
+  .pp-cardface { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px 16px; }
+  .pp-card-top { display: flex; align-items: center; gap: 8px; }
+  .pp-card-seat { font-size: 9.5px; font-weight: 800; letter-spacing: 0.8px; color: var(--surface); background: var(--ink); padding: 3px 8px; border-radius: 3px; }
+  .pp-card-you { font-size: 9.5px; font-weight: 800; letter-spacing: 0.8px; color: var(--green); border: 1px solid var(--green); padding: 2px 7px; border-radius: 3px; }
+  .pp-card-name { font-family: 'Source Serif 4', serif; font-size: 25px; font-weight: 700; margin: 9px 0 1px; letter-spacing: -0.3px; line-height: 1.15; }
+  .pp-card-sub2 { font-size: 11.5px; color: var(--muted); }
+  .pp-card-big { display: flex; align-items: baseline; gap: 10px; margin: 13px 0 2px; }
+  .pp-card-bigv { font-family: 'Source Serif 4', serif; font-size: 46px; font-weight: 700; line-height: 1; color: var(--ink); }
+  .pp-card-bigv.is-in { color: var(--green); }
+  .pp-card-bigv.is-live { color: var(--gold); }
+  .pp-card-bigv.is-out { color: var(--red); }
+  .pp-card-bigl { font-size: 11px; color: var(--muted); line-height: 1.35; }
+  .pp-statline { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-soft); border: 1px solid var(--border-soft); border-radius: 6px; overflow: hidden; margin-top: 14px; }
+  .pp-sl-cell { background: var(--bg); padding: 7px 10px 8px; min-width: 0; }
+  .pp-sl-k { font-size: 9px; font-weight: 800; letter-spacing: 0.6px; color: var(--faint); }
+  .pp-sl-v { font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; }
+  .pp-sl-v.is-up { color: var(--green); }
+  .pp-sl-v.is-down { color: var(--red); }
+  .pp-sl-s { font-size: 10px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pp-cardright { display: grid; gap: 12px; min-width: 0; }
+
+  /* The league table, set as agate: small, rigid and dense on purpose --
+     twelve columns fit without crowding because that is what agate is for. */
+  .pp-table { font-size: 11.5px; }
+  .pp-table th { font-size: 9px; letter-spacing: 0.4px; }
+  .pp-table td { padding-top: 5px; padding-bottom: 5px; }
+
   .pp-team-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px; margin-bottom: 14px; }
   .pp-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
   .pp-panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -1785,6 +1817,7 @@
   @media (max-width: 900px) {
     .pp-team-grid { grid-template-columns: 1fr; }
     .pp-wif-grid { grid-template-columns: 1fr; }
+    .pp-cardback { grid-template-columns: 1fr; }
   }
 
   /* ---- Rankings ----------------------------------------------------
@@ -2264,6 +2297,21 @@
   .rg-list { display: flex; flex-direction: column; gap: 6px; max-height: 460px; overflow-y: auto; }
   .rg-panel-even .rg-list { max-height: none; }
 
+  .rg-band-head {
+    font-size: 9.5px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--faint); padding: 13px 2px 5px; border-bottom: 1px solid var(--border-soft);
+    margin-bottom: 5px;
+  }
+  .rg-band-head:first-child { padding-top: 2px; }
+  .rg-score-head { display: flex; gap: 14px; align-items: flex-start; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .rg-score-num { font-family: 'Source Serif 4', serif; font-size: 34px; font-weight: 700; line-height: 1; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .rg-score-num.is-pos { color: var(--green); }
+  .rg-score-num.is-neg { color: var(--red); }
+  .rg-score-num.is-even { color: var(--gold); }
+  .rg-score-say { min-width: 0; }
+  .rg-score-band { font-size: 10px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); }
+  .rg-score-line { font-size: 13px; line-height: 1.5; margin-top: 3px; }
+  .rg-score-fine { font-size: 11px; color: var(--faint); line-height: 1.5; margin-top: 5px; }
   .rg-band { color: var(--faint); font-weight: 600; }
   .rg-band::before { content: '\00b7'; margin: 0 5px; }
   .rg-key-bands { margin: 6px 0 8px; padding-left: 0; list-style: none; font-size: 11.5px; color: var(--muted); line-height: 1.75; }
@@ -17941,10 +17989,39 @@
   // Inline expand under the clicked row (not a full-screen takeover) so you
   // can still scroll and open other players' league lists on the same page
   // without having to back out first.
+  // The score, said plainly, at the top of the panel a click already opens.
+  // This used to live only in a `title` tooltip, which is the wrong place
+  // twice over: it never appears on a touch screen at all, and on a desktop
+  // it takes a second of hovering to reach something the page should simply
+  // have said out loud.
+  function rgScoreHeadHtml(row) {
+    const score = Number(row.dataset.score);
+    const raw = Number(row.dataset.raw);
+    if (!Number.isFinite(score) || !Number.isFinite(raw)) return '';
+    const n = Number(row.dataset.levcount) || 0;
+    const band = typeof sbRootingBand === 'function' ? sbRootingBand(score) : '';
+    const wins = typeof sbRootingWinsText === 'function' ? sbRootingWinsText(raw) : '0.00';
+    const cls = score > 2 ? 'is-pos' : (score < -2 ? 'is-neg' : 'is-even');
+    const dirWord = score > 0 ? 'Root for him' : (score < 0 ? 'Root against him' : 'Neutral');
+    return `<div class="rg-score-head">
+      <div class="rg-score-num ${cls}">${score > 0 ? '+' : ''}${score}</div>
+      <div class="rg-score-say">
+        <div class="rg-score-band">${dirWord} &middot; ${band}</div>
+        <div class="rg-score-line">A <b>10-point game</b> from him is worth about
+          <b>${wins} matchups</b> to you, across the
+          ${n === 1 ? 'one league' : n + ' leagues'} listed below.</div>
+        <div class="rg-score-fine">Win probabilities add up, so that really is a count of games.
+          The score is the same reading on a fixed &minus;100 to +100 dial, which is what makes two
+          players comparable when one is in three leagues and the other is in nine.</div>
+      </div>
+    </div>`;
+  }
+
   function rgExpandHtml(row) {
     const forLeagues = (row.dataset.for || '').split(' &middot; ').filter(Boolean);
     const againstLeagues = (row.dataset.against || '').split(' &middot; ').filter(Boolean);
     return (
+      rgScoreHeadHtml(row) +
       `<div class="pm-exp-head" style="text-align:left;margin-bottom:8px">STARTING FOR YOU &middot; <b>${forLeagues.length}</b> Leagues</div>` +
       `<div class="pm-league-list">${rgLeagueRowsHtml(forLeagues)}</div>` +
       `<div class="pm-exp-head" style="text-align:left;margin:16px 0 8px">STARTING AGAINST YOU &middot; <b>${againstLeagues.length}</b> Leagues</div>` +
@@ -18247,6 +18324,9 @@
         r.el.dataset.dollar = String(dollarNet);
         r.el.dataset.swing = swingNet.toFixed(3);
         r.el.dataset.score = String(rootScore);
+        // Unweighted, for the expected-wins reading in the expand panel.
+        r.el.dataset.raw = levLeagues.reduce((sum, l) => sum + l.perPoint, 0).toFixed(3);
+        r.el.dataset.levcount = String(levLeagues.length);
         const deltaEl = r.el.querySelector('.rg-delta');
         const noteEl = r.el.querySelector('.rg-note');
         deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
@@ -18338,8 +18418,29 @@
       forListEl.innerHTML = '';
       againstListEl.innerHTML = '';
       evenListEl.innerHTML = '';
-      buckets.for.forEach(b => forListEl.appendChild(b.el));
-      buckets.against.forEach(b => againstListEl.appendChild(b.el));
+      // In score mode the list is grouped by band, because the first thing
+      // you want off this page is "who actually decides my week", and that
+      // is a group rather than a rank. Off in the other modes, where the
+      // number is dollars or a league count and has no bands.
+      const grouped = rgSortCriterion === 'score' && typeof sbRootingBand === 'function';
+      const fill = (listEl, rows) => {
+        let band = null;
+        rows.forEach(b => {
+          if (grouped) {
+            const mine = sbRootingBand(Number(b.el.dataset.score) || 0);
+            if (mine !== band) {
+              band = mine;
+              const h = document.createElement('div');
+              h.className = 'rg-band-head';
+              h.textContent = mine;
+              listEl.appendChild(h);
+            }
+          }
+          listEl.appendChild(b.el);
+        });
+      };
+      fill(forListEl, buckets.for);
+      fill(againstListEl, buckets.against);
       buckets.even.forEach(b => evenListEl.appendChild(b.el));
     }
     // Exposed so Settings' League Money panel can refresh this page's $
@@ -27359,6 +27460,26 @@
     return `A ${SB_SCORE_YARDSTICK}-point game from him leaves your week about `
       + `${rounded} points of win probability ${dir} off, added up across your matchups.`;
   }
+  // ---- The same thing in matchups ---------------------------------------
+  // The one unit on this page that needs no explaining: how many more
+  // matchups you expect to win. Win probabilities add up to expected wins,
+  // so a player worth 3.2% a point over a 10-point game is worth 0.32 of a
+  // win -- and a person can check that against the league list printed
+  // under it, which a hyperbolic tangent on a fixed dial can never be.
+  //
+  // Deliberately the RAW per-point number, not the money-weighted one that
+  // ranks the list. Expected wins is a count of real matchups; weighting it
+  // by buy-in would make it a count of nothing.
+  function sbRootingWins(rawPerPoint) {
+    return (Number(rawPerPoint) || 0) * SB_SCORE_YARDSTICK / 100;
+  }
+  function sbRootingWinsText(rawPerPoint) {
+    const w = sbRootingWins(rawPerPoint);
+    if (Math.abs(w) < 0.005) return '0.00';
+    return (w > 0 ? '+' : '\u2212') + Math.abs(w).toFixed(2);
+  }
+  window.sbRootingWins = sbRootingWins;
+  window.sbRootingWinsText = sbRootingWinsText;
   window.sbRootingBand = sbRootingBand;
   window.sbRootingMeaning = sbRootingMeaning;
 
@@ -31115,56 +31236,12 @@
         return;
       }
 
-      bodyEl.innerHTML = ppTeamCard(entry, selected, byeSlots, playoffTeams) +
-        ppStatTiles(teams, selected) +
+      bodyEl.innerHTML = ppTeamCard(entry, selected, byeSlots, playoffTeams, teams, seedOf) +
         ppLeagueTable(teams, seedOf, playoffTeams) +
         `<p class="pp-note">${playoffTeams} of ${rosters.length} teams make the playoffs` +
         (byeSlots ? `, and the top ${byeSlots} get a bye` : '') +
         `. Odds are from ${PP_SIM_RUNS.toLocaleString()} simulated seasons played through the real remaining schedule.` +
         ` <b>If win</b> and <b>if loss</b> replay every one of those seasons both ways, changing this week's result and nothing else &mdash; so they measure the game, not how good a team looked in the seasons it happened to win.</p>`;
-    }
-
-    // ---- The four numbers a manager checks next -------------------------
-    // Points per game and the last three say how good a team has been and
-    // how good it is right now; all-play says how good it has been against
-    // the WHOLE league rather than against the six teams the schedule
-    // happened to hand it; and luck is the gap between the two, which is
-    // the only one of the four that says anything the record does not.
-    function ppStatTiles(teams, team) {
-      const ppgRanked = teams.filter(t => t.ppg != null).sort((a, b) => b.ppg - a.ppg);
-      const ppgRank = ppgRanked.findIndex(t => t.id === team.id) + 1;
-      const ap = team.ap || { w: 0, l: 0, t: 0, games: 0 };
-      const apRate = ap.games ? (ap.w + ap.t * 0.5) / ap.games : null;
-      const played = team.wins + team.losses + team.ties;
-      // Wins against the wins an all-play record says the team earned:
-      // the same schedule-free win rate, applied to the games it actually
-      // played. Positive means the schedule has been kind.
-      const luck = apRate == null || !played ? null
-        : (team.wins + team.ties * 0.5) - played * apRate;
-      const last3Delta = team.last3 != null && team.ppg != null ? team.last3 - team.ppg : null;
-      const tile = (label, value, sub, cls) => `<div class="pp-tile">
-        <div class="pp-tile-label">${label}</div>
-        <div class="pp-tile-value${cls || ''}">${value}</div>
-        <div class="pp-tile-sub">${sub}</div>
-      </div>`;
-      const signed = (v, d) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d);
-      return `<div class="pp-tiles">
-        ${tile('POINTS PER GAME',
-          team.ppg != null ? team.ppg.toFixed(1) : '&mdash;',
-          ppgRank ? ppOrdinal(ppgRank) + ' in the league' : 'No games played yet')}
-        ${tile('LAST 3 GAMES',
-          team.last3 != null ? team.last3.toFixed(1) : '&mdash;',
-          last3Delta == null ? '&mdash;' : signed(last3Delta, 1) + ' vs season',
-          last3Delta == null || Math.abs(last3Delta) < 0.05 ? '' : (last3Delta > 0 ? ' is-up' : ' is-down'))}
-        ${tile('ALL-PLAY',
-          ap.games ? `${ap.w}-${ap.l}${ap.t ? '-' + ap.t : ''}` : '&mdash;',
-          apRate == null ? 'Needs a week on the board'
-            : Math.round(apRate * 100) + '% win rate vs the whole league')}
-        ${tile('LUCK',
-          luck == null ? '&mdash;' : signed(luck, 1),
-          'Wins vs all-play record',
-          luck == null || Math.abs(luck) < 0.05 ? '' : (luck > 0 ? ' is-up' : ' is-down'))}
-      </div>`;
     }
 
     function ppFillTeamSelect(teams, selected) {
@@ -31175,54 +31252,98 @@
       ).join('');
     }
 
-    function ppTeamCard(entry, team, byeSlots, playoffTeams) {
+    function ppTeamCard(entry, team, byeSlots, playoffTeams, teams, seedOf) {
       const o = team.odds || {};
       const wk = ppMatchupFor(entry, team);
       const seedChart = ppSeedChart(o.seedProb, playoffTeams, byeSlots);
-      const projRec = ppProjRecord(o);
-      return `<div class="pp-team-grid">
-        <div class="pp-panel">
-          <div class="pp-panel-head">
-            <span class="pp-panel-title">${sbFieldEsc(team.name)}</span>
-            <span class="pp-panel-sub">${sbFieldEsc(recordOf(team.roster))} &middot; ${team.isMe ? 'you' : 'not your team'}</span>
+      const seat = seedOf ? seedOf[team.id] : null;
+      return `<div class="pp-cardback">
+        <div class="pp-cardface">
+          <div class="pp-card-top">
+            <span class="pp-card-seat">${seat ? ppOrdinal(seat).toUpperCase() + ' SEED' : 'UNSEEDED'}</span>
+            ${team.isMe ? '<span class="pp-card-you">YOU</span>' : ''}
           </div>
-          <div class="pp-stat-row">
-            <div>
-              <div class="pp-stat-label">PLAYOFFS</div>
-              <div class="pp-stat-big${oddsClass(o.playoff)}">${pctText(o.playoff)}</div>
-            </div>
-            <div>
-              <div class="pp-stat-label">BYE</div>
-              <div class="pp-stat-big is-plain">${o.bye == null ? '&mdash;' : pctText(o.bye)}</div>
-            </div>
-            <div style="margin-left:auto;text-align:right">
-              <div class="pp-stat-label">PROJECTED RECORD</div>
-              <div class="pp-stat-big is-plain">${projRec}</div>
-              <div class="pp-stat-sub">${o.likelySeed != null
-              ? ppOrdinal(o.likelySeed) + ' seed or better, half the time'
-                + (o.topSeedOdds != null ? ' &middot; ' + pctText(o.topSeedOdds) + ' to be the 1 seed' : '')
-              : ''}</div>
-            </div>
+          <h3 class="pp-card-name">${sbFieldEsc(team.name)}</h3>
+          <div class="pp-card-sub2">${sbFieldEsc(entry.league.name)} &middot; ${sbFieldEsc(recordOf(team.roster))} &middot; week ${entry.week || ''}</div>
+
+          <div class="pp-card-big">
+            <span class="pp-card-bigv${oddsClass(o.playoff)}">${pctText(o.playoff)}</span>
+            <span class="pp-card-bigl">to make<br>the field</span>
           </div>
-          <div class="pp-stat-label" style="margin-top:14px">CHANCE OF EACH SEED</div>
-          ${seedChart}
+
+          ${ppStatLine(teams, team, o)}
         </div>
-        <div class="pp-panel">
-          <div class="pp-panel-head"><span class="pp-panel-title">Week ${entry.week || ''} Matchup</span></div>
-          ${wk}
-          <div class="pp-split">
-            <div class="pp-split-box is-win">
-              <div class="pp-split-label">WITH A WIN</div>
-              <div class="pp-split-value">${pctText(o.ifWin)}</div>
-              <div class="pp-split-label">PLAYOFF ODDS</div>
-            </div>
-            <div class="pp-split-box is-loss">
-              <div class="pp-split-label">WITH A LOSS</div>
-              <div class="pp-split-value">${pctText(o.ifLoss)}</div>
-              <div class="pp-split-label">PLAYOFF ODDS</div>
+
+        <div class="pp-cardright">
+          <div class="pp-panel">
+            <div class="pp-panel-head"><span class="pp-panel-title">Week ${entry.week || ''} Matchup</span></div>
+            ${wk}
+            <div class="pp-split">
+              <div class="pp-split-box is-win">
+                <div class="pp-split-label">WITH A WIN</div>
+                <div class="pp-split-value">${pctText(o.ifWin)}</div>
+                <div class="pp-split-label">PLAYOFF ODDS</div>
+              </div>
+              <div class="pp-split-box is-loss">
+                <div class="pp-split-label">WITH A LOSS</div>
+                <div class="pp-split-value">${pctText(o.ifLoss)}</div>
+                <div class="pp-split-label">PLAYOFF ODDS</div>
+              </div>
             </div>
           </div>
+          <div class="pp-panel">
+            <div class="pp-panel-head">
+              <span class="pp-panel-title">Where the season ends</span>
+              <span class="pp-panel-sub">${o.likelySeed != null
+                ? ppOrdinal(o.likelySeed) + ' or better, half the time'
+                : 'chance of each seed'}</span>
+            </div>
+            ${seedChart}
+          </div>
         </div>
+      </div>`;
+    }
+
+    // ---- The card's stat block ------------------------------------------
+    // Eight readings in two columns down the side of the card, the way the
+    // back of a real card prints a season line: dense, aligned, and read by
+    // scanning rather than by studying. This replaced four wide tiles that
+    // carried four of these numbers across the full width of the page and
+    // left the card beside them mostly empty.
+    function ppStatLine(teams, team, o) {
+      const list = teams || [];
+      const ppgRanked = list.filter(t => t.ppg != null).sort((a, b) => b.ppg - a.ppg);
+      const ppgRank = ppgRanked.findIndex(t => t.id === team.id) + 1;
+      const ap = team.ap || { w: 0, l: 0, t: 0, games: 0 };
+      const apRate = ap.games ? (ap.w + ap.t * 0.5) / ap.games : null;
+      const played = team.wins + team.losses + team.ties;
+      // Wins against the wins an all-play record says the team earned: the
+      // same schedule-free win rate, applied to the games actually played.
+      // Positive means the schedule has been kind.
+      const luck = apRate == null || !played ? null
+        : (team.wins + team.ties * 0.5) - played * apRate;
+      const last3Delta = team.last3 != null && team.ppg != null ? team.last3 - team.ppg : null;
+      const signed = (v, d) => (v > 0 ? '+' : v < 0 ? '\u2212' : '') + Math.abs(v).toFixed(d);
+      const tone = (v, eps) => v == null || Math.abs(v) < eps ? '' : (v > 0 ? ' is-up' : ' is-down');
+      const cell = (k, v, sub, cls) => `<div class="pp-sl-cell">
+        <div class="pp-sl-k">${k}</div>
+        <div class="pp-sl-v${cls || ''}">${v}</div>
+        ${sub ? `<div class="pp-sl-s">${sub}</div>` : ''}
+      </div>`;
+      return `<div class="pp-statline">
+        ${cell('BYE', o.bye == null ? '&mdash;' : pctText(o.bye), o.byeSlots ? 'top ' + o.byeSlots : '')}
+        ${cell('1 SEED', o.topSeedOdds == null ? '&mdash;' : pctText(o.topSeedOdds), 'outright')}
+        ${cell('PROJ. RECORD', ppProjRecord(o, 0), ppProjRecord(o) + ' exactly')}
+        ${cell('LIKELY SEED', o.likelySeed != null ? ppOrdinal(o.likelySeed) : '&mdash;',
+          o.seed != null ? o.seed.toFixed(1) + ' average' : '')}
+        ${cell('POINTS / GAME', team.ppg != null ? team.ppg.toFixed(1) : '&mdash;',
+          ppgRank ? ppOrdinal(ppgRank) + ' in league' : '')}
+        ${cell('LAST 3', team.last3 != null ? team.last3.toFixed(1) : '&mdash;',
+          last3Delta == null ? '' : signed(last3Delta, 1) + ' vs season',
+          tone(last3Delta, 0.05))}
+        ${cell('ALL-PLAY', ap.games ? `${ap.w}&ndash;${ap.l}` : '&mdash;',
+          apRate == null ? '' : Math.round(apRate * 100) + '% vs field')}
+        ${cell('LUCK', luck == null ? '&mdash;' : signed(luck, 1), 'wins vs all-play', tone(luck, 0.05))}
       </div>`;
     }
 
