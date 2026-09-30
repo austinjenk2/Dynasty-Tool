@@ -19323,6 +19323,24 @@
         // cached permanently across syncs, keyed by that season's own
         // league_id -- only fetched once per league ever, not every poll.
         window.__sleeperPrevSeasonCache = window.__sleeperPrevSeasonCache || {};
+        // ---- A light sync, when there is no football on ----------------
+        // Half the fetches below cannot produce a different answer on a
+        // Wednesday, and they are the bulk of the requests: a week's
+        // matchups are fixed once the week is set, manager names and
+        // avatars effectively never change, and projections for a week
+        // nobody is playing move slowly enough that half an hour late is
+        // not late. What CAN change is what this is really for -- a trade,
+        // a waiver claim, a roster move -- so rosters, transactions and
+        // traded picks are pulled every time regardless of the day.
+        //
+        // Skipped fetches reuse the last good answer rather than returning
+        // nothing, so nothing on the page goes blank between syncs.
+        const light = (typeof deskTempo === 'function') && deskTempo() === 'idle';
+        const reuse = (lg, pick, fallback) => {
+          const prev = (window.sleeperLeagueData || {})[lg.league_id];
+          const had = prev ? pick(prev) : null;
+          return had != null ? had : fallback;
+        };
         const [rosters, allMatchups, allUsers, projections, allTransactions, trendingAdds, allTradedPicks, allPrevRosters] = await Promise.all([
           // null (not []) on failure -- a transient fetch error here used to
           // silently collapse a league's whole roster list to empty, which
@@ -19331,9 +19349,15 @@
           // value). null lets the assembly below fall back to the last
           // known-good rosters for that league instead of wiping them out.
           Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/rosters`).catch(() => null))),
-          Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/matchups/${week}`).catch(() => []))),
-          Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
-          getWeekProjections(season, week, true),
+          light
+            ? Promise.resolve(leagues.map(lg => reuse(lg, e => e.allMatchups, [])))
+            : Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/matchups/${week}`).catch(() => []))),
+          light
+            ? Promise.resolve(leagues.map(lg => reuse(lg, e => e.users, [])))
+            : Promise.all(leagues.map(lg => sleeperFetch(`/league/${lg.league_id}/users`).catch(() => []))),
+          light && window.__sleeperProjections
+            ? Promise.resolve(window.__sleeperProjections)
+            : getWeekProjections(season, week, true),
           Promise.all(leagues.map(lg =>
             Promise.all(tradeWeeks.map(async (w) => {
               const cacheKey = `${lg.league_id}_${w}`;
@@ -19345,13 +19369,24 @@
               return data;
             })).then(arrs => arrs.flat())
           )),
+          // One request, and the waiver wire is exactly the thing that
+          // moves on a quiet day, so this one is never skipped.
           sleeperFetch('/players/nfl/trending/add?lookback_hours=24&limit=25').catch(() => []),
           // Future draft-pick ownership (Draft Capital) only matters for
           // real dynasty/keeper leagues -- redraft leagues don't carry
           // picks forward, so skip the fetch for those entirely.
-          Promise.all(leagues.map(lg => sbLeagueIsDynasty(lg)
-            ? sleeperFetch(`/league/${lg.league_id}/traded_picks`).catch(() => [])
-            : Promise.resolve([]))),
+          // Pick ownership only ever changes in a trade, and a trade shows
+          // up in the transactions above. So on a quiet day this is
+          // fetched once and then left alone until a trade is actually
+          // seen -- at which point the next sync picks the new ownership
+          // up. That is eighteen requests saved on most idle syncs, for a
+          // half-hour delay on a number that did not move.
+          Promise.all(leagues.map(lg => {
+            if (!sbLeagueIsDynasty(lg)) return Promise.resolve([]);
+            const cached = reuse(lg, e => e.tradedPicks, null);
+            if (light && cached && !window.__sleeperPicksStale) return Promise.resolve(cached);
+            return sleeperFetch(`/league/${lg.league_id}/traded_picks`).catch(() => []);
+          })),
           // Last Season Placement: real final regular-season standings
           // (wins, then points-for as tiebreak) from the league's own
           // previous_league_id. Doesn't account for playoff results --
@@ -19407,6 +19442,14 @@
           };
           return renderLeagueRow(lg, i, myRoster, isCoOwned, myMatchup, oppMatchup, oppUser);
         });
+
+        // Did anything trade since last sync? Pick ownership is refetched
+        // on the next sync when it did, and left alone when it did not.
+        const tradeCount = Object.values(window.sleeperLeagueData)
+          .reduce((n, e) => n + ((e.allTrades && e.allTrades.length) || 0), 0);
+        window.__sleeperPicksStale = window.__sleeperLastTradeCount != null
+          && tradeCount !== window.__sleeperLastTradeCount;
+        window.__sleeperLastTradeCount = tradeCount;
 
         // Draft data is cached per draft_id (not reset each sync) since a
         // completed draft never changes -- only re-fetch drafts that are
@@ -26148,28 +26191,46 @@
   // leagues counts 4, because that is how much of your week he actually
   // swings. `for` = your starters playing in this game, `against` = the
   // starters your opponents have in it.
-  function gcGameExposure(game, dict) {
-    const teams = new Set([game.away.abbr, game.home.abbr]);
-    const inGame = (pid) => {
+  // Exposure by NFL team, worked out once for the whole slate.
+  //
+  // This used to walk every league's two sides for every game on the
+  // board -- thirteen games times eighteen leagues times both sides, so
+  // roughly 470 lineup rebuilds every time the grid was drawn, and the
+  // grid is drawn every time you open or close a game. It now reads the
+  // same exposure index the play feed uses, which costs 36 rebuilds for
+  // the whole page, and buckets the answer by team.
+  window.__gcTeamExposure = window.__gcTeamExposure || { at: 0, map: null };
+  function gcTeamExposureMap(dict) {
+    const cache = window.__gcTeamExposure;
+    if (cache.map && Date.now() - cache.at < 10000) return cache.map;
+    const map = {};
+    const bucket = (team) => (map[team] = map[team]
+      || { forCount: 0, againstCount: 0, forNames: [], againstNames: [] });
+    const index = (typeof sbExposureIndex === 'function') ? sbExposureIndex() : new Map();
+    index.forEach((rows, pid) => {
       const p = dict && dict[pid];
-      return !!(p && p.team && teams.has(p.team));
-    };
-    let forCount = 0, againstCount = 0;
-    const forNames = [], againstNames = [];
-    const nameOf = (pid) => {
-      const p = dict && dict[pid];
-      if (!p) return pid;
-      return p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || pid;
-    };
-    gcVisibleLeagueEntries().forEach(e => {
-      gcSideIds(e.myMatchup, e.league).forEach(pid => {
-        if (inGame(pid)) { forCount++; forNames.push(`${nameOf(pid)} — ${e.league.name}`); }
-      });
-      gcSideIds(e.oppMatchup, e.league).forEach(pid => {
-        if (inGame(pid)) { againstCount++; againstNames.push(`${nameOf(pid)} — ${e.league.name}`); }
+      if (!p || !p.team) return;
+      const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || pid;
+      const b = bucket(p.team);
+      rows.forEach(r => {
+        if (r.onMySide) { b.forCount++; b.forNames.push(`${name} — ${r.entry.league.name}`); }
+        else { b.againstCount++; b.againstNames.push(`${name} — ${r.entry.league.name}`); }
       });
     });
-    return { forCount, againstCount, forNames, againstNames };
+    cache.at = Date.now();
+    cache.map = map;
+    return map;
+  }
+  function gcGameExposure(game, dict) {
+    const map = gcTeamExposureMap(dict);
+    const a = map[game.away.abbr] || { forCount: 0, againstCount: 0, forNames: [], againstNames: [] };
+    const h = map[game.home.abbr] || { forCount: 0, againstCount: 0, forNames: [], againstNames: [] };
+    return {
+      forCount: a.forCount + h.forCount,
+      againstCount: a.againstCount + h.againstCount,
+      forNames: a.forNames.concat(h.forNames),
+      againstNames: a.againstNames.concat(h.againstNames),
+    };
   }
 
   function gcExposureHtml(exp) {
@@ -27102,6 +27163,8 @@
     window.__gcEspnGameData = espnGameData;
     window.__gcWeek = week;
     window.__gcStatsMap = statsMap;
+    // Everything a click needs, so a click never has to fetch.
+    window.__gcCache = { sorted, dict, statsMap, projMap, week, season };
 
     const open = sorted.find(g => g.eventId === window.__gcOpenEventId);
     if (open) {
@@ -27172,12 +27235,28 @@
     const feed = document.getElementById('gcFeed');
     const feedFilter = document.getElementById('gcFeedFilter');
 
+    // Opening or closing a game is a local redraw, not a reload.
+    //
+    // It used to call renderRealGameCast, which re-reads the NFL state,
+    // the scoreboard, the player dictionary, the week's stats and
+    // projections, and then pulls an ESPN summary for every live game
+    // before the panel could fill -- so one click on a card sat there for
+    // half a minute. None of that can have changed since the render a few
+    // seconds ago, and the panel is built from data already in hand.
     const openGame = (eventId) => {
       window.__gcOpenEventId = window.__gcOpenEventId === eventId ? null : eventId;
       window.__gcStatsTeam = null;
       window.__gcExpandedPlayer = null;
-      window.__gcOpenData = null;
-      renderRealGameCast();
+      const cache = window.__gcCache;
+      if (!cache) { window.__gcOpenData = null; renderRealGameCast(); return; }
+      const open = cache.sorted.find(g => g.eventId === window.__gcOpenEventId);
+      window.__gcOpenData = open
+        ? { game: open, dict: cache.dict, statsMap: cache.statsMap, projMap: cache.projMap }
+        : null;
+      if (open) window.__gcStatsTeam = 'away';
+      // The grid draws the open game's panel with it; the feed is a
+      // separate column and has no reason to be touched at all.
+      gcRenderGrid(cache.sorted, cache.dict);
     };
 
     if (grid) {
