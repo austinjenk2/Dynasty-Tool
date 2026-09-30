@@ -19817,12 +19817,28 @@
     //
     // Skipped while hidden, and run once immediately on return so what you
     // come back to is current rather than an hour old.
+    // What a sync costs is the same whatever day it is -- rosters,
+    // matchups, users, transactions and traded picks for every league,
+    // then a repaint of every page. What it is WORTH depends entirely on
+    // whether football is being played. A minute apart during games; a
+    // quarter of an hour apart when there are none, which is still often
+    // enough to pick up an overnight waiver or a stat correction without
+    // a reload.
+    const POLL_MS = { live: 60000, soon: 60000, idle: 900000 };
+    function pollDelay() {
+      const tempo = (typeof deskTempo === 'function') ? deskTempo() : 'live';
+      return POLL_MS[tempo] || 60000;
+    }
     function startPolling() {
-      if (pollTimer) clearInterval(pollTimer);
-      pollTimer = setInterval(() => {
-        if (document.hidden) { pollMissedWhileHidden = true; return; }
-        if (getSavedUser()) loadSleeperData();
-      }, 60000);
+      if (pollTimer) clearTimeout(pollTimer);
+      // Self-scheduling rather than a fixed interval, so the gap is
+      // decided fresh each time from what is actually happening.
+      const tick = () => {
+        if (document.hidden) { pollMissedWhileHidden = true; }
+        else if (getSavedUser()) loadSleeperData();
+        pollTimer = setTimeout(tick, pollDelay());
+      };
+      pollTimer = setTimeout(tick, pollDelay());
       if (!pollVisibilityBound) {
         pollVisibilityBound = true;
         document.addEventListener('visibilitychange', () => {
@@ -25967,8 +25983,48 @@
     if (cached && (Date.now() - cached.at < ESPN_GAME_DATA_TTL)) return cached.data;
     const data = await getEspnGameData(week, season);
     window.__espnGameDataCache[key] = { data, at: Date.now() };
+    // Kept where deskTempo can see it. Several pages fetch this every
+    // sync anyway, so knowing whether football is being played costs
+    // nothing extra.
+    window.__deskEspnGames = data;
     return data;
   }
+
+  // ---- How fast anything needs to refresh -----------------------------
+  // There is no reason to be pulling live scores on a Wednesday. Nothing
+  // is happening, nothing will have changed, and every refresh is a round
+  // of fetches and a repaint spent on an answer that cannot move.
+  //
+  //   live  -- a game is being played. This is what the app is for.
+  //   soon  -- kickoff inside half an hour, or a game finished within the
+  //            last hour, while the final stats are still settling.
+  //   idle  -- no football. Tick over slowly, purely so that a kickoff,
+  //            an overnight waiver or a stat correction is noticed
+  //            without needing a reload.
+  function deskTempo() {
+    const games = window.__deskEspnGames;
+    if (!games) return 'soon';   // nothing known yet: check again shortly
+    const now = Date.now();
+    let soon = false;
+    // The map is keyed by team, so each game shows up twice; that costs
+    // nothing and saves de-duplicating it.
+    for (const team in games) {
+      const g = games[team];
+      if (!g) continue;
+      if (g.state === 'in') return 'live';
+      const t = g.when ? Date.parse(g.when) : NaN;
+      if (!isNaN(t)) {
+        if (g.state === 'pre' && t - now < 30 * 60000 && t > now) soon = true;
+        // An hour, not a night. A late game ending at 11:30 used to hold
+        // the whole app at a one-minute cadence until dawn, which is the
+        // exact waste this is here to stop. Stat corrections that land
+        // later are picked up by the idle poll anyway.
+        if (g.state === 'post' && now - t < 3600000) soon = true;
+      }
+    }
+    return soon ? 'soon' : 'idle';
+  }
+  window.deskTempo = deskTempo;
   window.sleeperGetEspnGameData = getEspnGameDataCached;
 
   // Which of two teams is at home.
@@ -26254,13 +26310,23 @@
   // tick the view isn't visible instead of dying.
   if (!window.__gcRefreshTimerStarted) {
     window.__gcRefreshTimerStarted = true;
+    // Twenty seconds while games are on, because that is the point of the
+    // page. Ten minutes when there are none: the scores are final, the
+    // plays are cached, and the only thing a refresh can discover is that
+    // a game has started.
+    const GC_REFRESH_MS = { live: 20000, soon: 60000, idle: 600000 };
+    let gcLastRefresh = 0;
     setInterval(() => {
       // Hidden tab: no fetches, no repaint. This one pulls an ESPN
-      // summary per live game every twenty seconds, which is the heaviest
-      // repeating job in the app.
+      // summary per live game, which is the heaviest repeating job here.
       if (document.hidden) return;
       const view = document.querySelector('[data-view="gamecast"]');
-      if (view && view.classList.contains('is-active')) renderRealGameCast();
+      if (!view || !view.classList.contains('is-active')) return;
+      const tempo = (typeof deskTempo === 'function') ? deskTempo() : 'live';
+      const wait = GC_REFRESH_MS[tempo] || 20000;
+      if (Date.now() - gcLastRefresh < wait) return;
+      gcLastRefresh = Date.now();
+      renderRealGameCast();
     }, 20000);
   }
 
@@ -31286,9 +31352,18 @@
     window.setTickerEnabled = applyEnabled;
 
     applyEnabled(enabled);
+    // The strip is live scores and live sweats, so it follows the same
+    // tempo as everything else: every minute during games, every ten
+    // when there are none to report on.
+    const TICKER_MS = { live: DATA_REFRESH_MS, soon: DATA_REFRESH_MS, idle: 600000 };
+    let tickerLastBuild = 0;
     setInterval(() => {
       if (!enabled) return;
       if (document.hidden) { missedBuild = true; return; }
+      const tempo = (typeof deskTempo === 'function') ? deskTempo() : 'live';
+      const wait = TICKER_MS[tempo] || DATA_REFRESH_MS;
+      if (Date.now() - tickerLastBuild < wait) return;
+      tickerLastBuild = Date.now();
       build().catch(() => {});
     }, DATA_REFRESH_MS);
   })();
