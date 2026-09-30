@@ -83,6 +83,34 @@
     letter-spacing: -0.2px;
   }
 
+  /* ---------- Subsection bar ----------
+     The pages inside whichever section is open. Always visible while you
+     are in that section, so every page in it is one click from every
+     other -- fourteen tabs across the top was one flat list of everything
+     the site can do, which is a menu, not navigation. */
+  .subsection-bar {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    padding: 8px 22px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .subsection-bar[hidden] { display: none; }
+  .sub-crumb {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.6px;
+    color: var(--faint); margin-right: 6px; white-space: nowrap;
+  }
+  .sub-tab {
+    font-size: 12.5px; font-weight: 700; color: var(--muted);
+    padding: 5px 11px; border-radius: 20px;
+    border: 1px solid transparent; white-space: nowrap; cursor: pointer;
+  }
+  .sub-tab:hover:not(.active) { color: var(--ink); border-color: var(--border); }
+  .sub-tab.active { background: var(--ink); color: var(--surface); }
+  @media (max-width: 760px) {
+    .subsection-bar { padding: 8px 14px; overflow-x: auto; flex-wrap: nowrap; }
+    .subsection-bar::-webkit-scrollbar { display: none; }
+  }
+
   /* ---------- Section tabs (moved up next to brand) ---------- */
   .section-tabs { display: flex; gap: 6px; }
   .section-tab {
@@ -4731,23 +4759,9 @@
 
 <nav class="site-nav">
   <div class="brand"><span class="brand-mark"></span><span class="brand-name">Fantasy Desk</span></div>
-  <div class="section-tabs" id="sectionNav">
-    <a class="section-tab active" data-section="dashboard">Dashboard</a>
-    <a class="section-tab" data-section="leagues">Leagues</a>
-    <a class="section-tab" data-section="lineups">Matchup Hub</a>
-    <a class="section-tab" data-section="gamecast">GameCast</a>
-    <a class="section-tab" data-section="rooting">Weekly Sweats</a>
-    <a class="section-tab" data-section="waiver">Waiver Radar</a>
-    <a class="section-tab" data-section="draft">Draft Room</a>
-    <a class="section-tab" data-section="exposures">Exposures</a>
-    <a class="section-tab" data-section="trades">Trade History</a>
-    <a class="section-tab" data-section="records">Results</a>
-    <a class="section-tab" data-section="rankings">Rankings</a>
-    <a class="section-tab" data-section="calculator">Trade Calc</a>
-    <a class="section-tab" data-section="tanking">Tanking Tracker</a>
-    <a class="section-tab" data-section="settings">Settings</a>
-  </div>
+  <div class="section-tabs" id="sectionNav"></div>
 </nav>
+<div class="subsection-bar" id="subsectionNav" hidden></div>
 
 <div class="mode-chooser" id="modeChooser" hidden>
   <div class="mc-eyebrow">FANTASY DESK</div>
@@ -12481,6 +12495,18 @@
       </table>
     </div>
   </div>
+  <div data-view="playoff">
+    <div class="page-title">
+      <h1>Playoff Picture</h1>
+      <p>Not built yet. This is where every league&rsquo;s race goes &mdash; who is in, who is out, what still has to happen and which weeks decide it.</p>
+    </div>
+    <div class="rb-table-wrap">
+      <div class="rb-empty">
+        The playoff and bye odds this page will be built on already exist &mdash; they run on Standings inside a
+        league and on the Tanking Tracker, out of one simulation of the rest of the season.
+      </div>
+    </div>
+  </div>
   <div data-view="settings">
     <div class="page-title">
       <h1>Settings</h1>
@@ -13082,24 +13108,128 @@
   }
   window.deskFlushView = deskFlushView;
 
-  const sectionTabs = document.querySelectorAll('.section-tab');
+  // ---- Navigation -----------------------------------------------------
+  // Six sections across the top, and the pages inside whichever one is
+  // open on a second row underneath. Every page is still its own
+  // data-view exactly as before -- this changes how you reach them, not
+  // what they are.
+  //
+  // Trade Calc is in two sections on purpose. It is the tool you reach for
+  // mid-trade (Team Management) and the tool you reach for while reading
+  // the board (Values); making you remember which one it was filed under
+  // is the kind of thing navigation is supposed to prevent.
+  const DESK_SECTIONS = [
+    { id: 'dashboard', label: 'Dashboard', pages: [
+      { view: 'dashboard', label: 'Dashboard' },
+    ] },
+    { id: 'manage', label: 'Team Management', pages: [
+      { view: 'leagues', label: 'Leagues' },
+      { view: 'waiver', label: 'Waiver Radar' },
+      { view: 'draft', label: 'Draft Room' },
+      { view: 'calculator', label: 'Trade Calc' },
+    ] },
+    { id: 'season', label: 'Season', pages: [
+      { view: 'exposures', label: 'Exposures' },
+      { view: 'trades', label: 'Trade History' },
+      { view: 'records', label: 'Results' },
+      { view: 'tanking', label: 'Tanking Tracker' },
+      { view: 'playoff', label: 'Playoff Picture' },
+    ] },
+    { id: 'gameday', label: 'Game Day', pages: [
+      { view: 'lineups', label: 'Matchup Hub' },
+      { view: 'gamecast', label: 'GameCast' },
+      { view: 'rooting', label: 'Weekly Sweats' },
+    ] },
+    { id: 'values', label: 'Values', pages: [
+      { view: 'rankings', label: 'Rankings' },
+      { view: 'calculator', label: 'Trade Calc' },
+    ] },
+    { id: 'settings', label: 'Settings', pages: [
+      { view: 'settings', label: 'Settings' },
+    ] },
+  ];
+
+  const sectionNav = document.getElementById('sectionNav');
+  const subsectionNav = document.getElementById('subsectionNav');
   const views = document.querySelectorAll('[data-view]');
-  sectionTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      sectionTabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const target = tab.dataset.section;
-      views.forEach(v => v.classList.toggle('is-active', v.dataset.view === target));
-      deskFlushView(target);
+
+  // Which section a page belongs to. A page listed in two answers with the
+  // first, which only matters when something jumps straight to a view from
+  // outside the nav.
+  const deskSectionForView = {};
+  DESK_SECTIONS.forEach(sec => {
+    sec.pages.forEach(p => {
+      if (deskSectionForView[p.view] == null) deskSectionForView[p.view] = sec.id;
     });
   });
 
+  let deskActiveSection = 'dashboard';
+  let deskOpenView = 'dashboard';
+  // Where you were last time you were in each section, so coming back to
+  // Game Day mid-Sunday returns you to the page you were watching instead
+  // of to the front of the section.
+  const deskLastViewInSection = {};
+
+  function deskRenderNav() {
+    const sec = DESK_SECTIONS.find(x => x.id === deskActiveSection) || DESK_SECTIONS[0];
+    if (sectionNav) {
+      sectionNav.querySelectorAll('[data-nav-section]').forEach(t =>
+        t.classList.toggle('active', t.dataset.navSection === sec.id));
+    }
+    if (!subsectionNav) return;
+    // A section with one page has nothing to choose between, so it gets no
+    // second row rather than a row with one thing in it.
+    if (sec.pages.length < 2) {
+      subsectionNav.hidden = true;
+      subsectionNav.innerHTML = '';
+      return;
+    }
+    subsectionNav.hidden = false;
+    subsectionNav.innerHTML = `<span class="sub-crumb">${sec.label.toUpperCase()}</span>` +
+      sec.pages.map(p =>
+        `<span class="sub-tab${p.view === deskOpenView ? ' active' : ''}" data-nav-view="${p.view}">${p.label}</span>`
+      ).join('');
+  }
+
+  function deskShow(view, sectionId) {
+    deskOpenView = view;
+    deskActiveSection = sectionId || deskSectionForView[view] || deskActiveSection;
+    deskLastViewInSection[deskActiveSection] = view;
+    views.forEach(v => v.classList.toggle('is-active', v.dataset.view === view));
+    deskRenderNav();
+    deskFlushView(view);
+    // Pages used to hang their "render me when my tab is clicked" logic off
+    // the tab element itself. Tabs are rebuilt now, so they listen for this
+    // instead -- one event, fired wherever a view is opened from, including
+    // a jump straight to it from elsewhere in the app.
+    document.dispatchEvent(new CustomEvent('desk:view', { detail: view }));
+  }
+
+  if (sectionNav) {
+    sectionNav.innerHTML = DESK_SECTIONS.map(sec =>
+      `<a class="section-tab" data-nav-section="${sec.id}">${sec.label}</a>`).join('');
+    sectionNav.addEventListener('click', (e) => {
+      const tab = e.target.closest('[data-nav-section]');
+      if (!tab) return;
+      const sec = DESK_SECTIONS.find(x => x.id === tab.dataset.navSection);
+      if (!sec) return;
+      const last = deskLastViewInSection[sec.id];
+      deskShow((last && sec.pages.some(p => p.view === last)) ? last : sec.pages[0].view, sec.id);
+    });
+  }
+  if (subsectionNav) {
+    subsectionNav.addEventListener('click', (e) => {
+      const tab = e.target.closest('[data-nav-view]');
+      if (tab) deskShow(tab.dataset.navView, deskActiveSection);
+    });
+  }
+
   function goToSection(name) {
-    sectionTabs.forEach(t => t.classList.toggle('active', t.dataset.section === name));
-    views.forEach(v => v.classList.toggle('is-active', v.dataset.view === name));
-    deskFlushView(name);
+    deskShow(name, deskSectionForView[name]);
     window.scrollTo(0, 0);
   }
+  deskRenderNav();
+
   function goToLeagueDetail(name, targetRosterId) {
     goToSection('leagues');
     const listView = document.getElementById('leaguesListView');
@@ -15234,9 +15364,8 @@
     }
     window.renderRealTrades = renderRealTrades;
 
-    document.querySelectorAll('.section-tab').forEach(tab => {
-      if (tab.dataset.section !== 'trades' && tab.dataset.section !== 'insights') return;
-      tab.addEventListener('click', () => { renderRealTrades(); });
+    document.addEventListener('desk:view', (e) => {
+      if (e.detail === 'trades' || e.detail === 'insights') renderRealTrades();
     });
   })();
 
@@ -27199,9 +27328,8 @@
   // The persistent interval declared above already keeps GameCast fresh
   // on its own; this just triggers an immediate render on click instead
   // of waiting up to 20s for the next tick.
-  document.querySelectorAll('.section-tab').forEach(tab => {
-    if (tab.dataset.section !== 'gamecast') return;
-    tab.addEventListener('click', () => { renderRealGameCast(); });
+  document.addEventListener('desk:view', (e) => {
+    if (e.detail === 'gamecast') renderRealGameCast();
   });
 
   window.__sleeperScheduleCache = window.__sleeperScheduleCache || {};
@@ -29816,9 +29944,8 @@
     // Rendered on demand as well as on sync, since the pick rows pull last
     // week's matchups per league and there is no reason to do that before
     // anyone has opened the page.
-    document.querySelectorAll('.section-tab').forEach(tab => {
-      if (tab.dataset.section !== 'tanking') return;
-      tab.addEventListener('click', () => { renderRealTankingTracker().catch(() => {}); });
+    document.addEventListener('desk:view', (e) => {
+      if (e.detail === 'tanking') renderRealTankingTracker().catch(() => {});
     });
   })();
 
@@ -30100,9 +30227,8 @@
     }
     window.renderRealRankings = renderRealRankings;
 
-    document.querySelectorAll('.section-tab').forEach(tab => {
-      if (tab.dataset.section !== 'rankings') return;
-      tab.addEventListener('click', () => renderRealRankings());
+    document.addEventListener('desk:view', (e) => {
+      if (e.detail === 'rankings') renderRealRankings();
     });
   })();
 
