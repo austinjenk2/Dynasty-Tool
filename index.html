@@ -21327,7 +21327,7 @@
       // Standings order and the draft order come off one sort, so the seed
       // shown beside a name and the slot shown at the end of its row are
       // always describing the same finish.
-      const outcome = ppSeasonOutcome(teams, playoffTeams);
+      const outcome = ppSeasonOutcome(teams, playoffTeams, ppDivisionMap(entry.league, rosters));
       const seedOf = {}, slotOf = {};
       outcome.standings.forEach((t, i) => { seedOf[t.id] = i + 1; });
       outcome.order.forEach((t, i) => { slotOf[t.id] = i + 1; });
@@ -23947,6 +23947,24 @@
   // would carry it is not trustworthy enough yet.
   const PP_FORECAST_YEARS_OUT = 0;
 
+  // Which division each roster is in, but only for a league actually
+  // running divisions -- returns null otherwise, which every caller reads
+  // as "seed on record alone".
+  function ppDivisionMap(league, rosters) {
+    const count = league && league.settings && Number(league.settings.divisions);
+    if (!count || count < 2 || !Array.isArray(rosters)) return null;
+    const map = {};
+    let tagged = 0;
+    rosters.forEach(r => {
+      const div = r && r.settings && r.settings.division;
+      if (div != null) { map[r.roster_id] = div; tagged++; }
+    });
+    // A half-tagged league would seed some teams as division winners and
+    // leave the rest unplaced, which is worse than not trying.
+    return tagged === rosters.length ? map : null;
+  }
+  window.ppDivisionMap = ppDivisionMap;
+
   // The league's own draft-order rule, applied to one finished (or
   // simulated-to-finish) season. Teams out of the playoffs draft first,
   // ordered by potential points from the bottom up; teams in the playoffs
@@ -23956,16 +23974,36 @@
   //
   // `teams` is [{ id, wins, pf, ppts }], and the returned array is
   // slot-ordered: index 0 holds the 1.01.
-  function ppDraftOrderFor(teams, playoffTeams) {
-    return ppSeasonOutcome(teams, playoffTeams).order;
+  function ppDraftOrderFor(teams, playoffTeams, divisionOf) {
+    return ppSeasonOutcome(teams, playoffTeams, divisionOf).order;
   }
 
   // The finish of one simulated season: the seeded standings, who made the
   // playoffs, and the resulting draft order. The standings sort is done
   // once and both answers read off it -- the draft order and the playoff
   // field can never disagree about who finished where.
-  function ppSeasonOutcome(teams, playoffTeams) {
-    const standings = teams.slice().sort((a, b) => b.wins - a.wins || b.pf - a.pf);
+  function ppSeasonOutcome(teams, playoffTeams, divisionOf) {
+    const byRecord = teams.slice().sort((a, b) => b.wins - a.wins || b.pf - a.pf);
+    // Divisions, where a league runs them: Sleeper seeds each division's
+    // winner ahead of every non-winner, so a 7-5 division winner is in and
+    // an 8-4 second-place team can be out. Seeding this purely on record
+    // gets those leagues wrong in both directions at once -- it drops a
+    // team that is actually locked in and floats one that is not.
+    //
+    // Only applied when the league genuinely has divisions and its rosters
+    // say which one they are in; every other league sorts on record and
+    // points exactly as before.
+    let standings = byRecord;
+    if (divisionOf) {
+      const seenDivision = new Set();
+      const winners = [], rest = [];
+      byRecord.forEach(t => {
+        const div = divisionOf[t.id];
+        if (div != null && !seenDivision.has(div)) { seenDivision.add(div); winners.push(t); }
+        else rest.push(t);
+      });
+      if (winners.length > 1) standings = winners.concat(rest);
+    }
     const inPlayoffs = new Set(standings.slice(0, playoffTeams).map(t => t.id));
     const missed = teams.filter(t => !inPlayoffs.has(t.id)).sort((a, b) => a.ppts - b.ppts || a.pf - b.pf);
     const made = teams.filter(t => inPlayoffs.has(t.id)).sort((a, b) => a.wins - b.wins || a.pf - b.pf);
@@ -24211,6 +24249,18 @@
     // pass rather than simulated separately. One simulation, one answer --
     // the pick model and the playoff odds can never tell different
     // stories about the same season.
+    // Does this league play the median? Sleeper's "league_average_match"
+    // gives every team a SECOND real result every week -- win or lose
+    // against that week's league median score, on top of the head-to-head
+    // -- and those wins are already inside the stored record this
+    // simulation starts from. Simulating the weeks ahead with only the
+    // head-to-head meant every team could earn at most one win a week
+    // from here while having banked up to two a week so far: the model
+    // quietly stopped the league's best teams pulling away and pushed
+    // every projected finish toward the middle, which is exactly the
+    // thing playoff odds are supposed to measure.
+    const hasMedian = !!(league.settings && league.settings.league_average_match);
+    const divisionOf = ppDivisionMap(league, rosters);
     const byeSlots = ppByeCountFor(playoffTeams);
     const playoffCounts = {}, byeCounts = {}, seedSum = {};
     model.forEach(m => { playoffCounts[m.id] = 0; byeCounts[m.id] = 0; seedSum[m.id] = 0; });
@@ -24223,6 +24273,9 @@
     const remainingIdx = remaining.map(pairs => pairs.map(([a, b]) => [idxOf[a], idxOf[b]]));
     const drawn = new Array(scratch.length).fill(0);
     const seasonMean = new Array(scratch.length).fill(0);
+    // Scratch space for the weekly median, sorted in place each week
+    // rather than allocated 1,500 times.
+    const medianScratch = new Array(scratch.length).fill(0);
     for (let sim = 0; sim < PP_SIM_RUNS; sim++) {
       for (let i = 0; i < scratch.length; i++) {
         const m = model[i], t = scratch[i];
@@ -24252,8 +24305,23 @@
           else if (sb > sa) scratch[ib].wins += 1;
           else { scratch[ia].wins += 0.5; scratch[ib].wins += 0.5; }
         }
+        if (hasMedian) {
+          // The median of this simulated week, and a second win for
+          // everyone who beat it -- the same second game the league
+          // actually plays.
+          for (let i = 0; i < scratch.length; i++) medianScratch[i] = drawn[i];
+          medianScratch.sort((a, b) => a - b);
+          const mid = medianScratch.length >> 1;
+          const median = medianScratch.length % 2
+            ? medianScratch[mid]
+            : (medianScratch[mid - 1] + medianScratch[mid]) / 2;
+          for (let i = 0; i < scratch.length; i++) {
+            if (drawn[i] > median) scratch[i].wins += 1;
+            else if (drawn[i] === median) scratch[i].wins += 0.5;
+          }
+        }
       }
-      const outcome = ppSeasonOutcome(scratch, playoffTeams);
+      const outcome = ppSeasonOutcome(scratch, playoffTeams, divisionOf);
       const order = outcome.order;
       for (let i = 0; i < order.length; i++) slotCounts[order[i].id][i]++;
       const standings = outcome.standings;
