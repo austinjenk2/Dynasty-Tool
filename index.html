@@ -1721,8 +1721,56 @@
   .pp-pct.is-live { color: var(--gold); }
   .pp-pct.is-out { color: var(--red); }
 
+  /* Tabs: one league, two questions -- where it stands, and what would
+     have to happen. */
+  .pp-tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--border); margin: 6px 0 14px; }
+  .pp-tab { font-size: 13px; font-weight: 700; color: var(--faint); padding: 8px 0 9px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .pp-tab:hover { color: var(--muted); }
+  .pp-tab.is-active { color: var(--ink); border-bottom-color: var(--green); }
+
+  /* The four things a manager checks after the odds themselves. */
+  .pp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .pp-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 15px; }
+  .pp-tile-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.6px; color: var(--faint); }
+  .pp-tile-value { font-family: 'Source Serif 4', serif; font-size: 25px; font-weight: 700; color: var(--ink); line-height: 1.2; margin-top: 2px; }
+  .pp-tile-value.is-up { color: var(--green); }
+  .pp-tile-value.is-down { color: var(--red); }
+  .pp-tile-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ---- What If ---------------------------------------------------------
+     Pick results, watch the odds move. */
+  .pp-wif-head { display: flex; align-items: flex-start; gap: 26px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+  .pp-wif-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .pp-wif-btn { font-size: 11.5px; font-weight: 700; padding: 7px 13px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; }
+  .pp-wif-btn:hover { border-color: var(--navy); color: var(--ink); }
+  .pp-wif-btn.is-win { border-color: var(--green); color: var(--green); }
+  .pp-wif-btn.is-loss { border-color: var(--red); color: var(--red); }
+  .pp-wif-btn[disabled] { opacity: 0.4; cursor: default; }
+  .pp-wif-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 12px; align-items: start; }
+  .pp-wif-weeks { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .pp-wif-week { font-size: 11.5px; font-weight: 700; padding: 6px 11px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; }
+  .pp-wif-week:hover { border-color: var(--navy); }
+  .pp-wif-week.is-active { background: var(--surface); border-color: var(--ink); color: var(--ink); }
+  .pp-wif-week.is-set::after { content: '\2022'; color: var(--gold); margin-left: 5px; }
+  .pp-wif-game { display: flex; align-items: stretch; gap: 8px; margin-bottom: 8px; }
+  .pp-wif-side { flex: 1; display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); cursor: pointer; min-width: 0; }
+  .pp-wif-side:hover { border-color: var(--navy); }
+  .pp-wif-side.is-picked { border-color: var(--green); background: var(--green-bg); }
+  .pp-wif-side.is-beaten { opacity: 0.45; }
+  .pp-wif-side.is-mine .pp-wif-name { color: var(--green); }
+  .pp-wif-name { font-size: 12.5px; font-weight: 700; color: var(--ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pp-wif-pct { font-size: 11.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .pp-wif-vs { display: flex; align-items: center; font-size: 9.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); }
+  .pp-gtm-row { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; }
+  .pp-gtm-main { flex: 1; min-width: 0; }
+  .pp-gtm-title { font-size: 12.5px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pp-gtm-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .pp-gtm-swing { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; color: var(--green); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pp-gtm-swing.is-flat { color: var(--faint); }
+
   @media (max-width: 900px) {
     .pp-team-grid { grid-template-columns: 1fr; }
+    .pp-wif-grid { grid-template-columns: 1fr; }
   }
 
   /* ---- Rankings ----------------------------------------------------
@@ -12338,6 +12386,11 @@
         <span>TEAM</span>
         <select id="ppTeamSelect"></select>
       </label>
+    </div>
+
+    <div class="pp-tabs" id="ppTabs" hidden>
+      <span class="pp-tab is-active" data-pp-tab="picture">Playoff Picture</span>
+      <span class="pp-tab" data-pp-tab="whatif">What If</span>
     </div>
 
     <div id="ppBody"><div class="ld-loading">Loading the playoff picture&hellip;</div></div>
@@ -24009,7 +24062,14 @@
   // are left can only move so much. Measured between the extremes of
   // roster value in a league it is worth about 0.015 of a base 1st, and
   // pushing the multiplier past here barely moves that -- it saturates.
-  const PP_VALUE_PULL = 0.035;
+  // TURNED OFF (was 0.035). Dynasty value is a read on a roster's room to
+  // improve, not on how good it is this Sunday, and the rest-of-season
+  // projection is already built from the players who will actually be
+  // started. Leaving it in meant a team's playoff odds moved on the
+  // long-term worth of its rookies and picks, which is not what the
+  // question asks. Set this back to 0.035 to restore the old behaviour --
+  // the code it drives is still below and still correct.
+  const PP_VALUE_PULL = 0;
   // How fast a team's true level drifts away from what it has shown, per
   // remaining week, as a share of its weekly variance. Rosters change.
   const PP_DRIFT_PER_WEEK = 0.035;
@@ -24032,6 +24092,68 @@
   // falls back to the flat round value, because the strength read that
   // would carry it is not trustworthy enough yet.
   const PP_FORECAST_YEARS_OUT = 0;
+
+  // ---- Injuries, and the depth behind them ----------------------------
+  // What share of the weeks still to be played a player is expected to be
+  // available for. Sleeper's weekly projection does not carry this: a
+  // player on IR still projects like a starter, so a roster that has lost
+  // its best back was being simulated as though it had not.
+  //
+  // This is deliberately about the REST of the season, not about Sunday. A
+  // player ruled Out misses one week out of the however-many that are
+  // left, and by week 12 that is nearly nothing; a player on IR or PUP is
+  // most likely gone for the stretch that decides the race, and is treated
+  // that way.
+  const PP_LONG_TERM_AVAILABILITY = 0.15;
+  function ppAvailability(p, weeksLeft) {
+    if (!p) return 1;
+    const w = Math.max(1, Number(weeksLeft) || 1);
+    const st = String(p.injury_status || '').toUpperCase();
+    if (!st) return p.status === 'Inactive' ? (w - 1) / w : 1;
+    // Out for the stretch, not for the weekend.
+    if (st === 'IR' || st === 'PUP' || st === 'NA' || st === 'SUS' || st === 'DNR') return PP_LONG_TERM_AVAILABILITY;
+    if (st === 'OUT') return (w - 1) / w;
+    if (st === 'DOUBTFUL') return (w - 0.75) / w;
+    // Questionable players mostly play, and mostly play through it.
+    if (st === 'QUESTIONABLE') return (w - 0.25) / w;
+    return 1;
+  }
+
+  // A roster's rest-of-season projection with its injuries priced in --
+  // and, just as much, with its DEPTH priced in, which is the half of this
+  // that a simple haircut on the injured player misses. Losing a stud
+  // whose backup is nearly as good costs a roster very little; losing the
+  // same stud off a thin bench is most of the season.
+  //
+  // So the lineup is optimised twice. Once with every unavailable player
+  // struck out entirely -- that is the team its replacements actually
+  // field, and it is where depth shows up. Then each unavailable player is
+  // added back on his own, and his own marginal value over that
+  // replacement lineup is paid out at the share of remaining weeks he is
+  // expected to play. A player whose slot is covered contributes a
+  // marginal of nearly zero either way, which is the right answer.
+  function ppHealthyProjection(playerIds, league, weeksLeft) {
+    const base = window.sbTeamOptimalProjection;
+    if (!base) return null;
+    const full = base(playerIds, league);
+    const dict = window.__sleeperPlayerDict;
+    if (full == null || !dict) return full;
+    const ids = (playerIds || []).filter(id => id && id !== '0');
+    const hurt = ids.filter(id => ppAvailability(dict[id], weeksLeft) < 1);
+    if (!hurt.length) return full;
+    const hurtSet = new Set(hurt);
+    const healthyIds = ids.filter(id => !hurtSet.has(id));
+    const healthy = base(healthyIds, league);
+    if (healthy == null) return full;
+    let total = healthy;
+    hurt.forEach(id => {
+      const withHim = base(healthyIds.concat([id]), league);
+      if (withHim == null) return;
+      total += Math.max(0, withHim - healthy) * ppAvailability(dict[id], weeksLeft);
+    });
+    return total;
+  }
+  window.ppHealthyProjection = ppHealthyProjection;
 
   // Which division each roster is in, but only for a league actually
   // running divisions -- returns null otherwise, which every caller reads
@@ -24194,8 +24316,11 @@
     let realismFactor = null;
     if (window.sbTeamOptimalProjection) {
       let optSum = 0, optCount = 0;
+      // Weeks still to be played, which is what an injury has to be priced
+      // against: missing one of eleven is not missing one of two.
+      const weeksLeftForInjury = Math.max(1, played.filter(p => !p).length);
       rosters.forEach(r => {
-        const opt = window.sbTeamOptimalProjection(r.players, league);
+        const opt = ppHealthyProjection(r.players, league, weeksLeftForInjury);
         if (opt != null && opt > 0) { strengthById[r.roster_id] = opt; optSum += opt; optCount++; }
       });
       if (optCount === rosters.length && optSum > 0) {
@@ -24309,7 +24434,9 @@
     model.forEach(m => { byId[m.id] = m; });
 
     // The real remaining schedule, straight off Sleeper -- it publishes
-    // the pairings for a week long before it is played.
+    // the pairings for a week long before it is played. The week NUMBER is
+    // carried alongside the pairings, because What If asks about week 9 by
+    // name, not about "the sixth week still to be played".
     const remaining = [];
     for (let i = 0; i < regularWeeks; i++) {
       if (played[i]) continue;
@@ -24321,20 +24448,9 @@
         (byMatchup[m.matchup_id] = byMatchup[m.matchup_id] || []).push(m.roster_id);
       });
       const pairs = Object.values(byMatchup).filter(p => p.length === 2);
-      if (pairs.length) remaining.push(pairs);
+      if (pairs.length) remaining.push({ week: i + 1, pairs });
     }
 
-    // slotCounts[rosterId][slotIndex] -- how often that team's own pick
-    // came out at that slot across every simulated finish.
-    const slotCounts = {};
-    model.forEach(m => { slotCounts[m.id] = new Array(teamCount).fill(0); });
-
-    // Playoff and bye odds come free with the draft-order work: the same
-    // sorted standings that decide where a pick lands also decide who made
-    // the field and who earned a bye, so they are counted in the same
-    // pass rather than simulated separately. One simulation, one answer --
-    // the pick model and the playoff odds can never tell different
-    // stories about the same season.
     // Does this league play the median? Sleeper's "league_average_match"
     // gives every team a SECOND real result every week -- win or lose
     // against that week's league median score, on top of the head-to-head
@@ -24348,34 +24464,116 @@
     const hasMedian = !!(league.settings && league.settings.league_average_match);
     const divisionOf = ppDivisionMap(league, rosters);
     const byeSlots = ppByeCountFor(playoffTeams);
-    const playoffCounts = {}, byeCounts = {}, seedSum = {};
-    // Everything the Playoff Picture asks for beyond "do they make it":
-    // how often each seed, how many wins on average, and the same playoff
-    // question split by how THIS week goes -- which is a real conditional
-    // out of the same runs, not a second guess bolted on afterwards.
-    const seedCounts = {}, winsSum = {};
-    const winRuns = {}, lossRuns = {}, playoffIfWin = {}, playoffIfLoss = {};
-    model.forEach(m => {
-      playoffCounts[m.id] = 0; byeCounts[m.id] = 0; seedSum[m.id] = 0;
-      seedCounts[m.id] = new Array(teamCount).fill(0);
-      winsSum[m.id] = 0;
-      winRuns[m.id] = 0; lossRuns[m.id] = 0; playoffIfWin[m.id] = 0; playoffIfLoss[m.id] = 0;
-    });
+    // A median league plays two games a week, so a 13-week season is a
+    // 26-game record. Carried here because the projected record is shown
+    // as wins-and-losses and the losses are games minus wins: without it a
+    // projected 15.2 wins in a 13-week median league reads "15.2--2.2".
+    const gamesPerWeek = hasMedian ? 2 : 1;
+    const regularGames = regularWeeks * gamesPerWeek;
 
-    const scratch = model.map(m => ({ id: m.id, wins: 0, pf: 0, ppts: 0 }));
     // Matchups name roster ids; the simulation works on array positions.
     // Resolved once here rather than searched for inside the hot loop.
     const idxOf = {};
-    scratch.forEach((t, i) => { idxOf[t.id] = i; });
-    const remainingIdx = remaining.map(pairs => pairs.map(([a, b]) => [idxOf[a], idxOf[b]]));
-    const drawn = new Array(scratch.length).fill(0);
-    const seasonMean = new Array(scratch.length).fill(0);
+    model.forEach((m, i) => { idxOf[m.id] = i; });
+
+    // Everything a batch of simulated seasons needs, and nothing that had
+    // to be fetched or fitted to get it. Handed to ppRunSims below for the
+    // real answer, and kept on the model afterwards so the What If page
+    // can re-run the same league under forced results without touching
+    // the network or re-fitting a single team.
+    const ctx = {
+      model, teamCount, playoffTeams, byeSlots, divisionOf, hasMedian,
+      regularWeeks, regularGames, gamesPerWeek, idxOf,
+      // Both forms of every pairing, filtered together so index `pi` means
+      // the same game in each: the roster ids for anything the page has to
+      // name, the array positions for the hot loop.
+      schedule: remaining.map(r => {
+        const usable = r.pairs.filter(([a, b]) => idxOf[a] != null && idxOf[b] != null);
+        return {
+          week: r.week,
+          rosterPairs: usable,
+          pairs: usable.map(([a, b]) => [idxOf[a], idxOf[b]]),
+        };
+      }).filter(w => w.pairs.length),
+      seed: 'season|' + leagueId + '|' + league.season + '|' + (entry.week || 0),
+    };
+
+    const out = ppRunSims(ctx, null);
+    out.ctx = ctx;
+    out.leagueMean = leagueMean;
+    out.model = byId;
+    return out;
+  }
+
+  // ---- One batch of simulated seasons ----------------------------------
+  // Split out of ppSimulateSeason so the What If page can re-run a league
+  // under forced results without re-fetching or re-fitting anything: the
+  // fitted teams and the real remaining schedule are already in `ctx`, and
+  // only the dice change.
+  //
+  // `forced` is an optional map of "<week>|<rosterId>" -> 1 (won) or 0
+  // (lost). A forced game is still PLAYED -- both scores are drawn as
+  // normal -- and when the draw disagrees with the forced result the two
+  // scores are swapped between the teams. That keeps points-for, the
+  // median second game and every tiebreak coherent, which simply awarding
+  // the win (or nudging a score) would not.
+  function ppRunSims(ctx, forced) {
+    const model = ctx.model;
+    const teamCount = ctx.teamCount, playoffTeams = ctx.playoffTeams;
+    const byeSlots = ctx.byeSlots, divisionOf = ctx.divisionOf;
+    const hasMedian = ctx.hasMedian, idxOf = ctx.idxOf, schedule = ctx.schedule;
+    // Seeded on the league alone, deliberately NOT on the forced results.
+    // Every batch therefore rolls the same dice, and a what-if changes only
+    // the games it actually forces: pick your own week 9 and the other five
+    // games that week come out exactly as they did before, instead of
+    // wobbling a couple of points on a fresh random stream. The swing a
+    // game shows is then signal rather than a mix of signal and noise.
+    // (See ppSeedRandom for why anything here is seeded at all.)
+    ppSeedRandom(ctx.seed);
+
+    const n = model.length;
+    const slotCounts = {}, playoffCounts = {}, byeCounts = {}, seedSum = {};
+    const seedCounts = {}, winsSum = {};
+    model.forEach(m => {
+      slotCounts[m.id] = new Array(teamCount).fill(0);
+      seedCounts[m.id] = new Array(teamCount).fill(0);
+      playoffCounts[m.id] = 0; byeCounts[m.id] = 0; seedSum[m.id] = 0; winsSum[m.id] = 0;
+    });
+
+    // Per remaining GAME: how often each side won, and how often every
+    // team in the league made the playoffs in the seasons where it did.
+    // That is the whole of "games that matter" -- the swing in your odds
+    // between the two results of somebody else's game -- and it is a real
+    // conditional out of these same runs rather than a second model.
+    const gameWon = schedule.map(w => [new Array(w.pairs.length).fill(0), new Array(w.pairs.length).fill(0)]);
+    const gamePlayoff = schedule.map(w => w.pairs.map(() => [
+      new Array(n).fill(0), new Array(n).fill(0),
+    ]));
+    // Which side won each game in the run being played, so the counters
+    // above can be filled in once the season's finish is known.
+    const wonSide = schedule.map(w => new Array(w.pairs.length).fill(-1));
+
+    const scratch = model.map(m => ({ id: m.id, wins: 0, pf: 0, ppts: 0 }));
+    const drawn = new Array(n).fill(0);
+    const seasonMean = new Array(n).fill(0);
     // Scratch space for the weekly median, sorted in place each week
     // rather than allocated 1,500 times.
-    const medianScratch = new Array(scratch.length).fill(0);
-    const thisWeek = new Array(scratch.length).fill(null);
+    const medianScratch = new Array(n).fill(0);
+    const madeIdx = new Array(n).fill(false);
+
+    // Forced results, resolved to array positions once rather than looked
+    // up by string key inside the hot loop.
+    const forcedSide = schedule.map((w, wi) => w.pairs.map((pair, pi) => {
+      if (!forced) return -1;
+      const rp = w.rosterPairs[pi];
+      const a = forced[w.week + '|' + rp[0]], b = forced[w.week + '|' + rp[1]];
+      if (a === 1 || b === 0) return 0;
+      if (a === 0 || b === 1) return 1;
+      return -1;
+    }));
+
     for (let sim = 0; sim < PP_SIM_RUNS; sim++) {
-      for (let i = 0; i < scratch.length; i++) {
+      for (let i = 0; i < n; i++) {
         const m = model[i], t = scratch[i];
         t.wins = m.wins; t.pf = m.pf; t.ppts = m.ppts;
       }
@@ -24383,45 +24581,41 @@
       // team turns out to actually be", so it has to hold all the way
       // through the run. A fresh draw each week would average straight
       // back out and change nothing.
-      for (let i = 0; i < scratch.length; i++) {
+      for (let i = 0; i < n; i++) {
         seasonMean[i] = model[i].mean + model[i].tau * ppRandNormal();
       }
-      // 1 won this week, 0 lost, null tied or not playing. The week being
-      // simulated first IS this week: a week in progress is not treated as
-      // history anywhere in this model.
-      for (let i = 0; i < thisWeek.length; i++) thisWeek[i] = null;
-      for (let w = 0; w < remainingIdx.length; w++) {
-        for (let i = 0; i < scratch.length; i++) {
+      for (let w = 0; w < schedule.length; w++) {
+        for (let i = 0; i < n; i++) {
           const m = model[i];
-          const score = Math.max(0, seasonMean[i] + m.sd * ppRandNormal());
-          drawn[i] = score;
-          scratch[i].pf += score;
-          scratch[i].ppts += score * m.ratio;
+          drawn[i] = Math.max(0, seasonMean[i] + m.sd * ppRandNormal());
         }
-        const pairs = remainingIdx[w];
+        const pairs = schedule[w].pairs;
         for (let j = 0; j < pairs.length; j++) {
           const ia = pairs[j][0], ib = pairs[j][1];
-          if (ia == null || ib == null) continue;
+          const force = forcedSide[w][j];
+          // The forced winner takes the higher of the two drawn scores.
+          if (force === 0 && drawn[ib] > drawn[ia]) { const s = drawn[ia]; drawn[ia] = drawn[ib]; drawn[ib] = s; }
+          else if (force === 1 && drawn[ia] > drawn[ib]) { const s = drawn[ia]; drawn[ia] = drawn[ib]; drawn[ib] = s; }
           const sa = drawn[ia], sb = drawn[ib];
-          if (sa > sb) scratch[ia].wins += 1;
-          else if (sb > sa) scratch[ib].wins += 1;
-          else { scratch[ia].wins += 0.5; scratch[ib].wins += 0.5; }
-          if (w === 0) {
-            thisWeek[ia] = sa > sb ? 1 : (sb > sa ? 0 : null);
-            thisWeek[ib] = sb > sa ? 1 : (sa > sb ? 0 : null);
-          }
+          if (sa > sb) { scratch[ia].wins += 1; wonSide[w][j] = 0; }
+          else if (sb > sa) { scratch[ib].wins += 1; wonSide[w][j] = 1; }
+          else { scratch[ia].wins += 0.5; scratch[ib].wins += 0.5; wonSide[w][j] = -1; }
+        }
+        for (let i = 0; i < n; i++) {
+          scratch[i].pf += drawn[i];
+          scratch[i].ppts += drawn[i] * model[i].ratio;
         }
         if (hasMedian) {
           // The median of this simulated week, and a second win for
           // everyone who beat it -- the same second game the league
           // actually plays.
-          for (let i = 0; i < scratch.length; i++) medianScratch[i] = drawn[i];
+          for (let i = 0; i < n; i++) medianScratch[i] = drawn[i];
           medianScratch.sort((a, b) => a - b);
           const mid = medianScratch.length >> 1;
           const median = medianScratch.length % 2
             ? medianScratch[mid]
             : (medianScratch[mid - 1] + medianScratch[mid]) / 2;
-          for (let i = 0; i < scratch.length; i++) {
+          for (let i = 0; i < n; i++) {
             if (drawn[i] > median) scratch[i].wins += 1;
             else if (drawn[i] === median) scratch[i].wins += 0.5;
           }
@@ -24431,45 +24625,86 @@
       const order = outcome.order;
       for (let i = 0; i < order.length; i++) slotCounts[order[i].id][i]++;
       const standings = outcome.standings;
+      for (let i = 0; i < n; i++) madeIdx[i] = false;
       for (let i = 0; i < standings.length; i++) {
         const id = standings[i].id;
         const made = i < playoffTeams;
         seedSum[id] += i + 1;
         seedCounts[id][i]++;
         winsSum[id] += standings[i].wins;
-        if (made) playoffCounts[id]++;
+        if (made) { playoffCounts[id]++; madeIdx[idxOf[id]] = true; }
         if (i < byeSlots) byeCounts[id]++;
-        const res = thisWeek[idxOf[id]];
-        if (res === 1) { winRuns[id]++; if (made) playoffIfWin[id]++; }
-        else if (res === 0) { lossRuns[id]++; if (made) playoffIfLoss[id]++; }
+      }
+      for (let w = 0; w < schedule.length; w++) {
+        const won = wonSide[w];
+        for (let j = 0; j < won.length; j++) {
+          const side = won[j];
+          if (side < 0) continue;
+          gameWon[w][side][j]++;
+          const bucket = gamePlayoff[w][j][side];
+          for (let i = 0; i < n; i++) if (madeIdx[i]) bucket[i]++;
+        }
       }
     }
 
-    const slotProb = {};
-    Object.keys(slotCounts).forEach(id => {
+    const slotProb = {}, playoffProb = {}, byeProb = {}, avgSeed = {};
+    const seedProb = {}, projWins = {};
+    model.forEach(m => {
+      const id = m.id;
       slotProb[id] = slotCounts[id].map(c => c / PP_SIM_RUNS);
-    });
-    const playoffProb = {}, byeProb = {}, avgSeed = {};
-    const seedProb = {}, projWins = {}, ifWinProb = {}, ifLossProb = {};
-    Object.keys(playoffCounts).forEach(id => {
+      seedProb[id] = seedCounts[id].map(c => c / PP_SIM_RUNS);
       playoffProb[id] = playoffCounts[id] / PP_SIM_RUNS;
       byeProb[id] = byeCounts[id] / PP_SIM_RUNS;
       avgSeed[id] = seedSum[id] / PP_SIM_RUNS;
-      seedProb[id] = seedCounts[id].map(c => c / PP_SIM_RUNS);
       projWins[id] = winsSum[id] / PP_SIM_RUNS;
-      // Null rather than zero when this week gives no such runs -- a team
-      // on a bye, or a season with nothing left to play, has no "if you
-      // win" to report and should say so instead of reading 0%.
-      ifWinProb[id] = winRuns[id] ? playoffIfWin[id] / winRuns[id] : null;
-      ifLossProb[id] = lossRuns[id] ? playoffIfLoss[id] / lossRuns[id] : null;
     });
-    const weeksLeft = remaining.length;
+
+    // The conditionals, turned into odds. A side with no runs at all --
+    // a game whose result was forced, so the other outcome never happened
+    // -- reports null rather than 0%, because "never simulated" and "never
+    // makes it" are not the same answer.
+    const games = schedule.map((w, wi) => ({
+      week: w.week,
+      games: w.pairs.map((pair, pi) => {
+        const runsA = gameWon[wi][0][pi], runsB = gameWon[wi][1][pi];
+        const decided = runsA + runsB;
+        const rp = w.rosterPairs[pi];
+        const odds = (side, runs) => {
+          if (!runs) return null;
+          const bucket = gamePlayoff[wi][pi][side], out = {};
+          model.forEach((m, i) => { out[m.id] = bucket[i] / runs; });
+          return out;
+        };
+        return {
+          a: rp[0], b: rp[1],
+          probA: decided ? runsA / decided : null,
+          playoffIfA: odds(0, runsA),
+          playoffIfB: odds(1, runsB),
+        };
+      }),
+    }));
+
+    // "If you win this week" is the first remaining week's conditional,
+    // read off the same runs -- not a second guess bolted on afterwards.
+    const ifWinProb = {}, ifLossProb = {};
+    model.forEach(m => { ifWinProb[m.id] = null; ifLossProb[m.id] = null; });
+    if (games.length) {
+      games[0].games.forEach(g => {
+        if (g.playoffIfA) { ifWinProb[g.a] = g.playoffIfA[g.a]; ifLossProb[g.b] = g.playoffIfA[g.b]; }
+        if (g.playoffIfB) { ifWinProb[g.b] = g.playoffIfB[g.b]; ifLossProb[g.a] = g.playoffIfB[g.a]; }
+      });
+    }
+
     return {
-      slotProb, teamCount, playoffTeams, byeSlots, regularWeeks, weeksLeft,
-      model: byId, leagueMean, playoffProb, byeProb, avgSeed,
-      seedProb, projWins, ifWinProb, ifLossProb,
+      slotProb, playoffProb, byeProb, avgSeed, seedProb, projWins,
+      ifWinProb, ifLossProb, games,
+      teamCount, playoffTeams, byeSlots,
+      regularWeeks: ctx.regularWeeks, regularGames: ctx.regularGames,
+      gamesPerWeek: ctx.gamesPerWeek,
+      weeksLeft: schedule.length,
     };
   }
+  window.ppRunSims = ppRunSims;
 
   // ---- Later drafts ----------------------------------------------------
   // A pick two or three drafts out is not this season's finish pushed
@@ -24639,6 +24874,10 @@
       ifWin: cur.ifWinProb ? cur.ifWinProb[rosterId] : null,
       ifLoss: cur.ifLossProb ? cur.ifLossProb[rosterId] : null,
       regularWeeks: cur.regularWeeks,
+      // Games, not weeks: a median league plays two a week, so the losses
+      // in a projected record are games-minus-wins and nothing else.
+      regularGames: cur.regularGames != null ? cur.regularGames : cur.regularWeeks,
+      gamesPerWeek: cur.gamesPerWeek || 1,
       teamCount: cur.teamCount,
       byeSlots: cur.byeSlots,
       playoffTeams: cur.playoffTeams,
@@ -30442,6 +30681,20 @@
       const s = ['th', 'st', 'nd', 'rd'][(v % 100 - v % 10 !== 10) ? Math.min(v % 10, 4) % 4 : 0];
       return v + (v % 100 >= 11 && v % 100 <= 13 ? 'th' : s);
     };
+    // A projected record, rounded to whole games for the headline and kept
+    // to a decimal underneath it. The losses are GAMES minus wins -- in a
+    // median league that is two per week, and using weeks there produced
+    // records like "15.2--2.2".
+    const ppProjRecord = (o, decimals) => {
+      if (!o || o.projWins == null) return '&mdash;';
+      const games = o.regularGames != null ? o.regularGames : o.regularWeeks;
+      if (games == null) return '&mdash;';
+      const l = Math.max(0, games - o.projWins);
+      return decimals === 0
+        ? `${Math.round(o.projWins)}-${Math.round(l)}`
+        : `${o.projWins.toFixed(1)}-${l.toFixed(1)}`;
+    };
+
     const summaryEl = document.getElementById('ppSummary');
     const bodyEl = document.getElementById('ppBody');
     const leagueSel = document.getElementById('ppLeagueSelect');
@@ -30452,6 +30705,8 @@
 
     let ppLeagueId = 'all';
     let ppRosterId = null;
+    let ppTab = 'picture';
+    const ppTabsEl = document.getElementById('ppTabs');
 
     const pct = (v) => v == null ? null : Math.round(v * 100);
     const pctText = (v) => {
@@ -30630,13 +30885,68 @@
       const selected = teams.find(t => t.id === ppRosterId) || teams.find(t => t.isMe) || teams[0];
       ppRosterId = selected.id;
       ppFillTeamSelect(teams, selected);
+      if (ppTabsEl) {
+        ppTabsEl.hidden = false;
+        ppTabsEl.querySelectorAll('[data-pp-tab]').forEach(el => {
+          el.classList.toggle('is-active', el.dataset.ppTab === ppTab);
+        });
+      }
+
+      if (ppTab === 'whatif') {
+        bodyEl.innerHTML = ppWhatIfView(entry, teams, selected, playoffTeams, byeSlots);
+        return;
+      }
 
       bodyEl.innerHTML = ppTeamCard(entry, selected, byeSlots, playoffTeams) +
+        ppStatTiles(teams, selected) +
         ppLeagueTable(teams, seedOf, playoffTeams) +
         `<p class="pp-note">${playoffTeams} of ${rosters.length} teams make the playoffs` +
         (byeSlots ? `, and the top ${byeSlots} get a bye` : '') +
         `. Odds are from ${PP_SIM_RUNS.toLocaleString()} simulated seasons played through the real remaining schedule.` +
         ` <b>If win</b> and <b>if loss</b> are read off the same seasons, split by how this week actually went in each of them.</p>`;
+    }
+
+    // ---- The four numbers a manager checks next -------------------------
+    // Points per game and the last three say how good a team has been and
+    // how good it is right now; all-play says how good it has been against
+    // the WHOLE league rather than against the six teams the schedule
+    // happened to hand it; and luck is the gap between the two, which is
+    // the only one of the four that says anything the record does not.
+    function ppStatTiles(teams, team) {
+      const ppgRanked = teams.filter(t => t.ppg != null).sort((a, b) => b.ppg - a.ppg);
+      const ppgRank = ppgRanked.findIndex(t => t.id === team.id) + 1;
+      const ap = team.ap || { w: 0, l: 0, t: 0, games: 0 };
+      const apRate = ap.games ? (ap.w + ap.t * 0.5) / ap.games : null;
+      const played = team.wins + team.losses + team.ties;
+      // Wins against the wins an all-play record says the team earned:
+      // the same schedule-free win rate, applied to the games it actually
+      // played. Positive means the schedule has been kind.
+      const luck = apRate == null || !played ? null
+        : (team.wins + team.ties * 0.5) - played * apRate;
+      const last3Delta = team.last3 != null && team.ppg != null ? team.last3 - team.ppg : null;
+      const tile = (label, value, sub, cls) => `<div class="pp-tile">
+        <div class="pp-tile-label">${label}</div>
+        <div class="pp-tile-value${cls || ''}">${value}</div>
+        <div class="pp-tile-sub">${sub}</div>
+      </div>`;
+      const signed = (v, d) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d);
+      return `<div class="pp-tiles">
+        ${tile('POINTS PER GAME',
+          team.ppg != null ? team.ppg.toFixed(1) : '&mdash;',
+          ppgRank ? ppOrdinal(ppgRank) + ' in the league' : 'No games played yet')}
+        ${tile('LAST 3 GAMES',
+          team.last3 != null ? team.last3.toFixed(1) : '&mdash;',
+          last3Delta == null ? '&mdash;' : signed(last3Delta, 1) + ' vs season',
+          last3Delta == null || Math.abs(last3Delta) < 0.05 ? '' : (last3Delta > 0 ? ' is-up' : ' is-down'))}
+        ${tile('ALL-PLAY',
+          ap.games ? `${ap.w}-${ap.l}${ap.t ? '-' + ap.t : ''}` : '&mdash;',
+          apRate == null ? 'Needs a week on the board'
+            : Math.round(apRate * 100) + '% win rate vs the whole league')}
+        ${tile('LUCK',
+          luck == null ? '&mdash;' : signed(luck, 1),
+          'Wins vs all-play record',
+          luck == null || Math.abs(luck) < 0.05 ? '' : (luck > 0 ? ' is-up' : ' is-down'))}
+      </div>`;
     }
 
     function ppFillTeamSelect(teams, selected) {
@@ -30651,9 +30961,7 @@
       const o = team.odds || {};
       const wk = ppMatchupFor(entry, team);
       const seedChart = ppSeedChart(o.seedProb, playoffTeams, byeSlots);
-      const projRec = o.projWins != null && o.regularWeeks != null
-        ? `${o.projWins.toFixed(1)}-${(o.regularWeeks - o.projWins).toFixed(1)}`
-        : '&mdash;';
+      const projRec = ppProjRecord(o);
       return `<div class="pp-team-grid">
         <div class="pp-panel">
           <div class="pp-panel-head">
@@ -30748,8 +31056,7 @@
         .map((h, i) => `<th${i === 1 ? ' class="rb-th-league"' : ''}>${h}</th>`).join('');
       const rows = teams.map((t, i) => {
         const o = t.odds || {};
-        const projRec = o.projWins != null && o.regularWeeks != null
-          ? `${o.projWins.toFixed(1)}-${(o.regularWeeks - o.projWins).toFixed(1)}` : '&mdash;';
+        const projRec = ppProjRecord(o);
         const cls = (t.isMe ? ' is-me' : '') + (seedOf[t.id] === playoffTeams ? ' is-cut' : '');
         return `<tr class="${cls.trim()}" data-pp-roster="${t.id}">
           <td>${seedOf[t.id]}</td>
@@ -30769,6 +31076,191 @@
         <thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>`;
     }
 
+    // ---- What If --------------------------------------------------------
+    // Decide results and watch the race move. Every number on this tab is
+    // a real re-run of the same 1,500-season model against the same real
+    // remaining schedule, with the games you picked held to the result you
+    // picked -- not the base odds nudged by a rule of thumb. That is why
+    // it can answer "what if I win out AND Chris loses twice", which no
+    // amount of arithmetic on the base odds can.
+    let ppWif = {};        // "<week>|<rosterId>" -> 1 won, 0 lost
+    let ppWifWeek = null;  // which week's games are on screen
+    let ppWifRes = null, ppWifKey = '';
+
+    const ppWifSig = (leagueId) => leagueId + '::' + Object.keys(ppWif)
+      .filter(k => ppWif[k] != null).sort().map(k => k + '=' + ppWif[k]).join(',');
+
+    // The simulation behind this tab. With nothing picked it is the base
+    // model itself rather than a fresh run -- same seed, same context, so
+    // it is the same answer, and the tab opens without paying for 1,500
+    // seasons to be told what the other tab already says.
+    function ppWifResult(entry) {
+      const model = (window.__ppPickModel || {})[entry.league.league_id];
+      const cur = model && model.current;
+      if (!cur || !cur.ctx || !window.ppRunSims) return null;
+      const key = ppWifSig(entry.league.league_id);
+      if (key === ppWifKey && ppWifRes) return ppWifRes;
+      const forced = Object.keys(ppWif).filter(k => ppWif[k] != null).length;
+      ppWifRes = forced ? window.ppRunSims(cur.ctx, ppWif) : cur;
+      ppWifKey = key;
+      return ppWifRes;
+    }
+
+    const ppOddsFrom = (res, id) => !res || res.playoffProb[id] == null ? null : {
+      playoff: res.playoffProb[id],
+      bye: res.byeProb[id] != null ? res.byeProb[id] : null,
+      seed: res.avgSeed[id], seedProb: res.seedProb[id],
+      projWins: res.projWins[id],
+      regularWeeks: res.regularWeeks,
+      regularGames: res.regularGames != null ? res.regularGames : res.regularWeeks,
+    };
+
+    function ppWhatIfView(entry, teams, team, playoffTeams, byeSlots) {
+      const res = ppWifResult(entry);
+      const model = (window.__ppPickModel || {})[entry.league.league_id];
+      const ctx = model && model.current && model.current.ctx;
+      if (!res || !ctx || !ctx.schedule.length) {
+        return '<div class="rb-empty">Nothing left to play, or the season simulation has not landed yet.</div>';
+      }
+      const weeks = ctx.schedule.map(w => w.week);
+      if (ppWifWeek == null || !weeks.includes(ppWifWeek)) ppWifWeek = weeks[0];
+      const wi = weeks.indexOf(ppWifWeek);
+      const o = ppOddsFrom(res, team.id) || {};
+      const picked = Object.keys(ppWif).filter(k => ppWif[k] != null).length;
+      const nameOf = (id) => {
+        const t = teams.find(x => x.id === id);
+        return t ? t.name : 'Roster ' + id;
+      };
+
+      const head = `<div class="pp-wif-head">
+        <div>
+          <div class="pp-panel-title">${sbFieldEsc(team.name)}</div>
+          <div class="pp-panel-sub">${picked
+            ? picked + (picked === 1 ? ' result picked' : ' results picked')
+            : 'No results picked &mdash; this is the race as it stands'}</div>
+        </div>
+        <div class="pp-stat-row" style="gap:26px">
+          <div>
+            <div class="pp-stat-label">PLAYOFFS</div>
+            <div class="pp-stat-big${oddsClass(o.playoff)}">${pctText(o.playoff)}</div>
+          </div>
+          <div>
+            <div class="pp-stat-label">BYE</div>
+            <div class="pp-stat-big is-plain">${o.bye == null ? '&mdash;' : pctText(o.bye)}</div>
+          </div>
+          <div>
+            <div class="pp-stat-label">PROJ. RECORD</div>
+            <div class="pp-stat-big is-plain">${ppProjRecord(o, 0)}</div>
+          </div>
+          <div>
+            <div class="pp-stat-label">LIKELY SEED</div>
+            <div class="pp-stat-big is-plain">${o.seed != null ? ppOrdinal(Math.round(o.seed)) : '&mdash;'}</div>
+          </div>
+        </div>
+        <div class="pp-wif-actions">
+          <button class="pp-wif-btn is-win" data-pp-wif-all="1">Win Out</button>
+          <button class="pp-wif-btn is-loss" data-pp-wif-all="0">Lose Out</button>
+          <button class="pp-wif-btn" data-pp-wif-reset="1"${picked ? '' : ' disabled'}>Reset</button>
+        </div>
+      </div>`;
+
+      const weekTabs = ctx.schedule.map(w => {
+        const set = w.rosterPairs.some(p => ppWif[w.week + '|' + p[0]] != null || ppWif[w.week + '|' + p[1]] != null);
+        return `<span class="pp-wif-week${w.week === ppWifWeek ? ' is-active' : ''}${set ? ' is-set' : ''}" data-pp-wif-week="${w.week}">Wk ${w.week}</span>`;
+      }).join('');
+
+      const games = ctx.schedule[wi].rosterPairs.map((pair, pi) => {
+        const g = res.games && res.games[wi] ? res.games[wi].games[pi] : null;
+        const probA = g ? g.probA : null;
+        const side = (id, p, other) => {
+          // A side is picked if it was chosen to win, or beaten if it lost
+          // -- either because it was picked to lose, or because the team
+          // across from it was picked to win. One click, both sides move.
+          const mineState = ppWif[ppWifWeek + '|' + id];
+          const theirState = ppWif[ppWifWeek + '|' + other];
+          let cls = '';
+          if (mineState === 1 || theirState === 0) cls = ' is-picked';
+          else if (mineState === 0 || theirState === 1) cls = ' is-beaten';
+          return `<div class="pp-wif-side${cls}${id === team.id ? ' is-mine' : ''}" data-pp-wif-pick="${ppWifWeek}|${id}|${other}">
+            <span class="pp-wif-name">${sbFieldEsc(nameOf(id))}</span>
+            <span class="pp-wif-pct">${p == null ? '' : pctText(p)}</span>
+          </div>`;
+        };
+        return `<div class="pp-wif-game">
+          ${side(pair[0], probA, pair[1])}
+          <span class="pp-wif-vs">VS</span>
+          ${side(pair[1], probA == null ? null : 1 - probA, pair[0])}
+        </div>`;
+      }).join('');
+
+      return head + `<div class="pp-wif-grid">
+        <div class="pp-panel">
+          <div class="pp-wif-weeks">${weekTabs}</div>
+          ${games}
+          <p class="pp-note">Click a team to hold that result. Click it again to let the week play out.</p>
+        </div>
+        <div class="pp-panel">
+          <div class="pp-panel-head"><span class="pp-panel-title">Games That Matter</span>
+            <span class="pp-panel-sub">Week ${ppWifWeek}</span></div>
+          ${ppGamesThatMatter(res, ctx, wi, team, nameOf)}
+        </div>
+      </div>`;
+    }
+
+    // What each of this week's games is worth to one team: the gap between
+    // its playoff odds in the seasons where one side won and the seasons
+    // where the other did. Read off the same runs as everything else on
+    // the tab, so a game shown as +4% really is the model's own answer and
+    // not a second estimate of it.
+    function ppGamesThatMatter(res, ctx, wi, team, nameOf) {
+      const week = res.games && res.games[wi];
+      if (!week) return '<div class="pp-panel-sub">No games left to weigh this week.</div>';
+      const rows = week.games.map((g) => {
+        const a = g.playoffIfA ? g.playoffIfA[team.id] : null;
+        const b = g.playoffIfB ? g.playoffIfB[team.id] : null;
+        if (a == null || b == null) {
+          return { g, swing: null, root: null };
+        }
+        return { g, swing: Math.abs(a - b), root: a >= b ? g.a : g.b };
+      }).sort((x, y) => (y.swing == null ? -1 : y.swing) - (x.swing == null ? -1 : x.swing));
+
+      return rows.map(({ g, swing, root }) => {
+        const mine = g.a === team.id || g.b === team.id;
+        const title = `${sbFieldEsc(nameOf(g.a))} vs ${sbFieldEsc(nameOf(g.b))}`;
+        const sub = swing == null
+          ? 'Result is held, so there is nothing to weigh'
+          : (mine ? 'Your game' : 'Root for <b>' + sbFieldEsc(nameOf(root)) + '</b>');
+        const pts = swing == null ? '&mdash;'
+          : (swing < 0.005 ? '&lt;1%' : '+' + Math.round(swing * 100) + '%');
+        return `<div class="pp-gtm-row">
+          <div class="pp-gtm-main">
+            <div class="pp-gtm-title">${title}</div>
+            <div class="pp-gtm-sub">${sub}</div>
+          </div>
+          <span class="pp-gtm-swing${swing == null || swing < 0.005 ? ' is-flat' : ''}">${pts}</span>
+        </div>`;
+      }).join('') + '<p class="pp-note">The difference in your playoff odds between the two results of each game.</p>';
+    }
+
+    // Every game this team has left, held to the same result. The whole
+    // point of "win out" is that it answers the question a manager
+    // actually asks in November, which no single game does.
+    function ppWifSetAll(entry, rosterId, result) {
+      const model = (window.__ppPickModel || {})[entry.league.league_id];
+      const ctx = model && model.current && model.current.ctx;
+      if (!ctx) return;
+      ctx.schedule.forEach(w => {
+        w.rosterPairs.forEach(pair => {
+          if (pair[0] !== rosterId && pair[1] !== rosterId) return;
+          const other = pair[0] === rosterId ? pair[1] : pair[0];
+          // Whatever was held for the opponent goes: one game, one entry,
+          // so "win out" can never end up arguing with an earlier pick.
+          delete ppWif[w.week + '|' + other];
+          ppWif[w.week + '|' + rosterId] = result;
+        });
+      });
+    }
+
     // ---- Wiring --------------------------------------------------------
     function renderRealPlayoffPicture() {
       const entries = ppEntries();
@@ -30785,6 +31277,7 @@
 
       if (ppLeagueId === 'all') {
         if (teamWrap) teamWrap.hidden = true;
+        if (ppTabsEl) ppTabsEl.hidden = true;
         if (titleEl) titleEl.textContent = 'By League';
         // Longest odds first among the ones still in question: the leagues
         // worth thinking about, rather than the ones already decided.
@@ -30805,16 +31298,57 @@
     }
     window.renderRealPlayoffPicture = renderRealPlayoffPicture;
 
+    // Results picked in one league mean nothing in another, and neither
+    // does the week they were picked in.
+    function ppWifClear() {
+      ppWif = {}; ppWifWeek = null; ppWifRes = null; ppWifKey = '';
+    }
+
     leagueSel.addEventListener('change', () => {
       ppLeagueId = leagueSel.value;
       ppRosterId = null;
+      ppWifClear();
+      renderRealPlayoffPicture();
+    });
+
+    if (ppTabsEl) ppTabsEl.addEventListener('click', (e) => {
+      const tab = e.target.closest('[data-pp-tab]');
+      if (!tab || tab.dataset.ppTab === ppTab) return;
+      ppTab = tab.dataset.ppTab;
       renderRealPlayoffPicture();
     });
     if (teamSel) teamSel.addEventListener('change', () => {
+      // The picked results stay: "what if I win out" is worth asking about
+      // the team you just switched to, and the run behind it is the same
+      // run either way -- only which team's odds are read off it changes.
       ppRosterId = Number(teamSel.value);
       renderRealPlayoffPicture();
     });
     bodyEl.addEventListener('click', (e) => {
+      const entry = ppEntries().find(x => x.league.league_id === ppLeagueId);
+      const wk = e.target.closest('[data-pp-wif-week]');
+      if (wk) { ppWifWeek = Number(wk.dataset.ppWifWeek); renderRealPlayoffPicture(); return; }
+      const pick = e.target.closest('[data-pp-wif-pick]');
+      if (pick) {
+        const [week, id, other] = pick.dataset.ppWifPick.split('|').map(Number);
+        const key = week + '|' + id, oppKey = week + '|' + other;
+        // Clicking the side that is already holding the win releases the
+        // game; clicking either side otherwise gives it that result. The
+        // loser's key is dropped rather than written as a 0, so one game
+        // is only ever one entry.
+        if (ppWif[key] === 1) { delete ppWif[key]; delete ppWif[oppKey]; }
+        else { ppWif[key] = 1; delete ppWif[oppKey]; }
+        renderRealPlayoffPicture();
+        return;
+      }
+      const all = e.target.closest('[data-pp-wif-all]');
+      if (all && entry && ppRosterId != null) {
+        ppWifSetAll(entry, ppRosterId, Number(all.dataset.ppWifAll));
+        renderRealPlayoffPicture();
+        return;
+      }
+      if (e.target.closest('[data-pp-wif-reset]')) { ppWifClear(); renderRealPlayoffPicture(); return; }
+
       const row = e.target.closest('[data-pp-league]');
       if (row) { ppLeagueId = row.dataset.ppLeague; ppRosterId = null; renderRealPlayoffPicture(); return; }
       const tr = e.target.closest('[data-pp-roster]');
