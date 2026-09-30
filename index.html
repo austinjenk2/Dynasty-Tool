@@ -1652,6 +1652,12 @@
 
   .pp-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 26px 0 10px; }
   .pp-head h2 { font-family: 'Source Serif 4', serif; font-size: 17px; margin: 0; flex: 1; }
+  .pp-back { font-size: 11.5px; font-weight: 700; padding: 6px 11px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; }
+  .pp-back:hover { border-color: var(--navy); color: var(--ink); }
+  .pp-th { cursor: pointer; user-select: none; white-space: nowrap; }
+  .pp-th:hover { color: var(--ink); }
+  .pp-th.is-sorted { color: var(--ink); }
+  .pp-sort-caret { display: inline-block; width: 9px; font-size: 9px; }
 
   /* One row per league in the portfolio view. */
   .pp-league-row {
@@ -2257,6 +2263,12 @@
   .rg-panel-even .rg-panel-head { color: var(--gold); }
   .rg-list { display: flex; flex-direction: column; gap: 6px; max-height: 460px; overflow-y: auto; }
   .rg-panel-even .rg-list { max-height: none; }
+
+  .rg-band { color: var(--faint); font-weight: 600; }
+  .rg-band::before { content: '\00b7'; margin: 0 5px; }
+  .rg-key-bands { margin: 6px 0 8px; padding-left: 0; list-style: none; font-size: 11.5px; color: var(--muted); line-height: 1.75; }
+  .rg-key-bands b { color: var(--ink); }
+  .rg-key-band-n { display: inline-block; min-width: 46px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--faint); }
 
   /* The Rooting Score key. On only while that mode is, because it is
      explaining that mode and nothing else. */
@@ -6253,8 +6265,19 @@
               <span class="rg-key-chip rg-key-neg">&minus;100</span><span class="rg-key-cap">root hard against</span>
               <span class="rg-key-chip rg-key-zero">0</span><span class="rg-key-cap">neutral</span>
               <span class="rg-key-chip rg-key-pos">+100</span><span class="rg-key-cap">root hard for</span>
-              <span class="rg-key-hint">Hover any player&rsquo;s score for his own numbers.</span>
             </div>
+            <p class="rg-key-line"><b>What the size means.</b> The sign is who to root for; the size is how
+              much to care, and it is the same whichever way it points.</p>
+            <ul class="rg-key-bands">
+              <li><span class="rg-key-band-n">80+</span> <b>your whole week</b> &mdash; his game more or less decides how your Sunday goes</li>
+              <li><span class="rg-key-band-n">55&ndash;79</span> <b>huge</b> &mdash; a big game from him swings a matchup you could go either way in</li>
+              <li><span class="rg-key-band-n">30&ndash;54</span> <b>matters a lot</b> &mdash; clearly worth watching, not the whole day</li>
+              <li><span class="rg-key-band-n">12&ndash;29</span> <b>worth watching</b> &mdash; a real but modest nudge</li>
+              <li><span class="rg-key-band-n">3&ndash;11</span> <b>barely matters</b> &mdash; his leagues are mostly decided already</li>
+              <li><span class="rg-key-band-n">0&ndash;2</span> <b>neutral</b> &mdash; nothing riding on him</li>
+            </ul>
+            <p class="rg-key-hint">Hover any player&rsquo;s score to see what a 10-point game from him is
+              actually worth to you, and the matchup-by-matchup working behind it.</p>
           </div>
         </div>
 
@@ -12385,6 +12408,7 @@
     <div class="pp-summary" id="ppSummary"></div>
 
     <div class="pp-head">
+      <button type="button" class="pp-back" id="ppBackAll" hidden>&larr; All leagues</button>
       <h2 id="ppLeagueTitle">By League</h2>
       <label class="rk-edition">
         <span>LEAGUE</span>
@@ -18236,6 +18260,18 @@
           if (rootScore > 2) deltaEl.classList.add('rg-delta-pos');
           else if (rootScore < -2) deltaEl.classList.add('rg-delta-neg');
           else deltaEl.classList.add('rg-delta-even');
+          // The number tells you how much; the word tells you what that
+          // amount IS. Sitting in the row rather than in a tooltip because
+          // a tooltip nobody opens explains nothing.
+          if (noteEl && typeof sbRootingBand === 'function') {
+            const band = noteEl.querySelector('.rg-band') || (() => {
+              const el = document.createElement('span');
+              el.className = 'rg-band';
+              noteEl.appendChild(el);
+              return el;
+            })();
+            band.textContent = sbRootingBand(rootScore);
+          }
           deltaEl.title = (typeof sbRootingScoreExplain === 'function')
             ? sbRootingScoreExplain(
                 (r.el.querySelector('.rg-name') || {}).textContent, levLeagues, weights, swingNet, rootScore)
@@ -24964,6 +25000,18 @@
   //   playoff : share of simulated seasons this team made the field
   //   bye     : share where it finished high enough for a first-round bye
   //   seed    : its average finishing seed across those seasons
+  // Half the simulated seasons finish at this seed or better.
+  function ppMedianSeed(seedProb) {
+    if (!seedProb || !seedProb.length) return null;
+    let cum = 0;
+    for (let i = 0; i < seedProb.length; i++) {
+      cum += seedProb[i];
+      if (cum >= 0.5) return i + 1;
+    }
+    return seedProb.length;
+  }
+  window.ppMedianSeed = ppMedianSeed;
+
   function ppTeamOdds(entry, rosterId) {
     if (!entry || !entry.league || rosterId == null) return null;
     const model = window.__ppPickModel[entry.league.league_id];
@@ -24979,6 +25027,18 @@
       projWins: cur.projWins ? cur.projWins[rosterId] : null,
       ifWin: cur.ifWinProb ? cur.ifWinProb[rosterId] : null,
       ifLoss: cur.ifLossProb ? cur.ifLossProb[rosterId] : null,
+      // The MEDIAN seed: finish here or better in half the simulated
+      // seasons. Neither of the obvious alternatives works. The mean drags
+      // on a long tail of bad seasons, so the team with the best record,
+      // the best odds and the best bye chance in the league prints "2nd"
+      // -- which is the thing that looked broken. And the single most
+      // likely seed is worse still: in a bunched league the seed
+      // distribution is nearly flat through the middle, so its peak is
+      // sampling noise, and a team whose median finish is fifth reports
+      // "1st" off a thirteen percent spike. The median moves only when the
+      // distribution really moves, and it says something plain.
+      likelySeed: ppMedianSeed(cur.seedProb && cur.seedProb[rosterId]),
+      topSeedOdds: cur.seedProb && cur.seedProb[rosterId] ? cur.seedProb[rosterId][0] : null,
       regularWeeks: cur.regularWeeks,
       // Games, not weeks: a median league plays two a week, so the losses
       // in a projected record are games-minus-wins and nothing else.
@@ -27262,13 +27322,57 @@
   }
   window.sbRootingScore = sbRootingScore;
 
+  // ---- What a score actually means -------------------------------------
+  // "+66" is a precise number that tells you nothing on its own. Nobody
+  // has an intuition for two thirds of a hyperbolic tangent, and the honest
+  // unit behind it -- win probability per fantasy point -- is worse. So
+  // every score also carries a word and a sentence.
+  //
+  // The word is a band, because the decision a score drives is coarse:
+  // watch this guy, or do not. The sentence converts the score back into
+  // something a person has a feel for -- what a normal game from him is
+  // worth -- by running the scale backwards to the leverage it came from
+  // and multiplying by a real number of points.
+  const SB_SCORE_BANDS = [
+    { at: 80, label: 'your whole week' },
+    { at: 55, label: 'huge' },
+    { at: 30, label: 'matters a lot' },
+    { at: 12, label: 'worth watching' },
+    { at: 3, label: 'barely matters' },
+    { at: 0, label: 'neutral' },
+  ];
+  function sbRootingBand(score) {
+    const v = Math.abs(Number(score) || 0);
+    const band = SB_SCORE_BANDS.find(b => v >= b.at) || SB_SCORE_BANDS[SB_SCORE_BANDS.length - 1];
+    return band.label;
+  }
+  // A typical starter's game, used as the yardstick. Ten points is a quiet
+  // day for a starting back and a good one for a tight end -- close enough
+  // to "a game" that the sentence reads as a real thing that happens.
+  const SB_SCORE_YARDSTICK = 10;
+  function sbRootingMeaning(perPoint, score) {
+    const pp = Number(perPoint) || 0;
+    if (!pp || Math.abs(score) < 1) return 'Nothing riding on him this week.';
+    const swing = Math.abs(pp) * SB_SCORE_YARDSTICK;
+    const dir = pp > 0 ? 'better' : 'worse';
+    const rounded = swing >= 10 ? Math.round(swing) : swing.toFixed(1);
+    return `A ${SB_SCORE_YARDSTICK}-point game from him leaves your week about `
+      + `${rounded} points of win probability ${dir} off, added up across your matchups.`;
+  }
+  window.sbRootingBand = sbRootingBand;
+  window.sbRootingMeaning = sbRootingMeaning;
+
   // The whole derivation, in words, for the hover on a player's score:
   // every matchup he is in, what a point of his does to it, what that
   // league is weighted, and the two steps from there to the number.
   function sbRootingScoreExplain(name, levLeagues, weights, net, score) {
     const lines = [];
-    lines.push(`${name || 'This player'} — Rooting Score ${score > 0 ? '+' : ''}${score}`);
+    lines.push(`${name || 'This player'} — Rooting Score ${score > 0 ? '+' : ''}${score} (${sbRootingBand(score)})`);
     lines.push(score > 0 ? 'Root FOR him.' : (score < 0 ? 'Root AGAINST him.' : 'Neutral — nothing to gain either way.'));
+    lines.push('');
+    // The one line that makes the number mean something, before any of the
+    // derivation that explains where it came from.
+    lines.push(sbRootingMeaning(net, score));
     lines.push('');
     lines.push('Each matchup he is in, and what one point of his does to it:');
     levLeagues.forEach(l => {
@@ -30812,7 +30916,9 @@
     let ppLeagueId = 'all';
     let ppRosterId = null;
     let ppTab = 'picture';
+    let ppSortKey = 'seed', ppSortDesc = false;
     const ppTabsEl = document.getElementById('ppTabs');
+    const ppBackEl = document.getElementById('ppBackAll');
 
     const pct = (v) => v == null ? null : Math.round(v * 100);
     const pctText = (v) => {
@@ -30836,11 +30942,17 @@
       .filter(e => e && e.roster && e.league)
       .sort((a, b) => a.league.name.localeCompare(b.league.name));
 
+    // The MANAGER, not the team name. Team names change on a whim, differ
+    // from league to league for the same person, and are the reason a
+    // portfolio of eighteen leagues reads as ninety strangers. The handle
+    // is what you actually know someone by, and it is the same handle in
+    // every league they are in.
     const nameFor = (entry, rosterId) => {
       const roster = (entry.allRosters || []).find(r => r.roster_id === rosterId);
       const user = (entry.users || []).find(u => u.user_id === (roster && roster.owner_id));
-      const meta = (user && user.metadata) || {};
-      return meta.team_name || (user && (user.display_name || user.username)) || 'Team ' + rosterId;
+      return (user && (user.display_name || user.username))
+        || ((user && user.metadata && user.metadata.team_name))
+        || 'Team ' + rosterId;
     };
     const recordOf = (roster) => {
       const st = (roster && roster.settings) || {};
@@ -31086,7 +31198,10 @@
             <div style="margin-left:auto;text-align:right">
               <div class="pp-stat-label">PROJECTED RECORD</div>
               <div class="pp-stat-big is-plain">${projRec}</div>
-              <div class="pp-stat-sub">${o.seed != null ? ppOrdinal(Math.round(o.seed)) + ' seed on average' : ''}</div>
+              <div class="pp-stat-sub">${o.likelySeed != null
+              ? ppOrdinal(o.likelySeed) + ' seed or better, half the time'
+                + (o.topSeedOdds != null ? ' &middot; ' + pctText(o.topSeedOdds) + ' to be the 1 seed' : '')
+              : ''}</div>
             </div>
           </div>
           <div class="pp-stat-label" style="margin-top:14px">CHANCE OF EACH SEED</div>
@@ -31157,13 +31272,48 @@
         </div>`;
     }
 
+    // Every column sorts, and each one knows which way round "best" is:
+    // the first click on playoff odds puts the safest team on top, the
+    // first click on seed puts the one seed on top. `get` pulls the value,
+    // `desc` says whether the first click should run high-to-low.
+    const PP_COLUMNS = [
+      { key: 'seed',    label: 'SEED',     desc: false, get: (t, ctx) => ctx.seedOf[t.id] },
+      { key: 'name',    label: 'MANAGER',  desc: false, get: (t) => t.name.toLowerCase(), text: true },
+      { key: 'playoff', label: 'PLAYOFFS', desc: true,  get: (t) => t.odds && t.odds.playoff },
+      { key: 'ifwin',   label: 'IF WIN',   desc: true,  get: (t) => t.odds && t.odds.ifWin },
+      { key: 'ifloss',  label: 'IF LOSS',  desc: true,  get: (t) => t.odds && t.odds.ifLoss },
+      { key: 'bye',     label: 'BYE',      desc: true,  get: (t) => t.odds && t.odds.bye },
+      { key: 'top',     label: '1 SEED',   desc: true,  get: (t) => t.odds && t.odds.topSeedOdds },
+      { key: 'record',  label: 'RECORD',   desc: true,  get: (t) => t.wins + t.ties * 0.5 },
+      { key: 'proj',    label: 'PROJ W/L', desc: true,  get: (t) => t.odds && t.odds.projWins },
+      { key: 'allplay', label: 'ALL-PLAY', desc: true,  get: (t) => t.ap.games ? (t.ap.w + t.ap.t * 0.5) / t.ap.games : null },
+      { key: 'ppg',     label: 'PPG',      desc: true,  get: (t) => t.ppg },
+      { key: 'last3',   label: 'LAST 3',   desc: true,  get: (t) => t.last3 },
+    ];
+
     function ppLeagueTable(teams, seedOf, playoffTeams) {
-      const head = ['SEED', 'TEAM', 'PLAYOFFS', 'IF WIN', 'IF LOSS', 'BYE', 'RECORD', 'PROJ W/L', 'ALL-PLAY', 'PPG', 'LAST 3']
-        .map((h, i) => `<th${i === 1 ? ' class="rb-th-league"' : ''}>${h}</th>`).join('');
-      const rows = teams.map((t, i) => {
+      const col = PP_COLUMNS.find(c => c.key === ppSortKey) || PP_COLUMNS[0];
+      const dir = ppSortDesc ? -1 : 1;
+      // Missing values sink to the bottom whichever way the column is
+      // pointing, so an unpriced team never takes the top of the table.
+      const rows0 = teams.slice().sort((a, b) => {
+        const av = col.get(a, { seedOf }), bv = col.get(b, { seedOf });
+        if (av == null && bv == null) return seedOf[a.id] - seedOf[b.id];
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        const cmp = col.text ? String(av).localeCompare(String(bv)) : (av - bv);
+        return cmp * dir || seedOf[a.id] - seedOf[b.id];
+      });
+
+      const head = PP_COLUMNS.map(c => {
+        const on = c.key === ppSortKey;
+        return `<th class="pp-th${on ? ' is-sorted' : ''}${c.key === 'name' ? ' rb-th-league' : ''}" data-pp-sort="${c.key}">`
+          + `${c.label}<span class="pp-sort-caret">${on ? (ppSortDesc ? '\u25be' : '\u25b4') : ''}</span></th>`;
+      }).join('');
+
+      const rows = rows0.map((t) => {
         const o = t.odds || {};
-        const projRec = ppProjRecord(o);
-        const cls = (t.isMe ? ' is-me' : '') + (seedOf[t.id] === playoffTeams ? ' is-cut' : '');
+        const cls = (t.isMe ? ' is-me' : '') + (ppSortKey === 'seed' && !ppSortDesc && seedOf[t.id] === playoffTeams ? ' is-cut' : '');
         return `<tr class="${cls.trim()}" data-pp-roster="${t.id}">
           <td>${seedOf[t.id]}</td>
           <td class="rb-league-cell"><span class="rb-league-name">${sbFieldEsc(t.name)}</span></td>
@@ -31171,8 +31321,9 @@
           <td>${pctText(o.ifWin)}</td>
           <td>${pctText(o.ifLoss)}</td>
           <td>${o.bye == null ? '&mdash;' : pctText(o.bye)}</td>
+          <td>${o.topSeedOdds == null ? '&mdash;' : pctText(o.topSeedOdds)}</td>
           <td>${t.wins}-${t.losses}${t.ties ? '-' + t.ties : ''}</td>
-          <td>${projRec}</td>
+          <td>${ppProjRecord(o)}</td>
           <td>${t.ap.games ? `${t.ap.w}-${t.ap.l}` : '&mdash;'}</td>
           <td>${t.ppg != null ? t.ppg.toFixed(1) : '&mdash;'}</td>
           <td>${t.last3 != null ? t.last3.toFixed(1) : '&mdash;'}</td>
@@ -31216,6 +31367,8 @@
       playoff: res.playoffProb[id],
       bye: res.byeProb[id] != null ? res.byeProb[id] : null,
       seed: res.avgSeed[id], seedProb: res.seedProb[id],
+      likelySeed: ppMedianSeed(res.seedProb[id]),
+      topSeedOdds: res.seedProb[id] ? res.seedProb[id][0] : null,
       projWins: res.projWins[id],
       regularWeeks: res.regularWeeks,
       regularGames: res.regularGames != null ? res.regularGames : res.regularWeeks,
@@ -31270,8 +31423,8 @@
           ${delta('BYE', b.bye, o.bye, (v) => v == null ? '&mdash;' : pctText(v), true)}
           ${delta('PROJ. W/L', b.projWins, o.projWins,
             (v) => ppProjRecord({ projWins: v, regularGames: o.regularGames, regularWeeks: o.regularWeeks }, 0), true)}
-          ${delta('LIKELY SEED', b.seed, o.seed,
-            (v) => v == null ? '&mdash;' : ppOrdinal(Math.round(v)), false)}
+          ${delta('LIKELY SEED', b.likelySeed, o.likelySeed,
+            (v) => v == null ? '&mdash;' : ppOrdinal(v), false)}
         </div>
         <div class="pp-wif-actions">
           <button class="pp-wif-btn is-win" data-pp-wif-all="1">Win Out</button>
@@ -31285,9 +31438,24 @@
         return `<span class="pp-wif-week${w.week === ppWifWeek ? ' is-active' : ''}${set ? ' is-set' : ''}" data-pp-wif-week="${w.week}">Wk ${w.week}</span>`;
       }).join('');
 
-      const games = ctx.schedule[wi].rosterPairs.map((pair, pi) => {
+      // Your own matchup leads the week. You open a week to see your game,
+      // and hunting for it in a list of six is a small tax paid every
+      // single click.
+      const ordered = ctx.schedule[wi].rosterPairs
+        .map((pair, pi) => ({ pair, pi }))
+        .sort((a, b) => (b.pair.includes(team.id) ? 1 : 0) - (a.pair.includes(team.id) ? 1 : 0));
+
+      const games = ordered.map(({ pair, pi }) => {
         const g = res.games && res.games[wi] ? res.games[wi].games[pi] : null;
-        const probA = g ? g.probA : null;
+        // The win percentage the rest of the app would show for this game:
+        // the Slate's own live number for the week being played, and both
+        // rosters' best possible lineups for a week that has not happened.
+        // The simulation's own head-to-head rate is a season-model answer
+        // and belongs to the odds, not to the scoreboard -- showing one
+        // number here and a different one on the Slate for the same game
+        // is the kind of thing that makes a whole page look wrong.
+        let probA = ppGameWinPct(entry, ppWifWeek, pair[0], pair[1]);
+        if (probA == null) probA = g ? g.probA : null;
         const side = (id, p, other) => {
           // A side is picked if it was chosen to win, or beaten if it lost
           // -- either because it was picked to lose, or because the team
@@ -31328,6 +31496,54 @@
     // where the other did. Read off the same runs as everything else on
     // the tab, so a game shown as +4% really is the model's own answer and
     // not a second estimate of it.
+    // One game's win probability, from whichever source actually knows.
+    // The live week has real lineups, real game state and the Slate's own
+    // model, so it uses that. A future week has neither, so it goes off
+    // both rosters' best possible lineups by projection, spread by what
+    // the season model says a weekly score swings by. Null when it cannot
+    // answer, and the caller falls back to the simulation's own rate.
+    function ppGameWinPct(entry, week, idA, idB) {
+      if (!entry || !entry.league) return null;
+      const liveWeek = Number(entry.week) || 0;
+      if (week === liveWeek) {
+        const all = entry.allMatchups || [];
+        const a = all.find(m => m.roster_id === idA), b = all.find(m => m.roster_id === idB);
+        if (a && b) {
+          try {
+            const p = sbMatchupWinPct(a, b, entry.league, null, window.__gcEspnGameData, liveWeek);
+            if (p != null && Number.isFinite(p)) return p / 100;
+          } catch (e) {}
+        }
+        return null;
+      }
+      if (!window.sbTeamOptimalProjection) return null;
+      const rosters = entry.allRosters || [];
+      const ra = rosters.find(r => r.roster_id === idA), rb = rosters.find(r => r.roster_id === idB);
+      if (!ra || !rb) return null;
+      const pa = window.sbTeamOptimalProjection(ra.players, entry.league);
+      const pb = window.sbTeamOptimalProjection(rb.players, entry.league);
+      // Two rosters that project identically -- or two that could not be
+      // projected at all, which comes out as a pair of zeroes -- is not a
+      // coin flip, it is no answer. Saying 50/50 there would be inventing
+      // one, so the caller falls back to the simulation instead.
+      if (pa == null || pb == null || Math.abs(pa - pb) < 1e-9) return null;
+      // How far a single week swings around its projection. Taken off the
+      // fitted model where there is one, so this and the odds are reading
+      // the same league rather than two different guesses about it.
+      const cur = ((window.__ppPickModel || {})[entry.league.league_id] || {}).current;
+      const m = cur && cur.model;
+      const sd = (m && m[idA] && m[idB]) ? Math.sqrt((m[idA].sd * m[idA].sd + m[idB].sd * m[idB].sd) / 2) : 26;
+      const spread = sd * Math.SQRT2;
+      if (!(spread > 0)) return null;
+      // Normal CDF via erf, good to about 1e-7 -- plenty for a percentage.
+      const z = (pa - pb) / spread;
+      const t = 1 / (1 + 0.2316419 * Math.abs(z));
+      const d = 0.3989422804014327 * Math.exp(-z * z / 2);
+      let p = 1 - d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+      if (z < 0) p = 1 - p;
+      return Math.max(0, Math.min(1, p));
+    }
+
     function ppGamesThatMatter(res, ctx, wi, team, nameOf, wifWeek) {
       const week = res.games && res.games[wi];
       if (!week) return '<div class="pp-panel-sub">No games left to weigh this week.</div>';
@@ -31395,6 +31611,7 @@
       }));
       ppRenderSummary(rows);
 
+      if (ppBackEl) ppBackEl.hidden = ppLeagueId === 'all';
       if (ppLeagueId === 'all') {
         if (teamWrap) teamWrap.hidden = true;
         if (ppTabsEl) ppTabsEl.hidden = true;
@@ -31427,6 +31644,12 @@
     leagueSel.addEventListener('change', () => {
       ppLeagueId = leagueSel.value;
       ppRosterId = null;
+      ppWifClear();
+      renderRealPlayoffPicture();
+    });
+
+    if (ppBackEl) ppBackEl.addEventListener('click', () => {
+      ppLeagueId = 'all'; ppRosterId = null; ppTab = 'picture';
       ppWifClear();
       renderRealPlayoffPicture();
     });
@@ -31469,6 +31692,16 @@
       }
       if (e.target.closest('[data-pp-wif-reset]')) { ppWifClear(); renderRealPlayoffPicture(); return; }
 
+      const th = e.target.closest('[data-pp-sort]');
+      if (th) {
+        const key = th.dataset.ppSort;
+        // Same column again flips it; a new column starts on the end that
+        // reads as "best" for that column.
+        if (key === ppSortKey) ppSortDesc = !ppSortDesc;
+        else { ppSortKey = key; ppSortDesc = !!(PP_COLUMNS.find(c => c.key === key) || {}).desc; }
+        renderRealPlayoffPicture();
+        return;
+      }
       const row = e.target.closest('[data-pp-league]');
       if (row) { ppLeagueId = row.dataset.ppLeague; ppRosterId = null; renderRealPlayoffPicture(); return; }
       const tr = e.target.closest('[data-pp-roster]');
