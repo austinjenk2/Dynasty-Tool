@@ -2332,6 +2332,28 @@
   .rg-list { display: flex; flex-direction: column; gap: 6px; max-height: 460px; overflow-y: auto; }
   .rg-panel-even .rg-list { max-height: none; }
 
+  /* The Rooting Score key. On only while that mode is, because it is
+     explaining that mode and nothing else. */
+  .rg-key {
+    margin-top: 12px; padding: 12px 14px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .rg-key[hidden] { display: none; }
+  .rg-key-title { font-family: 'Source Serif 4', serif; font-size: 13.5px; font-weight: 700; color: var(--ink); margin-bottom: 5px; }
+  .rg-key-line { margin: 0 0 7px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .rg-key-steps { margin: 0 0 9px; padding-left: 18px; font-size: 12px; color: var(--muted); line-height: 1.55; }
+  .rg-key-steps b { color: var(--ink); }
+  .rg-key-scale { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .rg-key-chip {
+    font-family: 'Source Serif 4', serif; font-size: 13px; font-weight: 700;
+    border-radius: 4px; padding: 1px 7px; border: 1px solid var(--border);
+  }
+  .rg-key-neg { color: var(--red); border-color: var(--red); background: var(--red-bg); }
+  .rg-key-pos { color: var(--green); border-color: var(--green); background: var(--green-bg); }
+  .rg-key-zero { color: var(--faint); }
+  .rg-key-cap { font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; color: var(--faint); margin-right: 6px; }
+  .rg-key-hint { font-size: 10.5px; color: var(--faint); font-style: italic; margin-left: auto; }
+
   .rg-row { border: 1px solid var(--border-soft); border-radius: 6px; cursor: pointer; }
   .rg-row:hover { border-color: var(--border); }
   .rg-row-flash { animation: rgRowFlash 1.4s ease; }
@@ -6309,13 +6331,30 @@
             </span>
           </div>
           <p>Your starters versus your opponents across all scheduled matchups. Tap a player for the league list.</p>
+          <div class="rg-key" id="rgScoreKey">
+            <div class="rg-key-title">How the Rooting Score works</div>
+            <p class="rg-key-line">Not every matchup cares the same amount. A game you are 95% to win is
+              already decided &mdash; points there barely move anything. A coin flip moves a lot. The score
+              measures that instead of counting leagues.</p>
+            <ol class="rg-key-steps">
+              <li><b>Where is each matchup headed?</b> Your projected final against your opponent&rsquo;s, plus how much is still unplayed.</li>
+              <li><b>What does one of his points do to it?</b> Slide that projection by a point and see how far your win probability moves. Steep at 50/50, flat at 95/5, zero once a matchup is settled.</li>
+              <li><b>Add up his matchups</b>, plus where he starts for you, minus where he starts against you &mdash; each league weighted half by your buy-in, half by simply being a league.</li>
+            </ol>
+            <div class="rg-key-scale">
+              <span class="rg-key-chip rg-key-neg">&minus;100</span><span class="rg-key-cap">root hard against</span>
+              <span class="rg-key-chip rg-key-zero">0</span><span class="rg-key-cap">neutral</span>
+              <span class="rg-key-chip rg-key-pos">+100</span><span class="rg-key-cap">root hard for</span>
+              <span class="rg-key-hint">Hover any player&rsquo;s score for his own numbers.</span>
+            </div>
+          </div>
         </div>
 
         <div class="rg-leagues-dropdown" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div class="exp-search" id="rgSearchWrap" style="max-width:220px"><input type="text" id="rgSearchInput" placeholder="Search player..."></div>
           <div class="rg-leagues-toggle" id="rgLeaguesBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="rgLeaguesCount">(18 of 18)</span></div>
           <div class="rg-sort-toggle" id="rgSortToggle">
-            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="score" title="0-100. 50 is neutral, above 50 root for him, below root against -- how far from 50 is how much it matters. Built from how much your win probability moves per point he scores, weighted by what each league is worth to you.">Rooting Score</button>
+            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="score" title="-100 to +100. Zero is neutral, positive means root for him, negative means root against, and the size is how much it matters. Hover any player&#39;s score to see exactly how his was built.">Rooting Score</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="swing" title="The same thing in its raw unit: win probability per point he scores, added up across every matchup he is in">Swing %</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="value">Leagues</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="leagues">$</button>
@@ -13135,19 +13174,24 @@
       // whichever one matches the Rooting Guide's current $ / league-count
       // toggle, so this list agrees with it instead of always showing the
       // league-count number.
-      const isMoney = !!window.__rgMoneyMode;
-      const deltaNum = Number(row.dataset[isMoney ? 'dollar' : 'delta']);
+      const mode = window.__rgMode || (window.__rgMoneyMode ? 'leagues' : 'value');
+      const key = mode === 'score' ? 'score' : (mode === 'swing' ? 'swing' : (mode === 'leagues' ? 'dollar' : 'delta'));
+      const deltaNum = Number(row.dataset[key]);
       if (!deltaNum) return;
-      matches.push({ id: row.dataset.playerId, name: nameEl.textContent.trim(), delta: deltaNum, isMoney });
+      matches.push({ id: row.dataset.playerId, name: nameEl.textContent.trim(), delta: deltaNum, mode });
     });
     matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     return matches;
   }
-  // Formats one match's delta for display -- "+$325"/"-$50" in $ mode,
-  // "+4"/"-2" in league-count mode -- shared by every place that renders
-  // getRootingDeltasForTeams() results as a chip.
+  // Formats one match's number for display -- a signed Rooting Score,
+  // "+1.8%" of win probability per point, "+$325", or a league count --
+  // whichever the Weekly Sweats page is currently showing, so a chip
+  // anywhere else on the site never disagrees with it.
   function rgChipDeltaText(m) {
-    if (m.isMoney) return m.delta > 0 ? `+$${m.delta}` : `-$${Math.abs(m.delta)}`;
+    const mode = m.mode || (m.isMoney ? 'leagues' : 'value');
+    if (mode === 'score') return (m.delta > 0 ? '+' : '') + Math.round(m.delta);
+    if (mode === 'swing') return `${m.delta > 0 ? '+' : '\u2212'}${Math.abs(m.delta).toFixed(2)}%`;
+    if (mode === 'leagues') return m.delta > 0 ? `+$${m.delta}` : `-$${Math.abs(m.delta)}`;
     return m.delta > 0 ? `+${m.delta}` : `${m.delta}`;
   }
 
@@ -13238,17 +13282,35 @@
     const rows = await computeRootingRowsForWeek(week);
     const blacklist = window.__rgBlacklistSet || new Set();
     const dollarMap = window.__rgLeagueDollarMap ? window.__rgLeagueDollarMap() : {};
-    const isMoney = !!window.__rgMoneyMode;
+    let mode = window.__rgMode || (window.__rgMoneyMode ? 'leagues' : 'value');
+    // A Rooting Score is a reading of live matchups, so it only means
+    // anything for the week actually being played. Asked about some other
+    // week, this falls back to the league count rather than inventing a
+    // score out of projections for a week nobody has played yet.
+    if ((mode === 'score' || mode === 'swing') && week !== window.__sleeperLiveWeek) mode = 'value';
     const matches = [];
     rows.forEach(r => {
       if (!teamCodes.includes(r.team)) return;
       const f = r.for.filter(l => !blacklist.has(l));
       const a = r.against.filter(l => !blacklist.has(l));
-      const deltaNum = isMoney
-        ? f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0)
-        : f.length - a.length;
+      let deltaNum;
+      if (mode === 'score' || mode === 'swing') {
+        const lev = (typeof sbPlayerLeverage === 'function' && r.id)
+          ? sbPlayerLeverage(r.id) : { leagues: [] };
+        const levLeagues = lev.leagues.filter(l => !blacklist.has(l.name));
+        const weights = (typeof sbLeagueWeights === 'function')
+          ? sbLeagueWeights(levLeagues.map(l => l.name)) : {};
+        const net = levLeagues.reduce((sum, l) => sum + l.perPoint * (weights[l.name] != null ? weights[l.name] : 1), 0);
+        deltaNum = mode === 'score'
+          ? (typeof sbRootingScore === 'function' ? sbRootingScore(net) : 0)
+          : Number(net.toFixed(3));
+      } else if (mode === 'leagues') {
+        deltaNum = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
+      } else {
+        deltaNum = f.length - a.length;
+      }
       if (!deltaNum) return;
-      matches.push({ id: r.id, name: r.name, delta: deltaNum, isMoney });
+      matches.push({ id: r.id, name: r.name, delta: deltaNum, mode });
     });
     matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     return matches;
@@ -17873,6 +17935,14 @@
     // button labels were swapped, so "Leagues" (default) triggers the
     // 'value'-based ranking and "$" triggers the money-based one.
     let rgSortCriterion = 'score';
+    window.__rgMode = rgSortCriterion;
+    // The key explains the Rooting Score, so it is up exactly when that
+    // mode is and gone when you switch to one it does not describe.
+    function rgSyncScoreKey() {
+      const key = document.getElementById('rgScoreKey');
+      if (key) key.hidden = rgSortCriterion !== 'score';
+    }
+    rgSyncScoreKey();
     const rgSortToggle = document.getElementById('rgSortToggle');
     if (rgSortToggle) {
       rgSortToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(btn => {
@@ -17880,6 +17950,7 @@
           rgSortCriterion = btn.dataset.rgSort;
           rgSortToggle.querySelectorAll('.rg-sort-toggle-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
+          rgSyncScoreKey();
           recomputeRootingGuide();
           // 1-on-1 Slates reads its chip numbers off .rg-row's dataset,
           // which recomputeRootingGuide() just updated -- but the slate
@@ -18015,6 +18086,10 @@
       // Exposed so other places that read a player's rooting impact off
       // .rg-row (Weekly Schedule's exposure preview, the Rooting Guide's
       // own 1-on-1 Slates) know whether to show dollars or league count.
+      // Every other place that shows a rooting number off these rows --
+      // the Weekly Schedule's exposure chips, the 1-on-1 Slates, the
+      // ticker -- reads this to say the same thing this page is saying.
+      window.__rgMode = rgSortCriterion;
       window.__rgMoneyMode = rgSortCriterion === 'leagues';
       const buckets = { for: [], against: [], even: [] };
       rgRows.forEach(r => {
@@ -18069,13 +18144,17 @@
         // In $ mode the badge shows real dollars at stake instead of a
         // league count, so it reads "+$325" rather than "+3".
         if (rgSortCriterion === 'score') {
-          // 0-100, 50 neutral. The number a person can act on without
-          // first being taught what a percentage point of win probability
-          // is worth.
-          deltaEl.textContent = String(rootScore);
-          if (rootScore > 52) deltaEl.classList.add('rg-delta-pos');
-          else if (rootScore < 48) deltaEl.classList.add('rg-delta-neg');
+          // -100 to +100, zero neutral. The number a person can act on
+          // without first being taught what a percentage point of win
+          // probability is worth.
+          deltaEl.textContent = (rootScore > 0 ? '+' : '') + rootScore;
+          if (rootScore > 2) deltaEl.classList.add('rg-delta-pos');
+          else if (rootScore < -2) deltaEl.classList.add('rg-delta-neg');
           else deltaEl.classList.add('rg-delta-even');
+          deltaEl.title = (typeof sbRootingScoreExplain === 'function')
+            ? sbRootingScoreExplain(
+                (r.el.querySelector('.rg-name') || {}).textContent, levLeagues, weights, swingNet, rootScore)
+            : '';
         } else if (rgSortCriterion === 'swing') {
           // Win probability per fantasy point, summed over his matchups.
           // A player in two dead-rubber leagues reads near zero however
@@ -18086,6 +18165,7 @@
           else if (swingNet < -0.005) deltaEl.classList.add('rg-delta-neg');
           else deltaEl.classList.add('rg-delta-even');
         } else if (rgSortCriterion === 'leagues') {
+          deltaEl.title = '';
           if (dollarNet > 0) { deltaEl.textContent = '+$' + dollarNet; deltaEl.classList.add('rg-delta-pos'); }
           else if (dollarNet < 0) { deltaEl.textContent = '-$' + Math.abs(dollarNet); deltaEl.classList.add('rg-delta-neg'); }
           else { deltaEl.textContent = '$0'; deltaEl.classList.add('rg-delta-even'); }
@@ -26508,20 +26588,50 @@
   // ---- Rooting score ---------------------------------------------------
   // Leverage in win-percent-per-point is the honest unit, and "-2.34%" is
   // not a thing anyone wants to read on a Sunday. This is the same number
-  // on a 0-100 dial: 50 is neutral, above 50 root for him, below root
-  // against, and how far from 50 is how much you should care.
+  // on a -100 to +100 dial, which is how you already think about it: zero
+  // is neutral, a positive number means root for him, a negative one means
+  // root against, and the size is how much to care. A minus sign says
+  // "against" faster than any number below fifty does.
   //
   // tanh does the squashing, so the scale never runs out of room -- a
   // player who matters twice as much as anything you have seen still fits
   // -- while staying nearly straight through the middle, where almost
   // every player actually sits. SB_SCORE_FULL is the leverage that reads
-  // about 88: roughly a player starting for you in three coin flips.
+  // about 76: roughly a player starting for you in three coin flips.
   const SB_SCORE_FULL = 4;
   function sbRootingScore(perPoint) {
     const t = Math.tanh((Number(perPoint) || 0) / SB_SCORE_FULL);
-    return Math.round(50 + 50 * t);
+    return Math.round(100 * t);
   }
   window.sbRootingScore = sbRootingScore;
+
+  // The whole derivation, in words, for the hover on a player's score:
+  // every matchup he is in, what a point of his does to it, what that
+  // league is weighted, and the two steps from there to the number.
+  function sbRootingScoreExplain(name, levLeagues, weights, net, score) {
+    const lines = [];
+    lines.push(`${name || 'This player'} — Rooting Score ${score > 0 ? '+' : ''}${score}`);
+    lines.push(score > 0 ? 'Root FOR him.' : (score < 0 ? 'Root AGAINST him.' : 'Neutral — nothing to gain either way.'));
+    lines.push('');
+    lines.push('Each matchup he is in, and what one point of his does to it:');
+    levLeagues.forEach(l => {
+      const w = weights[l.name] != null ? weights[l.name] : 1;
+      lines.push(`  ${l.name}` +
+        `\n      you are ${l.winPct}% to win it · ${l.onMySide ? 'he starts for you' : 'he starts against you'}` +
+        `\n      1 point of his = ${l.perPoint > 0 ? '+' : ''}${l.perPoint.toFixed(2)}% win probability` +
+        (Math.abs(w - 1) > 0.005 ? ` · this league weighted ${w.toFixed(2)}x` : ''));
+    });
+    if (!levLeagues.length) lines.push('  (none — he is not in any of your lineups this week)');
+    lines.push('');
+    lines.push(`Added up: ${net > 0 ? '+' : ''}${net.toFixed(2)}% win probability per point he scores.`);
+    lines.push(`On the -100 to +100 scale that is ${score > 0 ? '+' : ''}${score}.`);
+    lines.push('');
+    lines.push('A matchup already won or already lost barely moves, so a player in it');
+    lines.push('counts for almost nothing. A coin flip moves a lot, so he counts for a lot.');
+    lines.push('League weight is half your buy-in share, half an equal share per league.');
+    return lines.join('\n');
+  }
+  window.sbRootingScoreExplain = sbRootingScoreExplain;
 
   // Every league a player is in, with what a point of his is worth there.
   // Positive means his points help you, negative means they cost you --
@@ -30202,9 +30312,16 @@
       return v ? v.split(' &middot; ').length : 0;
     }
 
-    function sweatRow(item, net, money) {
+    function sweatRow(item, net, mode) {
       const cls = net > 0 ? 'is-pos' : (net < 0 ? 'is-neg' : 'is-even');
-      const label = money
+      // Whatever the Weekly Sweats page is showing, the strip says the
+      // same thing -- a Rooting Score up there and a league count down
+      // here would be two answers to one question.
+      const label = mode === 'score'
+        ? (net > 0 ? `+${Math.round(net)} root for` : (net < 0 ? `${Math.round(net)} root against` : 'neutral'))
+        : mode === 'swing'
+        ? (net > 0 ? `+${net.toFixed(2)}% for you` : (net < 0 ? `${net.toFixed(2)}% against you` : 'even'))
+        : mode === 'leagues'
         ? (net > 0 ? `+$${net} for you` : (net < 0 ? `-$${Math.abs(net)} against you` : '$0'))
         : (net > 0 ? `+${net} for you` : (net < 0 ? `${net} against you` : 'even'));
       return `<div class="tk-item">${playerCell(item)}` +
@@ -30228,10 +30345,11 @@
       const els = topOf('.rg-panel-for').concat(topOf('.rg-panel-against'));
 
       if (els.length) {
-        // In $ mode the page ranks and labels by real money at stake, so the
-        // ticker says the same thing rather than quietly reverting to a
-        // league count the page isn't sorted by.
-        const money = !!window.__rgMoneyMode;
+        // The page ranks and labels by whichever mode is active, so the
+        // ticker reads the matching number off the same rows rather than
+        // quietly reverting to a league count the page isn't sorted by.
+        const mode = window.__rgMode || (window.__rgMoneyMode ? 'leagues' : 'value');
+        const dsKey = mode === 'score' ? 'score' : (mode === 'swing' ? 'swing' : (mode === 'leagues' ? 'dollar' : 'delta'));
         return els.map(el => {
           const d = el.dataset;
           const r = byId[d.playerId] || {};
@@ -30246,7 +30364,7 @@
             for: { length: rgLeagueCount(d.for) },
             against: { length: rgLeagueCount(d.against) },
           };
-          return sweatRow(item, Number(money ? d.dollar : d.delta) || 0, money);
+          return sweatRow(item, Number(d[dsKey]) || 0, mode);
         });
       }
 
@@ -30264,7 +30382,7 @@
         .sort((a, b) => b.delta - a.delta || tie(a, b)).slice(0, SWEAT_PER_SIDE);
       const againstSide = scored.filter(x => x.delta < 0)
         .sort((a, b) => a.delta - b.delta || tie(a, b)).slice(0, SWEAT_PER_SIDE);
-      return forSide.concat(againstSide).map(({ r, delta }) => sweatRow(r, delta, false));
+      return forSide.concat(againstSide).map(({ r, delta }) => sweatRow(r, delta, 'value'));
     }
 
     // The same sweats, but ranked by what they are actually doing today --
