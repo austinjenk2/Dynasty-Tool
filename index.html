@@ -2138,6 +2138,19 @@
     padding: 16px 18px;
     margin-top: -2px;
   }
+  .sb-recodds { padding: 11px 0 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .sb-ro-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 7px; }
+  .sb-ro-k { font-size: 9px; font-weight: 800; letter-spacing: 0.7px; color: var(--faint); }
+  .sb-ro-marks { display: flex; gap: 13px; margin-left: auto; font-size: 11px; color: var(--muted); }
+  .sb-ro-mark b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .sb-ro-chart { display: flex; align-items: flex-end; gap: 3px; height: 62px; }
+  .sb-ro-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; min-width: 0; height: 100%; }
+  .sb-ro-pct { font-size: 9px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .sb-ro-bar { width: 100%; border-radius: 2px 2px 0 0; background: var(--border); min-height: 2px; }
+  .sb-ro-bar.is-peak { background: var(--green); }
+  .sb-ro-num { font-size: 10px; font-weight: 700; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .sb-ro-foot { font-size: 11px; color: var(--faint); margin-top: 7px; }
+  .sb-ro-foot b { color: var(--ink); }
   .sb-exp-header { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
   .sb-exp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
   .sb-exp-chip {
@@ -2365,6 +2378,7 @@
   .sb-weekswing b { font-family: 'Source Serif 4', serif; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .sb-weekswing.is-up b { color: var(--green); }
   .sb-weekswing.is-down b { color: var(--red); }
+  .sb-weekswing.is-idle b { color: var(--faint); }
   .sb-ws-k { font-size: 9px; font-weight: 800; letter-spacing: 0.7px; color: var(--faint); }
   .sb-ws-s { font-size: 10.5px; color: var(--faint); }
   .rg-score-live { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin: 6px 0 2px; }
@@ -17764,6 +17778,7 @@
           (metaBits ? `<div class="sb-exp-chips">${metaBits}</div>` : '') +
         '</div>' +
       '</div>' +
+      sbRecordOddsHtml(entry) +
       `<div class="sb-exp-scoreline">${scoreHtml}</div>` +
       `<div class="sb-exp-body">${bodyHtml}</div>`;
     if (isFieldPane) {
@@ -17772,6 +17787,57 @@
       loadSbLastPlays(panel, fieldRosters.myIds, fieldRosters.oppIds, dict, entry.league, week);
     }
   }
+
+  // ---- Where this record actually finishes ------------------------------
+  // "Projected 8.1-5.9" is an average, and nobody finishes on an average.
+  // This is what the average is hiding: the odds of each whole-number
+  // record, and the "or better" thresholds people actually ask each other
+  // about in November. Head-to-head wins only -- a median league counts two
+  // games a week in its standings, but "am I getting to nine wins" has
+  // always meant the head-to-head nine.
+  //
+  // Reads the same season simulation as the Playoff Picture, so the two
+  // pages cannot disagree, and renders nothing at all until it lands.
+  function sbRecordOddsHtml(entry) {
+    if (!entry || !entry.roster || !window.ppTeamOdds) return '';
+    let o = null;
+    try { o = window.ppTeamOdds(entry, entry.roster.roster_id); } catch (e) { return ''; }
+    const dist = o && o.winDist;
+    if (!dist || !dist.length) return '';
+    const games = o.regularWeeks != null ? o.regularWeeks : dist.length - 1;
+    let lo = 0, hi = dist.length - 1;
+    while (lo < hi && dist[lo] < 0.005) lo++;
+    while (hi > lo && dist[hi] < 0.005) hi--;
+    if (hi <= lo) return '';
+    const max = Math.max.apply(null, dist.slice(lo, hi + 1));
+    const atLeast = [];
+    let cum = 0;
+    for (let w = dist.length - 1; w >= 0; w--) { cum += dist[w]; atLeast[w] = cum; }
+    const pct = (v) => v >= 0.995 ? '>99%' : (v < 0.005 ? '<1%' : Math.round(v * 100) + '%');
+    let peak = lo;
+    for (let w = lo; w <= hi; w++) if (dist[w] > dist[peak]) peak = w;
+    const cols = [];
+    for (let w = lo; w <= hi; w++) {
+      cols.push('<div class="sb-ro-col" title="' + w + '-' + (games - w) + ' in ' + pct(dist[w])
+        + ' of simulated seasons &mdash; ' + pct(atLeast[w]) + ' finish ' + w + '-' + (games - w) + ' or better">'
+        + '<span class="sb-ro-pct">' + (dist[w] >= 0.02 ? Math.round(dist[w] * 100) : '') + '</span>'
+        + '<span class="sb-ro-bar' + (w === peak ? ' is-peak' : '') + '" style="height:'
+        + Math.max(2, Math.round((dist[w] / max) * 100)) + '%"></span>'
+        + '<span class="sb-ro-num">' + w + '</span></div>');
+    }
+    const marks = [peak + 1, peak, peak - 1]
+      .filter(w => w >= 0 && w < dist.length && atLeast[w] > 0.005 && atLeast[w] < 0.995)
+      .map(w => '<span class="sb-ro-mark"><b>' + w + '+</b> ' + pct(atLeast[w]) + '</span>')
+      .join('');
+    return '<div class="sb-recodds">'
+      + '<div class="sb-ro-head"><span class="sb-ro-k">ODDS OF EACH FINAL RECORD</span>'
+      + '<span class="sb-ro-marks">' + marks + '</span></div>'
+      + '<div class="sb-ro-chart">' + cols.join('') + '</div>'
+      + '<div class="sb-ro-foot">Wins across the full season, head to head. Most likely: <b>'
+      + peak + '&ndash;' + (games - peak) + '</b> at ' + pct(dist[peak]) + '.</div>'
+      + '</div>';
+  }
+  window.sbRecordOddsHtml = sbRecordOddsHtml;
 
   // Re-draw whatever matchup is currently open -- used when the
   // Standard/Field toggle flips what the reading pane should be showing.
@@ -19935,6 +20001,11 @@
         setSyncState('ok', 'Synced just now');
         // Weekly Sweats builds window.__sleeperRootingRows, which other
         // parts of the app read, so it runs now rather than from the queue.
+        // The chip is written by the Rooting Guide's recompute, which runs
+        // inside the call below -- but if that render bails for any reason
+        // the chip would sit blank with no explanation, so it is put into
+        // its idle state first and overwritten a moment later.
+        if (window.sbSetWeekSwing) window.sbSetWeekSwing(null);
         if (window.renderRealRootingGuide) window.renderRealRootingGuide(window.__rgSelectedWeek || undefined);
         // Everything else is a page repainting itself, so it goes through
         // the queue: the page in front of you first, the rest in ~8ms
@@ -27777,9 +27848,19 @@
   function sbSetWeekSwing(total) {
     const el = document.getElementById('sbWeekSwing');
     if (!el) return;
-    if (total == null || !Number.isFinite(total)) { el.hidden = true; return; }
-    const sign = total > 0.005 ? '+' : (total < -0.005 ? '\u2212' : '');
+    // Shown even before kickoff, reading zero. A chip that simply is not
+    // there on a Wednesday is indistinguishable from one that is broken,
+    // and the thing it says -- nothing has happened yet -- is worth saying.
     el.hidden = false;
+    if (total == null || !Number.isFinite(total)) {
+      el.className = 'sb-weekswing is-idle';
+      el.innerHTML = `<span class="sb-ws-k">WEEK VS EXPECTED</span>`
+        + `<b>&plusmn;0.00</b><span class="sb-ws-s">no games started</span>`;
+      el.title = 'Once your players are playing, this tracks how far ahead of (or behind) '
+        + 'expectation your week is running, in matchups.';
+      return;
+    }
+    const sign = total > 0.005 ? '+' : (total < -0.005 ? '\u2212' : '');
     el.className = 'sb-weekswing' + (total > 0.005 ? ' is-up' : (total < -0.005 ? ' is-down' : ''));
     el.innerHTML = `<span class="sb-ws-k">WEEK VS EXPECTED</span>`
       + `<b>${sign}${Math.abs(total).toFixed(2)}</b>`
