@@ -950,6 +950,20 @@
   .sb-stat-value.sb-cyan { color: var(--blue); }
   .sb-stat-value.sb-green { color: var(--green); }
   .sb-stat-value.sb-red { color: var(--red); }
+  /* How many of this week's matchups you actually win -- the shape behind
+     "projected 8.4-5.6", which is an average of a thing that only ever
+     comes out whole. */
+  .sb-haul { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 11px 14px 12px; margin-top: 10px; }
+  .sb-haul-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .sb-haul-k { font-size: 9px; font-weight: 800; letter-spacing: 0.7px; color: var(--faint); }
+  .sb-haul-marks { display: flex; gap: 14px; margin-left: auto; font-size: 11.5px; color: var(--muted); }
+  .sb-haul-mark b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .sb-haul-chart { display: flex; align-items: flex-end; gap: 3px; height: 54px; }
+  .sb-haul-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; min-width: 0; height: 100%; }
+  .sb-haul-pct { font-size: 9px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .sb-haul-bar { width: 100%; border-radius: 2px 2px 0 0; background: var(--border); min-height: 2px; }
+  .sb-haul-bar.is-peak { background: var(--green); }
+  .sb-haul-num { font-size: 10px; font-weight: 700; color: var(--faint); font-variant-numeric: tabular-nums; }
   .sb-stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: var(--muted); margin-top: 6px; }
   .sb-stat-divider { width: 1px; height: 34px; background: var(--border); }
 
@@ -5838,6 +5852,8 @@
             <div class="sb-stat-label" id="sbStatSwingLabel">WEEK VS EXPECTED</div>
           </div>
         </div>
+
+        <div class="sb-haul" id="sbHaul" hidden></div>
 
         <div class="sb-toolbar">
           <div class="sb-player-search">
@@ -17815,9 +17831,11 @@
     const div = document.getElementById('sbStatSweepDivider');
     if (!el || !wrap) return;
     const odds = sbMatchupsWonOdds(probs);
+    const haulEl = document.getElementById('sbHaul');
     if (!odds || odds.games < 2) {
       wrap.hidden = true;
       if (div) div.hidden = true;
+      if (haulEl) haulEl.hidden = true;
       return;
     }
     wrap.hidden = false;
@@ -17825,19 +17843,37 @@
     const pct = (v) => v >= 0.995 ? '>99%' : (v < 0.005 ? '<1%' : Math.round(v * 100) + '%');
     el.textContent = `${odds.peak} of ${odds.games}`;
     if (sub) sub.textContent = 'MOST LIKELY HAUL';
-    // The whole shape, on hover: every outcome with a real chance, and the
-    // running "or better" beside it.
-    const lines = [`Matchups won this week, out of ${odds.games}`, ''];
-    odds.dist.forEach((p, k) => {
-      if (p < 0.005 && odds.atLeast[k] < 0.005) return;
-      if (p < 0.005) return;
-      lines.push(`  ${String(k).padStart(2)} wins   ${pct(p).padStart(5)}      ${pct(odds.atLeast[k]).padStart(5)} chance of ${k}+`);
-    });
-    lines.push('');
-    lines.push('Each matchup is its own coin with its own weight, so this is the');
-    lines.push('exact distribution of how many you win -- not the average, which');
-    lines.push('is a number you can never actually finish on.');
-    wrap.title = lines.join('\n');
+
+    // The whole shape, drawn on the page. It was in a title tooltip, which
+    // is the same mistake the Rooting Score made: a number nobody hovers is
+    // a number nobody has.
+    const haul = document.getElementById('sbHaul');
+    if (!haul) return;
+    let lo = 0, hi = odds.dist.length - 1;
+    while (lo < hi && odds.dist[lo] < 0.005) lo++;
+    while (hi > lo && odds.dist[hi] < 0.005) hi--;
+    const max = Math.max.apply(null, odds.dist.slice(lo, hi + 1));
+    const cols = [];
+    for (let k = lo; k <= hi; k++) {
+      const p = odds.dist[k];
+      cols.push('<div class="sb-haul-col" title="' + k + ' of ' + odds.games + ' in ' + pct(p)
+        + ' of weeks \u2014 ' + pct(odds.atLeast[k]) + ' chance of ' + k + ' or more">'
+        + '<span class="sb-haul-pct">' + (p >= 0.02 ? Math.round(p * 100) : '') + '</span>'
+        + '<span class="sb-haul-bar' + (k === odds.peak ? ' is-peak' : '') + '" style="height:'
+        + Math.max(2, Math.round((p / max) * 100)) + '%"></span>'
+        + '<span class="sb-haul-num">' + k + '</span></div>');
+    }
+    // The thresholds either side of the likely one, which is the form the
+    // question always gets asked in: "do I get to ten".
+    const marks = [odds.peak + 2, odds.peak + 1, odds.peak]
+      .filter(k => k >= 0 && k < odds.dist.length && odds.atLeast[k] > 0.005 && odds.atLeast[k] < 0.995)
+      .map(k => '<span class="sb-haul-mark"><b>' + k + '+</b> ' + pct(odds.atLeast[k]) + '</span>')
+      .join('');
+    haul.hidden = false;
+    haul.innerHTML = '<div class="sb-haul-head">'
+      + '<span class="sb-haul-k">MATCHUPS WON THIS WEEK</span>'
+      + '<span class="sb-haul-marks">' + marks + '</span></div>'
+      + '<div class="sb-haul-chart">' + cols.join('') + '</div>';
   }
   window.sbRenderMatchupsWon = sbRenderMatchupsWon;
 
@@ -25978,8 +26014,6 @@
     // whenever a league was excluded from one page's list (Scoreboard's
     // tanking-teams toggle) but not the other's (co-managed toggle).
     let projWinSum = 0, projLossSum = 0;
-    // Every matchup's own win probability this week, in order.
-    const weekWinProbs = [];
     if (window.__sbProjectedRecord) {
       projWinSum = window.__sbProjectedRecord.winSum;
       projLossSum = window.__sbProjectedRecord.lossSum;
@@ -28769,6 +28803,11 @@
   async function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
     if (!sbGrid) return;
+    // Every matchup's own win probability this week, in order. Kept as a
+    // list and not just a sum, because how many of them you win is a
+    // distribution and a sum cannot answer "what are the odds I go 10 of
+    // 14" -- see sbMatchupsWonOdds.
+    const weekWinProbs = [];
     renderSbTankChips();
     const tankList = sbGetTankList();
     const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && !tankList.has(e.league.name));
