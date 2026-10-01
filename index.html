@@ -956,14 +956,18 @@
   .sb-haul { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 11px 14px 12px; margin-top: 10px; }
   .sb-haul-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
   .sb-haul-k { font-size: 9px; font-weight: 800; letter-spacing: 0.7px; color: var(--faint); }
-  .sb-haul-marks { display: flex; gap: 14px; margin-left: auto; font-size: 11.5px; color: var(--muted); }
-  .sb-haul-mark b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .sb-haul-chart { display: flex; align-items: flex-end; gap: 3px; height: 54px; }
-  .sb-haul-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; min-width: 0; height: 100%; }
-  .sb-haul-pct { font-size: 9px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .sb-haul-bar { width: 100%; border-radius: 2px 2px 0 0; background: var(--border); min-height: 2px; }
-  .sb-haul-bar.is-peak { background: var(--green); }
-  .sb-haul-num { font-size: 10px; font-weight: 700; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .sb-haul-sub { font-size: 11px; color: var(--faint); margin-left: auto; }
+  .sb-haul-rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(188px, 1fr)); gap: 4px 20px; }
+  .sb-haul-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+  .sb-haul-th { font-size: 12px; font-weight: 700; color: var(--ink); width: 64px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .sb-haul-track { flex: 1; min-width: 40px; height: 7px; border-radius: 4px; background: var(--bg); border: 1px solid var(--border-soft); overflow: hidden; }
+  .sb-haul-fill { display: block; height: 100%; background: var(--gold); }
+  .sb-haul-fill.is-in { background: var(--green); }
+  .sb-haul-fill.is-out { background: var(--red); opacity: 0.55; }
+  .sb-haul-odds { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; width: 46px; text-align: right; }
+  .sb-haul-odds.is-in { color: var(--green); }
+  .sb-haul-odds.is-live { color: var(--gold); }
+  .sb-haul-odds.is-out { color: var(--red); }
   .sb-stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: var(--muted); margin-top: 6px; }
   .sb-stat-divider { width: 1px; height: 34px; background: var(--border); }
 
@@ -5840,11 +5844,6 @@
           <div class="sb-stat" id="sbStatCurrentWins">
             <div class="sb-stat-value" id="sbStatCurrentWinsValue">0 of 0</div>
             <div class="sb-stat-label">CURRENTLY WINNING</div>
-          </div>
-          <div class="sb-stat-divider" id="sbStatSweepDivider" hidden></div>
-          <div class="sb-stat" id="sbStatSweep" hidden>
-            <div class="sb-stat-value" id="sbStatSweepValue">&mdash;</div>
-            <div class="sb-stat-label" id="sbStatSweepLabel">MOST LIKELY HAUL</div>
           </div>
           <div class="sb-stat-divider" id="sbStatSwingDivider"></div>
           <div class="sb-stat" id="sbStatSwing">
@@ -17821,59 +17820,45 @@
   }
   window.sbMatchupsWonOdds = sbMatchupsWonOdds;
 
-  // Drawn into the Slate's own stat strip, beside projected record and
-  // favored to win, because it is the same question those two are
-  // answering and it belongs in the same glance.
+  // The five thresholds that actually get asked about, centred on where the
+  // week is heading. Projected 8.1 wins, so: 6+, 7+, 8+, 9+, 10+ -- two
+  // either side of the likely number, which is the whole live-interesting
+  // range. Everything further out is a rounding error and everything
+  // nearer is already decided.
+  //
+  // "Or better" rather than "exactly", because that is the form the
+  // question gets asked in. Nobody wonders about finishing on exactly
+  // eight; they wonder whether they get to nine.
   function sbRenderMatchupsWon(probs) {
-    const el = document.getElementById('sbStatSweepValue');
-    const sub = document.getElementById('sbStatSweepLabel');
-    const wrap = document.getElementById('sbStatSweep');
-    const div = document.getElementById('sbStatSweepDivider');
-    if (!el || !wrap) return;
-    const odds = sbMatchupsWonOdds(probs);
-    const haulEl = document.getElementById('sbHaul');
-    if (!odds || odds.games < 2) {
-      wrap.hidden = true;
-      if (div) div.hidden = true;
-      if (haulEl) haulEl.hidden = true;
-      return;
-    }
-    wrap.hidden = false;
-    if (div) div.hidden = false;
-    const pct = (v) => v >= 0.995 ? '>99%' : (v < 0.005 ? '<1%' : Math.round(v * 100) + '%');
-    el.textContent = `${odds.peak} of ${odds.games}`;
-    if (sub) sub.textContent = 'MOST LIKELY HAUL';
-
-    // The whole shape, drawn on the page. It was in a title tooltip, which
-    // is the same mistake the Rooting Score made: a number nobody hovers is
-    // a number nobody has.
     const haul = document.getElementById('sbHaul');
     if (!haul) return;
-    let lo = 0, hi = odds.dist.length - 1;
-    while (lo < hi && odds.dist[lo] < 0.005) lo++;
-    while (hi > lo && odds.dist[hi] < 0.005) hi--;
-    const max = Math.max.apply(null, odds.dist.slice(lo, hi + 1));
-    const cols = [];
-    for (let k = lo; k <= hi; k++) {
-      const p = odds.dist[k];
-      cols.push('<div class="sb-haul-col" title="' + k + ' of ' + odds.games + ' in ' + pct(p)
-        + ' of weeks \u2014 ' + pct(odds.atLeast[k]) + ' chance of ' + k + ' or more">'
-        + '<span class="sb-haul-pct">' + (p >= 0.02 ? Math.round(p * 100) : '') + '</span>'
-        + '<span class="sb-haul-bar' + (k === odds.peak ? ' is-peak' : '') + '" style="height:'
-        + Math.max(2, Math.round((p / max) * 100)) + '%"></span>'
-        + '<span class="sb-haul-num">' + k + '</span></div>');
+    const odds = sbMatchupsWonOdds(probs);
+    if (!odds || odds.games < 2) { haul.hidden = true; return; }
+    const pct = (v) => v >= 0.995 ? '>99%' : (v < 0.005 ? '<1%' : Math.round(v * 100) + '%');
+    const mean = odds.dist.reduce((t, p, k) => t + p * k, 0);
+    // Centred on the projected number, then slid back inside the range if
+    // it runs off either end -- a three-league week still shows what it
+    // can rather than a row of impossible thresholds.
+    const span = Math.min(5, odds.games + 1);
+    let lo = Math.round(mean) - 2;
+    lo = Math.max(0, Math.min(lo, odds.games + 1 - span));
+    const rows = [];
+    for (let k = lo; k < lo + span; k++) {
+      const p = odds.atLeast[k];
+      const tone = p >= 0.75 ? ' is-in' : (p <= 0.25 ? ' is-out' : ' is-live');
+      rows.push('<div class="sb-haul-row">'
+        + '<span class="sb-haul-th">' + k + '+ wins</span>'
+        + '<span class="sb-haul-track"><span class="sb-haul-fill' + tone + '" style="width:'
+        + Math.max(1, Math.round(p * 100)) + '%"></span></span>'
+        + '<span class="sb-haul-odds' + tone + '">' + pct(p) + '</span>'
+        + '</div>');
     }
-    // The thresholds either side of the likely one, which is the form the
-    // question always gets asked in: "do I get to ten".
-    const marks = [odds.peak + 2, odds.peak + 1, odds.peak]
-      .filter(k => k >= 0 && k < odds.dist.length && odds.atLeast[k] > 0.005 && odds.atLeast[k] < 0.995)
-      .map(k => '<span class="sb-haul-mark"><b>' + k + '+</b> ' + pct(odds.atLeast[k]) + '</span>')
-      .join('');
     haul.hidden = false;
     haul.innerHTML = '<div class="sb-haul-head">'
       + '<span class="sb-haul-k">MATCHUPS WON THIS WEEK</span>'
-      + '<span class="sb-haul-marks">' + marks + '</span></div>'
-      + '<div class="sb-haul-chart">' + cols.join('') + '</div>';
+      + '<span class="sb-haul-sub">' + odds.games + ' matchups &middot; projected '
+      + mean.toFixed(1) + '</span></div>'
+      + '<div class="sb-haul-rows">' + rows.join('') + '</div>';
   }
   window.sbRenderMatchupsWon = sbRenderMatchupsWon;
 
@@ -31874,6 +31859,7 @@
       { key: 'ifloss',  label: 'IF LOSS',  desc: true,  get: (t) => t.odds && t.odds.ifLoss },
       { key: 'bye',     label: 'BYE',      desc: true,  get: (t) => t.odds && t.odds.bye },
       { key: 'top',     label: '1 SEED',   desc: true,  get: (t) => t.odds && t.odds.topSeedOdds },
+      { key: 'title',   label: 'TITLE',    desc: true,  get: (t) => t.odds && t.odds.title },
       { key: 'record',  label: 'RECORD',   desc: true,  get: (t) => t.wins + t.ties * 0.5 },
       { key: 'proj',    label: 'PROJ W/L', desc: true,  get: (t) => t.odds && t.odds.projWins },
       { key: 'allplay', label: 'ALL-PLAY', desc: true,  get: (t) => t.ap.games ? (t.ap.w + t.ap.t * 0.5) / t.ap.games : null },
@@ -31912,6 +31898,7 @@
           <td>${pctText(o.ifLoss)}</td>
           <td>${o.bye == null ? '&mdash;' : pctText(o.bye)}</td>
           <td>${o.topSeedOdds == null ? '&mdash;' : pctText(o.topSeedOdds)}</td>
+          <td>${o.title == null ? '&mdash;' : pctText(o.title)}</td>
           <td>${t.wins}-${t.losses}${t.ties ? '-' + t.ties : ''}</td>
           <td>${ppProjRecord(o)}</td>
           <td>${t.ap.games ? `${t.ap.w}-${t.ap.l}` : '&mdash;'}</td>
