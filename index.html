@@ -1662,8 +1662,8 @@
   .pp-crucial-win { color: var(--green); }
   .pp-crucial-loss { color: var(--red); }
   .pp-crucial-arrow { color: var(--faint); font-weight: 400; }
-  .pp-crucial-swing { font-family: 'Source Serif 4', serif; font-size: 23px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; width: 62px; text-align: right; white-space: nowrap; }
-  .pp-crucial-swing span { font-size: 10px; color: var(--faint); font-family: 'Source Sans 3', sans-serif; margin-left: 2px; }
+  .pp-crucial-swing { font-family: 'Source Serif 4', serif; font-size: 23px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; width: 70px; text-align: right; white-space: nowrap; line-height: 1.1; }
+  .pp-crucial-swing span { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); font-family: 'Source Sans 3', sans-serif; }
 
   .pp-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 26px 0 10px; }
   .pp-head h2 { font-family: 'Source Serif 4', serif; font-size: 17px; margin: 0; flex: 1; }
@@ -1703,6 +1703,13 @@
   .pp-seed-bar.is-bye { background: var(--blue); }
   .pp-seed-bar.is-in { background: var(--green); }
   .pp-seed-num { font-size: 10px; font-weight: 700; color: var(--faint); }
+  .pp-dist-toggle { margin-left: auto; display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .pp-dist-btn { border: 0; background: transparent; font-family: inherit; font-size: 10.5px; font-weight: 700; color: var(--faint); padding: 4px 10px; cursor: pointer; }
+  .pp-dist-btn + .pp-dist-btn { border-left: 1px solid var(--border); }
+  .pp-dist-btn:hover { color: var(--ink); }
+  .pp-dist-btn.is-on { background: var(--ink); color: var(--surface); }
+  .pp-rec-marks { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--muted); }
+  .pp-rec-mark b { color: var(--ink); font-variant-numeric: tabular-nums; }
   .pp-seed-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 10.5px; color: var(--faint); }
   .pp-seed-key { display: inline-flex; align-items: center; gap: 5px; }
   .pp-seed-dot { width: 8px; height: 8px; border-radius: 2px; }
@@ -1748,13 +1755,18 @@
      of the season takes. */
   .pp-wk { padding: 11px 14px 12px; }
   .pp-wk-head { display: flex; align-items: baseline; gap: 9px; margin-bottom: 7px; }
-  .pp-wk-line { display: flex; align-items: center; gap: 10px; }
-  .pp-wk-side { display: flex; align-items: baseline; gap: 7px; min-width: 0; flex: 1; font-size: 12.5px; color: var(--muted); }
-  .pp-wk-side b { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pp-wk-side .num { font-family: 'Source Serif 4', serif; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; margin-left: auto; }
+  /* Each score sits against its own name, with the gap in the middle
+     rather than between a name and its number. */
+  .pp-wk-line { display: flex; align-items: baseline; gap: 12px; }
+  .pp-wk-side { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 1; font-size: 12.5px; }
+  .pp-wk-side.is-right { justify-content: flex-end; }
+  .pp-wk-side b { color: var(--ink); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pp-wk-side .num { font-family: 'Source Serif 4', serif; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
   .pp-wk-side.is-fav .num { color: var(--green); }
+  .pp-wk-splitwrap { margin-top: 10px; }
+  .pp-wk-splitwrap .pp-sl-k { margin-bottom: 4px; }
   .pp-wk-vs { font-size: 9.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); }
-  .pp-wk-split { display: flex; gap: 8px; margin-top: 9px; }
+  .pp-wk-split { display: flex; gap: 8px; }
   .pp-wk-chip { flex: 1; text-align: center; font-size: 9.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); border: 1px solid var(--border); border-radius: 5px; padding: 5px 8px; }
   .pp-wk-chip b { display: block; font-family: 'Source Serif 4', serif; font-size: 17px; letter-spacing: 0; margin-top: 1px; }
   .pp-wk-chip.is-win { border-color: var(--green); background: var(--green-bg); }
@@ -2349,6 +2361,18 @@
     margin-bottom: 5px;
   }
   .rg-band-head:first-child { padding-top: 2px; }
+  .sb-weekswing { display: inline-flex; align-items: baseline; gap: 7px; margin-left: 14px; padding: 4px 11px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+  .sb-weekswing b { font-family: 'Source Serif 4', serif; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .sb-weekswing.is-up b { color: var(--green); }
+  .sb-weekswing.is-down b { color: var(--red); }
+  .sb-ws-k { font-size: 9px; font-weight: 800; letter-spacing: 0.7px; color: var(--faint); }
+  .sb-ws-s { font-size: 10.5px; color: var(--faint); }
+  .rg-score-live { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin: 6px 0 2px; }
+  .rg-live-k { font-size: 9px; font-weight: 800; letter-spacing: 0.7px; color: var(--faint); }
+  .rg-live-v { font-family: 'Source Serif 4', serif; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rg-live-v.is-pos { color: var(--green); }
+  .rg-live-v.is-neg { color: var(--red); }
+  .rg-live-s { font-size: 11.5px; color: var(--muted); }
   .rg-score-head { display: flex; gap: 14px; align-items: flex-start; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
   .rg-score-num { font-family: 'Source Serif 4', serif; font-size: 34px; font-weight: 700; line-height: 1; flex-shrink: 0; font-variant-numeric: tabular-nums; }
   .rg-score-num.is-pos { color: var(--green); }
@@ -5775,6 +5799,7 @@
             <button type="button" class="sb-view-toggle-btn" data-sbv="grid">Grid View</button>
           </div>
         </div>
+        <span class="sb-weekswing" id="sbWeekSwing" hidden></span>
         <span class="week-dropdown" id="sbWeekDropdown">
           <span class="week-select" id="sbWeekSelect"><span class="week-lead">Week</span> <span class="week-num" id="sbWeekLabel">1</span> <span class="week-caret">&#9662;</span></span>
           <span class="week-menu" id="sbWeekMenu" hidden></span>
@@ -18068,10 +18093,29 @@
          A ${good.toFixed(0)}-point day: <b>${fmt((good - proj) * per)}</b>.
          A ${bad.toFixed(0)}-point dud: <b>${fmt((bad - proj) * per)}</b>.`
       : `Every point he scores is worth <b>${fmt(per)}</b> matchups to you.`;
+    // ---- What he has already done -------------------------------------
+    // The number this page was missing. Leverage says how much a player
+    // COULD move your week; this says how much he already HAS, and it is
+    // the one that changes while you watch. His points over expectation
+    // priced at what a point of his is worth, which is a count of real
+    // matchups: "+0.14" means his day so far has bought you a seventh of
+    // a win across the leagues he is in.
+    const poe = row.dataset.poe != null ? Number(row.dataset.poe) : null;
+    const live = (poe != null && Number.isFinite(poe))
+      ? { poe, swung: per * poe }
+      : null;
+    const liveLine = !live ? '' : `<div class="rg-score-live">
+      <span class="rg-live-k">SO FAR TODAY</span>
+      <span class="rg-live-v ${live.poe >= 0 ? 'is-pos' : 'is-neg'}">${fmt(live.swung)} matchups</span>
+      <span class="rg-live-s">tracking ${live.poe >= 0 ? '+' : '\u2212'}${Math.abs(live.poe).toFixed(1)}
+        ${live.poe >= 0 ? 'over' : 'under'} his projection</span>
+    </div>`;
+
     return `<div class="rg-score-head">
       <div class="rg-score-num ${cls}">${Math.abs(score)}</div>
       <div class="rg-score-say">
         <div class="rg-score-band">${dirWord} &middot; ${band}</div>
+        ${liveLine}
         <div class="rg-score-line">${expLine}</div>
         <div class="rg-score-fine">Win probabilities add up, so those really are counts of games,
           across the ${n === 1 ? 'one league' : n + ' leagues'} listed below. The score is the same
@@ -18332,6 +18376,18 @@
     }
     window.__rgLeagueDollarMap = rgLeagueDollarMap;
     function recomputeRootingGuide() {
+      // ---- How the week is actually going -------------------------------
+      // Not "am I winning", which any scoreboard shows, but how far ahead
+      // of where you expected to be. Every player in one of your matchups
+      // is worth some fraction of a win per point of his; multiplied by how
+      // far over or under his own projection he is tracking, and added up,
+      // that is the number of matchups your Sunday has bought or cost you.
+      //
+      // Zero means the week is going exactly as projected, however many
+      // matchups you happen to be leading. Which is the point: a week where
+      // you are up in four games you were always going to win has not
+      // actually gone well.
+      let weekSwingTotal = 0, weekSwingCount = 0;
       const dollarMap = rgLeagueDollarMap();
       // Exposed so other places that read a player's rooting impact off
       // .rg-row (Weekly Schedule's exposure preview, the Rooting Guide's
@@ -18411,6 +18467,27 @@
           // The number tells you how much; the word tells you what that
           // amount IS. Sitting in the row rather than in a tooltip because
           // a tooltip nobody opens explains nothing.
+          // What he has already done to your week, beside what he could
+          // still do to it. Filled here because this is the one place that
+          // holds both his points over expectation and what a point of his
+          // is worth.
+          const swungEl = r.el.querySelector('.rg-swung');
+          if (swungEl) {
+            const poeNow = r.el.dataset.poe != null ? Number(r.el.dataset.poe) : null;
+            const rawNow = levLeagues.reduce((sum, l) => sum + l.perPoint, 0);
+            if (poeNow != null && Number.isFinite(poeNow) && Math.abs(rawNow) > 0.0001) {
+              const swung = rawNow / 100 * poeNow;
+              weekSwingTotal += swung;
+              weekSwingCount++;
+              swungEl.hidden = false;
+              swungEl.querySelector('b').textContent =
+                (swung > 0 ? '+' : swung < 0 ? '\u2212' : '') + Math.abs(swung).toFixed(2);
+              swungEl.classList.toggle('rg-poe-pos', swung > 0.0005);
+              swungEl.classList.toggle('rg-poe-neg', swung < -0.0005);
+            } else {
+              swungEl.hidden = true;
+            }
+          }
           if (noteEl && typeof sbRootingBand === 'function') {
             const band = noteEl.querySelector('.rg-band') || (() => {
               const el = document.createElement('span');
@@ -18490,6 +18567,8 @@
       // you want off this page is "who actually decides my week", and that
       // is a group rather than a rank. Off in the other modes, where the
       // number is dollars or a league count and has no bands.
+      sbSetWeekSwing(weekSwingCount ? weekSwingTotal : null);
+
       const grouped = rgSortCriterion === 'score' && typeof sbRootingBand === 'function';
       const fill = (listEl, rows) => {
         let band = null;
@@ -18686,6 +18765,12 @@
         el.dataset.team = r.team;
         el.dataset.pos = r.pos;
         el.dataset.proj = r.liveProj;
+        // Points over expectation: how far ahead of (or behind) his own
+        // pregame number his day is tracking. The basis for what he has
+        // already done to your week, below.
+        if (r.poe != null) el.dataset.poe = String(r.poe);
+        else delete el.dataset.poe;
+        if (r.origProj != null) el.dataset.orig = String(r.origProj);
         el.innerHTML =
           '<div class="rg-row-main">' +
             `<span class="rg-delta ${deltaClass}">${deltaText}</span>` +
@@ -18696,6 +18781,7 @@
             `<span class="rg-stat">Proj: <b>${projText}</b></span>` +
             `<span class="rg-stat">Orig: <b>${origText}</b></span>` +
             `<span class="rg-stat rg-poe ${poeClass}">Points Over Expected: <b>${poeText}</b></span>` +
+            `<span class="rg-stat rg-swung" hidden>Swung: <b></b></span>` +
             `<span class="rg-note">${noteParts.join(' &middot; ')}</span>` +
           '</div>';
         return { el, forAll: r.for.slice(), againstAll: r.against.slice() };
@@ -24563,6 +24649,26 @@
       });
     });
 
+    // Banked head-to-head wins, read off the real results rather than off
+    // the stored record, which in a median league already has the second
+    // game folded into it.
+    const h2hById = {};
+    rosters.forEach(r => { h2hById[r.roster_id] = 0; });
+    weeks.forEach((ms, i) => {
+      if (!played[i] || !Array.isArray(ms)) return;
+      const byM = {};
+      ms.forEach(m => { if (m.matchup_id != null) (byM[m.matchup_id] = byM[m.matchup_id] || []).push(m); });
+      Object.keys(byM).forEach(k => {
+        const pair = byM[k];
+        if (pair.length !== 2) return;
+        const pa = Number(pair[0].points) || 0, pb = Number(pair[1].points) || 0;
+        if (h2hById[pair[0].roster_id] == null || h2hById[pair[1].roster_id] == null) return;
+        if (pa > pb) h2hById[pair[0].roster_id] += 1;
+        else if (pb > pa) h2hById[pair[1].roster_id] += 1;
+        else { h2hById[pair[0].roster_id] += 0.5; h2hById[pair[1].roster_id] += 0.5; }
+      });
+    });
+
     const allScores = Object.values(scoresById).flat();
     if (!allScores.length) return null;
 
@@ -24704,6 +24810,7 @@
         sd, tau,
         weeksPlayed: n,
         wins: (st.wins || 0) + (st.ties || 0) * 0.5,
+        h2hWins: h2hById[r.roster_id] != null ? h2hById[r.roster_id] : null,
         pf, ppts,
         // How a week's points become potential points. Under the optimal
         // lineup assumption a simulated week's best-possible total IS what
@@ -24878,6 +24985,15 @@
     const alive = new Array(bracketSize).fill(-1);
     const nextAlive = new Array(bracketSize).fill(-1);
 
+    // Head-to-head wins only, tracked beside the total. In a median league
+    // the standings count two games a week and the record people actually
+    // say out loud is the head-to-head one, so "what are the odds I finish
+    // 9-5" has to be asked of this and not of the number the seeding runs
+    // on. In every other league the two are the same.
+    const h2hCounts = {};
+    model.forEach(m => { h2hCounts[m.id] = new Array(ctx.regularWeeks + 1).fill(0); });
+    const h2h = new Array(n).fill(0);
+
     const scratch = model.map((m, i) => ({ id: m.id, idx: i, wins: 0, pf: 0, ppts: 0 }));
     const drawn = new Array(n).fill(0);
     const seasonMean = new Array(n).fill(0);
@@ -24903,6 +25019,7 @@
       for (let i = 0; i < n; i++) {
         const m = model[i], t = scratch[i];
         t.wins = m.wins; t.pf = m.pf; t.ppts = m.ppts;
+        h2h[i] = m.h2hWins != null ? m.h2hWins : m.wins;
       }
       // One draw per team per SEASON, not per week: this is "what this
       // team turns out to actually be", so it has to hold all the way
@@ -24920,13 +25037,13 @@
         for (let j = 0; j < pairs.length; j++) {
           const ia = pairs[j][0], ib = pairs[j][1];
           const force = forcedSide[w][j];
-          if (force === 0) { scratch[ia].wins += 1; wonSide[w][j] = 0; }
-          else if (force === 1) { scratch[ib].wins += 1; wonSide[w][j] = 1; }
+          if (force === 0) { scratch[ia].wins += 1; h2h[ia] += 1; wonSide[w][j] = 0; }
+          else if (force === 1) { scratch[ib].wins += 1; h2h[ib] += 1; wonSide[w][j] = 1; }
           else {
             const sa = drawn[ia], sb = drawn[ib];
-            if (sa > sb) { scratch[ia].wins += 1; wonSide[w][j] = 0; }
-            else if (sb > sa) { scratch[ib].wins += 1; wonSide[w][j] = 1; }
-            else { scratch[ia].wins += 0.5; scratch[ib].wins += 0.5; wonSide[w][j] = -1; }
+            if (sa > sb) { scratch[ia].wins += 1; h2h[ia] += 1; wonSide[w][j] = 0; }
+            else if (sb > sa) { scratch[ib].wins += 1; h2h[ib] += 1; wonSide[w][j] = 1; }
+            else { scratch[ia].wins += 0.5; scratch[ib].wins += 0.5; h2h[ia] += 0.5; h2h[ib] += 0.5; wonSide[w][j] = -1; }
           }
         }
         for (let i = 0; i < n; i++) {
@@ -24991,6 +25108,11 @@
       }
       if (alive[0] >= 0) titleCounts[model[alive[0]].id]++;
 
+      for (let i = 0; i < n; i++) {
+        const b = Math.max(0, Math.min(ctx.regularWeeks, Math.round(h2h[i])));
+        h2hCounts[model[i].id][b]++;
+      }
+
       for (let w = 0; w < schedule.length; w++) {
         const won = wonSide[w], pairs = schedule[w].pairs;
         for (let j = 0; j < won.length; j++) {
@@ -25014,11 +25136,12 @@
     }
 
     const slotProb = {}, playoffProb = {}, byeProb = {}, avgSeed = {};
-    const seedProb = {}, projWins = {}, finalProb = {}, titleProb = {};
+    const seedProb = {}, projWins = {}, finalProb = {}, titleProb = {}, winDist = {};
     model.forEach(m => {
       const id = m.id;
       finalProb[id] = finalCounts[id] / PP_SIM_RUNS;
       titleProb[id] = titleCounts[id] / PP_SIM_RUNS;
+      winDist[id] = h2hCounts[id].map(c => c / PP_SIM_RUNS);
       slotProb[id] = slotCounts[id].map(c => c / PP_SIM_RUNS);
       seedProb[id] = seedCounts[id].map(c => c / PP_SIM_RUNS);
       playoffProb[id] = playoffCounts[id] / PP_SIM_RUNS;
@@ -25069,7 +25192,7 @@
 
     return {
       slotProb, playoffProb, byeProb, avgSeed, seedProb, projWins,
-      finalProb, titleProb, bracketSize,
+      finalProb, titleProb, bracketSize, winDist,
       ifWinProb, ifLossProb, games,
       teamCount, playoffTeams, byeSlots,
       regularWeeks: ctx.regularWeeks, regularGames: ctx.regularGames,
@@ -25272,6 +25395,7 @@
       topSeedOdds: cur.seedProb && cur.seedProb[rosterId] ? cur.seedProb[rosterId][0] : null,
       reachFinal: cur.finalProb ? cur.finalProb[rosterId] : null,
       title: cur.titleProb ? cur.titleProb[rosterId] : null,
+      winDist: cur.winDist ? cur.winDist[rosterId] : null,
       regularWeeks: cur.regularWeeks,
       // Games, not weeks: a median league plays two a week, so the losses
       // in a projected record are games-minus-wins and nothing else.
@@ -27646,6 +27770,25 @@
     return lines.join('\n');
   }
   window.sbRootingScoreExplain = sbRootingScoreExplain;
+
+  // The week's swing, shown in the Slate's own header. Written from the
+  // Rooting Guide's recompute because that is where both halves of it
+  // already exist, so the two pages can never tell different stories.
+  function sbSetWeekSwing(total) {
+    const el = document.getElementById('sbWeekSwing');
+    if (!el) return;
+    if (total == null || !Number.isFinite(total)) { el.hidden = true; return; }
+    const sign = total > 0.005 ? '+' : (total < -0.005 ? '\u2212' : '');
+    el.hidden = false;
+    el.className = 'sb-weekswing' + (total > 0.005 ? ' is-up' : (total < -0.005 ? ' is-down' : ''));
+    el.innerHTML = `<span class="sb-ws-k">WEEK VS EXPECTED</span>`
+      + `<b>${sign}${Math.abs(total).toFixed(2)}</b>`
+      + `<span class="sb-ws-s">matchups</span>`;
+    el.title = 'Every player in your matchups, priced at what a point of his is worth to you '
+      + 'and multiplied by how far over or under his own projection he is tracking. '
+      + 'Zero means the week is going exactly as projected.';
+  }
+  window.sbSetWeekSwing = sbSetWeekSwing;
 
   // ---- Who is in what, worked out once -------------------------------
   // Every league's two sides, as a map from player to the matchups he is
@@ -31171,6 +31314,7 @@
     let ppRosterId = null;
     let ppTab = 'picture';
     let ppSortKey = 'seed', ppSortDesc = false;
+    let ppDistMode = 'seed';
     const ppTabsEl = document.getElementById('ppTabs');
     const ppBackEl = document.getElementById('ppBackAll');
 
@@ -31275,8 +31419,13 @@
           ${bar != null ? `<div class="pp-card-bar${cls || ''}"><span style="width:${Math.max(0, Math.min(100, bar))}%"></span></div>` : ''}
         </div>`;
 
-      const withFinal = priced.filter(r => r.odds.reachFinal != null);
-      const expFinal = withFinal.reduce((t, r) => t + r.odds.reachFinal, 0);
+      // Titles, not finalists. Every league sends exactly two teams to its
+      // championship game and gives exactly two byes, so summed across a
+      // portfolio those two numbers land on nearly the same figure and
+      // reading them side by side told you one thing twice. A championship
+      // has one winner, so this is the number that is actually different.
+      const withTitle = priced.filter(r => r.odds.title != null);
+      const expTitle = withTitle.reduce((t, r) => t + r.odds.title, 0);
 
       summaryEl.innerHTML =
         card('PROJECTED TO MAKE THE PLAYOFFS', expPlayoff.toFixed(1), priced.length,
@@ -31285,9 +31434,9 @@
         card('PROJECTED BYES', expBye.toFixed(1), withBye.length,
           withBye.length ? 'Across the leagues that give one.' : 'None of your leagues give a bye.',
           withBye.length ? expBye / withBye.length * 100 : 0, ' is-bye') +
-        card('PROJECTED IN A CHAMPIONSHIP GAME', expFinal.toFixed(1), withFinal.length,
-          'The field is seeded and the bracket played out in every one of those seasons &mdash; this is how many of your teams reach the final, not how many win it.',
-          withFinal.length ? expFinal / withFinal.length * 100 : 0, ' is-bye');
+        card('PROJECTED CHAMPIONSHIPS', expTitle.toFixed(2), withTitle.length,
+          'The field is seeded and the bracket played all the way out in every simulated season. This is how many titles to expect out of the whole portfolio.',
+          withTitle.length ? expTitle / withTitle.length * 100 : 0, ' is-bye');
 
       ppRenderCrucial(priced);
     }
@@ -31333,7 +31482,7 @@
               <span class="pp-crucial-arrow">&darr;</span>
               <span class="pp-crucial-loss">${pctText(g.ifLoss)}</span>
             </div>
-            <div class="pp-crucial-swing">${Math.round(g.swing * 100)}<span>pts</span></div>
+            <div class="pp-crucial-swing">${Math.round(g.swing * 100)}%<span>swing</span></div>
           </div>`).join('')}</div>
         <div class="pp-card-sub">Playoff odds with a win, then with a loss. The number on the right is
           the gap &mdash; how much of your season is actually riding on that game.</div>
@@ -31464,11 +31613,14 @@
           <div class="pp-panel">
             <div class="pp-panel-head">
               <span class="pp-panel-title">Where the season ends</span>
-              <span class="pp-panel-sub">${o.likelySeed != null
-                ? ppOrdinal(o.likelySeed) + ' or better, half the time'
-                : 'chance of each seed'}</span>
+              <span class="pp-dist-toggle">
+                <button type="button" class="pp-dist-btn${ppDistMode === 'seed' ? ' is-on' : ''}" data-pp-dist="seed">Seed</button>
+                <button type="button" class="pp-dist-btn${ppDistMode === 'record' ? ' is-on' : ''}" data-pp-dist="record">Record</button>
+              </span>
             </div>
-            ${ppSeedChart(o.seedProb, playoffTeams, byeSlots)}
+            ${ppDistMode === 'record'
+              ? ppRecordChart(o, team)
+              : ppSeedChart(o.seedProb, playoffTeams, byeSlots)}
           </div>
         </div>
       </div>`;
@@ -31528,9 +31680,14 @@
       const opp = mine && mine.matchup_id != null
         ? all.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== team.id)
         : null;
-      const split = `<div class="pp-wk-split">
-        <span class="pp-wk-chip is-win">WIN <b>${pctText(odds.ifWin)}</b></span>
-        <span class="pp-wk-chip is-loss">LOSE <b>${pctText(odds.ifLoss)}</b></span>
+      // Labelled, because "WIN 99%" beside "LOSE 97%" reads as the odds of
+      // winning the game, which is not what either number is.
+      const split = `<div class="pp-wk-splitwrap">
+        <div class="pp-sl-k">YOUR PLAYOFF ODDS AFTER THIS GAME</div>
+        <div class="pp-wk-split">
+          <span class="pp-wk-chip is-win">IF YOU WIN <b>${pctText(odds.ifWin)}</b></span>
+          <span class="pp-wk-chip is-loss">IF YOU LOSE <b>${pctText(odds.ifLoss)}</b></span>
+        </div>
       </div>`;
       if (!mine || !opp) {
         return `<div class="pp-panel pp-wk">
@@ -31549,13 +31706,61 @@
         </div>
         <div class="pp-wk-line">
           <span class="pp-wk-side${myPct != null && myPct >= 50 ? ' is-fav' : ''}">
-            <b>${sbFieldEsc(team.name)}</b><span class="num">${num(myProj)}</span></span>
+            <span class="num">${num(myProj)}</span><b>${sbFieldEsc(team.name)}</b></span>
           <span class="pp-wk-vs">vs</span>
-          <span class="pp-wk-side${myPct != null && myPct < 50 ? ' is-fav' : ''}">
+          <span class="pp-wk-side is-right${myPct != null && myPct < 50 ? ' is-fav' : ''}">
             <b>${sbFieldEsc(nameFor(entry, opp.roster_id))}</b><span class="num">${num(oppProj)}</span></span>
         </div>
         ${split}
       </div>`;
+    }
+
+    // ---- How the record itself finishes ---------------------------------
+    // "Projected 8.1-5.9" is an average, and nobody finishes on an average.
+    // This is the thing the average is hiding: the odds of each whole-number
+    // record, plus how often you get at least that many, which is the
+    // question people actually ask each other in November.
+    //
+    // Head-to-head wins only. In a median league the standings count two
+    // games a week, but "am I getting to nine wins" has always meant the
+    // head-to-head nine.
+    function ppRecordChart(o, team) {
+      const dist = o.winDist;
+      if (!dist || !dist.length) {
+        return '<div class="pp-panel-sub">Record odds land once the season simulation finishes.</div>';
+      }
+      // Only the range that actually happens -- a 14-week season has
+      // fifteen possible records and twelve of them are usually zero.
+      let lo = 0, hi = dist.length - 1;
+      while (lo < hi && dist[lo] < 0.005) lo++;
+      while (hi > lo && dist[hi] < 0.005) hi--;
+      const games = o.regularWeeks != null ? o.regularWeeks : dist.length - 1;
+      const max = Math.max.apply(null, dist.slice(lo, hi + 1));
+      // Running total from the top down, so each bar can say "or better".
+      const atLeast = [];
+      let cum = 0;
+      for (let w = dist.length - 1; w >= 0; w--) { cum += dist[w]; atLeast[w] = cum; }
+      const banked = team ? team.wins + team.ties * 0.5 : null;
+      const cols = [];
+      for (let w = lo; w <= hi; w++) {
+        const p = dist[w];
+        const h = max > 0 ? Math.round((p / max) * 100) : 0;
+        const locked = banked != null && w < banked;
+        cols.push(`<div class="pp-seed-col" title="${w}-${games - w} in ${Math.round(p * 100)}% of seasons &mdash; ${Math.round(atLeast[w] * 100)}% finish ${w}-${games - w} or better">
+          <span class="pp-seed-pct">${p >= 0.015 ? Math.round(p * 100) + '%' : ''}</span>
+          <span class="pp-seed-bar${locked ? '' : ' is-in'}" style="height:${Math.max(2, h)}px"></span>
+          <span class="pp-seed-num">${w}</span>
+        </div>`);
+      }
+      // The three thresholds worth naming: the most likely record, and the
+      // two round numbers either side of it.
+      const peak = dist.indexOf(Math.max.apply(null, dist));
+      const marks = [peak + 1, peak, peak - 1]
+        .filter(w => w >= 0 && w < dist.length && atLeast[w] > 0.005 && atLeast[w] < 0.995)
+        .map(w => `<span class="pp-rec-mark"><b>${w}+</b> wins ${pctText(atLeast[w])}</span>`)
+        .join('');
+      return `<div class="pp-seed-chart">${cols.join('')}</div>
+        <div class="pp-rec-marks">${marks || '<span class="pp-rec-mark">This record is already decided.</span>'}</div>`;
     }
 
     function ppSeedChart(seedProb, playoffTeams, byeSlots) {
@@ -32006,6 +32211,8 @@
       }
       if (e.target.closest('[data-pp-wif-reset]')) { ppWifClear(); renderRealPlayoffPicture(); return; }
 
+      const dist = e.target.closest('[data-pp-dist]');
+      if (dist) { ppDistMode = dist.dataset.ppDist; renderRealPlayoffPicture(); return; }
       const th = e.target.closest('[data-pp-sort]');
       if (th) {
         const key = th.dataset.ppSort;
