@@ -1677,9 +1677,6 @@
   .gc-feed-stat b.is-pos { color: var(--green); }
   .gc-feed-stat b.is-neg { color: var(--red); }
   .gc-feed-stat b.is-flat { color: var(--muted); }
-  /* Expected wins, bigger than the line around it: it is the answer to
-     "do I care about this guy", so it should not read as a footnote. */
-  .gc-feed-root { font-size: 12.5px; font-weight: 800; letter-spacing: 0.2px; font-variant-numeric: tabular-nums; }
   .gc-feed-net { margin-top: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px; }
   .gc-feed-net.is-pos { color: var(--green); }
   .gc-feed-net.is-neg { color: var(--red); }
@@ -28369,26 +28366,6 @@
 
     const mineOnly = window.__gcFeedFilter === 'mine';
 
-    // A player's Rooting Score, worked out once per draw. sbExposureIndex
-    // is already cached for ten seconds, so one call is a map lookup plus
-    // a little per-league arithmetic -- but a quarterback is in nearly
-    // every play and this column draws sixty of them, so the same answer
-    // was being recomputed dozens of times for one render.
-    const rootCache = new Map();
-    const rootScoreHtml = (pid) => {
-      if (rootCache.has(pid)) return rootCache.get(pid);
-      let html = '';
-      const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(pid) : null;
-      if (lev && lev.leagues.length) {
-        const wins = sbRootingWins(lev.perPoint);
-        const cls = wins > 0.005 ? 'ldrec-pos' : (wins < -0.005 ? 'ldrec-neg' : '');
-        const tip = (typeof sbRootingMeaning === 'function') ? sbRootingMeaning(lev.perPoint) : '';
-        html = `<span class="gc-feed-root ${cls}" title="${sbFieldEsc(tip)}">`
-          + `${sbRootingWinsText(lev.perPoint)} wins</span>`;
-      }
-      rootCache.set(pid, html);
-      return html;
-    };
 
     const items = [];
     rows.forEach(({ game, play, players }) => {
@@ -28419,8 +28396,15 @@
         // worth nothing), full PPR, tight ends +0.5 a catch. The box score
         // reads this through the same function, so the two cannot drift.
         const dayTotal = gcScoreStats(pl.id, (window.__gcStatsMap || {})[pl.id], dict);
-        const totCls = dayTotal == null ? 'is-flat'
-          : (dayTotal > 0 ? 'is-pos' : (dayTotal < 0 ? 'is-neg' : 'is-flat'));
+        // Coloured against his PROJECTION, not against zero. Every player
+        // who has done anything at all scores above zero, so colouring by
+        // sign painted the whole feed green and told you nothing -- 13.9
+        // read as good news from a quarterback projected 18. Green now
+        // means he is beating what was expected of him.
+        const dayProj = gcProjectedPoints(pl.id, dict);
+        const totCls = (dayTotal == null || dayProj == null) ? 'is-flat'
+          : (dayTotal > dayProj + 0.05 ? 'is-pos'
+            : (dayTotal < dayProj - 0.05 ? 'is-neg' : 'is-flat'));
         // No per-league chips. A player in a dozen leagues produced a
         // dozen of them, which buried what the row is actually for --
         // what happened and what it was worth. The single net figure at
@@ -28435,7 +28419,6 @@
               `<b class="${fpCls.trim() || 'is-flat'}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</b></span>` +
             `<span class="gc-feed-stat"><span class="gc-feed-k">Total</span>` +
               `<b class="${totCls}">${dayTotal != null ? dayTotal.toFixed(1) : '&mdash;'}</b></span>` +
-            rootScoreHtml(pl.id) +
           `</div>` +
           (dayLine ? `<div class="gc-feed-day"><span class="gc-feed-day-label">ON THE DAY</span>${sbFieldEsc(dayLine)}</div>` : '') +
           (impacts.length ? ''
