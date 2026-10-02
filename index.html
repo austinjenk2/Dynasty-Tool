@@ -18639,66 +18639,80 @@
         deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
         // In $ mode the badge shows real dollars at stake instead of a
         // league count, so it reads "+$325" rather than "+3".
-        if (rgSortCriterion === 'score') {
-          // Wins at stake: the weighted per-point slope times what he has
-          // left to score. Signed, because the sign is part of the
-          // quantity -- -0.42 is a real thing he can still do to you, not
-          // just which of the two lists he is in. A finished game reads
-          // 0.00, which is the only honest answer once he cannot move.
-          deltaEl.textContent = sbWinsAtStakeText(stake);
-          if (stake > 0.005) deltaEl.classList.add('rg-delta-pos');
-          else if (stake < -0.005) deltaEl.classList.add('rg-delta-neg');
-          else deltaEl.classList.add('rg-delta-even');
-          // The number tells you how much; the word tells you what that
-          // amount IS. Sitting in the row rather than in a tooltip because
-          // a tooltip nobody opens explains nothing.
-          // What he has already done to your week, beside what he could
-          // still do to it. Filled here because this is the one place that
-          // holds both his points over expectation and what a point of his
-          // is worth.
-          const swungEl = r.el.querySelector('.rg-swung');
-          if (swungEl) {
-            const poeNow = r.el.dataset.poe != null ? Number(r.el.dataset.poe) : null;
-            const rawNow = levLeagues.reduce((sum, l) => sum + l.perPoint, 0);
-            if (poeNow != null && Number.isFinite(poeNow) && Math.abs(rawNow) > 0.0001) {
-              const swung = rawNow / 100 * poeNow;
-              weekSwingTotal += swung;
-              weekSwingCount++;
-              swungEl.hidden = false;
-              swungEl.querySelector('b').textContent =
-                (swung > 0 ? '+' : swung < 0 ? '\u2212' : '') + Math.abs(swung).toFixed(2);
-              swungEl.classList.toggle('rg-poe-pos', swung > 0.0005);
-              swungEl.classList.toggle('rg-poe-neg', swung < -0.0005);
-            } else {
-              swungEl.hidden = true;
+        // A formatter that throws must not take the board down with it.
+        // That is not hypothetical: a stale identifier in the Wins at
+        // Stake tooltip threw on the first row, which aborted this whole
+        // forEach, so fill() never ran and all three lists rendered empty
+        // -- while Swing %, which never reaches that line, looked fine.
+        // Bucketing happens after this, so catching here keeps every row
+        // on the page even if its badge could not be drawn.
+        try {
+          if (rgSortCriterion === 'score') {
+            // Wins at stake: the weighted per-point slope times what he has
+            // left to score. Signed, because the sign is part of the
+            // quantity -- -0.42 is a real thing he can still do to you, not
+            // just which of the two lists he is in. A finished game reads
+            // 0.00, which is the only honest answer once he cannot move.
+            deltaEl.textContent = sbWinsAtStakeText(stake);
+            if (stake > 0.005) deltaEl.classList.add('rg-delta-pos');
+            else if (stake < -0.005) deltaEl.classList.add('rg-delta-neg');
+            else deltaEl.classList.add('rg-delta-even');
+            // The number tells you how much; the word tells you what that
+            // amount IS. Sitting in the row rather than in a tooltip because
+            // a tooltip nobody opens explains nothing.
+            // What he has already done to your week, beside what he could
+            // still do to it. Filled here because this is the one place that
+            // holds both his points over expectation and what a point of his
+            // is worth.
+            const swungEl = r.el.querySelector('.rg-swung');
+            if (swungEl) {
+              const poeNow = r.el.dataset.poe != null ? Number(r.el.dataset.poe) : null;
+              const rawNow = levLeagues.reduce((sum, l) => sum + l.perPoint, 0);
+              if (poeNow != null && Number.isFinite(poeNow) && Math.abs(rawNow) > 0.0001) {
+                const swung = rawNow / 100 * poeNow;
+                weekSwingTotal += swung;
+                weekSwingCount++;
+                swungEl.hidden = false;
+                swungEl.querySelector('b').textContent =
+                  (swung > 0 ? '+' : swung < 0 ? '\u2212' : '') + Math.abs(swung).toFixed(2);
+                swungEl.classList.toggle('rg-poe-pos', swung > 0.0005);
+                swungEl.classList.toggle('rg-poe-neg', swung < -0.0005);
+              } else {
+                swungEl.hidden = true;
+              }
             }
+            deltaEl.title = (typeof sbRootingScoreExplain === 'function')
+              ? sbRootingScoreExplain(
+                  (r.el.querySelector('.rg-name') || {}).textContent, levLeagues, weights, stake, remaining)
+              : '';
+          } else if (rgSortCriterion === 'swing') {
+            // Win probability per fantasy point, summed over his matchups.
+            // A player in two dead-rubber leagues reads near zero however
+            // many leagues that is.
+            const txt = `${swingNet > 0 ? '+' : (swingNet < 0 ? '\u2212' : '')}${Math.abs(swingNet).toFixed(2)}%`;
+            deltaEl.textContent = txt;
+            if (swingNet > 0.005) deltaEl.classList.add('rg-delta-pos');
+            else if (swingNet < -0.005) deltaEl.classList.add('rg-delta-neg');
+            else deltaEl.classList.add('rg-delta-even');
+          } else if (rgSortCriterion === 'leagues') {
+            deltaEl.title = '';
+            if (dollarNet > 0) { deltaEl.textContent = '+$' + dollarNet; deltaEl.classList.add('rg-delta-pos'); }
+            else if (dollarNet < 0) { deltaEl.textContent = '-$' + Math.abs(dollarNet); deltaEl.classList.add('rg-delta-neg'); }
+            else { deltaEl.textContent = '$0'; deltaEl.classList.add('rg-delta-even'); }
+          } else {
+            if (delta > 0) { deltaEl.textContent = '+' + delta; deltaEl.classList.add('rg-delta-pos'); }
+            else if (delta < 0) { deltaEl.textContent = String(delta); deltaEl.classList.add('rg-delta-neg'); }
+            else { deltaEl.textContent = '0'; deltaEl.classList.add('rg-delta-even'); }
           }
-          deltaEl.title = (typeof sbRootingScoreExplain === 'function')
-            ? sbRootingScoreExplain(
-                (r.el.querySelector('.rg-name') || {}).textContent, levLeagues, weights, stake, remaining)
-            : '';
-        } else if (rgSortCriterion === 'swing') {
-          // Win probability per fantasy point, summed over his matchups.
-          // A player in two dead-rubber leagues reads near zero however
-          // many leagues that is.
-          const txt = `${swingNet > 0 ? '+' : (swingNet < 0 ? '\u2212' : '')}${Math.abs(swingNet).toFixed(2)}%`;
-          deltaEl.textContent = txt;
-          if (swingNet > 0.005) deltaEl.classList.add('rg-delta-pos');
-          else if (swingNet < -0.005) deltaEl.classList.add('rg-delta-neg');
-          else deltaEl.classList.add('rg-delta-even');
-        } else if (rgSortCriterion === 'leagues') {
-          deltaEl.title = '';
-          if (dollarNet > 0) { deltaEl.textContent = '+$' + dollarNet; deltaEl.classList.add('rg-delta-pos'); }
-          else if (dollarNet < 0) { deltaEl.textContent = '-$' + Math.abs(dollarNet); deltaEl.classList.add('rg-delta-neg'); }
-          else { deltaEl.textContent = '$0'; deltaEl.classList.add('rg-delta-even'); }
-        } else {
-          if (delta > 0) { deltaEl.textContent = '+' + delta; deltaEl.classList.add('rg-delta-pos'); }
-          else if (delta < 0) { deltaEl.textContent = String(delta); deltaEl.classList.add('rg-delta-neg'); }
-          else { deltaEl.textContent = '0'; deltaEl.classList.add('rg-delta-even'); }
+          // Counts only. Naming the leagues here ran the row off the side of
+          // the screen, and the league list is one click away on the player
+          // anyway, which is where it has always lived.
+        } catch (err) {
+          if (!window.__rgBadgeErr) {
+            window.__rgBadgeErr = err;
+            console.error('Weekly Sweats: could not draw a badge', err);
+          }
         }
-        // Counts only. Naming the leagues here ran the row off the side of
-        // the screen, and the league list is one click away on the player
-        // anyway, which is where it has always lived.
         const noteParts = [];
         if (f.length) noteParts.push(f.length + ' <span class="rg-note-for">for</span>');
         if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
@@ -28186,8 +28200,14 @@
     });
     if (!levLeagues.length) lines.push('  (none — he is not in any of your lineups this week)');
     lines.push('');
-    lines.push(`Added up: ${net > 0 ? '+' : ''}${net.toFixed(2)}% win probability per point he scores.`);
-    lines.push(`On the -100 to +100 scale that is ${score > 0 ? '+' : ''}${score}.`);
+    // Rebuilt from the league list rather than taken as an argument: this
+    // is the one place that needs it, and passing it in is how the last two
+    // names here went stale without anything noticing.
+    const perPoint = levLeagues.reduce((sum, l) =>
+      sum + l.perPoint * (weights[l.name] != null ? weights[l.name] : 1), 0);
+    lines.push(`Added up: ${perPoint > 0 ? '+' : ''}${perPoint.toFixed(2)}% win probability per point he scores.`);
+    lines.push(`Over the ${(Number(remaining) || 0).toFixed(1)} points he has left, that is `
+      + `${sbWinsAtStakeText(stake)} of a matchup.`);
     lines.push('');
     lines.push('A matchup already won or already lost barely moves, so a player in it');
     lines.push('counts for almost nothing. A coin flip moves a lot, so he counts for a lot.');
