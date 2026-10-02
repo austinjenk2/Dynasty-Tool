@@ -6454,11 +6454,11 @@
             <p class="rg-key-line">Not every matchup cares the same amount. A game you are 95% to win is
               already decided &mdash; points there barely move anything. A coin flip moves a lot. The score
               measures that instead of counting leagues, and answers in matchups: how much of a win
-              he can still move, counting only the points he has left to score.</p>
+              he can still move while his game is live.</p>
             <ol class="rg-key-steps">
               <li><b>What does one of his points do to each matchup?</b> Slide your projected final by a point and see how far your win probability moves. Steep at 50/50, flat at 95/5, zero once a matchup is settled.</li>
               <li><b>What is that league worth to you?</b> Half its share of your buy-ins, half simply being one of your leagues &mdash; so a $100 league outweighs a $50 one without two $50 leagues losing to a single $100.</li>
-              <li><b>How many points has he left?</b> His live projection minus what he has already scored. Before kickoff that is his whole game; once it is over it is nothing, which is why a finished player reads 0.00.</li>
+              <li><b>How much can he still swing?</b> The points he has left, plus the touchdown that stays possible for as long as his game is live &mdash; a score with two minutes to go is worth every bit of one in the first quarter. What ends it is the whistle, not the clock running down, which is why a finished player reads 0.00 and a man still on the field never does.</li>
             </ol>
             <div class="rg-key-scale">
               <span class="rg-key-chip rg-key-zero">0.00</span><span class="rg-key-cap">played out, or nothing riding on him</span>
@@ -13486,7 +13486,10 @@
   // anywhere else on the site never disagrees with it.
   function rgChipDeltaText(m) {
     const mode = m.mode || (m.isMoney ? 'leagues' : 'value');
-    if (mode === 'score') return (m.delta > 0 ? '+' : '') + Math.round(m.delta);
+    // Two decimals. Math.round is left from the -100 to +100 score; wins
+    // at stake live between about 0 and 1.5, so rounding to a whole number
+    // printed +0 for everyone but the single biggest name on the slate.
+    if (mode === 'score') return sbWinsAtStakeText(m.delta);
     if (mode === 'swing') return `${m.delta > 0 ? '+' : '\u2212'}${Math.abs(m.delta).toFixed(2)}%`;
     if (mode === 'leagues') return m.delta > 0 ? `+$${m.delta}` : `-$${Math.abs(m.delta)}`;
     return m.delta > 0 ? `+${m.delta}` : `${m.delta}`;
@@ -13601,14 +13604,21 @@
         // Score mode is wins at stake: the same weighted per-point slope
         // the board shows, times what he has left to score.
         deltaNum = mode === 'score'
-          ? Number(sbWinsAtStakeFrom(levLeagues, weights, sbRemainingPoints(r.id)).toFixed(3))
+          ? Number(sbWinsAtStakeFrom(levLeagues, weights,
+              sbRemainingSwing(r.id, { dict, projStats: rgProjStatsMap })).toFixed(3))
           : Number(net.toFixed(3));
       } else if (mode === 'leagues') {
         deltaNum = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
       } else {
         deltaNum = f.length - a.length;
       }
-      if (!deltaNum) return;
+      // A zero is information in score mode: it means his game is over, or
+      // the matchups he is in cannot move any more. Dropping it emptied a
+      // whole slate once Thursday night had been played -- "no rooting
+      // impact this slate" when the honest answer is that everyone on it
+      // is settled. The other modes keep their old behaviour, where a zero
+      // really does mean "not involved".
+      if (!deltaNum && mode !== 'score') return;
       matches.push({ id: r.id, name: r.name, delta: deltaNum, mode });
     });
     matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
@@ -16589,6 +16599,23 @@
   // quarterback implies 0.77. One flat factor cannot fit both.
   const SB_SIGMA_K = { QB: 0.7, RB: 1.0, WR: 1.0, TE: 1.0, K: 0.8, DEF: 0.8, DST: 0.8, DEFAULT: 1.0 };
 
+  // The scoring play that is on the table for as long as his game is live,
+  // and is gone the moment it is not.
+  //
+  // SB_SIGMA_K above scales with a player's REMAINING projection, so it
+  // shrinks to nothing late in a game -- which says a touchdown with two
+  // minutes left is worth nothing, and that is plainly wrong. It is the
+  // same six points it would have been in the first quarter, and arguably
+  // worth more, because there is less football left to undo it. What ends
+  // the possibility is the whistle, not the clock winding down, so this
+  // term is flat while the game is in progress and zero after it.
+  //
+  // These are judgement calls, not measured values: roughly "one touchdown
+  // might still happen", a little lower for a tight end and a quarterback
+  // whose yardage floor already carries more of his range. Worth fitting
+  // against real finishes in calibration/ rather than leaving as guesses.
+  const SB_BIGPLAY_SD = { QB: 4.0, RB: 4.0, WR: 4.5, TE: 3.5, DEFAULT: 3.5 };
+
   // With every starter done there is no football left to change the result,
   // so the spread collapses to zero and the projection IS the outcome. A
   // small floor keeps that from dividing by zero, and leaves room for the
@@ -18519,6 +18546,13 @@
       return map;
     }
     window.__rgLeagueDollarMap = rgLeagueDollarMap;
+    // The live maps renderRealRootingGuide fetched for this view, parked
+    // where recomputeRootingGuide can reach them. It runs on its own from
+    // the sort toggles, not only at the end of a render, and it needs the
+    // same data -- reading the Press Box's globals instead is what left
+    // this board blank until GameCast had rendered at least once.
+    let rgLiveData = null;
+
     function recomputeRootingGuide() {
       // ---- How the week is actually going -------------------------------
       // Not "am I winning", which any scoreboard shows, but how far ahead
@@ -18591,9 +18625,18 @@
         // the points he has left. The displayed figure, so anything reading
         // a player's rooting impact off this row gets the number the badge
         // shows rather than one of the three ingredients.
-        const remaining = (typeof sbRemainingPoints === 'function' && r.el.dataset.playerId)
-          ? sbRemainingPoints(r.el.dataset.playerId) : 0;
-        const stake = sbWinsAtStakeFrom(levLeagues, weights, remaining);
+        // This view's own fetched data, not the Press Box's globals -- see
+        // sbRemainingPoints. Passing these is what lets the board draw on
+        // first paint instead of only after GameCast has rendered once.
+        const pid = r.el.dataset.playerId;
+        // Points left is what the expand panel talks about in words; swing
+        // is what the badge is priced on. They are different numbers now --
+        // see sbRemainingSwing.
+        const remaining = (typeof sbRemainingPoints === 'function' && pid)
+          ? sbRemainingPoints(pid, rgLiveData || undefined) : 0;
+        const swingLeft = (typeof sbRemainingSwing === 'function' && pid)
+          ? sbRemainingSwing(pid, rgLiveData || undefined) : 0;
+        const stake = sbWinsAtStakeFrom(levLeagues, weights, swingLeft);
         r.el.dataset.score = stake.toFixed(3);
         r.el.dataset.remaining = remaining.toFixed(1);
         // Unweighted per-point, still used by the expand panel's worked
@@ -18605,66 +18648,80 @@
         deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
         // In $ mode the badge shows real dollars at stake instead of a
         // league count, so it reads "+$325" rather than "+3".
-        if (rgSortCriterion === 'score') {
-          // Wins at stake: the weighted per-point slope times what he has
-          // left to score. Signed, because the sign is part of the
-          // quantity -- -0.42 is a real thing he can still do to you, not
-          // just which of the two lists he is in. A finished game reads
-          // 0.00, which is the only honest answer once he cannot move.
-          deltaEl.textContent = sbWinsAtStakeText(stake);
-          if (stake > 0.005) deltaEl.classList.add('rg-delta-pos');
-          else if (stake < -0.005) deltaEl.classList.add('rg-delta-neg');
-          else deltaEl.classList.add('rg-delta-even');
-          // The number tells you how much; the word tells you what that
-          // amount IS. Sitting in the row rather than in a tooltip because
-          // a tooltip nobody opens explains nothing.
-          // What he has already done to your week, beside what he could
-          // still do to it. Filled here because this is the one place that
-          // holds both his points over expectation and what a point of his
-          // is worth.
-          const swungEl = r.el.querySelector('.rg-swung');
-          if (swungEl) {
-            const poeNow = r.el.dataset.poe != null ? Number(r.el.dataset.poe) : null;
-            const rawNow = levLeagues.reduce((sum, l) => sum + l.perPoint, 0);
-            if (poeNow != null && Number.isFinite(poeNow) && Math.abs(rawNow) > 0.0001) {
-              const swung = rawNow / 100 * poeNow;
-              weekSwingTotal += swung;
-              weekSwingCount++;
-              swungEl.hidden = false;
-              swungEl.querySelector('b').textContent =
-                (swung > 0 ? '+' : swung < 0 ? '\u2212' : '') + Math.abs(swung).toFixed(2);
-              swungEl.classList.toggle('rg-poe-pos', swung > 0.0005);
-              swungEl.classList.toggle('rg-poe-neg', swung < -0.0005);
-            } else {
-              swungEl.hidden = true;
+        // A formatter that throws must not take the board down with it.
+        // That is not hypothetical: a stale identifier in the Wins at
+        // Stake tooltip threw on the first row, which aborted this whole
+        // forEach, so fill() never ran and all three lists rendered empty
+        // -- while Swing %, which never reaches that line, looked fine.
+        // Bucketing happens after this, so catching here keeps every row
+        // on the page even if its badge could not be drawn.
+        try {
+          if (rgSortCriterion === 'score') {
+            // Wins at stake: the weighted per-point slope times what he has
+            // left to score. Signed, because the sign is part of the
+            // quantity -- -0.42 is a real thing he can still do to you, not
+            // just which of the two lists he is in. A finished game reads
+            // 0.00, which is the only honest answer once he cannot move.
+            deltaEl.textContent = sbWinsAtStakeText(stake);
+            if (stake > 0.005) deltaEl.classList.add('rg-delta-pos');
+            else if (stake < -0.005) deltaEl.classList.add('rg-delta-neg');
+            else deltaEl.classList.add('rg-delta-even');
+            // The number tells you how much; the word tells you what that
+            // amount IS. Sitting in the row rather than in a tooltip because
+            // a tooltip nobody opens explains nothing.
+            // What he has already done to your week, beside what he could
+            // still do to it. Filled here because this is the one place that
+            // holds both his points over expectation and what a point of his
+            // is worth.
+            const swungEl = r.el.querySelector('.rg-swung');
+            if (swungEl) {
+              const poeNow = r.el.dataset.poe != null ? Number(r.el.dataset.poe) : null;
+              const rawNow = levLeagues.reduce((sum, l) => sum + l.perPoint, 0);
+              if (poeNow != null && Number.isFinite(poeNow) && Math.abs(rawNow) > 0.0001) {
+                const swung = rawNow / 100 * poeNow;
+                weekSwingTotal += swung;
+                weekSwingCount++;
+                swungEl.hidden = false;
+                swungEl.querySelector('b').textContent =
+                  (swung > 0 ? '+' : swung < 0 ? '\u2212' : '') + Math.abs(swung).toFixed(2);
+                swungEl.classList.toggle('rg-poe-pos', swung > 0.0005);
+                swungEl.classList.toggle('rg-poe-neg', swung < -0.0005);
+              } else {
+                swungEl.hidden = true;
+              }
             }
+            deltaEl.title = (typeof sbRootingScoreExplain === 'function')
+              ? sbRootingScoreExplain(
+                  (r.el.querySelector('.rg-name') || {}).textContent, levLeagues, weights, stake, remaining)
+              : '';
+          } else if (rgSortCriterion === 'swing') {
+            // Win probability per fantasy point, summed over his matchups.
+            // A player in two dead-rubber leagues reads near zero however
+            // many leagues that is.
+            const txt = `${swingNet > 0 ? '+' : (swingNet < 0 ? '\u2212' : '')}${Math.abs(swingNet).toFixed(2)}%`;
+            deltaEl.textContent = txt;
+            if (swingNet > 0.005) deltaEl.classList.add('rg-delta-pos');
+            else if (swingNet < -0.005) deltaEl.classList.add('rg-delta-neg');
+            else deltaEl.classList.add('rg-delta-even');
+          } else if (rgSortCriterion === 'leagues') {
+            deltaEl.title = '';
+            if (dollarNet > 0) { deltaEl.textContent = '+$' + dollarNet; deltaEl.classList.add('rg-delta-pos'); }
+            else if (dollarNet < 0) { deltaEl.textContent = '-$' + Math.abs(dollarNet); deltaEl.classList.add('rg-delta-neg'); }
+            else { deltaEl.textContent = '$0'; deltaEl.classList.add('rg-delta-even'); }
+          } else {
+            if (delta > 0) { deltaEl.textContent = '+' + delta; deltaEl.classList.add('rg-delta-pos'); }
+            else if (delta < 0) { deltaEl.textContent = String(delta); deltaEl.classList.add('rg-delta-neg'); }
+            else { deltaEl.textContent = '0'; deltaEl.classList.add('rg-delta-even'); }
           }
-          deltaEl.title = (typeof sbRootingScoreExplain === 'function')
-            ? sbRootingScoreExplain(
-                (r.el.querySelector('.rg-name') || {}).textContent, levLeagues, weights, stake, remaining)
-            : '';
-        } else if (rgSortCriterion === 'swing') {
-          // Win probability per fantasy point, summed over his matchups.
-          // A player in two dead-rubber leagues reads near zero however
-          // many leagues that is.
-          const txt = `${swingNet > 0 ? '+' : (swingNet < 0 ? '\u2212' : '')}${Math.abs(swingNet).toFixed(2)}%`;
-          deltaEl.textContent = txt;
-          if (swingNet > 0.005) deltaEl.classList.add('rg-delta-pos');
-          else if (swingNet < -0.005) deltaEl.classList.add('rg-delta-neg');
-          else deltaEl.classList.add('rg-delta-even');
-        } else if (rgSortCriterion === 'leagues') {
-          deltaEl.title = '';
-          if (dollarNet > 0) { deltaEl.textContent = '+$' + dollarNet; deltaEl.classList.add('rg-delta-pos'); }
-          else if (dollarNet < 0) { deltaEl.textContent = '-$' + Math.abs(dollarNet); deltaEl.classList.add('rg-delta-neg'); }
-          else { deltaEl.textContent = '$0'; deltaEl.classList.add('rg-delta-even'); }
-        } else {
-          if (delta > 0) { deltaEl.textContent = '+' + delta; deltaEl.classList.add('rg-delta-pos'); }
-          else if (delta < 0) { deltaEl.textContent = String(delta); deltaEl.classList.add('rg-delta-neg'); }
-          else { deltaEl.textContent = '0'; deltaEl.classList.add('rg-delta-even'); }
+          // Counts only. Naming the leagues here ran the row off the side of
+          // the screen, and the league list is one click away on the player
+          // anyway, which is where it has always lived.
+        } catch (err) {
+          if (!window.__rgBadgeErr) {
+            window.__rgBadgeErr = err;
+            console.error('Weekly Sweats: could not draw a badge', err);
+          }
         }
-        // Counts only. Naming the leagues here ran the row off the side of
-        // the screen, and the league list is one click away on the player
-        // anyway, which is where it has always lived.
         const noteParts = [];
         if (f.length) noteParts.push(f.length + ' <span class="rg-note-for">for</span>');
         if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
@@ -18679,8 +18736,13 @@
         // "against" but still help you overall once you weigh in that your
         // for-leagues carry more money than your against-leagues (and vice
         // versa), so re-bucket by dollarNet's sign instead of delta's.
+        // Which LIST he goes in is which way he leans, which stays true
+        // after his game is over; how far up that list is the stake, which
+        // does not. Bucketing on the stake made a finished player -- stake
+        // exactly 0.00 -- fall out of both lists, and would empty the whole
+        // board if the remaining-points data were ever missing.
         const bucketKey = rgSortCriterion === 'score'
-          ? (Math.abs(stake) < 0.005 ? 0 : stake)
+          ? (Math.abs(swingNet) < 0.005 ? 0 : swingNet)
           : (rgSortCriterion === 'swing'
             ? (Math.abs(swingNet) < 0.005 ? 0 : swingNet)
             : (rgSortCriterion === 'leagues' ? dollarNet : delta));
@@ -18795,6 +18857,12 @@
       const rgEspnGameData = window.sleeperGetEspnGameData
         ? await window.sleeperGetEspnGameData(week, rgSeason).catch(() => null)
         : null;
+      // Hand these to recomputeRootingGuide, which runs again on every
+      // sort-toggle click without coming back through here.
+      rgLiveData = {
+        dict, espnGameData: rgEspnGameData,
+        statsMap: rgActualStatsMap, projStats: rgProjStatsMap,
+      };
       // Thin wrapper so the call sites below read the same as before; all
       // the scoring (and the no-stat-line fallback) lives in sbHouseScore.
       const rgHousePoints = (id, stats) => sbHouseScore(id, stats, dict);
@@ -18953,6 +19021,21 @@
       if (window.renderRootingSlates) window.renderRootingSlates(overrideWeek);
     }
     window.renderRealRootingGuide = renderRealRootingGuide;
+
+    // Draw when the page is opened, not only when the next sync comes
+    // round. Every other page that builds itself from league data does
+    // this -- Press Box, Tanking Tracker, The Board, Playoff Picture --
+    // and this one was simply never wired up, so opening it showed three
+    // empty lists until a poll happened to land, up to a minute later.
+    // Clicking a sort toggle appeared to fix it only because that calls
+    // recomputeRootingGuide directly, which appends the rows the previous
+    // sync had already built. The stale Slates underneath had the same
+    // cause: renderRootingSlates runs at the end of this render.
+    document.addEventListener('desk:view', (e) => {
+      if (e.detail === 'rooting') {
+        renderRealRootingGuide(window.__rgSelectedWeek || undefined);
+      }
+    });
   })();
 
   // Rooting Guide player search -- jumps straight to a player's row (Root
@@ -27989,26 +28072,77 @@
 
   // How many more points he is expected to score from this moment. A
   // finished game is zero; before kickoff it is his whole projection.
-  function sbRemainingPoints(playerId) {
-    const dict = window.__sleeperPlayerDict || {};
+  // Every input is injectable, and this matters more than it looks.
+  // Reading the globals directly meant this only worked once the Press Box
+  // had rendered, because renderRealGameCast is the one place that sets
+  // __gcStatsMap, __gcEspnGameData and __sleeperProjectionStats. Weekly
+  // Sweats fetches the same three things into its own locals and never
+  // writes them back -- so landing there first gave every player a
+  // projection of null, a remaining of 0, a stake of 0, and a board with
+  // both lists empty until you clicked away and back.
+  function sbRemainingPoints(playerId, opts) {
+    const o = opts || {};
+    const dict = o.dict || window.__sleeperPlayerDict || {};
     const p = dict[playerId];
     if (!p) return 0;
-    const espnGameData = window.__gcEspnGameData || null;
+    const espnGameData = o.espnGameData !== undefined
+      ? o.espnGameData : (window.__gcEspnGameData || null);
+    const statsMap = o.statsMap || window.__gcStatsMap || {};
+    const projStats = o.projStats || window.__sleeperProjectionStats || {};
     const team = p.team;
     if (sbGameFinishedForTeam(team, espnGameData)) return 0;
-    const origProj = gcProjectedPoints(playerId, dict);
+    // Not gcProjectedPoints, which hard-codes the global this has to be
+    // able to take as an argument.
+    const origProj = sbHouseScore(playerId, projStats[playerId], dict);
     if (origProj == null) return 0;
     // A player ruled out has nothing left to give, whatever he was
     // projected for this morning.
     if (sbCountAsInactive(p, espnGameData)) return 0;
     const started = sbGameStartedForTeam(team, espnGameData);
     if (!started) return Math.max(0, origProj);
-    const live = gcScoreStats(playerId, (window.__gcStatsMap || {})[playerId], dict) || 0;
+    const live = sbHouseScore(playerId, statsMap[playerId], dict) || 0;
     const elapsed = sbGameElapsedFraction(team, espnGameData);
     const liveProj = sbEstimateLiveProjection(live, origProj, elapsed, started, false,
       { position: p.position, team, espnGameData });
     const finalProj = (liveProj == null) ? origProj : liveProj;
     return Math.max(0, finalProj - live);
+  }
+
+  // How much his remaining game could still SWING, which is not the same
+  // as how much he is expected to score.
+  //
+  // Two parts, added in quadrature because they are independent sources of
+  // spread: the ordinary variation around the points he has left, and the
+  // scoring play that stays possible until the whistle. The second is what
+  // keeps a man with two minutes to go from reading as though he were
+  // already in the shower.
+  //
+  // A player who is done, ruled out, or has no projection has neither, and
+  // returns 0 -- the stake really is nothing by then.
+  function sbRemainingSwing(playerId, opts) {
+    const o = opts || {};
+    const dict = o.dict || window.__sleeperPlayerDict || {};
+    const p = dict[playerId];
+    if (!p) return 0;
+    const espnGameData = o.espnGameData !== undefined
+      ? o.espnGameData : (window.__gcEspnGameData || null);
+    const team = p.team;
+    if (sbGameFinishedForTeam(team, espnGameData)) return 0;
+    if (sbCountAsInactive(p, espnGameData)) return 0;
+    const projStats = o.projStats || window.__sleeperProjectionStats || {};
+    // No projection at all means we know nothing about him, which is not
+    // the same as knowing he cannot move -- but inventing a spread for a
+    // player we cannot price is worse, so he reads 0 as before.
+    if (sbHouseScore(playerId, projStats[playerId], dict) == null) return 0;
+    const mean = sbRemainingPoints(playerId, opts);
+    const k = SB_SIGMA_K[p.position] != null ? SB_SIGMA_K[p.position] : SB_SIGMA_K.DEFAULT;
+    const spread = k * mean;
+    // Flat while his game is live, by design -- see SB_BIGPLAY_SD. Before
+    // kickoff it applies too: the touchdown is no less possible for the
+    // game not having started.
+    const big = SB_BIGPLAY_SD[p.position] != null
+      ? SB_BIGPLAY_SD[p.position] : SB_BIGPLAY_SD.DEFAULT;
+    return Math.sqrt(spread * spread + big * big);
   }
 
   // The weighted per-point slope, summed over his matchups, times what he
@@ -28025,7 +28159,7 @@
     if (!lev || !lev.leagues.length) return 0;
     const weights = (typeof sbLeagueWeights === 'function')
       ? sbLeagueWeights(lev.leagues.map(l => l.name)) : {};
-    return sbWinsAtStakeFrom(lev.leagues, weights, sbRemainingPoints(playerId));
+    return sbWinsAtStakeFrom(lev.leagues, weights, sbRemainingSwing(playerId, opts));
   }
 
   function sbWinsAtStakeText(wins) {
@@ -28047,6 +28181,7 @@
   }
 
   window.sbRemainingPoints = sbRemainingPoints;
+  window.sbRemainingSwing = sbRemainingSwing;
   window.sbWinsAtStake = sbWinsAtStake;
   window.sbWinsAtStakeFrom = sbWinsAtStakeFrom;
   window.sbWinsAtStakeText = sbWinsAtStakeText;
@@ -28074,8 +28209,14 @@
     });
     if (!levLeagues.length) lines.push('  (none — he is not in any of your lineups this week)');
     lines.push('');
-    lines.push(`Added up: ${net > 0 ? '+' : ''}${net.toFixed(2)}% win probability per point he scores.`);
-    lines.push(`On the -100 to +100 scale that is ${score > 0 ? '+' : ''}${score}.`);
+    // Rebuilt from the league list rather than taken as an argument: this
+    // is the one place that needs it, and passing it in is how the last two
+    // names here went stale without anything noticing.
+    const perPoint = levLeagues.reduce((sum, l) =>
+      sum + l.perPoint * (weights[l.name] != null ? weights[l.name] : 1), 0);
+    lines.push(`Added up: ${perPoint > 0 ? '+' : ''}${perPoint.toFixed(2)}% win probability per point he scores.`);
+    lines.push(`Over the ${(Number(remaining) || 0).toFixed(1)} points he has left, that is `
+      + `${sbWinsAtStakeText(stake)} of a matchup.`);
     lines.push('');
     lines.push('A matchup already won or already lost barely moves, so a player in it');
     lines.push('counts for almost nothing. A coin flip moves a lot, so he counts for a lot.');
@@ -28435,6 +28576,27 @@
 
     const mineOnly = window.__gcFeedFilter === 'mine';
 
+    // What he can still do to your week, beside what he just did to it.
+    // Worked out once per draw and cached by player: a quarterback is in
+    // nearly every play and this column draws sixty of them, so the same
+    // answer was otherwise recomputed dozens of times for one render.
+    const stakeCache = new Map();
+    const stakeHtml = (pid) => {
+      if (stakeCache.has(pid)) return stakeCache.get(pid);
+      let html = '';
+      const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(pid) : null;
+      if (lev && lev.leagues.length) {
+        const stake = sbWinsAtStake(pid);
+        const cls = stake > 0.005 ? 'is-pos' : (stake < -0.005 ? 'is-neg' : 'is-flat');
+        const tip = (typeof sbRootingMeaning === 'function')
+          ? sbRootingMeaning(stake, sbRemainingPoints(pid)) : '';
+        html = `<span class="gc-feed-stat" title="${sbFieldEsc(tip)}">`
+          + `<span class="gc-feed-k">At stake</span>`
+          + `<b class="${cls}">${sbWinsAtStakeText(stake)}</b></span>`;
+      }
+      stakeCache.set(pid, html);
+      return html;
+    };
 
     const items = [];
     rows.forEach(({ game, play, players }) => {
@@ -28488,6 +28650,7 @@
               `<b class="${fpCls.trim() || 'is-flat'}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</b></span>` +
             `<span class="gc-feed-stat"><span class="gc-feed-k">Total</span>` +
               `<b class="${totCls}">${dayTotal != null ? dayTotal.toFixed(1) : '&mdash;'}</b></span>` +
+            stakeHtml(pl.id) +
           `</div>` +
           (dayLine ? `<div class="gc-feed-day"><span class="gc-feed-day-label">ON THE DAY</span>${sbFieldEsc(dayLine)}</div>` : '') +
           (impacts.length ? ''
