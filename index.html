@@ -362,6 +362,7 @@
   .schedule-expand-chips { display: flex; flex-wrap: wrap; gap: 6px 14px; }
   .schedule-expand-chip { font-size: 12.5px; font-weight: 600; color: var(--ink); }
   .schedule-expand-pos { color: var(--green); }
+  .schedule-expand-even { color: var(--gold); }
   .schedule-expand-neg { color: var(--red); }
   .schedule-expand-guide { display: block; margin-top: 10px; font-size: 11.5px; font-weight: 700; color: var(--green); cursor: pointer; }
 
@@ -2399,6 +2400,11 @@
   .rg-panel-for .rg-panel-head { color: var(--green); }
   .rg-panel-against .rg-panel-head { color: var(--red); }
   .rg-panel-even .rg-panel-head { color: var(--gold); }
+  /* Settled names are history, not a sweat -- muted, and the whole panel
+     hides itself while nothing on the slate has finished. */
+  .rg-panel-settled .rg-panel-head { color: var(--muted); }
+  .rg-panel-settled .rg-list { max-height: none; }
+  .rg-panel-settled .rg-row { opacity: 0.7; }
   .rg-list { display: flex; flex-direction: column; gap: 6px; max-height: 460px; overflow-y: auto; }
   .rg-panel-even .rg-list { max-height: none; }
 
@@ -2491,6 +2497,8 @@
      the live sweats above it still carry the eye. */
   .rg-chip-done { opacity: 0.55; }
   .rg-chip-settled { color: var(--faint); font-weight: 700; }
+  .rg-slate-line { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+  .rg-slate-side { flex-shrink: 0; width: 30px; font-size: 9px; font-weight: 800; letter-spacing: 0.6px; color: var(--faint); }
   .rg-hist { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   @media (max-width: 700px) { .rg-hist { grid-template-columns: 1fr; } }
   .rg-hist-col { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
@@ -6450,13 +6458,12 @@
           <p>Your starters versus your opponents across all scheduled matchups. Tap a player for the league list.</p>
           <div class="rg-key" id="rgScoreKey">
             <div class="rg-key-title">How Wins at Stake works</div>
-            <p class="rg-key-line">One question: how many of your matchups can this player still
-              change? A matchup you are 95% to win barely moves, a coin flip moves a lot &mdash; so the
-              answer is in matchups, not in leagues.</p>
+            <p class="rg-key-line">One question: how many of your matchups can this player
+              still change?</p>
             <ol class="rg-key-steps">
-              <li><b>What one of his points does.</b> Move your projected total by a point and see how far your win odds shift. Steep at 50/50, flat at 95/5, zero once a matchup is settled.</li>
-              <li><b>What that league is worth to you.</b> Half its share of your buy-ins, half an equal share per league &mdash; so a $100 league outweighs a $50 one without two $50 leagues losing to a single $100.</li>
-              <li><b>How much he can still do.</b> Not the points he has left, but how far his day can still land from its projection &mdash; which stays wide while a touchdown is possible and collapses to nothing at the whistle. That is why a finished player reads 0.00 and a man still on the field never does.</li>
+              <li><b>What one of his points is worth.</b> In a coin-flip matchup a point swings a lot. In one you are 95% to win, almost nothing. Settled, nothing at all.</li>
+              <li><b>What the league is worth.</b> Half its share of your buy-ins, half an equal share per league.</li>
+              <li><b>How much he can still move.</b> Not points he is owed &mdash; how far his day can still land from its projection. Wide while a touchdown is possible, zero at the whistle.</li>
             </ol>
             <div class="rg-key-scale">
               <span class="rg-key-chip rg-key-zero">0.00</span><span class="rg-key-cap">played out, or nothing riding on him</span>
@@ -7395,6 +7402,11 @@
                 </div>
               </div>
           </div>
+        </div>
+
+        <div class="rg-panel rg-panel-settled" hidden>
+          <div class="rg-panel-head">Already Played</div>
+          <div class="rg-list"></div>
         </div>
 
         <div class="rg-slates-head">Week <span class="sb-week-num">1</span> Slates &mdash; When Your Rooting Interests Play</div>
@@ -13489,6 +13501,23 @@
       // parked on the window rather than adding another attribute.
       const settled = sbGameFinishedForTeam(row.dataset.team, window.__gcEspnGameData || null);
       const histRow = (window.__sleeperRootingRows || []).find(r => String(r.id) === String(row.dataset.playerId));
+      // Which way he leans, carried separately from the size of the number.
+      // Colouring a chip by the sign of its delta made every 0.00 red --
+      // claiming "root against him" about a man who is simply settled, or
+      // whose projection never loaded. The lean survives both.
+      //
+      // The board itself has already decided this: recomputeRootingGuide
+      // appends each row into the For, Against or Even list, so the row's
+      // own panel is the authoritative answer and cannot disagree with
+      // what is on screen above. The league counts are the fallback for a
+      // row that is not in a panel yet.
+      const forNames = (row.dataset.for || '').split(' &middot; ').filter(Boolean);
+      const againstNames = (row.dataset.against || '').split(' &middot; ').filter(Boolean);
+      let lean;
+      if (row.closest('.rg-panel-for')) lean = 1;
+      else if (row.closest('.rg-panel-against')) lean = -1;
+      else if (row.closest('.rg-panel-even')) lean = 0;
+      else lean = Math.sign(forNames.length - againstNames.length);
       matches.push({
         id: row.dataset.playerId,
         name: nameEl.textContent.trim(),
@@ -13496,6 +13525,13 @@
         mode,
         settled,
         scored: histRow && histRow.pprPoints != null ? histRow.pprPoints : null,
+        lean,
+        forCount: forNames.length,
+        againstCount: againstNames.length,
+        // A player with no projection reads 0.00 for a reason that has
+        // nothing to do with his game being over. Kept apart so the chip
+        // can say which it is.
+        noProj: !row.dataset.proj || Number(row.dataset.proj) === 0,
       });
     });
     matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
@@ -13514,6 +13550,12 @@
     // next to his name reads as "irrelevant" rather than "done". Show what
     // he actually scored instead.
     if (m.settled && m.scored != null) return `${Number(m.scored).toFixed(1)} final`;
+    // A missing projection zeroes the stake for a reason that has nothing
+    // to do with his game. Printing a confident 0.00 there states something
+    // false; fall back to the league count, which is still true.
+    if (mode === 'score' && m.noProj && !m.settled && (m.forCount || m.againstCount)) {
+      return `${m.forCount} for \u00b7 ${m.againstCount} vs`;
+    }
     if (mode === 'score') return sbWinsAtStakeText(m.delta);
     if (mode === 'swing') return `${m.delta > 0 ? '+' : '\u2212'}${Math.abs(m.delta).toFixed(2)}%`;
     if (mode === 'leagues') return m.delta > 0 ? `+$${m.delta}` : `-$${Math.abs(m.delta)}`;
@@ -13644,7 +13686,13 @@
       // is settled. The other modes keep their old behaviour, where a zero
       // really does mean "not involved".
       if (!deltaNum && mode !== 'score') return;
-      matches.push({ id: r.id, name: r.name, delta: deltaNum, mode });
+      // Lean travels with the match everywhere, so a chip rendered from
+      // this path colours the same way as one rendered off the board.
+      matches.push({
+        id: r.id, name: r.name, delta: deltaNum, mode,
+        lean: Math.sign(f.length - a.length),
+        forCount: f.length, againstCount: a.length,
+      });
     });
     matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     return matches;
@@ -13676,6 +13724,12 @@
   async function renderRootingSlates(overrideWeek) {
     const grid = document.querySelector('.rg-slates-grid');
     if (!grid) return;
+    // Callers that just want a redraw (the sort toggle, a money edit in
+    // Settings) have no week to hand back, and passing nothing silently
+    // snapped the slates to the current week while the board above still
+    // showed another. Remember the last week asked for and reuse it.
+    if (overrideWeek) window.__rgSlateWeek = overrideWeek;
+    else overrideWeek = window.__rgSlateWeek || null;
     const firstEntry = Object.values(window.sleeperLeagueData || {}).find(e => e.roster);
     if (!firstEntry) return;
     const currentWeek = firstEntry.week;
@@ -13737,25 +13791,42 @@
       const teamCodes = [];
       buckets[label].forEach(g => teamCodes.push(g.away, g.home));
       const matches = getRootingDeltasForTeams(teamCodes);
+      // Colour by which way he leans, never by the sign of the number: a
+      // 0.00 is not a man you are rooting against, and the old
+      // `delta > 0 ? pos : neg` painted every one of them red.
       const chipHtml = m => {
-        const cls = m.settled ? 'rg-chip-settled' : (m.delta > 0 ? 'rg-chip-pos' : 'rg-chip-neg');
+        const cls = m.settled ? 'rg-chip-settled'
+          : (m.lean > 0 ? 'rg-chip-pos' : (m.lean < 0 ? 'rg-chip-neg' : 'rg-chip-even'));
         const rowCls = m.settled ? 'rg-chip rg-chip-done' : 'rg-chip';
         return `<span class="${rowCls}" data-player-id="${m.id}">${sbFieldEsc(m.name)} <span class="${cls}">${rgChipDeltaText(m)}</span></span>`;
       };
-      // Live sweats first -- a settled name is history, not something to
-      // watch, so it sorts below anyone whose game can still move.
-      matches.sort((a, b) => (a.settled === b.settled) ? 0 : (a.settled ? 1 : -1));
       const liveCount = matches.filter(m => !m.settled).length;
       const doneCount = matches.length - liveCount;
       const countText = `${liveCount} sweat${liveCount === 1 ? '' : 's'}` + (doneCount ? ` \u00b7 ${doneCount} settled` : '');
-      const shown = matches.slice(0, RG_SLATE_CHIP_LIMIT).map(chipHtml).join('');
-      const extra = matches.slice(RG_SLATE_CHIP_LIMIT);
-      const extraHtml = extra.length
-        ? `<span class="rg-chip rg-chip-more" data-more-label="+${extra.length} more">+${extra.length} more</span>` +
-          `<span class="rg-slate-extra" hidden>${extra.map(chipHtml).join('')}</span>`
-        : '';
+      // Split into the two things you actually want to know apart. Within
+      // a row the biggest stake leads, and a settled name sits below
+      // anyone whose game can still move.
+      const bySize = (a, b) => (a.settled === b.settled ? 0 : (a.settled ? 1 : -1))
+        || (Math.abs(b.delta) - Math.abs(a.delta));
+      const rowHtml = (lbl, list) => {
+        if (!list.length) return '';
+        const shown = list.slice(0, RG_SLATE_CHIP_LIMIT).map(chipHtml).join('');
+        const extra = list.slice(RG_SLATE_CHIP_LIMIT);
+        const extraHtml = extra.length
+          ? `<span class="rg-chip rg-chip-more" data-more-label="+${extra.length} more">+${extra.length} more</span>` +
+            `<span class="rg-slate-extra" hidden>${extra.map(chipHtml).join('')}</span>`
+          : '';
+        return `<div class="rg-slate-line"><span class="rg-slate-side">${lbl}</span>` +
+          `<span class="rg-slate-chips">${shown}${extraHtml}</span></div>`;
+      };
+      const forList = matches.filter(m => m.lean > 0).sort(bySize);
+      const vsList = matches.filter(m => m.lean < 0).sort(bySize);
+      const evenList = matches.filter(m => !m.lean).sort(bySize);
+      const body = matches.length
+        ? rowHtml('FOR', forList) + rowHtml('VS', vsList) + rowHtml('EVEN', evenList)
+        : '<span style="color:var(--faint)">No rooting impact this slate.</span>';
       return `<div class="rg-slate-card"><div class="rg-slate-head"><span class="rg-slate-label">${label}</span><span class="rg-slate-count">${countText}</span></div>` +
-        `<div class="rg-slate-chips">${matches.length ? shown + extraHtml : '<span style="color:var(--faint)">No rooting impact this slate.</span>'}</div></div>`;
+        `${body}</div>`;
     }).join('');
 
     grid.innerHTML = cardsHtml || '<div class="placeholder"><p>No games scheduled this week.</p></div>';
@@ -13777,7 +13848,10 @@
       expand.innerHTML = '<p class="schedule-expand-count">No plus/minus exposure for you in this game.</p>';
     } else {
       const chips = matches.map(m => {
-        const cls = m.delta > 0 ? 'schedule-expand-pos' : 'schedule-expand-neg';
+        // Same rule as the slate chips: lean decides the colour, not the
+        // sign of a number that is 0.00 whenever his game is done.
+        const cls = m.lean > 0 ? 'schedule-expand-pos'
+          : (m.lean < 0 ? 'schedule-expand-neg' : 'schedule-expand-even');
         return `<span class="schedule-expand-chip" data-player-id="${m.id}">${m.name} <b class="${cls}">${rgChipDeltaText(m)}</b></span>`;
       }).join('');
       expand.innerHTML =
@@ -16535,14 +16609,14 @@
       // A league we cannot rank gets the sort-last sentinel, not 0 -- this
       // column holds a rank and sorts ascending, so a 0 would float every
       // unranked league to the top.
-      if (getSiteMode() !== 'dynasty' || !dict || allRosters.length < 2) { cell.textContent = '—'; row.dataset.value = '999'; return; }
+      if (getSiteMode() !== 'dynasty' || !dict || allRosters.length < 2) { cell.textContent = '—'; row.dataset.value = '999'; row.dataset.valueShare = '0'; return; }
       const isDynastyLeague = sbLeagueIsDynasty(entry.league);
       const values = allRosters.map(r => ({
         rosterId: r.roster_id,
         value: ppRosterValue(r, dict) + (isDynastyLeague ? ppPicksOwnedBy(entry, r.roster_id).reduce((s, p) => s + window.ppPickValueFuture(entry, p), 0) : 0),
       }));
       const myValue = values.find(v => v.rosterId === entry.roster.roster_id);
-      if (!myValue) { cell.textContent = '—'; row.dataset.value = '999'; return; }
+      if (!myValue) { cell.textContent = '—'; row.dataset.value = '999'; row.dataset.valueShare = '0'; return; }
       const sortedDesc = [...values].sort((a, b) => b.value - a.value);
       const rank = sortedDesc.findIndex(v => v.rosterId === entry.roster.roster_id) + 1;
       cell.textContent = sbOrdinal(rank);
@@ -16551,6 +16625,12 @@
       // "Roster Value" sort a silent no-op that just restored Sleeper
       // order -- the same bug the Playoff Odds column had.
       row.dataset.value = String(rank);
+      // Share of the league's whole asset pile, as the tiebreak. Rank
+      // alone ties constantly -- you are 1st in a dozen leagues -- and
+      // being 1st by a mile is not the same league position as being 1st
+      // by a nose. Same formula League Detail's Value Share already uses.
+      const leagueValue = values.reduce((sum, v) => sum + v.value, 0);
+      row.dataset.valueShare = String(leagueValue > 0 ? myValue.value / leagueValue : 0);
     });
     if (typeof reapplySort === 'function') reapplySort();
   }
@@ -18370,6 +18450,8 @@
     const forListEl = document.querySelector('.rg-panel-for .rg-list');
     const againstListEl = document.querySelector('.rg-panel-against .rg-list');
     const evenListEl = document.querySelector('.rg-panel-even .rg-list');
+    const settledListEl = document.querySelector('.rg-panel-settled .rg-list');
+    const settledPanelEl = document.querySelector('.rg-panel-settled');
     if (!rgBtn || !rgPanel || !rgChipsEl || !forListEl || !againstListEl || !evenListEl) return;
 
     // Which stat orders Root For/Root Against. Internal values keep their
@@ -18553,7 +18635,7 @@
       // -- reads this to say the same thing this page is saying.
       window.__rgMode = rgSortCriterion;
       window.__rgMoneyMode = rgSortCriterion === 'leagues';
-      const buckets = { for: [], against: [], even: [] };
+      const buckets = { for: [], against: [], even: [], settled: [] };
       rgRows.forEach(r => {
         if (rgPosFilter !== 'ALL' && r.el.dataset.pos !== rgPosFilter) {
           if (r.el.parentNode) r.el.parentNode.removeChild(r.el);
@@ -18578,8 +18660,12 @@
         // treats a coin flip and a game you have already won as one apiece;
         // this does not, which is the difference between "you are in three
         // of his matchups" and "root for him".
+        // Hand it rgLiveData, the same way sbRemainingSwing is called
+        // below. Called bare it fell back to window globals that this page
+        // does not set, so sbMatchupSigma went blind and every matchup got
+        // the fallback sigma rather than its real one.
         const lev = (typeof sbPlayerLeverage === 'function' && r.el.dataset.playerId)
-          ? sbPlayerLeverage(r.el.dataset.playerId)
+          ? sbPlayerLeverage(r.el.dataset.playerId, rgLiveData || undefined)
           : { perPoint: 0, leagues: [] };
         // Blacklisted leagues are off this page entirely, so they are off
         // this number too. What is left is weighted by what each league is
@@ -18704,7 +18790,9 @@
         // Score mode sorts on the same stake the badge prints. Ordering by
         // one number while showing another is what made the old board look
         // arbitrary.
-        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, swingNet, stake, proj };
+        const settledNow = sbGameFinishedForTeam(r.el.dataset.team,
+          (rgLiveData && rgLiveData.espnGameData) || window.__gcEspnGameData || null);
+        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, swingNet, stake, proj, settled: settledNow };
         // In $ mode, which bucket a player belongs in is decided by real
         // dollars at stake, not league count -- a player can be a league-count
         // "against" but still help you overall once you weigh in that your
@@ -18720,7 +18808,30 @@
           : (rgSortCriterion === 'swing'
             ? (Math.abs(swingNet) < 0.005 ? 0 : swingNet)
             : (rgSortCriterion === 'leagues' ? dollarNet : delta));
-        if (bucketKey > 0) buckets.for.push(bucket);
+        // A man whose game is over is not a sweat any more, whichever way
+        // he leaned. He gets his own list rather than sitting at the bottom
+        // of one you are still watching, and Even goes back to meaning what
+        // it says: no lean either way.
+        if (bucket.settled) {
+          // In the Already Played list the stake is always 0.00, which says
+          // nothing. Overwrite the badge with what he actually scored and
+          // the note with which way he had leaned -- the two facts that
+          // are still worth knowing about a man whose game is over.
+          const scored = r.pprPoints != null ? Number(r.pprPoints) : null;
+          if (scored != null) {
+            deltaEl.textContent = scored.toFixed(1);
+            deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
+            deltaEl.classList.add(delta > 0 ? 'rg-delta-pos' : (delta < 0 ? 'rg-delta-neg' : 'rg-delta-even'));
+            deltaEl.title = `${scored.toFixed(1)} points, final.`;
+          }
+          if (noteEl) {
+            noteEl.innerHTML = delta > 0
+              ? `was <span class="rg-note-for">for</span>`
+              : (delta < 0 ? `was <span class="rg-note-vs">vs</span>` : 'even');
+          }
+          buckets.settled.push(bucket);
+        }
+        else if (bucketKey > 0) buckets.for.push(bucket);
         else if (bucketKey < 0) buckets.against.push(bucket);
         else buckets.even.push(bucket);
       });
@@ -18766,6 +18877,14 @@
       fill(forListEl, buckets.for);
       fill(againstListEl, buckets.against);
       buckets.even.forEach(b => evenListEl.appendChild(b.el));
+      if (settledListEl) {
+        settledListEl.innerHTML = '';
+        // Biggest day first -- the point of this list is what already
+        // happened to you, so the man who went off leads it.
+        buckets.settled.sort((a, b) => (b.proj - a.proj));
+        buckets.settled.forEach(b => settledListEl.appendChild(b.el));
+      }
+      if (settledPanelEl) settledPanelEl.hidden = !buckets.settled.length;
     }
     // Exposed so Settings' League Money panel can refresh this page's $
     // sort immediately after an edit, instead of waiting on the next sync.
@@ -18831,6 +18950,21 @@
       const rgEspnGameData = window.sleeperGetEspnGameData
         ? await window.sleeperGetEspnGameData(week, rgSeason).catch(() => null)
         : null;
+      // Publish it. __gcEspnGameData was written in exactly one place --
+      // inside GameCast -- so anything reading game state off the window
+      // (the slate chips' "settled", the exposure history snapshot, every
+      // sb* helper that falls back to this global) saw null until GameCast
+      // had been opened at least once this session. That made a finished
+      // player impossible to detect on the Rooting page: nothing was ever
+      // settled, and the history recorded nothing at all.
+      //
+      // Only for the live week, and never clobber a populated map with an
+      // empty one -- opening a past week must not blank out today's state
+      // for everything else on the page.
+      if (isCurrentWeek && rgEspnGameData && Object.keys(rgEspnGameData).length) {
+        window.__gcEspnGameData = rgEspnGameData;
+        if (window.__gcWeek == null) window.__gcWeek = week;
+      }
       // Hand these to recomputeRootingGuide, which runs again on every
       // sort-toggle click without coming back through here.
       rgLiveData = {
@@ -18967,7 +19101,10 @@
             `<span class="rg-stat rg-swung" hidden>Swung: <b></b></span>` +
             `<span class="rg-note">${noteParts.join(' &middot; ')}</span>` +
           '</div>';
-        return { el, forAll: r.for.slice(), againstAll: r.against.slice() };
+        // pprPoints rides along so the Already Played list can show what
+        // he actually scored; recompute runs on sort-toggle clicks that
+        // never come back through here, so it cannot refetch it.
+        return { el, forAll: r.for.slice(), againstAll: r.against.slice(), pprPoints: r.pprPoints };
       });
 
       rgLeagueNames = entries.map(e => e.league.name).sort();
@@ -19363,12 +19500,19 @@
     rows.sort((a, b) => {
       const idxA = Number(a.dataset.index), idxB = Number(b.dataset.index);
       let primary;
+      let secondary = 0;
       switch (criterion) {
         case 'az':
           primary = a.dataset.name.localeCompare(b.dataset.name);
           break;
         case 'value':
           primary = Number(a.dataset.value) - Number(b.dataset.value);
+          // Ties on rank break on share of league value, biggest first.
+          // Deliberately outside the `* dir` below, like the direction-aware
+          // sort in the Playoff Picture: flipping the rank should not also
+          // flip the tiebreak, or reversing the column would promote the
+          // thinnest 1st-place roster to the top of the 1sts.
+          secondary = Number(b.dataset.valueShare || 0) - Number(a.dataset.valueShare || 0);
           break;
         case 'weekly':
           primary = Number(b.dataset.weekly) - Number(a.dataset.weekly);
@@ -19393,7 +19537,7 @@
         default:
           primary = idxA - idxB;
       }
-      return (primary * dir) || (idxA - idxB);
+      return (primary * dir) || secondary || (idxA - idxB);
     });
     rows.forEach(row => leagueList.appendChild(row));
   }
@@ -21787,6 +21931,10 @@
           if (window.renderRealRecordBook) window.renderRealRecordBook();
           if (window.renderRealExposures) window.renderRealExposures();
           if (window.recomputeRootingGuide) window.recomputeRootingGuide();
+          // The slate cards are built from the rows recompute just
+          // rewrote, but do not rebuild themselves -- without this they
+          // keep showing the old dollar weighting.
+          if (window.renderRootingSlates) window.renderRootingSlates();
         });
       });
     }
