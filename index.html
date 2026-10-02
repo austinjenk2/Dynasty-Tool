@@ -13486,7 +13486,10 @@
   // anywhere else on the site never disagrees with it.
   function rgChipDeltaText(m) {
     const mode = m.mode || (m.isMoney ? 'leagues' : 'value');
-    if (mode === 'score') return (m.delta > 0 ? '+' : '') + Math.round(m.delta);
+    // Two decimals. Math.round is left from the -100 to +100 score; wins
+    // at stake live between about 0 and 1.5, so rounding to a whole number
+    // printed +0 for everyone but the single biggest name on the slate.
+    if (mode === 'score') return sbWinsAtStakeText(m.delta);
     if (mode === 'swing') return `${m.delta > 0 ? '+' : '\u2212'}${Math.abs(m.delta).toFixed(2)}%`;
     if (mode === 'leagues') return m.delta > 0 ? `+$${m.delta}` : `-$${Math.abs(m.delta)}`;
     return m.delta > 0 ? `+${m.delta}` : `${m.delta}`;
@@ -13609,7 +13612,13 @@
       } else {
         deltaNum = f.length - a.length;
       }
-      if (!deltaNum) return;
+      // A zero is information in score mode: it means his game is over, or
+      // the matchups he is in cannot move any more. Dropping it emptied a
+      // whole slate once Thursday night had been played -- "no rooting
+      // impact this slate" when the honest answer is that everyone on it
+      // is settled. The other modes keep their old behaviour, where a zero
+      // really does mean "not involved".
+      if (!deltaNum && mode !== 'score') return;
       matches.push({ id: r.id, name: r.name, delta: deltaNum, mode });
     });
     matches.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
@@ -28567,6 +28576,27 @@
 
     const mineOnly = window.__gcFeedFilter === 'mine';
 
+    // What he can still do to your week, beside what he just did to it.
+    // Worked out once per draw and cached by player: a quarterback is in
+    // nearly every play and this column draws sixty of them, so the same
+    // answer was otherwise recomputed dozens of times for one render.
+    const stakeCache = new Map();
+    const stakeHtml = (pid) => {
+      if (stakeCache.has(pid)) return stakeCache.get(pid);
+      let html = '';
+      const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(pid) : null;
+      if (lev && lev.leagues.length) {
+        const stake = sbWinsAtStake(pid);
+        const cls = stake > 0.005 ? 'is-pos' : (stake < -0.005 ? 'is-neg' : 'is-flat');
+        const tip = (typeof sbRootingMeaning === 'function')
+          ? sbRootingMeaning(stake, sbRemainingPoints(pid)) : '';
+        html = `<span class="gc-feed-stat" title="${sbFieldEsc(tip)}">`
+          + `<span class="gc-feed-k">At stake</span>`
+          + `<b class="${cls}">${sbWinsAtStakeText(stake)}</b></span>`;
+      }
+      stakeCache.set(pid, html);
+      return html;
+    };
 
     const items = [];
     rows.forEach(({ game, play, players }) => {
@@ -28620,6 +28650,7 @@
               `<b class="${fpCls.trim() || 'is-flat'}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</b></span>` +
             `<span class="gc-feed-stat"><span class="gc-feed-k">Total</span>` +
               `<b class="${totCls}">${dayTotal != null ? dayTotal.toFixed(1) : '&mdash;'}</b></span>` +
+            stakeHtml(pl.id) +
           `</div>` +
           (dayLine ? `<div class="gc-feed-day"><span class="gc-feed-day-label">ON THE DAY</span>${sbFieldEsc(dayLine)}</div>` : '') +
           (impacts.length ? ''
