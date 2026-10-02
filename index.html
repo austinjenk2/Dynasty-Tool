@@ -2499,15 +2499,18 @@
   .rg-chip-settled { color: var(--faint); font-weight: 700; }
   .rg-slate-line { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
   .rg-slate-side { flex-shrink: 0; width: 30px; font-size: 9px; font-weight: 800; letter-spacing: 0.6px; color: var(--faint); }
-  .rg-math { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
-  .rg-math-term { font-size: 13px; color: var(--muted); }
-  .rg-math-term b { font-family: 'Source Serif 4', serif; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
-  .rg-math-op { font-size: 13px; color: var(--faint); }
-  .rg-math-eq { font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .rg-math-eq.rg-math-pos { color: var(--green); }
-  .rg-math-eq.rg-math-neg { color: var(--red); }
-  .rg-math-done { font-size: 13px; color: var(--muted); }
-  .rg-math-note { flex-basis: 100%; font-size: 11px; color: var(--faint); line-height: 1.5; margin-top: 2px; }
+  .rg-math { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .rg-math-done { font-size: 13px; color: var(--muted); text-align: left; display: block; }
+  .rg-lev { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .rg-lev-row { display: flex; align-items: baseline; gap: 10px; padding: 3px 0; font-size: 13px; text-align: left; }
+  .rg-lev-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rg-lev-state { flex: 0 0 auto; font-size: 11px; color: var(--faint); }
+  .rg-lev-v { flex: 0 0 52px; text-align: right; font-family: 'Source Serif 4', serif; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rg-lev-pos { color: var(--green); }
+  .rg-lev-neg { color: var(--red); }
+  .rg-lev-total { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 6px; font-weight: 700; }
+  .rg-lev-total .rg-lev-v { font-size: 16px; }
+  .rg-lev-note { font-size: 11px; color: var(--faint); line-height: 1.5; margin-top: 7px; text-align: left; }
   .rg-hist { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   @media (max-width: 700px) { .rg-hist { grid-template-columns: 1fr; } }
   .rg-hist-col { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
@@ -6466,29 +6469,29 @@
           </div>
           <p>Your starters versus your opponents across all scheduled matchups. Tap a player for the league list.</p>
           <div class="rg-key" id="rgScoreKey">
-            <div class="rg-key-title">How Wins at Stake works</div>
-            <p class="rg-key-line">One question: if this player beats his projection by
-              10 points, how many of your matchups does it cost you?</p>
+            <div class="rg-key-title">How Leverage works</div>
+            <p class="rg-key-line">One question: what is one point from this player worth to you?</p>
             <ol class="rg-key-steps">
-              <li><b>What one of his points is worth.</b> In a coin-flip matchup a point swings a lot. In one you are 95% to win, almost nothing. Settled, nothing at all.</li>
-              <li><b>What the league is worth.</b> Half its share of your buy-ins, half an equal share per league.</li>
-              <li><b>Times 10 points.</b> A fixed amount, deliberately &mdash; so the number measures how exposed you are to him, not how good he is. Two players in the same leagues and the same matchups read the same, whatever either is projected for.</li>
+              <li><b>In each matchup, how far does a point move you?</b> Slide your projected total by one point and watch your win odds. A coin flip moves a lot; a game you are 95% to win barely moves; a settled one does not move at all.</li>
+              <li><b>Weight each league.</b> Half its share of your buy-ins, half an equal share per league &mdash; so a $100 league outweighs a $50 one without two $50 leagues losing to a single $100.</li>
+              <li><b>Add them up.</b> That sum is the number. It is a rate, not a total, so it measures how exposed you are to him rather than how good he is: two players in the same leagues and the same matchups read the same, whatever either is projected for.</li>
             </ol>
-            <p class="rg-key-line">It falls to 0.00 the moment he can no longer add to his day.
-              Open any player to see his own arithmetic.</p>
+            <p class="rg-key-line">It moves all afternoon, and in both directions. A matchup tightening
+              steepens it. So does the clock &mdash; as starters finish there is less left to wash a point
+              out, so the same 50/50 is worth about three times more at four o&rsquo;clock than it was at
+              one. It reads 0.00 once he cannot add to his day. Open any player to see the sum.</p>
             <div class="rg-key-scale">
               <span class="rg-key-chip rg-key-zero">0.00</span><span class="rg-key-cap">played out, out, or nothing riding on him</span>
-              <span class="rg-key-chip rg-key-pos">1.00+</span><span class="rg-key-cap">he decides your week</span>
+              <span class="rg-key-chip rg-key-pos">1.00</span><span class="rg-key-cap">about one close matchup</span>
+              <span class="rg-key-chip rg-key-pos">3.00+</span><span class="rg-key-cap">he moves your whole week</span>
             </div>
-          </div>
         </div>
 
         <div class="rg-leagues-dropdown" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div class="exp-search" id="rgSearchWrap" style="max-width:220px"><input type="text" id="rgSearchInput" placeholder="Search player..."></div>
           <div class="rg-leagues-toggle" id="rgLeaguesBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="rgLeaguesCount">(18 of 18)</span></div>
           <div class="rg-sort-toggle" id="rgSortToggle">
-            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="score" title="How much of a matchup he can still swing: how far his day can still land from its projection, priced at what each point does to your win probability, with every league weighted half by your buy-in and half by being one of your leagues. Positive means root for him, negative means root against. A finished game reads 0.00.">Wins at Stake</button>
-            <button type="button" class="rg-sort-toggle-btn" data-rg-sort="swing" title="The same thing in its raw unit: win probability per point he scores, added up across every matchup he is in">Swing %</button>
+            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="score" title="What one point from him is worth to you: how far your win odds move per point, added up across every matchup he is in, weighted half by your buy-in and half by being one of your leagues. Positive means root for him, negative means root against. It updates live as matchups tighten or run away, and reads 0.00 once he cannot add to his day.">Leverage</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="value">Leagues</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="leagues">$</button>
           </div>
@@ -13681,8 +13684,8 @@
         const weights = (typeof sbLeagueWeights === 'function')
           ? sbLeagueWeights(levLeagues.map(l => l.name)) : {};
         const net = levLeagues.reduce((sum, l) => sum + l.perPoint * (weights[l.name] != null ? weights[l.name] : 1), 0);
-        // Score mode is wins at stake: the same weighted per-point slope
-        // the board shows, times what he has left to score.
+        // Score mode is leverage: the same weighted per-point slope the
+        // board shows, gated to zero once he can no longer produce.
         deltaNum = mode === 'score'
           ? Number(sbWinsAtStakeFrom(levLeagues, weights,
               sbRemainingSwing(r.id, { dict, projStats: rgProjStatsMap })).toFixed(3))
@@ -18368,32 +18371,44 @@
       `<div class="pm-league-row" data-league="${name.replace(/"/g, '&quot;')}"><span>${name}</span><span>&rsaquo;</span></div>`
     ).join('');
   }
-  // The whole number, as arithmetic you can check by eye. Prose kept
-  // failing here because the figure is a product of three things and
-  // sentences are bad at products -- this does not describe the
-  // calculation, it is the calculation, with this player's live values.
-  function rgStakeMathHtml(row) {
-    const n = Number(row.dataset.levcount) || 0;
-    const perPoint = Number(row.dataset.perpoint);
+  // The sum being built, league by league, rather than a total asserted
+  // at you. Prose failed here twice: the figure is an addition over six
+  // matchups and sentences are bad at additions. This is not a
+  // description of the calculation, it is the calculation, with this
+  // player's live values -- so when a matchup tightens or runs away you
+  // can see which line moved.
+  function rgLeverageTableHtml(row) {
     const score = Number(row.dataset.score);
-    if (!n || !Number.isFinite(perPoint)) return '';
+    let detail = [];
+    try { detail = JSON.parse(row.dataset.levdetail || '[]'); } catch (err) { detail = []; }
+    if (!detail.length) return '';
     if (row.dataset.canmove === '0') {
       return `<div class="rg-math"><span class="rg-math-done">Nothing left at stake &mdash; ` +
-        `he cannot add to his day, so ten more points from him is not on the table.</span></div>`;
+        `he cannot add to his day, so a point from him is not on the table.</span></div>`;
     }
-    const pp = Math.abs(perPoint).toFixed(2);
-    const dir = score >= 0 ? 'rg-math-pos' : 'rg-math-neg';
-    return `<div class="rg-math">` +
-      `<span class="rg-math-term"><b>${n}</b> league${n === 1 ? '' : 's'}</span>` +
-      `<span class="rg-math-op">&times;</span>` +
-      `<span class="rg-math-term"><b>${pp}%</b> per point</span>` +
-      `<span class="rg-math-op">&times;</span>` +
-      `<span class="rg-math-term"><b>${SB_STAKE_POINTS}</b> pts</span>` +
-      `<span class="rg-math-op">=</span>` +
-      `<span class="rg-math-eq ${dir}">${sbWinsAtStakeText(score)} matchups</span>` +
-      `<div class="rg-math-note">What ten points over his projection would do to you, ` +
-      `added up across the leagues he is in and weighted by what each is worth to you. ` +
-      `The per-point figure is already weighted, so the three numbers multiply out exactly.</div>` +
+    const rows = detail
+      .slice()
+      .sort((a, b) => Math.abs(b.p) - Math.abs(a.p))
+      .map(d => {
+        const cls = d.p > 0 ? 'rg-lev-pos' : (d.p < 0 ? 'rg-lev-neg' : '');
+        const sign = d.p > 0 ? '+' : (d.p < 0 ? '\u2212' : '');
+        return `<div class="rg-lev-row">` +
+          `<span class="rg-lev-name">${sbFieldEsc(d.n)}</span>` +
+          `<span class="rg-lev-state">${d.w}% to win &middot; ${d.s ? 'for you' : 'against you'}</span>` +
+          `<span class="rg-lev-v ${cls}">${sign}${Math.abs(d.p).toFixed(2)}</span></div>`;
+      }).join('');
+    const totCls = score > 0 ? 'rg-lev-pos' : (score < 0 ? 'rg-lev-neg' : '');
+    return `<div class="rg-lev">` +
+      rows +
+      `<div class="rg-lev-row rg-lev-total">` +
+        `<span class="rg-lev-name">Per point</span>` +
+        `<span class="rg-lev-state"></span>` +
+        `<span class="rg-lev-v ${totCls}">${sbWinsAtStakeText(score)}</span></div>` +
+      `<div class="rg-lev-note">What one point from him is worth in each matchup, weighted by ` +
+      `what that league is worth to you. A close matchup moves a lot per point; one already won ` +
+      `or lost barely moves. Both halves update live &mdash; as starters finish there is less left ` +
+      `to wash a point out, so a point in a tight matchup is worth more at four o&rsquo;clock than ` +
+      `it was at one.</div>` +
       `</div>`;
   }
 
@@ -18401,7 +18416,7 @@
     const forLeagues = (row.dataset.for || '').split(' &middot; ').filter(Boolean);
     const againstLeagues = (row.dataset.against || '').split(' &middot; ').filter(Boolean);
     return (
-      rgStakeMathHtml(row) +
+      rgLeverageTableHtml(row) +
       `<div class="pm-exp-head" style="text-align:left;margin-bottom:8px">STARTING FOR YOU &middot; <b>${forLeagues.length}</b> Leagues</div>` +
       `<div class="pm-league-list">${rgLeagueRowsHtml(forLeagues)}</div>` +
       `<div class="pm-exp-head" style="text-align:left;margin:16px 0 8px">STARTING AGAINST YOU &middot; <b>${againstLeagues.length}</b> Leagues</div>` +
@@ -18746,13 +18761,23 @@
         const stake = sbWinsAtStakeFrom(levLeagues, weights, swingLeft);
         r.el.dataset.score = stake.toFixed(3);
         r.el.dataset.remaining = remaining.toFixed(1);
-        // The two terms the expand panel multiplies together in front of
-        // you. Stored rather than recomputed there so the arithmetic it
-        // prints is the arithmetic that produced the badge, and the two
-        // can never drift apart.
+        // Every league's own contribution, so the expand panel can show
+        // the sum being built instead of asserting a total. Stored rather
+        // than recomputed there: what it prints is then provably the
+        // arithmetic that produced the badge, and the two cannot drift.
+        // Short keys because this rides on the element and there can be
+        // thirty of these on screen.
         r.el.dataset.perpoint = sbWeightedPerPoint(levLeagues, weights).toFixed(3);
         r.el.dataset.levcount = String(levLeagues.length);
         r.el.dataset.canmove = swingLeft > 0 ? '1' : '0';
+        try {
+          r.el.dataset.levdetail = JSON.stringify(levLeagues.map(l => ({
+            n: l.name,
+            w: l.winPct,
+            s: l.onMySide ? 1 : 0,
+            p: Number((l.perPoint * (weights[l.name] != null ? weights[l.name] : 1)).toFixed(3)),
+          })));
+        } catch (err) { delete r.el.dataset.levdetail; }
         const deltaEl = r.el.querySelector('.rg-delta');
         const noteEl = r.el.querySelector('.rg-note');
         deltaEl.classList.remove('rg-delta-pos', 'rg-delta-neg', 'rg-delta-even');
@@ -28171,6 +28196,12 @@
   // matters precisely where the curve is steepest.
   function sbSwingFor(state, points, onMySide) {
     const margin = state.margin;
+    // A settled matchup cannot be swung. sbWinProbRaw is a step function at
+    // sigma 0 (100/50/0), so without this a one-point step across a tied
+    // margin reported fifty points of win probability for a play in a game
+    // that was already over -- masked on the board, where a settled player
+    // is gated to zero anyway, but not in the play-by-play impact line.
+    if (!(Number(state.sigma) > 0)) return 0;
     const now = sbWinProbRaw(margin, 0, state.sigma);
     const after = sbWinProbRaw(margin + (onMySide ? points : -points), 0, state.sigma);
     return after - now;
@@ -28348,27 +28379,30 @@
   // The weighted per-point slope, summed over his matchups, times what he
   // has left to score. Split out so the Weekly Sweats board can pass the
   // league list it has already filtered rather than rebuilding it.
-  // What a fixed amount of overperformance from him costs you, in
-  // matchups. Ten points because it is round and scales in the head: a
-  // 20-point day over his number is simply double.
-  const SB_STAKE_POINTS = 10;
-  // This used to multiply by how far his day could still move, which
-  // meant it quietly ranked by projection: a man starting against you in
-  // three leagues read two and a half times worse than another man in the
-  // same three leagues purely because he was projected for more. Their
-  // points hurt you identically, so the board should say so. Pricing a
-  // fixed ten points instead removes the talent term and leaves the
-  // exposure -- and with equal buy-ins and equal matchups the order now
-  // collapses to the league count, which is the intuition it should match.
+  // Leverage: what one point from him is worth to you, added up across
+  // every matchup he is in and weighted by what each league is worth.
   //
-  // `remaining` is no longer a multiplier, only a gate: once he cannot
-  // produce -- game final, inactive, no projection -- the cost of ten more
-  // points from him is moot, and 0.00 is the honest answer.
+  // This started as a total -- the per-point slope times how far his own
+  // day could still move -- which quietly made it a ranking of projection.
+  // Two men starting against you in the same three leagues hurt you
+  // identically per point, but the better one read two and a half times
+  // worse purely because he was projected for more. Pricing a fixed ten
+  // points fixed that, and then the ten was itself redundant: the whole
+  // quantity already lives in the per-point figure, which is both smaller
+  // to explain and the thing that actually moves during a game.
+  //
+  // It is live on two axes, and the second is the one worth knowing. As a
+  // matchup tightens the slope steepens; and as starters finish, the
+  // spread left in the two lineups shrinks, so the same 50/50 is worth
+  // three times more at four o'clock than it was at one. A point late in
+  // a close game really is worth more, and this says so.
+  //
+  // `remaining` is not a multiplier, only a gate: once he cannot produce
+  // -- final, inactive, out, no projection -- a point from him is not on
+  // the table, and 0.00 is the honest answer.
   function sbWinsAtStakeFrom(levLeagues, weights, remaining) {
     if (!(Number(remaining) > 0)) return 0;
-    const perPoint = (levLeagues || []).reduce((sum, l) =>
-      sum + l.perPoint * ((weights && weights[l.name] != null) ? weights[l.name] : 1), 0);
-    return perPoint * SB_STAKE_POINTS / 100;
+    return sbWeightedPerPoint(levLeagues, weights);
   }
   // The weighted per-point slope on its own, for the derivation the expand
   // panel shows. Same reduce as above, kept in one place.
@@ -28537,9 +28571,9 @@
     // A rate, not a total: the number is what a fixed ten points over his
     // projection is worth, so it does not grow just because he is
     // projected for more.
-    return `Every ${SB_STAKE_POINTS} points he beats his projection by moves you about `
-      + `${Math.abs(w).toFixed(2)} of a matchup ${dir === 'win' ? 'toward' : 'away from'} `
-      + `a win, added up across your leagues.`;
+    return `Every point he scores moves you about ${Math.abs(w).toFixed(2)} `
+      + `${dir === 'win' ? 'toward' : 'away from'} a win, added up across your leagues. `
+      + `Ten points would be ten times that.`;
   }
 
   window.sbRemainingPoints = sbRemainingPoints;
@@ -28577,16 +28611,16 @@
     const perPoint = levLeagues.reduce((sum, l) =>
       sum + l.perPoint * (weights[l.name] != null ? weights[l.name] : 1), 0);
     lines.push(`Added up: ${perPoint > 0 ? '+' : ''}${perPoint.toFixed(2)}% win probability per point he scores.`);
-    lines.push(`Over ${SB_STAKE_POINTS} points above his projection, that is `
-      + `${sbWinsAtStakeText(stake)} of a matchup.`);
-    lines.push(`He can still move ${(Number(remaining) || 0).toFixed(1)} points, so there is `
-      + `something left at stake; once that reaches zero so does this.`);
+    lines.push(`He can still move ${(Number(remaining) || 0).toFixed(1)} points, so a point `
+      + `from him is still on the table; once that reaches zero this reads 0.00.`);
     lines.push('');
     lines.push('A matchup already won or already lost barely moves, so a player in it');
     lines.push('counts for almost nothing. A coin flip moves a lot, so he counts for a lot.');
     lines.push('League weight is half your buy-in share, half an equal share per league.');
     lines.push('This is a rate, not a total: two players in the same leagues and the same');
     lines.push('matchups read the same, however many points either is projected for.');
+    lines.push('It moves during the game both ways -- steeper as a matchup tightens, and');
+    lines.push('steeper again as starters finish, because less is left to wash a point out.');
     return lines.join('\n');
   }
   window.sbRootingScoreExplain = sbRootingScoreExplain;
