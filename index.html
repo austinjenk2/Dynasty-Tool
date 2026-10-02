@@ -13601,7 +13601,8 @@
         // Score mode is wins at stake: the same weighted per-point slope
         // the board shows, times what he has left to score.
         deltaNum = mode === 'score'
-          ? Number(sbWinsAtStakeFrom(levLeagues, weights, sbRemainingPoints(r.id)).toFixed(3))
+          ? Number(sbWinsAtStakeFrom(levLeagues, weights,
+              sbRemainingPoints(r.id, { dict, projStats: rgProjStatsMap })).toFixed(3))
           : Number(net.toFixed(3));
       } else if (mode === 'leagues') {
         deltaNum = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
@@ -18519,6 +18520,13 @@
       return map;
     }
     window.__rgLeagueDollarMap = rgLeagueDollarMap;
+    // The live maps renderRealRootingGuide fetched for this view, parked
+    // where recomputeRootingGuide can reach them. It runs on its own from
+    // the sort toggles, not only at the end of a render, and it needs the
+    // same data -- reading the Press Box's globals instead is what left
+    // this board blank until GameCast had rendered at least once.
+    let rgLiveData = null;
+
     function recomputeRootingGuide() {
       // ---- How the week is actually going -------------------------------
       // Not "am I winning", which any scoreboard shows, but how far ahead
@@ -18591,8 +18599,12 @@
         // the points he has left. The displayed figure, so anything reading
         // a player's rooting impact off this row gets the number the badge
         // shows rather than one of the three ingredients.
+        // This view's own fetched data, not the Press Box's globals -- see
+        // sbRemainingPoints. Passing these is what lets the board draw on
+        // first paint instead of only after GameCast has rendered once.
         const remaining = (typeof sbRemainingPoints === 'function' && r.el.dataset.playerId)
-          ? sbRemainingPoints(r.el.dataset.playerId) : 0;
+          ? sbRemainingPoints(r.el.dataset.playerId, rgLiveData || undefined)
+          : 0;
         const stake = sbWinsAtStakeFrom(levLeagues, weights, remaining);
         r.el.dataset.score = stake.toFixed(3);
         r.el.dataset.remaining = remaining.toFixed(1);
@@ -18679,8 +18691,13 @@
         // "against" but still help you overall once you weigh in that your
         // for-leagues carry more money than your against-leagues (and vice
         // versa), so re-bucket by dollarNet's sign instead of delta's.
+        // Which LIST he goes in is which way he leans, which stays true
+        // after his game is over; how far up that list is the stake, which
+        // does not. Bucketing on the stake made a finished player -- stake
+        // exactly 0.00 -- fall out of both lists, and would empty the whole
+        // board if the remaining-points data were ever missing.
         const bucketKey = rgSortCriterion === 'score'
-          ? (Math.abs(stake) < 0.005 ? 0 : stake)
+          ? (Math.abs(swingNet) < 0.005 ? 0 : swingNet)
           : (rgSortCriterion === 'swing'
             ? (Math.abs(swingNet) < 0.005 ? 0 : swingNet)
             : (rgSortCriterion === 'leagues' ? dollarNet : delta));
@@ -18795,6 +18812,12 @@
       const rgEspnGameData = window.sleeperGetEspnGameData
         ? await window.sleeperGetEspnGameData(week, rgSeason).catch(() => null)
         : null;
+      // Hand these to recomputeRootingGuide, which runs again on every
+      // sort-toggle click without coming back through here.
+      rgLiveData = {
+        dict, espnGameData: rgEspnGameData,
+        statsMap: rgActualStatsMap, projStats: rgProjStatsMap,
+      };
       // Thin wrapper so the call sites below read the same as before; all
       // the scoring (and the no-stat-line fallback) lives in sbHouseScore.
       const rgHousePoints = (id, stats) => sbHouseScore(id, stats, dict);
@@ -27989,21 +28012,35 @@
 
   // How many more points he is expected to score from this moment. A
   // finished game is zero; before kickoff it is his whole projection.
-  function sbRemainingPoints(playerId) {
-    const dict = window.__sleeperPlayerDict || {};
+  // Every input is injectable, and this matters more than it looks.
+  // Reading the globals directly meant this only worked once the Press Box
+  // had rendered, because renderRealGameCast is the one place that sets
+  // __gcStatsMap, __gcEspnGameData and __sleeperProjectionStats. Weekly
+  // Sweats fetches the same three things into its own locals and never
+  // writes them back -- so landing there first gave every player a
+  // projection of null, a remaining of 0, a stake of 0, and a board with
+  // both lists empty until you clicked away and back.
+  function sbRemainingPoints(playerId, opts) {
+    const o = opts || {};
+    const dict = o.dict || window.__sleeperPlayerDict || {};
     const p = dict[playerId];
     if (!p) return 0;
-    const espnGameData = window.__gcEspnGameData || null;
+    const espnGameData = o.espnGameData !== undefined
+      ? o.espnGameData : (window.__gcEspnGameData || null);
+    const statsMap = o.statsMap || window.__gcStatsMap || {};
+    const projStats = o.projStats || window.__sleeperProjectionStats || {};
     const team = p.team;
     if (sbGameFinishedForTeam(team, espnGameData)) return 0;
-    const origProj = gcProjectedPoints(playerId, dict);
+    // Not gcProjectedPoints, which hard-codes the global this has to be
+    // able to take as an argument.
+    const origProj = sbHouseScore(playerId, projStats[playerId], dict);
     if (origProj == null) return 0;
     // A player ruled out has nothing left to give, whatever he was
     // projected for this morning.
     if (sbCountAsInactive(p, espnGameData)) return 0;
     const started = sbGameStartedForTeam(team, espnGameData);
     if (!started) return Math.max(0, origProj);
-    const live = gcScoreStats(playerId, (window.__gcStatsMap || {})[playerId], dict) || 0;
+    const live = sbHouseScore(playerId, statsMap[playerId], dict) || 0;
     const elapsed = sbGameElapsedFraction(team, espnGameData);
     const liveProj = sbEstimateLiveProjection(live, origProj, elapsed, started, false,
       { position: p.position, team, espnGameData });
@@ -28025,7 +28062,7 @@
     if (!lev || !lev.leagues.length) return 0;
     const weights = (typeof sbLeagueWeights === 'function')
       ? sbLeagueWeights(lev.leagues.map(l => l.name)) : {};
-    return sbWinsAtStakeFrom(lev.leagues, weights, sbRemainingPoints(playerId));
+    return sbWinsAtStakeFrom(lev.leagues, weights, sbRemainingPoints(playerId, opts));
   }
 
   function sbWinsAtStakeText(wins) {
