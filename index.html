@@ -6450,18 +6450,18 @@
           </div>
           <p>Your starters versus your opponents across all scheduled matchups. Tap a player for the league list.</p>
           <div class="rg-key" id="rgScoreKey">
-            <div class="rg-key-title">How Expected Wins works</div>
+            <div class="rg-key-title">How Wins at Stake works</div>
             <p class="rg-key-line">Not every matchup cares the same amount. A game you are 95% to win is
               already decided &mdash; points there barely move anything. A coin flip moves a lot. The score
-              measures that instead of counting leagues, and answers in matchups: how many more
-              games you expect to win if he has a normal ten-point day.</p>
+              measures that instead of counting leagues, and answers in matchups: how much of a win
+              he can still move, counting only the points he has left to score.</p>
             <ol class="rg-key-steps">
-              <li><b>Where is each matchup headed?</b> Your projected final against your opponent&rsquo;s, plus how much is still unplayed.</li>
-              <li><b>What does one of his points do to it?</b> Slide that projection by a point and see how far your win probability moves. Steep at 50/50, flat at 95/5, zero once a matchup is settled.</li>
-              <li><b>Add up his matchups</b>, plus where he starts for you, minus where he starts against you &mdash; each league weighted half by your buy-in, half by simply being a league.</li>
+              <li><b>What does one of his points do to each matchup?</b> Slide your projected final by a point and see how far your win probability moves. Steep at 50/50, flat at 95/5, zero once a matchup is settled.</li>
+              <li><b>What is that league worth to you?</b> Half its share of your buy-ins, half simply being one of your leagues &mdash; so a $100 league outweighs a $50 one without two $50 leagues losing to a single $100.</li>
+              <li><b>How many points has he left?</b> His live projection minus what he has already scored. Before kickoff that is his whole game; once it is over it is nothing, which is why a finished player reads 0.00.</li>
             </ol>
             <div class="rg-key-scale">
-              <span class="rg-key-chip rg-key-zero">0.00</span><span class="rg-key-cap">nothing riding on him</span>
+              <span class="rg-key-chip rg-key-zero">0.00</span><span class="rg-key-cap">played out, or nothing riding on him</span>
               <span class="rg-key-chip rg-key-pos">1.00+</span><span class="rg-key-cap">he decides your week</span>
             </div>
           </div>
@@ -6471,7 +6471,7 @@
           <div class="exp-search" id="rgSearchWrap" style="max-width:220px"><input type="text" id="rgSearchInput" placeholder="Search player..."></div>
           <div class="rg-leagues-toggle" id="rgLeaguesBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="rgLeaguesCount">(18 of 18)</span></div>
           <div class="rg-sort-toggle" id="rgSortToggle">
-            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="score" title="How many more matchups you expect to win if he has a normal ten-point game, added up across every league he is in. Positive means root for him, negative means root against. Hover any player&#39;s number to see exactly how it was built.">Expected Wins</button>
+            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="score" title="How much of a matchup he can still swing: the points he has left to score, priced at what each one does to your win probability, with every league weighted half by your buy-in and half by being one of your leagues. Positive means root for him, negative means root against. A finished game reads 0.00. Hover any player&#39;s number to see how it was built.">Wins at Stake</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="swing" title="The same thing in its raw unit: win probability per point he scores, added up across every matchup he is in">Swing %</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="value">Leagues</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="leagues">$</button>
@@ -13598,11 +13598,10 @@
         const weights = (typeof sbLeagueWeights === 'function')
           ? sbLeagueWeights(levLeagues.map(l => l.name)) : {};
         const net = levLeagues.reduce((sum, l) => sum + l.perPoint * (weights[l.name] != null ? weights[l.name] : 1), 0);
-        // Score mode is expected wins now, off the unweighted leverage --
-        // weighting a count of real matchups by buy-in makes it a count of
-        // nothing.
+        // Score mode is wins at stake: the same weighted per-point slope
+        // the board shows, times what he has left to score.
         deltaNum = mode === 'score'
-          ? Number(sbRootingWins(levLeagues.reduce((sum, l) => sum + l.perPoint, 0)).toFixed(3))
+          ? Number(sbWinsAtStakeFrom(levLeagues, weights, sbRemainingPoints(r.id)).toFixed(3))
           : Number(net.toFixed(3));
       } else if (mode === 'leagues') {
         deltaNum = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
@@ -18218,6 +18217,7 @@
     const raw = Number(row.dataset.raw);
     if (!Number.isFinite(score) || !Number.isFinite(raw)) return '';
     const n = Number(row.dataset.levcount) || 0;
+    const remaining = Number(row.dataset.remaining) || 0;
     const cls = score > 0.005 ? 'is-pos' : (score < -0.005 ? 'is-neg' : 'is-even');
     const dirWord = score > 0 ? 'Root for him' : (score < 0 ? 'Root against him' : 'Neutral');
     // Everything is measured against what he was EXPECTED to score, not
@@ -18255,15 +18255,16 @@
     </div>`;
 
     return `<div class="rg-score-head">
-      <div class="rg-score-num ${cls}">${sbRootingWinsText(raw)}</div>
+      <div class="rg-score-num ${cls}">${sbWinsAtStakeText(score)}</div>
       <div class="rg-score-say">
-        <div class="rg-score-band">${dirWord} &middot; expected wins</div>
+        <div class="rg-score-band">${dirWord} &middot; ${remaining > 0 ? 'still at stake' : 'his game is done'}</div>
         ${liveLine}
         <div class="rg-score-line">${expLine}</div>
         <div class="rg-score-fine">Win probabilities add up, so those really are counts of games,
           across the ${n === 1 ? 'one league' : n + ' leagues'} listed below. The headline number is
-          what a normal ten-point game from him is worth, in matchups &mdash; so a player in nine
-          leagues really does read about three times a player in three.</div>
+          his ${remaining.toFixed(1)} remaining points priced at what each is worth to you, with every
+          league weighted half by your buy-in and half by simply being one of your leagues. It falls
+          to zero as his game is played out, because by then there is nothing left at stake.</div>
       </div>
     </div>`;
   }
@@ -18586,10 +18587,17 @@
         r.el.dataset.delta = String(delta);
         r.el.dataset.dollar = String(dollarNet);
         r.el.dataset.swing = swingNet.toFixed(3);
-        // The displayed figure, so anything reading a player's rooting
-        // impact off this row gets the same number the badge shows.
-        r.el.dataset.score = levLeagues.reduce((sum, l) => sum + l.perPoint, 0).toFixed(3);
-        // Unweighted, for the expected-wins reading in the expand panel.
+        // What he can still do to you: the weighted per-point slope times
+        // the points he has left. The displayed figure, so anything reading
+        // a player's rooting impact off this row gets the number the badge
+        // shows rather than one of the three ingredients.
+        const remaining = (typeof sbRemainingPoints === 'function' && r.el.dataset.playerId)
+          ? sbRemainingPoints(r.el.dataset.playerId) : 0;
+        const stake = sbWinsAtStakeFrom(levLeagues, weights, remaining);
+        r.el.dataset.score = stake.toFixed(3);
+        r.el.dataset.remaining = remaining.toFixed(1);
+        // Unweighted per-point, still used by the expand panel's worked
+        // examples, which price a good game and a bad one in real matchups.
         r.el.dataset.raw = levLeagues.reduce((sum, l) => sum + l.perPoint, 0).toFixed(3);
         r.el.dataset.levcount = String(levLeagues.length);
         const deltaEl = r.el.querySelector('.rg-delta');
@@ -18598,14 +18606,14 @@
         // In $ mode the badge shows real dollars at stake instead of a
         // league count, so it reads "+$325" rather than "+3".
         if (rgSortCriterion === 'score') {
-          // Expected wins: what a normal ten-point game from him is worth
-          // across every matchup he is in. Signed, because unlike a rating
-          // out of 100 the sign is part of the quantity -- -0.42 wins is a
-          // real thing he does to you, not just which list he is in.
-          const rawWins = levLeagues.reduce((sum, l) => sum + l.perPoint, 0);
-          deltaEl.textContent = sbRootingWinsText(rawWins);
-          if (rawWins > 0.05) deltaEl.classList.add('rg-delta-pos');
-          else if (rawWins < -0.05) deltaEl.classList.add('rg-delta-neg');
+          // Wins at stake: the weighted per-point slope times what he has
+          // left to score. Signed, because the sign is part of the
+          // quantity -- -0.42 is a real thing he can still do to you, not
+          // just which of the two lists he is in. A finished game reads
+          // 0.00, which is the only honest answer once he cannot move.
+          deltaEl.textContent = sbWinsAtStakeText(stake);
+          if (stake > 0.005) deltaEl.classList.add('rg-delta-pos');
+          else if (stake < -0.005) deltaEl.classList.add('rg-delta-neg');
           else deltaEl.classList.add('rg-delta-even');
           // The number tells you how much; the word tells you what that
           // amount IS. Sitting in the row rather than in a tooltip because
@@ -18633,7 +18641,7 @@
           }
           deltaEl.title = (typeof sbRootingScoreExplain === 'function')
             ? sbRootingScoreExplain(
-                (r.el.querySelector('.rg-name') || {}).textContent, levLeagues, weights, swingNet)
+                (r.el.querySelector('.rg-name') || {}).textContent, levLeagues, weights, stake, remaining)
             : '';
         } else if (rgSortCriterion === 'swing') {
           // Win probability per fantasy point, summed over his matchups.
@@ -18662,20 +18670,17 @@
         if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
         noteEl.innerHTML = noteParts.join(' &middot; ');
         const proj = Number(r.el.dataset.proj) || 0;
-        // rawNet is the unweighted leverage the expected-wins badge is
-        // built from. Score mode has to sort on it rather than on the
-        // money-weighted swingNet, or the list is ordered by one number
-        // while showing another -- which is exactly what made the old
-        // board look arbitrary.
-        const rawNet = levLeagues.reduce((sum, l) => sum + l.perPoint, 0);
-        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, swingNet, rawNet, proj };
+        // Score mode sorts on the same stake the badge prints. Ordering by
+        // one number while showing another is what made the old board look
+        // arbitrary.
+        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, swingNet, stake, proj };
         // In $ mode, which bucket a player belongs in is decided by real
         // dollars at stake, not league count -- a player can be a league-count
         // "against" but still help you overall once you weigh in that your
         // for-leagues carry more money than your against-leagues (and vice
         // versa), so re-bucket by dollarNet's sign instead of delta's.
         const bucketKey = rgSortCriterion === 'score'
-          ? (Math.abs(rawNet) < 0.005 ? 0 : rawNet)
+          ? (Math.abs(stake) < 0.005 ? 0 : stake)
           : (rgSortCriterion === 'swing'
             ? (Math.abs(swingNet) < 0.005 ? 0 : swingNet)
             : (rgSortCriterion === 'leagues' ? dollarNet : delta));
@@ -18688,10 +18693,10 @@
       // sync poll and dataset.proj gets refreshed with it -- instead of
       // whatever arbitrary order the players happened to be built in.
       if (rgSortCriterion === 'score') {
-        // Most expected wins to gain first on one side, most to lose first
-        // on the other -- the same number the badge prints.
-        buckets.for.sort((a, b) => (b.rawNet - a.rawNet) || (b.proj - a.proj));
-        buckets.against.sort((a, b) => (a.rawNet - b.rawNet) || (b.proj - a.proj));
+        // Most still at stake in your favour first on one side, most
+        // against you first on the other -- the number the badge prints.
+        buckets.for.sort((a, b) => (b.stake - a.stake) || (b.proj - a.proj));
+        buckets.against.sort((a, b) => (a.stake - b.stake) || (b.proj - a.proj));
       } else if (rgSortCriterion === 'swing') {
         // Most win probability to gain first on one side, most to lose
         // first on the other.
@@ -27625,16 +27630,18 @@
       // against 2" says he is in five matchups and nothing about whether
       // any of them can still move -- three settled blowouts and two coin
       // flips read the same as the reverse. This is the number Weekly
-      // Sweats sorts on, so the two pages agree.
+      // Sweats sorts on, so the two pages agree. A finished game reads
+      // 0.00: there is nothing left for him to do to you.
       const rootBits = [];
       const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(r.id) : null;
       if (lev && lev.leagues.length) {
-        const wins = sbRootingWins(lev.perPoint);
-        const cls = wins > 0.005 ? 'ldrec-pos' : (wins < -0.005 ? 'ldrec-neg' : '');
+        const stake = sbWinsAtStake(r.id);
+        const remaining = sbRemainingPoints(r.id);
+        const cls = stake > 0.005 ? 'ldrec-pos' : (stake < -0.005 ? 'ldrec-neg' : '');
         const tip = (typeof sbRootingMeaning === 'function')
-          ? sbRootingMeaning(lev.perPoint) : '';
+          ? sbRootingMeaning(stake, remaining) : '';
         rootBits.push(`<span class="${cls}" title="${sbFieldEsc(tip)}">`
-          + `${sbRootingWinsText(lev.perPoint)} wins`
+          + `${sbWinsAtStakeText(stake)} at stake`
           + `</span><span class="gc-stat-root-n">${lev.leagues.length} league${lev.leagues.length === 1 ? '' : 's'}</span>`);
       }
       const line = gcStatLine(r.s);
@@ -27950,50 +27957,112 @@
   // twice the number -- and a person can check it against the league list
   // printed underneath, which a hyperbolic tangent never allowed.
 
-  const SB_SCORE_YARDSTICK = 10;
-  function sbRootingMeaning(perPoint) {
-    const pp = Number(perPoint) || 0;
-    if (!pp) return 'Nothing riding on him this week.';
-    const swing = Math.abs(pp) * SB_SCORE_YARDSTICK;
-    const dir = pp > 0 ? 'better' : 'worse';
-    const rounded = swing >= 10 ? Math.round(swing) : swing.toFixed(1);
-    return `A ${SB_SCORE_YARDSTICK}-point game from him leaves your week about `
-      + `${rounded} points of win probability ${dir} off, added up across your matchups.`;
-  }
-  // ---- The same thing in matchups ---------------------------------------
-  // The one unit on this page that needs no explaining: how many more
-  // matchups you expect to win. Win probabilities add up to expected wins,
-  // so a player worth 3.2% a point over a 10-point game is worth 0.32 of a
-  // win -- and a person can check that against the league list printed
-  // under it, which a hyperbolic tangent on a fixed dial can never be.
+  // ---- Wins at stake ----------------------------------------------------
+  // What he can still do to your week, in matchups.
   //
-  // Deliberately the RAW per-point number, not the money-weighted one that
-  // ranks the list. Expected wins is a count of real matchups; weighting it
-  // by buy-in would make it a count of nothing.
-  function sbRootingWins(rawPerPoint) {
-    return (Number(rawPerPoint) || 0) * SB_SCORE_YARDSTICK / 100;
+  // Three things multiplied together, each of which is a real quantity:
+  //
+  //   1. How much one of his points moves each matchup. The slope of the
+  //      win-probability curve at the current score -- steepest at 50/50,
+  //      flat at 95/5, exactly zero once a matchup can no longer move. A
+  //      point in a decided league is worth nothing and prices as nothing.
+  //   2. What that league is worth to you. Half its share of your buy-ins,
+  //      half simply being one of your leagues -- the same blend the
+  //      rooting score has always used (see sbLeagueWeights). The weights
+  //      average exactly 1, so this tilts the number toward the leagues
+  //      you care about without inflating it.
+  //   3. How many points he has left to score, from sbRemainingPoints.
+  //
+  // The third is what the old reading was missing. It priced everyone off
+  // a notional ten-point game, so a quarterback who had already finished
+  // still showed a number as large as one yet to kick off -- and the only
+  // honest answer for a man whose game is over is zero, because there is
+  // nothing left at stake. Now a player reads his full influence before
+  // kickoff and decays to nothing as his game is played out.
+  //
+  // The sign says which way to root, and comes from which side he is on,
+  // not from how he has played: a man you are mostly facing reads negative
+  // all afternoon, however badly he is doing. What he has ALREADY done to
+  // you is a different question, answered by points-over-expectation times
+  // the same per-point slope -- see the SO FAR TODAY line in the expand
+  // panel.
+
+  // How many more points he is expected to score from this moment. A
+  // finished game is zero; before kickoff it is his whole projection.
+  function sbRemainingPoints(playerId) {
+    const dict = window.__sleeperPlayerDict || {};
+    const p = dict[playerId];
+    if (!p) return 0;
+    const espnGameData = window.__gcEspnGameData || null;
+    const team = p.team;
+    if (sbGameFinishedForTeam(team, espnGameData)) return 0;
+    const origProj = gcProjectedPoints(playerId, dict);
+    if (origProj == null) return 0;
+    // A player ruled out has nothing left to give, whatever he was
+    // projected for this morning.
+    if (sbCountAsInactive(p, espnGameData)) return 0;
+    const started = sbGameStartedForTeam(team, espnGameData);
+    if (!started) return Math.max(0, origProj);
+    const live = gcScoreStats(playerId, (window.__gcStatsMap || {})[playerId], dict) || 0;
+    const elapsed = sbGameElapsedFraction(team, espnGameData);
+    const liveProj = sbEstimateLiveProjection(live, origProj, elapsed, started, false,
+      { position: p.position, team, espnGameData });
+    const finalProj = (liveProj == null) ? origProj : liveProj;
+    return Math.max(0, finalProj - live);
   }
-  function sbRootingWinsText(rawPerPoint) {
-    const w = sbRootingWins(rawPerPoint);
+
+  // The weighted per-point slope, summed over his matchups, times what he
+  // has left to score. Split out so the Weekly Sweats board can pass the
+  // league list it has already filtered rather than rebuilding it.
+  function sbWinsAtStakeFrom(levLeagues, weights, remaining) {
+    const perPoint = (levLeagues || []).reduce((sum, l) =>
+      sum + l.perPoint * ((weights && weights[l.name] != null) ? weights[l.name] : 1), 0);
+    return perPoint * (Number(remaining) || 0) / 100;
+  }
+
+  function sbWinsAtStake(playerId, opts) {
+    const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(playerId, opts) : null;
+    if (!lev || !lev.leagues.length) return 0;
+    const weights = (typeof sbLeagueWeights === 'function')
+      ? sbLeagueWeights(lev.leagues.map(l => l.name)) : {};
+    return sbWinsAtStakeFrom(lev.leagues, weights, sbRemainingPoints(playerId));
+  }
+
+  function sbWinsAtStakeText(wins) {
+    const w = Number(wins) || 0;
     if (Math.abs(w) < 0.005) return '0.00';
     return (w > 0 ? '+' : '\u2212') + Math.abs(w).toFixed(2);
   }
-  window.sbRootingWins = sbRootingWins;
-  window.sbRootingWinsText = sbRootingWinsText;
+
+  // The sentence under the number, in the same unit.
+  function sbRootingMeaning(wins, remaining) {
+    const w = Number(wins) || 0;
+    const rem = Number(remaining) || 0;
+    if (rem <= 0) return 'His game is done \u2014 nothing left riding on him.';
+    if (Math.abs(w) < 0.005) return 'Nothing riding on him: the matchups he is in are already decided.';
+    const dir = w > 0 ? 'win' : 'lose';
+    return `He has about ${rem.toFixed(1)} points left to score. All of them `
+      + `would move you roughly ${Math.abs(w).toFixed(2)} of a matchup `
+      + `${dir === 'win' ? 'toward' : 'away from'} a win, added up across your leagues.`;
+  }
+
+  window.sbRemainingPoints = sbRemainingPoints;
+  window.sbWinsAtStake = sbWinsAtStake;
+  window.sbWinsAtStakeFrom = sbWinsAtStakeFrom;
+  window.sbWinsAtStakeText = sbWinsAtStakeText;
   window.sbRootingMeaning = sbRootingMeaning;
 
   // The whole derivation, in words, for the hover on a player's score:
   // every matchup he is in, what a point of his does to it, what that
   // league is weighted, and the two steps from there to the number.
-  function sbRootingScoreExplain(name, levLeagues, weights, net) {
+  function sbRootingScoreExplain(name, levLeagues, weights, stake, remaining) {
     const lines = [];
-    const raw = levLeagues.reduce((sum, l) => sum + l.perPoint, 0);
-    lines.push(`${name || 'This player'} — ${sbRootingWinsText(raw)} expected wins`);
-    lines.push(raw > 0 ? 'Root FOR him.' : (raw < 0 ? 'Root AGAINST him.' : 'Neutral — nothing to gain either way.'));
+    lines.push(`${name || 'This player'} — ${sbWinsAtStakeText(stake)} matchups still at stake`);
+    lines.push(stake > 0 ? 'Root FOR him.' : (stake < 0 ? 'Root AGAINST him.' : 'Neutral — nothing to gain either way.'));
     lines.push('');
     // The one line that makes the number mean something, before any of the
     // derivation that explains where it came from.
-    lines.push(sbRootingMeaning(raw));
+    lines.push(sbRootingMeaning(stake, remaining));
     lines.push('');
     lines.push('Each matchup he is in, and what one point of his does to it:');
     levLeagues.forEach(l => {
