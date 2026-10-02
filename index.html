@@ -94,7 +94,8 @@
     padding: 5px 11px; border-radius: 20px;
     border: 1px solid transparent; white-space: nowrap; cursor: pointer;
   }
-  .sub-tab:hover:not(.active) { color: var(--ink); border-color: var(--border); }
+  .sub-tab { transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease; }
+  .sub-tab:hover:not(.active) { color: var(--ink); border-color: var(--border); background: var(--bg); }
   .sub-tab.active { background: var(--ink); color: var(--surface); }
   @media (max-width: 760px) {
     .subsection-bar { padding: 8px 14px; overflow-x: auto; flex-wrap: nowrap; }
@@ -113,7 +114,13 @@
     border-bottom: 2.5px solid transparent;
     white-space: nowrap;
   }
-  .section-tab:hover:not(.active) { color: var(--ink); }
+  /* These are buttons and never looked like it -- no cursor, and a hover
+     that only darkened the text. The tint plus a ghost of the active
+     underline makes hovering a preview of clicking. */
+  .section-tab { cursor: pointer; transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease; }
+  .section-tab:hover:not(.active) {
+    color: var(--ink); background: var(--bg); border-bottom-color: var(--border);
+  }
   .section-tab.active { color: var(--ink); border-bottom-color: var(--red); }
 
   /* ---------- Chips and the Settings account panel ---------- */
@@ -858,6 +865,11 @@
     background: var(--surface); color: var(--muted);
   }
   .gc-team-switch button.active { background: var(--navy); color: #fff; }
+  /* The default view, and about as wide as the two team buttons together
+     so it reads as the main thing rather than a third tab. */
+  .gc-team-switch button.gc-switch-leagues {
+    padding: 4px 16px; border-right: 1px solid var(--border);
+  }
 
   .gc-stat-row {
     display: flex; align-items: center; gap: 10px;
@@ -871,6 +883,9 @@
   .gc-stat-pos { font-size: 9.5px; font-weight: 800; color: var(--faint); margin-left: 4px; }
   .gc-stat-line { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .gc-stat-root { font-size: 10.5px; font-weight: 700; margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+  /* The league count rides behind the score as context, not as the number
+     you read first -- which is the mistake the old counts-only row made. */
+  .gc-stat-root-n { color: var(--faint); font-weight: 600; margin-left: 6px; }
   .gc-stat-nums { flex-shrink: 0; text-align: right; min-width: 62px; }
   .gc-stat-pts { font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 700; color: var(--ink); line-height: 1.1; }
   .gc-stat-proj { font-size: 9.5px; font-weight: 700; color: var(--faint); }
@@ -914,7 +929,13 @@
   .gc-lg-row[data-gc-league-id]:not([data-gc-league-id=""]):hover { background: var(--bg); }
   .gc-lg-name {
     font-size: 10.5px; font-weight: 800; color: var(--muted);
-    flex: 0 0 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    /* 78px was sized for the old panel, where this list shared the column
+       with the box score and most league names clipped to "Dynasty Lea...".
+       The list has the panel to itself now, so the name gets enough room
+       to actually identify the league; it still shrinks before the
+       starters do, and still clips rather than wrapping the row. */
+    flex: 0 1 180px; min-width: 60px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   /* The whole point of this row is that it is one line -- that is why the
      names are stripped to surnames in the first place. Clipping rather than
@@ -1592,6 +1613,9 @@
   .gc-inline-section { margin-top: 10px; }
   .gc-inline-label { font-size: 9px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 6px; }
   .gc-inline-scroll { max-height: 240px; overflow-y: auto; }
+  /* No cap: every league you have a stake in is listed. In a 240px box
+     this list silently ended at about eight, which is the bug it fixes. */
+  .gc-inline-leagues { max-height: none; overflow: visible; }
 
   .gc-feed-col { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; position: sticky; top: 12px; }
   .gc-feed { max-height: calc(100vh - 200px); overflow-y: auto; margin-top: 8px; }
@@ -1601,11 +1625,15 @@
      exists, so it is marked on the row rather than left to be found. */
   .gc-feed-item.is-mine { border-left: 2px solid var(--green); padding-left: 8px; margin-left: -10px; }
   .gc-feed-item.is-against { border-left: 2px solid var(--red); padding-left: 8px; margin-left: -10px; }
-  .gc-feed-top { display: flex; align-items: center; gap: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); }
+  /* The clock, the score and the down were set at 9.5px, which is caption
+     size for the two things you most want to read at a glance. */
+  .gc-feed-top { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); }
   .gc-feed-game { color: var(--ink); font-weight: 800; cursor: pointer; }
   .gc-feed-game:hover { color: var(--navy); }
   .gc-feed-spacer { flex: 1; }
-  .gc-feed-text { font-size: 12px; color: var(--muted); line-height: 1.45; margin-top: 3px; }
+  /* The play itself, which is the sentence the whole row is about. Rows
+      taking more height is fine -- it was asked for. */
+  .gc-feed-text { font-size: 13.5px; color: var(--ink); line-height: 1.5; margin-top: 4px; }
   .gc-feed-player {
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 11px; font-weight: 700; color: var(--ink);
@@ -1631,17 +1659,24 @@
   /* His day so far, not just this play -- four catches for 52 reads very
      differently from the 7-yard catch that got him there. */
   .gc-feed-day { font-size: 10.5px; color: var(--faint); margin: 1px 0 0 28px; }
-  .gc-feed-lgs { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 0 28px; }
-  .gc-feed-nostake { font-size: 10px; color: var(--faint); margin-left: 28px; }
-  .gc-feed-lg {
-    font-size: 10px; font-weight: 700; border-radius: 4px; padding: 1px 6px;
-    border: 1px solid var(--border); color: var(--muted); cursor: pointer;
-    font-variant-numeric: tabular-nums;
+  /* Says which line this is: the play above is what just happened, this
+     is his game to this point. Without the label the two read as one. */
+  .gc-feed-day-label {
+    font-size: 8.5px; font-weight: 800; letter-spacing: 0.5px;
+    color: var(--faint); margin-right: 6px;
   }
-  .gc-feed-lg b { font-weight: 800; }
-  .gc-feed-lg.is-good { color: var(--green); border-color: var(--green); background: var(--green-bg); }
-  .gc-feed-lg.is-bad { color: var(--red); border-color: var(--red); background: var(--red-bg); }
-  .gc-feed-lg.is-flat { color: var(--faint); }
+  .gc-feed-nostake { font-size: 10px; color: var(--faint); margin-left: 28px; }
+  /* The Rooting Score, so the feed answers "do I care about this guy"
+     without opening the game. Sits after the play's points because the
+     points are what the row is reporting; the score is why it matters. */
+  /* "Play: -0.1  Total: 4.2" -- the label small and grey, the number the
+     thing you actually read. */
+  .gc-feed-stat { display: inline-flex; align-items: baseline; gap: 4px; }
+  .gc-feed-k { font-size: 9px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); text-transform: uppercase; }
+  .gc-feed-stat b { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .gc-feed-stat b.is-pos { color: var(--green); }
+  .gc-feed-stat b.is-neg { color: var(--red); }
+  .gc-feed-stat b.is-flat { color: var(--muted); }
   .gc-feed-net { margin-top: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px; }
   .gc-feed-net.is-pos { color: var(--green); }
   .gc-feed-net.is-neg { color: var(--red); }
@@ -2367,12 +2402,6 @@
   .rg-list { display: flex; flex-direction: column; gap: 6px; max-height: 460px; overflow-y: auto; }
   .rg-panel-even .rg-list { max-height: none; }
 
-  .rg-band-head {
-    font-size: 9.5px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
-    color: var(--faint); padding: 13px 2px 5px; border-bottom: 1px solid var(--border-soft);
-    margin-bottom: 5px;
-  }
-  .rg-band-head:first-child { padding-top: 2px; }
   .rg-score-live { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin: 6px 0 2px; }
   .rg-live-k { font-size: 9px; font-weight: 800; letter-spacing: 0.7px; color: var(--faint); }
   .rg-live-v { font-family: 'Source Serif 4', serif; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -2380,7 +2409,7 @@
   .rg-live-v.is-neg { color: var(--red); }
   .rg-live-s { font-size: 11.5px; color: var(--muted); }
   .rg-score-head { display: flex; gap: 14px; align-items: flex-start; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
-  .rg-score-num { font-family: 'Source Serif 4', serif; font-size: 34px; font-weight: 700; line-height: 1; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .rg-score-num { font-family: 'Source Serif 4', serif; font-size: 30px; font-weight: 700; line-height: 1; flex-shrink: 0; font-variant-numeric: tabular-nums; }
   .rg-score-num.is-pos { color: var(--green); }
   .rg-score-num.is-neg { color: var(--red); }
   .rg-score-num.is-even { color: var(--gold); }
@@ -2388,11 +2417,6 @@
   .rg-score-band { font-size: 10px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); }
   .rg-score-line { font-size: 13px; line-height: 1.5; margin-top: 3px; }
   .rg-score-fine { font-size: 11px; color: var(--faint); line-height: 1.5; margin-top: 5px; }
-  .rg-band { color: var(--faint); font-weight: 600; }
-  .rg-band::before { content: '\00b7'; margin: 0 5px; }
-  .rg-key-bands { margin: 6px 0 8px; padding-left: 0; list-style: none; font-size: 11.5px; color: var(--muted); line-height: 1.75; }
-  .rg-key-bands b { color: var(--ink); }
-  .rg-key-band-n { display: inline-block; min-width: 46px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--faint); }
 
   /* The Rooting Score key. On only while that mode is, because it is
      explaining that mode and nothing else. */
@@ -2427,7 +2451,6 @@
   .rg-key-pos { color: var(--green); border-color: var(--green); background: var(--green-bg); }
   .rg-key-zero { color: var(--faint); }
   .rg-key-cap { font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; color: var(--faint); margin-right: 6px; }
-  .rg-key-hint { font-size: 10.5px; color: var(--faint); font-style: italic; margin-left: auto; }
 
   .rg-row { border: 1px solid var(--border-soft); border-radius: 6px; cursor: pointer; }
   .rg-row:hover { border-color: var(--border); }
@@ -4767,6 +4790,50 @@
                 mask-image: linear-gradient(to right, #000 88%, transparent); }
   }
 
+  /* ---------- One hover treatment for everything you can click ----------
+     These grew up one component at a time and stopped agreeing: a game
+     card lifted its border, a rooting row barely moved, an exposure card
+     set a pointer and did nothing else, and the top nav and the Weekly
+     Schedule had neither a hover nor a cursor -- which is why the menu
+     read as decoration rather than as buttons.
+
+     The palette is warm cardstock with hard, unblurred shadows, so the
+     hover that belongs to it is a physical one: the card picks up off the
+     page a pixel and drops a hard shadow behind it. Nothing glows.
+
+     Deliberately at the END of the stylesheet. A component's own
+     :hover (.gc-card:hover, .rg-row:hover) has the same specificity, so
+     whichever is written last wins -- these have to be last to beat them. */
+  .gc-card, .exp-card, .schedule-chip, .rg-row, .ww-row, .league-row {
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  }
+  .gc-card:hover, .exp-card:hover, .schedule-chip:hover,
+  .rg-row:hover, .ww-row:hover, .league-row:hover {
+    transform: translateY(-1px);
+    box-shadow: 2px 2px 0 var(--border);
+    border-color: var(--muted);
+  }
+  /* An open game card is already outlined in navy; lifting it as well
+     reads as "not yet selected", which is the opposite of true. */
+  .gc-card.active:hover { transform: none; box-shadow: 0 0 0 1px var(--navy) inset; }
+
+  /* Dense rows inside a scrolling panel. A lift would make the whole list
+     twitch as the pointer runs down it, so these just light up. */
+  .gc-lg-row, .gc-stat-row, .gc-feed-item {
+    transition: background 0.12s ease;
+  }
+  .gc-lg-row:hover, .gc-stat-row:hover { background: var(--bg); }
+
+  /* Someone who has asked their system not to animate still gets the
+     shadow and the border -- they just do not get the movement. */
+  @media (prefers-reduced-motion: reduce) {
+    .gc-card, .exp-card, .schedule-chip, .rg-row, .ww-row, .league-row,
+    .gc-lg-row, .gc-stat-row, .gc-feed-item, .section-tab, .sub-tab { transition: none; }
+    .gc-card:hover, .exp-card:hover, .schedule-chip:hover,
+    .rg-row:hover, .ww-row:hover, .league-row:hover { transform: none; }
+  }
+
 </style>
 <!-- Rasterizes a trade card to a canvas for the "export as image" feature
      (Trade History's camera icon) -- real, widely-used library, no key. -->
@@ -6383,35 +6450,20 @@
           </div>
           <p>Your starters versus your opponents across all scheduled matchups. Tap a player for the league list.</p>
           <div class="rg-key" id="rgScoreKey">
-            <div class="rg-key-title">How the Rooting Score works</div>
+            <div class="rg-key-title">How Wins at Stake works</div>
             <p class="rg-key-line">Not every matchup cares the same amount. A game you are 95% to win is
               already decided &mdash; points there barely move anything. A coin flip moves a lot. The score
-              measures that instead of counting leagues.</p>
+              measures that instead of counting leagues, and answers in matchups: how much of a win
+              he can still move, counting only the points he has left to score.</p>
             <ol class="rg-key-steps">
-              <li><b>Where is each matchup headed?</b> Your projected final against your opponent&rsquo;s, plus how much is still unplayed.</li>
-              <li><b>What does one of his points do to it?</b> Slide that projection by a point and see how far your win probability moves. Steep at 50/50, flat at 95/5, zero once a matchup is settled.</li>
-              <li><b>Add up his matchups</b>, plus where he starts for you, minus where he starts against you &mdash; each league weighted half by your buy-in, half by simply being a league.</li>
+              <li><b>What does one of his points do to each matchup?</b> Slide your projected final by a point and see how far your win probability moves. Steep at 50/50, flat at 95/5, zero once a matchup is settled.</li>
+              <li><b>What is that league worth to you?</b> Half its share of your buy-ins, half simply being one of your leagues &mdash; so a $100 league outweighs a $50 one without two $50 leagues losing to a single $100.</li>
+              <li><b>How many points has he left?</b> His live projection minus what he has already scored. Before kickoff that is his whole game; once it is over it is nothing, which is why a finished player reads 0.00.</li>
             </ol>
             <div class="rg-key-scale">
-              <span class="rg-key-chip rg-key-zero">0</span><span class="rg-key-cap">nothing riding on him</span>
-              <span class="rg-key-chip rg-key-pos">100</span><span class="rg-key-cap">he decides your week</span>
+              <span class="rg-key-chip rg-key-zero">0.00</span><span class="rg-key-cap">played out, or nothing riding on him</span>
+              <span class="rg-key-chip rg-key-pos">1.00+</span><span class="rg-key-cap">he decides your week</span>
             </div>
-            <p class="rg-key-line"><b>Measured against his own projection.</b> A ten-point game is not
-              automatically good news &mdash; for a player projected fifteen it costs you, and the
-              working shows it that way. Open any player to see what a big game and a bad one are
-              each worth to you, in matchups.</p>
-            <p class="rg-key-line"><b>Which list he is in says which way to root.</b> The score itself is
-              just how much to care, so it runs 0 to 100 either way.</p>
-            <ul class="rg-key-bands">
-              <li><span class="rg-key-band-n">80+</span> <b>your whole week</b> &mdash; his game more or less decides how your Sunday goes</li>
-              <li><span class="rg-key-band-n">55&ndash;79</span> <b>huge</b> &mdash; a big game from him swings a matchup you could go either way in</li>
-              <li><span class="rg-key-band-n">30&ndash;54</span> <b>matters a lot</b> &mdash; clearly worth watching, not the whole day</li>
-              <li><span class="rg-key-band-n">12&ndash;29</span> <b>worth watching</b> &mdash; a real but modest nudge</li>
-              <li><span class="rg-key-band-n">3&ndash;11</span> <b>barely matters</b> &mdash; his leagues are mostly decided already</li>
-              <li><span class="rg-key-band-n">0&ndash;2</span> <b>neutral</b> &mdash; nothing riding on him</li>
-            </ul>
-            <p class="rg-key-hint">Hover any player&rsquo;s score to see what a 10-point game from him is
-              actually worth to you, and the matchup-by-matchup working behind it.</p>
           </div>
         </div>
 
@@ -6419,7 +6471,7 @@
           <div class="exp-search" id="rgSearchWrap" style="max-width:220px"><input type="text" id="rgSearchInput" placeholder="Search player..."></div>
           <div class="rg-leagues-toggle" id="rgLeaguesBtn">&#9881; Tanking Teams / Irrelevant Leagues <span id="rgLeaguesCount">(18 of 18)</span></div>
           <div class="rg-sort-toggle" id="rgSortToggle">
-            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="score" title="-100 to +100. Zero is neutral, positive means root for him, negative means root against, and the size is how much it matters. Hover any player&#39;s score to see exactly how his was built.">Rooting Score</button>
+            <button type="button" class="rg-sort-toggle-btn active" data-rg-sort="score" title="How much of a matchup he can still swing: the points he has left to score, priced at what each one does to your win probability, with every league weighted half by your buy-in and half by being one of your leagues. Positive means root for him, negative means root against. A finished game reads 0.00. Hover any player&#39;s number to see how it was built.">Wins at Stake</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="swing" title="The same thing in its raw unit: win probability per point he scores, added up across every matchup he is in">Swing %</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="value">Leagues</button>
             <button type="button" class="rg-sort-toggle-btn" data-rg-sort="leagues">$</button>
@@ -13546,8 +13598,10 @@
         const weights = (typeof sbLeagueWeights === 'function')
           ? sbLeagueWeights(levLeagues.map(l => l.name)) : {};
         const net = levLeagues.reduce((sum, l) => sum + l.perPoint * (weights[l.name] != null ? weights[l.name] : 1), 0);
+        // Score mode is wins at stake: the same weighted per-point slope
+        // the board shows, times what he has left to score.
         deltaNum = mode === 'score'
-          ? (typeof sbRootingScore === 'function' ? sbRootingScore(net) : 0)
+          ? Number(sbWinsAtStakeFrom(levLeagues, weights, sbRemainingPoints(r.id)).toFixed(3))
           : Number(net.toFixed(3));
       } else if (mode === 'leagues') {
         deltaNum = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
@@ -18163,8 +18217,8 @@
     const raw = Number(row.dataset.raw);
     if (!Number.isFinite(score) || !Number.isFinite(raw)) return '';
     const n = Number(row.dataset.levcount) || 0;
-    const band = typeof sbRootingBand === 'function' ? sbRootingBand(score) : '';
-    const cls = score > 2 ? 'is-pos' : (score < -2 ? 'is-neg' : 'is-even');
+    const remaining = Number(row.dataset.remaining) || 0;
+    const cls = score > 0.005 ? 'is-pos' : (score < -0.005 ? 'is-neg' : 'is-even');
     const dirWord = score > 0 ? 'Root for him' : (score < 0 ? 'Root against him' : 'Neutral');
     // Everything is measured against what he was EXPECTED to score, not
     // against zero. A ten-point game is not a gift: for a player projected
@@ -18201,15 +18255,16 @@
     </div>`;
 
     return `<div class="rg-score-head">
-      <div class="rg-score-num ${cls}">${Math.abs(score)}</div>
+      <div class="rg-score-num ${cls}">${sbWinsAtStakeText(score)}</div>
       <div class="rg-score-say">
-        <div class="rg-score-band">${dirWord} &middot; ${band}</div>
+        <div class="rg-score-band">${dirWord} &middot; ${remaining > 0 ? 'still at stake' : 'his game is done'}</div>
         ${liveLine}
         <div class="rg-score-line">${expLine}</div>
         <div class="rg-score-fine">Win probabilities add up, so those really are counts of games,
-          across the ${n === 1 ? 'one league' : n + ' leagues'} listed below. The score is the same
-          reading on a fixed 0&ndash;100 dial, which is what lets you compare a player in three
-          leagues against one in nine.</div>
+          across the ${n === 1 ? 'one league' : n + ' leagues'} listed below. The headline number is
+          his ${remaining.toFixed(1)} remaining points priced at what each is worth to you, with every
+          league weighted half by your buy-in and half by simply being one of your leagues. It falls
+          to zero as his game is played out, because by then there is nothing left at stake.</div>
       </div>
     </div>`;
   }
@@ -18523,7 +18578,7 @@
         const weights = (typeof sbLeagueWeights === 'function')
           ? sbLeagueWeights(levLeagues.map(l => l.name)) : {};
         const swingNet = levLeagues.reduce((sum, l) => sum + l.perPoint * (weights[l.name] != null ? weights[l.name] : 1), 0);
-        const rootScore = (typeof sbRootingScore === 'function') ? sbRootingScore(swingNet) : 50;
+
         // Raw numbers (not the formatted display text below) so anything
         // reading a player's rooting impact off this row -- the Weekly
         // Schedule's exposure preview, the Rooting Guide's own 1-on-1
@@ -18532,8 +18587,17 @@
         r.el.dataset.delta = String(delta);
         r.el.dataset.dollar = String(dollarNet);
         r.el.dataset.swing = swingNet.toFixed(3);
-        r.el.dataset.score = String(rootScore);
-        // Unweighted, for the expected-wins reading in the expand panel.
+        // What he can still do to you: the weighted per-point slope times
+        // the points he has left. The displayed figure, so anything reading
+        // a player's rooting impact off this row gets the number the badge
+        // shows rather than one of the three ingredients.
+        const remaining = (typeof sbRemainingPoints === 'function' && r.el.dataset.playerId)
+          ? sbRemainingPoints(r.el.dataset.playerId) : 0;
+        const stake = sbWinsAtStakeFrom(levLeagues, weights, remaining);
+        r.el.dataset.score = stake.toFixed(3);
+        r.el.dataset.remaining = remaining.toFixed(1);
+        // Unweighted per-point, still used by the expand panel's worked
+        // examples, which price a good game and a bad one in real matchups.
         r.el.dataset.raw = levLeagues.reduce((sum, l) => sum + l.perPoint, 0).toFixed(3);
         r.el.dataset.levcount = String(levLeagues.length);
         const deltaEl = r.el.querySelector('.rg-delta');
@@ -18542,16 +18606,14 @@
         // In $ mode the badge shows real dollars at stake instead of a
         // league count, so it reads "+$325" rather than "+3".
         if (rgSortCriterion === 'score') {
-          // -100 to +100, zero neutral. The number a person can act on
-          // without first being taught what a percentage point of win
-          // probability is worth.
-          // No plus sign. This is a score, like a rating out of 100, and
-          // "66" reads as one where "+66" reads as a position you are
-          // carrying. Which side it is on is already said by the colour
-          // and by which of the two lists the player is in.
-          deltaEl.textContent = String(Math.abs(rootScore));
-          if (rootScore > 2) deltaEl.classList.add('rg-delta-pos');
-          else if (rootScore < -2) deltaEl.classList.add('rg-delta-neg');
+          // Wins at stake: the weighted per-point slope times what he has
+          // left to score. Signed, because the sign is part of the
+          // quantity -- -0.42 is a real thing he can still do to you, not
+          // just which of the two lists he is in. A finished game reads
+          // 0.00, which is the only honest answer once he cannot move.
+          deltaEl.textContent = sbWinsAtStakeText(stake);
+          if (stake > 0.005) deltaEl.classList.add('rg-delta-pos');
+          else if (stake < -0.005) deltaEl.classList.add('rg-delta-neg');
           else deltaEl.classList.add('rg-delta-even');
           // The number tells you how much; the word tells you what that
           // amount IS. Sitting in the row rather than in a tooltip because
@@ -18577,18 +18639,9 @@
               swungEl.hidden = true;
             }
           }
-          if (noteEl && typeof sbRootingBand === 'function') {
-            const band = noteEl.querySelector('.rg-band') || (() => {
-              const el = document.createElement('span');
-              el.className = 'rg-band';
-              noteEl.appendChild(el);
-              return el;
-            })();
-            band.textContent = sbRootingBand(rootScore);
-          }
           deltaEl.title = (typeof sbRootingScoreExplain === 'function')
             ? sbRootingScoreExplain(
-                (r.el.querySelector('.rg-name') || {}).textContent, levLeagues, weights, swingNet, rootScore)
+                (r.el.querySelector('.rg-name') || {}).textContent, levLeagues, weights, stake, remaining)
             : '';
         } else if (rgSortCriterion === 'swing') {
           // Win probability per fantasy point, summed over his matchups.
@@ -18617,15 +18670,20 @@
         if (a.length) noteParts.push(a.length + ' <span class="rg-note-vs">vs</span>');
         noteEl.innerHTML = noteParts.join(' &middot; ');
         const proj = Number(r.el.dataset.proj) || 0;
-        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, swingNet, proj };
+        // Score mode sorts on the same stake the badge prints. Ordering by
+        // one number while showing another is what made the old board look
+        // arbitrary.
+        const bucket = { el: r.el, delta, total: f.length + a.length, dollarNet, swingNet, stake, proj };
         // In $ mode, which bucket a player belongs in is decided by real
         // dollars at stake, not league count -- a player can be a league-count
         // "against" but still help you overall once you weigh in that your
         // for-leagues carry more money than your against-leagues (and vice
         // versa), so re-bucket by dollarNet's sign instead of delta's.
-        const bucketKey = (rgSortCriterion === 'swing' || rgSortCriterion === 'score')
-          ? (Math.abs(swingNet) < 0.005 ? 0 : swingNet)
-          : (rgSortCriterion === 'leagues' ? dollarNet : delta);
+        const bucketKey = rgSortCriterion === 'score'
+          ? (Math.abs(stake) < 0.005 ? 0 : stake)
+          : (rgSortCriterion === 'swing'
+            ? (Math.abs(swingNet) < 0.005 ? 0 : swingNet)
+            : (rgSortCriterion === 'leagues' ? dollarNet : delta));
         if (bucketKey > 0) buckets.for.push(bucket);
         else if (bucketKey < 0) buckets.against.push(bucket);
         else buckets.even.push(bucket);
@@ -18634,7 +18692,12 @@
       // projected for more points -- live, since this re-runs on every
       // sync poll and dataset.proj gets refreshed with it -- instead of
       // whatever arbitrary order the players happened to be built in.
-      if (rgSortCriterion === 'swing' || rgSortCriterion === 'score') {
+      if (rgSortCriterion === 'score') {
+        // Most still at stake in your favour first on one side, most
+        // against you first on the other -- the number the badge prints.
+        buckets.for.sort((a, b) => (b.stake - a.stake) || (b.proj - a.proj));
+        buckets.against.sort((a, b) => (a.stake - b.stake) || (b.proj - a.proj));
+      } else if (rgSortCriterion === 'swing') {
         // Most win probability to gain first on one side, most to lose
         // first on the other.
         buckets.for.sort((a, b) => (b.swingNet - a.swingNet) || (b.proj - a.proj));
@@ -18658,22 +18721,11 @@
       // number is dollars or a league count and has no bands.
       sbSetWeekSwing(weekSwingCount ? weekSwingTotal : null);
 
-      const grouped = rgSortCriterion === 'score' && typeof sbRootingBand === 'function';
+      // No band headings any more: expected wins is a continuous number,
+      // and slicing it into "huge" / "worth watching" was the arbitrary
+      // part. The list is simply ordered by it.
       const fill = (listEl, rows) => {
-        let band = null;
-        rows.forEach(b => {
-          if (grouped) {
-            const mine = sbRootingBand(Number(b.el.dataset.score) || 0);
-            if (mine !== band) {
-              band = mine;
-              const h = document.createElement('div');
-              h.className = 'rg-band-head';
-              h.textContent = mine;
-              listEl.appendChild(h);
-            }
-          }
-          listEl.appendChild(b.el);
-        });
+        rows.forEach(b => listEl.appendChild(b.el));
       };
       fill(forListEl, buckets.for);
       fill(againstListEl, buckets.against);
@@ -26819,9 +26871,20 @@
         ...((data.drives && data.drives.previous) || []),
         ...(data.drives && data.drives.current ? [data.drives.current] : []),
       ];
+      // A live game's in-progress drive is served as drives.current AND as
+      // the last entry of drives.previous, so every play on it arrived
+      // here twice and the feed showed each one twice. Keyed on ESPN's own
+      // play id, with the sequence and text as the fallback for a feed
+      // that omits it.
+      const seenPlays = new Set();
       driveGroups.forEach(drive => {
         (drive.plays || []).forEach(play => {
           if (!play || !play.text) return;
+          const key = play.id != null
+            ? `id:${play.id}`
+            : `sq:${play.sequenceNumber || ''}|${play.text}`;
+          if (seenPlays.has(key)) return;
+          seenPlays.add(key);
           plays.push({
             text: play.text,
             wallclock: play.wallclock || null,
@@ -26847,50 +26910,149 @@
     }
   }
 
-  const SB_PLAYER_NAME_RE = "[A-Z][\\w'-]*\\.[A-Z][\\w'-]*";
+  // ESPN writes a player two ways depending on the feed: "J.Burrow" in
+  // the NFL-style text and "Joe Burrow" in its own. Matching only the
+  // first silently dropped every play on any game served the other way,
+  // so both shapes are accepted and the lookup normalises them.
+  // The apostrophe class covers both the typewriter and the curly one --
+  // Ja'Marr and Ja’Marr are the same player and only one of them was
+  // matching.
+  const SB_NAME_ABBR = "[A-Z][\\w'’-]*\\.\\s?[A-Z][\\w'’-]+";
+  const SB_NAME_FULL = "[A-Z][\\w'’-]+ [A-Z][\\w'’-]+";
+  const SB_PLAYER_NAME_RE = `(?:${SB_NAME_ABBR}|${SB_NAME_FULL})`;
+
+  // Where the ball ended up, written between the player and the yardage:
+  // "to G.Bernard TO CLV 39 for 6 yards", "to D.Metcalf RAN OB AT CLV 12
+  // for 27 yards", "J.Mixon right tackle TO CIN 35 for 3 yards". Every
+  // completion and most carries in a real feed carry one, and requiring
+  // the yardage to follow the name directly is why none of them matched.
+  //
+  // Stops at a comma so it cannot run past ", TOUCHDOWN" into a later
+  // clause, and is non-greedy so it takes the first "for N yards" rather
+  // than one in a trailing "was injured during the play" sentence.
+  const SB_BALL_SPOT = '(?: [^,]*?)?';
 
   // Pulls a fantasy-relevant stat line out of one ESPN play-by-play text
   // description. ESPN's play text is free-form English, not structured
   // data -- these patterns cover the plays that actually move fantasy
-  // scores (completions, rushes, passing/rushing TDs, interceptions).
-  // Anything else (punts, kneels, penalties, incomplete passes) is
-  // intentionally left unmatched rather than guessed at. Not anchored to
-  // the start of the string -- ESPN often prefixes the actual play with a
-  // formation/personnel note in parens ("(Shotgun) J.Burrow pass...",
-  // "(No Huddle, Shotgun) ..."), which an anchored `^` match would never
-  // get past, silently matching nothing on a large share of real plays.
+  // scores. Anything else (punts, kneels, penalties) is intentionally
+  // left unmatched rather than guessed at.
+  //
+  // Deliberately NOT case-insensitive. The `i` flag these used to carry
+  // made every `[A-Z]` in a name pattern match lowercase as well, so a
+  // name class matched any word at all and the patterns leaned entirely
+  // on their keywords to stay honest. ESPN's verbs are lowercase, so the
+  // keywords are written that way and the capitals mean capitals again.
+  //
+  // Fumbles are left out on purpose: the text says a ball came loose and
+  // who recovered it, but not which side that recovery was for, and a
+  // guessed fum_lost is a real -2 on a player's score.
   function sbParsePlayEvents(text) {
-    const isTd = /touchdown/i.test(text);
-    const yardsFromWord = (raw) => {
-      if (/no gain/i.test(raw)) return 0;
-      if (/loss of/i.test(raw)) return -(Number(raw.replace(/\D/g, '')) || 0);
-      return Number(raw.replace(/[^\d.-]/g, '')) || 0;
+    const raw = String(text || '');
+    // Tacklers, formations and penalty notes all arrive in parentheses --
+    // "(Shotgun)", "(T.Watt)". A defender's name in there is not the name
+    // any of these patterns wants, and leaving it in is how a tackler ends
+    // up credited with the carry he just stopped.
+    const clean = raw.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+    const isTd = /touchdown/i.test(clean);
+    const is2pt = /two-point conversion/i.test(raw) && /succeeds|is good|is complete/i.test(raw);
+    const yardsFromWord = (s) => {
+      if (/no gain/i.test(s)) return 0;
+      if (/loss of/i.test(s)) return -(Number(s.replace(/\D/g, '')) || 0);
+      return Number(s.replace(/[^\d.-]/g, '')) || 0;
     };
     // "yards"/"yard" only actually appears in ESPN's text alongside a real
     // number or "a loss of N" -- a bare no-gain play is just "no gain"
     // with nothing after it, so that alternative can't require the word.
     const YARDS_PHRASE = '(?:-?\\d+ yards?|no gain|a loss of \\d+ yards?)';
+    const N = SB_PLAYER_NAME_RE;
 
-    let m = text.match(new RegExp(
-      `(${SB_PLAYER_NAME_RE}) pass (?:short|deep)?\\s*(?:left|right|middle)?\\s*to (${SB_PLAYER_NAME_RE}) for (${YARDS_PHRASE})`, 'i'
+    // An interception, read in two steps and checked before anything else.
+    // The old single pattern wanted "(NAME) pass intercepted" -- adjacent
+    // and lower case -- and real text is
+    // "A.Rodgers pass deep right intended for R.Wilson INTERCEPTED by
+    // G.Delpit", so it never matched and the passer kept his -2.
+    //
+    // Only the keyword test is case-insensitive. Putting an `i` flag on a
+    // pattern that contains [A-Z] name classes is the bug fixed two
+    // commits ago: it quietly makes every one of them match lowercase too.
+    if (/INTERCEPTED/i.test(clean)) {
+      const passer = clean.match(new RegExp(`(${N}) pass`));
+      if (passer) {
+        const out = [{ name: passer[1], desc: 'INT thrown', stats: { pass_int: 1 } }];
+        // The man it was going to, the same way an incompletion treats its
+        // target. Worth nothing on the house line, so he gets a row rather
+        // than points.
+        const tgt = clean.match(new RegExp(`intended for (${N})`));
+        if (tgt) out.push({ name: tgt[1], desc: 'targeted, picked', stats: { rec_tgt: 1 } });
+        return out;
+      }
+    }
+
+    // A completion. Two players move on one play, so two events come back.
+    let m = clean.match(new RegExp(
+      `(${N}) pass (?:short |deep )?(?:left |right |middle )?to (${N})${SB_BALL_SPOT} for (${YARDS_PHRASE})`
     ));
     if (m) {
       const yards = yardsFromWord(m[3]);
+      const tag = is2pt ? ', 2PT' : (isTd ? ', TD' : '');
       return [
-        { name: m[2], desc: `${yards}-yd catch${isTd ? ', TD' : ''}`, stats: { rec: 1, rec_yd: yards, rec_td: isTd ? 1 : 0 } },
-        { name: m[1], desc: `${yards}-yd pass${isTd ? ', TD' : ''}`, stats: { pass_att: 1, pass_cmp: 1, pass_yd: yards, pass_td: isTd ? 1 : 0 } },
+        { name: m[2], desc: `${yards}-yd catch${tag}`,
+          stats: { rec: 1, rec_yd: yards, rec_td: isTd && !is2pt ? 1 : 0, rec_2pt: is2pt ? 1 : 0 } },
+        { name: m[1], desc: `${yards}-yd pass${tag}`,
+          stats: { pass_att: 1, pass_cmp: 1, pass_yd: yards, pass_td: isTd && !is2pt ? 1 : 0, pass_2pt: is2pt ? 1 : 0 } },
       ];
     }
 
-    m = text.match(new RegExp(`(${SB_PLAYER_NAME_RE}) rush for (${YARDS_PHRASE})`, 'i'));
+    // An incompletion. No points anywhere, but it is the other half of a
+    // quarterback's line and the feed reads as though drives skip plays
+    // without it.
+    m = clean.match(new RegExp(`(${N}) pass incomplete(?:[^.]*? to (${N}))?`));
     if (m) {
-      const yards = yardsFromWord(m[2]);
-      return [{ name: m[1], desc: `${yards}-yd rush${isTd ? ', TD' : ''}`, stats: { rush_att: 1, rush_yd: yards, rush_td: isTd ? 1 : 0 } }];
+      const out = [{ name: m[1], desc: 'incomplete', stats: { pass_att: 1 } }];
+      if (m[2]) out.push({ name: m[2], desc: 'target, no catch', stats: { rec_tgt: 1 } });
+      return out;
     }
 
-    m = text.match(new RegExp(`(${SB_PLAYER_NAME_RE}) pass intercepted`, 'i'));
+    // A carry. ESPN writes most of them by direction -- "J.Mixon right
+    // tackle for 3 yards" -- and almost never with the word "rush", which
+    // is why the old single `rush for` pattern matched so few of them.
+    // A scramble carries a direction of its own ("scrambles right end"),
+    // so the gap list has to be reachable both on its own and after it.
+    const RUN_DIR = '(?:left end|left tackle|left guard|up the middle'
+      + '|right guard|right tackle|right end|left|right)';
+    // A kneel is a carry for a loss, and reads as one: "D.Watson kneels to
+    // CLV 17 for -1 yards" is a real -0.1 against a quarterback.
+    const RUN_GAP = `(?:rush(?:es)?|kneels?|scrambles?(?: ${RUN_DIR})?|${RUN_DIR})`;
+    m = clean.match(new RegExp(`(${N}) ${RUN_GAP}${SB_BALL_SPOT} for (${YARDS_PHRASE})`));
     if (m) {
-      return [{ name: m[1], desc: 'INT thrown', stats: { pass_int: 1 } }];
+      const yards = yardsFromWord(m[2]);
+      const tag = is2pt ? ', 2PT' : (isTd ? ', TD' : '');
+      return [{ name: m[1], desc: `${yards}-yd rush${tag}`,
+        stats: { rush_att: 1, rush_yd: yards, rush_td: isTd && !is2pt ? 1 : 0, rush_2pt: is2pt ? 1 : 0 } }];
+    }
+
+    // A sack costs no fantasy points on the house line -- sack yardage is
+    // not charged against passing yards -- but it belongs in the feed, so
+    // it comes back with an empty stat line and scores zero.
+    m = clean.match(new RegExp(`(${N}) sacked`));
+    if (m) {
+      return [{ name: m[1], desc: 'sacked', stats: {} }];
+    }
+
+    // A fumble. Whether it was LOST is not a question this function can
+    // answer: the text names the recovering team, but knowing whether that
+    // is the fumbler's own team needs his team, which only the caller has.
+    // So the recovering team rides out on the event and gcFeedPlays
+    // decides -- and declines to decide when it cannot, because a guessed
+    // fum_lost is a real -2 on somebody's score.
+    m = clean.match(new RegExp(`(${N}) FUMBLES`));
+    if (m) {
+      const rec = clean.match(/RECOVERED by ([A-Z]{2,3})-/);
+      return [{
+        name: m[1], desc: 'fumble', stats: {},
+        fumbleRecoveredBy: rec ? rec[1] : null,
+      }];
     }
 
     return [];
@@ -27027,7 +27189,7 @@
   }
 
   window.__gcOpenEventId = window.__gcOpenEventId || null;  // the game whose panel is open, if any
-  window.__gcStatsTeam = window.__gcStatsTeam || null;      // 'away' | 'home'
+  window.__gcStatsTeam = window.__gcStatsTeam || null;      // 'leagues' | 'away' | 'home'
   window.__gcExpandedPlayer = window.__gcExpandedPlayer || null;
   window.__gcOpenData = window.__gcOpenData || null;
   window.__gcFeedFilter = window.__gcFeedFilter || 'all';   // 'all' | 'mine'
@@ -27464,10 +27626,24 @@
 
     const body = rows.map(r => {
       const name = r.p.full_name || [r.p.first_name, r.p.last_name].filter(Boolean).join(' ');
-      const { forLeagues, againstLeagues } = gcRootingDelta(r.id);
+      // Expected wins, not a count of leagues. "rooting for 3, rooting
+      // against 2" says he is in five matchups and nothing about whether
+      // any of them can still move -- three settled blowouts and two coin
+      // flips read the same as the reverse. This is the number Weekly
+      // Sweats sorts on, so the two pages agree. A finished game reads
+      // 0.00: there is nothing left for him to do to you.
       const rootBits = [];
-      if (forLeagues.length) rootBits.push(`<span class="ldrec-pos">&#9650; rooting for ${forLeagues.length}</span>`);
-      if (againstLeagues.length) rootBits.push(`<span class="ldrec-neg">&#9660; rooting against ${againstLeagues.length}</span>`);
+      const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(r.id) : null;
+      if (lev && lev.leagues.length) {
+        const stake = sbWinsAtStake(r.id);
+        const remaining = sbRemainingPoints(r.id);
+        const cls = stake > 0.005 ? 'ldrec-pos' : (stake < -0.005 ? 'ldrec-neg' : '');
+        const tip = (typeof sbRootingMeaning === 'function')
+          ? sbRootingMeaning(stake, remaining) : '';
+        rootBits.push(`<span class="${cls}" title="${sbFieldEsc(tip)}">`
+          + `${sbWinsAtStakeText(stake)} at stake`
+          + `</span><span class="gc-stat-root-n">${lev.leagues.length} league${lev.leagues.length === 1 ? '' : 's'}</span>`);
+      }
       const line = gcStatLine(r.s);
       const expanded = window.__gcExpandedPlayer === r.id;
       const poeCls = r.poe == null ? '' : (r.poe > 0 ? 'ldrec-pos' : (r.poe < 0 ? 'ldrec-neg' : ''));
@@ -27629,10 +27805,18 @@
     }).join('');
   }
 
+  // Three ways to read an opened game, and only one of them is up at a
+  // time. Your leagues is the default and the reason the panel exists --
+  // the box score is what you go looking for afterwards, so it costs a
+  // click rather than taking half the panel from the thing you opened it
+  // for. The leagues button is deliberately the width of both team
+  // buttons together: it is the one you want most of the time.
   function gcTeamSwitchHtml(game, active, attr) {
+    const mode = active || 'leagues';
     return `<span class="gc-team-switch">
-      <button type="button" class="${active === 'away' ? 'active' : ''}" data-${attr}="away">${sbFieldEsc(game.away.abbr)}</button>
-      <button type="button" class="${active === 'home' ? 'active' : ''}" data-${attr}="home">${sbFieldEsc(game.home.abbr)}</button>
+      <button type="button" class="gc-switch-leagues${mode === 'leagues' ? ' active' : ''}" data-${attr}="leagues">YOUR LEAGUES IN THIS GAME</button>
+      <button type="button" class="${mode === 'away' ? 'active' : ''}" data-${attr}="away">${sbFieldEsc(game.away.abbr)}</button>
+      <button type="button" class="${mode === 'home' ? 'active' : ''}" data-${attr}="home">${sbFieldEsc(game.home.abbr)}</button>
     </span>`;
   }
 
@@ -27753,97 +27937,132 @@
   }
   window.sbLeagueWeights = sbLeagueWeights;
 
-  // ---- Rooting score ---------------------------------------------------
+  // ---- Expected wins ---------------------------------------------------
   // Leverage in win-percent-per-point is the honest unit, and "-2.34%" is
-  // not a thing anyone wants to read on a Sunday. This is the same number
-  // on a -100 to +100 dial, which is how you already think about it: zero
-  // is neutral, a positive number means root for him, a negative one means
-  // root against, and the size is how much to care. A minus sign says
-  // "against" faster than any number below fifty does.
+  // not a thing anyone wants to read on a Sunday.
   //
-  // tanh does the squashing, so the scale never runs out of room -- a
-  // player who matters twice as much as anything you have seen still fits
-  // -- while staying nearly straight through the middle, where almost
-  // every player actually sits. SB_SCORE_FULL is the leverage that reads
-  // about 76: roughly a player starting for you in three coin flips.
-  const SB_SCORE_FULL = 4;
-  function sbRootingScore(perPoint) {
-    const t = Math.tanh((Number(perPoint) || 0) / SB_SCORE_FULL);
-    return Math.round(100 * t);
-  }
-  window.sbRootingScore = sbRootingScore;
+  // This used to be squashed onto a -100..100 dial with
+  // 100*tanh(perPoint/4), carrying a band word ("huge", "worth watching")
+  // off six hand-picked cutoffs. It read as arbitrary because it was: the
+  // 4 was chosen to make a particular player score about 76, and tanh
+  // flattens exactly where the interesting players are. A man in four
+  // tight matchups scored 76 and a man in eight scored 99 -- twice the
+  // stake, three points apart -- so the number could not be reasoned with
+  // and the bands did the talking.
+  //
+  // Expected wins is the same leverage left in a unit that needs no
+  // explaining: how many more matchups you expect to win. Win
+  // probabilities add up, so a player worth 3.2% a point over a ten-point
+  // game is worth 0.32 of a win. It is linear -- twice the stake really is
+  // twice the number -- and a person can check it against the league list
+  // printed underneath, which a hyperbolic tangent never allowed.
 
-  // ---- What a score actually means -------------------------------------
-  // "+66" is a precise number that tells you nothing on its own. Nobody
-  // has an intuition for two thirds of a hyperbolic tangent, and the honest
-  // unit behind it -- win probability per fantasy point -- is worse. So
-  // every score also carries a word and a sentence.
+  // ---- Wins at stake ----------------------------------------------------
+  // What he can still do to your week, in matchups.
   //
-  // The word is a band, because the decision a score drives is coarse:
-  // watch this guy, or do not. The sentence converts the score back into
-  // something a person has a feel for -- what a normal game from him is
-  // worth -- by running the scale backwards to the leverage it came from
-  // and multiplying by a real number of points.
-  const SB_SCORE_BANDS = [
-    { at: 80, label: 'your whole week' },
-    { at: 55, label: 'huge' },
-    { at: 30, label: 'matters a lot' },
-    { at: 12, label: 'worth watching' },
-    { at: 3, label: 'barely matters' },
-    { at: 0, label: 'neutral' },
-  ];
-  function sbRootingBand(score) {
-    const v = Math.abs(Number(score) || 0);
-    const band = SB_SCORE_BANDS.find(b => v >= b.at) || SB_SCORE_BANDS[SB_SCORE_BANDS.length - 1];
-    return band.label;
-  }
-  // A typical starter's game, used as the yardstick. Ten points is a quiet
-  // day for a starting back and a good one for a tight end -- close enough
-  // to "a game" that the sentence reads as a real thing that happens.
-  const SB_SCORE_YARDSTICK = 10;
-  function sbRootingMeaning(perPoint, score) {
-    const pp = Number(perPoint) || 0;
-    if (!pp || Math.abs(score) < 1) return 'Nothing riding on him this week.';
-    const swing = Math.abs(pp) * SB_SCORE_YARDSTICK;
-    const dir = pp > 0 ? 'better' : 'worse';
-    const rounded = swing >= 10 ? Math.round(swing) : swing.toFixed(1);
-    return `A ${SB_SCORE_YARDSTICK}-point game from him leaves your week about `
-      + `${rounded} points of win probability ${dir} off, added up across your matchups.`;
-  }
-  // ---- The same thing in matchups ---------------------------------------
-  // The one unit on this page that needs no explaining: how many more
-  // matchups you expect to win. Win probabilities add up to expected wins,
-  // so a player worth 3.2% a point over a 10-point game is worth 0.32 of a
-  // win -- and a person can check that against the league list printed
-  // under it, which a hyperbolic tangent on a fixed dial can never be.
+  // Three things multiplied together, each of which is a real quantity:
   //
-  // Deliberately the RAW per-point number, not the money-weighted one that
-  // ranks the list. Expected wins is a count of real matchups; weighting it
-  // by buy-in would make it a count of nothing.
-  function sbRootingWins(rawPerPoint) {
-    return (Number(rawPerPoint) || 0) * SB_SCORE_YARDSTICK / 100;
+  //   1. How much one of his points moves each matchup. The slope of the
+  //      win-probability curve at the current score -- steepest at 50/50,
+  //      flat at 95/5, exactly zero once a matchup can no longer move. A
+  //      point in a decided league is worth nothing and prices as nothing.
+  //   2. What that league is worth to you. Half its share of your buy-ins,
+  //      half simply being one of your leagues -- the same blend the
+  //      rooting score has always used (see sbLeagueWeights). The weights
+  //      average exactly 1, so this tilts the number toward the leagues
+  //      you care about without inflating it.
+  //   3. How many points he has left to score, from sbRemainingPoints.
+  //
+  // The third is what the old reading was missing. It priced everyone off
+  // a notional ten-point game, so a quarterback who had already finished
+  // still showed a number as large as one yet to kick off -- and the only
+  // honest answer for a man whose game is over is zero, because there is
+  // nothing left at stake. Now a player reads his full influence before
+  // kickoff and decays to nothing as his game is played out.
+  //
+  // The sign says which way to root, and comes from which side he is on,
+  // not from how he has played: a man you are mostly facing reads negative
+  // all afternoon, however badly he is doing. What he has ALREADY done to
+  // you is a different question, answered by points-over-expectation times
+  // the same per-point slope -- see the SO FAR TODAY line in the expand
+  // panel.
+
+  // How many more points he is expected to score from this moment. A
+  // finished game is zero; before kickoff it is his whole projection.
+  function sbRemainingPoints(playerId) {
+    const dict = window.__sleeperPlayerDict || {};
+    const p = dict[playerId];
+    if (!p) return 0;
+    const espnGameData = window.__gcEspnGameData || null;
+    const team = p.team;
+    if (sbGameFinishedForTeam(team, espnGameData)) return 0;
+    const origProj = gcProjectedPoints(playerId, dict);
+    if (origProj == null) return 0;
+    // A player ruled out has nothing left to give, whatever he was
+    // projected for this morning.
+    if (sbCountAsInactive(p, espnGameData)) return 0;
+    const started = sbGameStartedForTeam(team, espnGameData);
+    if (!started) return Math.max(0, origProj);
+    const live = gcScoreStats(playerId, (window.__gcStatsMap || {})[playerId], dict) || 0;
+    const elapsed = sbGameElapsedFraction(team, espnGameData);
+    const liveProj = sbEstimateLiveProjection(live, origProj, elapsed, started, false,
+      { position: p.position, team, espnGameData });
+    const finalProj = (liveProj == null) ? origProj : liveProj;
+    return Math.max(0, finalProj - live);
   }
-  function sbRootingWinsText(rawPerPoint) {
-    const w = sbRootingWins(rawPerPoint);
+
+  // The weighted per-point slope, summed over his matchups, times what he
+  // has left to score. Split out so the Weekly Sweats board can pass the
+  // league list it has already filtered rather than rebuilding it.
+  function sbWinsAtStakeFrom(levLeagues, weights, remaining) {
+    const perPoint = (levLeagues || []).reduce((sum, l) =>
+      sum + l.perPoint * ((weights && weights[l.name] != null) ? weights[l.name] : 1), 0);
+    return perPoint * (Number(remaining) || 0) / 100;
+  }
+
+  function sbWinsAtStake(playerId, opts) {
+    const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(playerId, opts) : null;
+    if (!lev || !lev.leagues.length) return 0;
+    const weights = (typeof sbLeagueWeights === 'function')
+      ? sbLeagueWeights(lev.leagues.map(l => l.name)) : {};
+    return sbWinsAtStakeFrom(lev.leagues, weights, sbRemainingPoints(playerId));
+  }
+
+  function sbWinsAtStakeText(wins) {
+    const w = Number(wins) || 0;
     if (Math.abs(w) < 0.005) return '0.00';
     return (w > 0 ? '+' : '\u2212') + Math.abs(w).toFixed(2);
   }
-  window.sbRootingWins = sbRootingWins;
-  window.sbRootingWinsText = sbRootingWinsText;
-  window.sbRootingBand = sbRootingBand;
+
+  // The sentence under the number, in the same unit.
+  function sbRootingMeaning(wins, remaining) {
+    const w = Number(wins) || 0;
+    const rem = Number(remaining) || 0;
+    if (rem <= 0) return 'His game is done \u2014 nothing left riding on him.';
+    if (Math.abs(w) < 0.005) return 'Nothing riding on him: the matchups he is in are already decided.';
+    const dir = w > 0 ? 'win' : 'lose';
+    return `He has about ${rem.toFixed(1)} points left to score. All of them `
+      + `would move you roughly ${Math.abs(w).toFixed(2)} of a matchup `
+      + `${dir === 'win' ? 'toward' : 'away from'} a win, added up across your leagues.`;
+  }
+
+  window.sbRemainingPoints = sbRemainingPoints;
+  window.sbWinsAtStake = sbWinsAtStake;
+  window.sbWinsAtStakeFrom = sbWinsAtStakeFrom;
+  window.sbWinsAtStakeText = sbWinsAtStakeText;
   window.sbRootingMeaning = sbRootingMeaning;
 
   // The whole derivation, in words, for the hover on a player's score:
   // every matchup he is in, what a point of his does to it, what that
   // league is weighted, and the two steps from there to the number.
-  function sbRootingScoreExplain(name, levLeagues, weights, net, score) {
+  function sbRootingScoreExplain(name, levLeagues, weights, stake, remaining) {
     const lines = [];
-    lines.push(`${name || 'This player'} — Rooting Score ${score > 0 ? '+' : ''}${score} (${sbRootingBand(score)})`);
-    lines.push(score > 0 ? 'Root FOR him.' : (score < 0 ? 'Root AGAINST him.' : 'Neutral — nothing to gain either way.'));
+    lines.push(`${name || 'This player'} — ${sbWinsAtStakeText(stake)} matchups still at stake`);
+    lines.push(stake > 0 ? 'Root FOR him.' : (stake < 0 ? 'Root AGAINST him.' : 'Neutral — nothing to gain either way.'));
     lines.push('');
     // The one line that makes the number mean something, before any of the
     // derivation that explains where it came from.
-    lines.push(sbRootingMeaning(net, score));
+    lines.push(sbRootingMeaning(stake, remaining));
     lines.push('');
     lines.push('Each matchup he is in, and what one point of his does to it:');
     levLeagues.forEach(l => {
@@ -28046,27 +28265,28 @@
   function gcInlineHtmlInner(game, dict) {
     const d = window.__gcOpenData;
     const ready = d && d.game && d.game.eventId === game.eventId;
-    const stats = ready
-      ? gcStatsHtml(game, window.__gcStatsTeam || 'away', dict, d.statsMap, d.projMap)
-      : '<div class="ld-loading">Loading box score&hellip;</div>';
-    const leagues = ready
-      ? gcLeagueBreakdownHtml(game, dict, d.statsMap, d.projMap)
-      : '<div class="ld-loading">Loading&hellip;</div>';
+    const mode = window.__gcStatsTeam || 'leagues';
+    // One section, not two. The leagues list is uncapped on purpose: it
+    // used to live in a 240px box that quietly cut you off at about eight
+    // leagues, with the rest reachable only by scrolling inside a panel
+    // most people never realised scrolled at all.
+    const section = mode === 'leagues'
+      ? `<div class="gc-inline-label">YOUR LEAGUES IN THIS GAME &middot; CLOSEST MATCHUP FIRST</div>
+         <div class="gc-inline-leagues" id="gcLeaguesBody">${ready
+           ? gcLeagueBreakdownHtml(game, dict, d.statsMap, d.projMap)
+           : '<div class="ld-loading">Loading&hellip;</div>'}</div>`
+      : `<div class="gc-inline-label">FANTASY STATS &middot; ${GC_SCORING_LABEL.toUpperCase()} &middot; TAP A PLAYER FOR MATCHUP IMPACT</div>
+         <div class="gc-inline-scroll" id="gcStatsBody">${ready
+           ? gcStatsHtml(game, mode, dict, d.statsMap, d.projMap)
+           : '<div class="ld-loading">Loading box score&hellip;</div>'}</div>`;
     return `<div class="gc-inline" data-gc-inline="${sbFieldEsc(game.eventId)}">
       <div class="gc-inline-head">
         <span class="gc-inline-title">${sbFieldEsc(game.away.abbr)} at ${sbFieldEsc(game.home.abbr)}</span>
         <span class="gc-inline-spacer"></span>
-        ${gcTeamSwitchHtml(game, window.__gcStatsTeam || 'away', 'gc-stats-team')}
+        ${gcTeamSwitchHtml(game, mode, 'gc-stats-team')}
         <span class="gc-inline-close" data-gc-close="1">&#10005;</span>
       </div>
-      <div class="gc-inline-section">
-        <div class="gc-inline-label">YOUR LEAGUES IN THIS GAME &middot; CLOSEST MATCHUP FIRST</div>
-        <div class="gc-inline-scroll" id="gcLeaguesBody">${leagues}</div>
-      </div>
-      <div class="gc-inline-section">
-        <div class="gc-inline-label">FANTASY STATS &middot; ${GC_SCORING_LABEL.toUpperCase()} &middot; TAP A PLAYER FOR MATCHUP IMPACT</div>
-        <div class="gc-inline-scroll" id="gcStatsBody">${stats}</div>
-      </div>
+      <div class="gc-inline-section">${section}</div>
     </div>`;
   }
 
@@ -28085,6 +28305,24 @@
   // match until the next reload, never a wrong one.
   const gcShortNameCache = {};
   const GC_FEED_MAX = 60;
+
+  // One key for a name however it was written: case and punctuation out,
+  // so "J.Burrow", "J. Burrow" and "Joe Burrow" collapse to comparable
+  // strings. Short and full forms still differ, which is why a player is
+  // indexed under both rather than normalised to one.
+  const gcNameKey = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+
+  // ESPN's play text and its own scoreboard do not agree on team codes --
+  // a game card reads CLE while the plays inside it say CLV. Only the
+  // codes that actually differ are listed; anything else passes through.
+  const GC_TEAM_ALIAS = {
+    CLV: 'CLE', WSH: 'WAS', ARZ: 'ARI', BLT: 'BAL',
+    HST: 'HOU', LA: 'LAR', OAK: 'LV', SD: 'LAC', SL: 'LAR',
+  };
+  const gcTeamKey = (abbr) => {
+    const a = String(abbr || '').toUpperCase();
+    return GC_TEAM_ALIAS[a] || a;
+  };
 
   async function gcFeedPlays(games, dict) {
     const live = games.filter(g => g.state === 'in');
@@ -28121,7 +28359,11 @@
           if (!p || !GC_FANTASY_POS.includes(p.position)) return;
           if (p.team !== game.away.abbr && p.team !== game.home.abbr) return;
           const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-          shortNameMap[sbEspnShortName(full)] = id;
+          // Both shapes the play text can use, under a key that ignores
+          // punctuation and case -- "J.Burrow", "J. Burrow" and "Joe
+          // Burrow" all have to find the same player.
+          shortNameMap[gcNameKey(sbEspnShortName(full))] = id;
+          shortNameMap[gcNameKey(full)] = id;
         });
       }
       // Only the tail of each game is ever shown, so there is no reason to
@@ -28129,8 +28371,23 @@
       plays.slice(-GC_FEED_MAX).forEach(play => {
         const players = [];
         sbParsePlayEvents(play.text).forEach(ev => {
-          const pid = shortNameMap[ev.name];
+          const pid = shortNameMap[gcNameKey(ev.name)];
           if (!pid) return;
+          // The fumble the parser could not finish. It is only LOST if the
+          // recovery went to the other team in this game, which is a
+          // question this side can answer: the fumbler's team is in the
+          // dictionary and both teams in the game are known. If the
+          // recovering code resolves to neither, the fumble still shows
+          // but scores nothing -- better a missing -2 than an invented one.
+          if (ev.fumbleRecoveredBy !== undefined) {
+            const own = gcTeamKey((dict[pid] || {}).team);
+            const by = gcTeamKey(ev.fumbleRecoveredBy);
+            const sides = [gcTeamKey(game.away.abbr), gcTeamKey(game.home.abbr)];
+            if (by && own && sides.includes(by) && sides.includes(own) && by !== own) {
+              ev.stats = Object.assign({}, ev.stats, { fum_lost: 1 });
+              ev.desc = 'FUMBLE lost';
+            }
+          }
           const fp = sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING) || 0;
           const existing = players.find(x => x.id === pid);
           // The raw stat line rides along, not just the house-line points:
@@ -28177,6 +28434,8 @@
     };
 
     const mineOnly = window.__gcFeedFilter === 'mine';
+
+
     const items = [];
     rows.forEach(({ game, play, players }) => {
       // Every league this play touched, and what it did to that matchup.
@@ -28200,27 +28459,38 @@
         // the box score shows, so the running total on a play matches what
         // you get when you open the game.
         const dayLine = gcStatLine((window.__gcStatsMap || {})[pl.id]);
-        const chips = impacts.map(i => {
-          // Green when the play helped you in that league, red when it
-          // cost you -- which is the sign of the swing, not of the play.
-          const cls = i.swing > 0.05 ? ' is-good' : (i.swing < -0.05 ? ' is-bad' : ' is-flat');
-          const sign = i.swing > 0 ? '+' : (i.swing < 0 ? '\u2212' : '');
-          const mag = Math.abs(i.swing);
-          const shown = mag >= 0.05 ? `${sign}${mag.toFixed(1)}%` : '0.0%';
-          return `<span class="gc-feed-lg${cls}" data-gc-league-id="${sbFieldEsc(i.leagueId)}" ` +
-            `title="${sbFieldEsc(`${i.name} — ${i.onMySide ? 'your starter' : 'started against you'}, ${i.pts.toFixed(1)} pts in this league's scoring`)}">` +
-            `${sbFieldEsc(i.name)} <b>${shown}</b></span>`;
-        }).join('');
+        // What he has in the game so far, on the same house line the play
+        // itself is priced on -- 5pt passing TD, -2 an interception, -2 a
+        // fumble lost (a fumble he recovers has no key at all, so it is
+        // worth nothing), full PPR, tight ends +0.5 a catch. The box score
+        // reads this through the same function, so the two cannot drift.
+        const dayTotal = gcScoreStats(pl.id, (window.__gcStatsMap || {})[pl.id], dict);
+        // Coloured against his PROJECTION, not against zero. Every player
+        // who has done anything at all scores above zero, so colouring by
+        // sign painted the whole feed green and told you nothing -- 13.9
+        // read as good news from a quarterback projected 18. Green now
+        // means he is beating what was expected of him.
+        const dayProj = gcProjectedPoints(pl.id, dict);
+        const totCls = (dayTotal == null || dayProj == null) ? 'is-flat'
+          : (dayTotal > dayProj + 0.05 ? 'is-pos'
+            : (dayTotal < dayProj - 0.05 ? 'is-neg' : 'is-flat'));
+        // No per-league chips. A player in a dozen leagues produced a
+        // dozen of them, which buried what the row is actually for --
+        // what happened and what it was worth. The single net figure at
+        // the foot of the play carries the same answer in one line.
         return `<div class="gc-feed-block">` +
           `<div class="gc-feed-who">` +
             (teamLogo ? `<img class="gc-feed-logo" src="${teamLogo}" alt="" loading="lazy" onerror="this.remove()">` : '') +
             `<span class="gc-feed-shot">${shot ? `<img src="${shot}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>` +
             `<span class="gc-feed-name">${sbFieldEsc(nameOf(pl.id))}</span>` +
             (onThisPlay ? `<span class="gc-feed-did">${sbFieldEsc(onThisPlay)}</span>` : '') +
-            `<span class="gc-feed-fp${fpCls}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</span>` +
+            `<span class="gc-feed-stat"><span class="gc-feed-k">Play</span>` +
+              `<b class="${fpCls.trim() || 'is-flat'}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</b></span>` +
+            `<span class="gc-feed-stat"><span class="gc-feed-k">Total</span>` +
+              `<b class="${totCls}">${dayTotal != null ? dayTotal.toFixed(1) : '&mdash;'}</b></span>` +
           `</div>` +
-          (dayLine ? `<div class="gc-feed-day">${sbFieldEsc(dayLine)}</div>` : '') +
-          (chips ? `<div class="gc-feed-lgs">${chips}</div>`
+          (dayLine ? `<div class="gc-feed-day"><span class="gc-feed-day-label">ON THE DAY</span>${sbFieldEsc(dayLine)}</div>` : '') +
+          (impacts.length ? ''
                  : '<div class="gc-feed-nostake">no stake in any of your leagues</div>') +
         `</div>`;
       });
@@ -28306,7 +28576,7 @@
     const open = sorted.find(g => g.eventId === window.__gcOpenEventId);
     if (open) {
       window.__gcOpenData = { game: open, dict, statsMap, projMap };
-      if (!window.__gcStatsTeam) window.__gcStatsTeam = 'away';
+      if (!window.__gcStatsTeam) window.__gcStatsTeam = 'leagues';
       gcRefreshInlineBodies();
     } else {
       window.__gcOpenData = null;
@@ -28342,12 +28612,18 @@
 
   // Redraw just the two bodies inside an opened game, so changing the team
   // switch or expanding a player never touches the grid or the feed.
+  // Only one of the two bodies is in the document at a time now, so each
+  // write is guarded by whether its element is actually there rather than
+  // by which mode we think is up.
   function gcRefreshInlineBodies() {
     const cur = window.__gcOpenData;
     if (!cur) return;
-    gcKeepScroll('gcStatsBody', (el) => {
-      el.innerHTML = gcStatsHtml(cur.game, window.__gcStatsTeam || 'away', cur.dict, cur.statsMap, cur.projMap);
-    });
+    const mode = window.__gcStatsTeam || 'leagues';
+    if (mode !== 'leagues') {
+      gcKeepScroll('gcStatsBody', (el) => {
+        el.innerHTML = gcStatsHtml(cur.game, mode, cur.dict, cur.statsMap, cur.projMap);
+      });
+    }
     gcKeepScroll('gcLeaguesBody', (el) => {
       el.innerHTML = gcLeagueBreakdownHtml(cur.game, cur.dict, cur.statsMap, cur.projMap);
     });
@@ -28365,6 +28641,19 @@
     const body = document.getElementById('gcStatsBody');
     if (!cur || !body) return;
     body.innerHTML = gcStatsHtml(cur.game, window.__gcStatsTeam || 'away', cur.dict, cur.statsMap, cur.projMap);
+  }
+
+  // Swap the whole open panel in place -- used when the segmented switch
+  // changes which section the panel is showing. The card above it and the
+  // rest of the grid are untouched, so this stays the cheap local redraw
+  // opening a game already is.
+  function gcRedrawInlinePanel() {
+    const cur = window.__gcOpenData;
+    if (!cur) return;
+    const grid = document.getElementById('gcGrid');
+    const existing = grid && grid.querySelector('.gc-inline');
+    if (!existing) return;
+    existing.outerHTML = gcInlineHtml(cur.game, cur.dict);
   }
 
   (function initGcClicks() {
@@ -28392,7 +28681,7 @@
       window.__gcOpenData = open
         ? { game: open, dict: cache.dict, statsMap: cache.statsMap, projMap: cache.projMap }
         : null;
-      if (open) window.__gcStatsTeam = 'away';
+      if (open) window.__gcStatsTeam = 'leagues';
 
       // Insert or remove just the panel. Redrawing the whole grid to open
       // one game means thirteen cards and twenty-six team logos thrown
@@ -28422,8 +28711,10 @@
         if (statsBtn) {
           window.__gcStatsTeam = statsBtn.dataset.gcStatsTeam;
           window.__gcExpandedPlayer = null;
-          statsBtn.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === statsBtn));
-          gcRefreshStatsBody();
+          // The switch now swaps which section is in the panel at all, not
+          // just which team the one section is showing, so redraw the
+          // panel rather than writing into a body that may not be there.
+          gcRedrawInlinePanel();
           return;
         }
         const lgRow = e.target.closest('.gc-lg-row');
@@ -28444,9 +28735,6 @@
     // A game tag in the feed opens that game's panel on the left.
     if (feed) {
       feed.addEventListener('click', (e) => {
-        // A league chip goes to that matchup; the game tag opens the game.
-        const lg = e.target.closest('.gc-feed-lg[data-gc-league-id]');
-        if (lg && typeof goToLeagueMatchup === 'function') { goToLeagueMatchup(lg.dataset.gcLeagueId); return; }
         const tag = e.target.closest('[data-gc-open]');
         if (tag) openGame(tag.dataset.gcOpen);
       });
