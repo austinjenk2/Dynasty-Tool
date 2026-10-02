@@ -1655,6 +1655,10 @@
     color: var(--faint); margin-right: 6px;
   }
   .gc-feed-nostake { font-size: 10px; color: var(--faint); margin-left: 28px; }
+  /* The Rooting Score, so the feed answers "do I care about this guy"
+     without opening the game. Sits after the play's points because the
+     points are what the row is reporting; the score is why it matters. */
+  .gc-feed-root { font-size: 10px; font-weight: 800; letter-spacing: 0.2px; }
   .gc-feed-net { margin-top: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px; }
   .gc-feed-net.is-pos { color: var(--green); }
   .gc-feed-net.is-neg { color: var(--red); }
@@ -26928,6 +26932,28 @@
     const YARDS_PHRASE = '(?:-?\\d+ yards?|no gain|a loss of \\d+ yards?)';
     const N = SB_PLAYER_NAME_RE;
 
+    // An interception, read in two steps and checked before anything else.
+    // The old single pattern wanted "(NAME) pass intercepted" -- adjacent
+    // and lower case -- and real text is
+    // "A.Rodgers pass deep right intended for R.Wilson INTERCEPTED by
+    // G.Delpit", so it never matched and the passer kept his -2.
+    //
+    // Only the keyword test is case-insensitive. Putting an `i` flag on a
+    // pattern that contains [A-Z] name classes is the bug fixed two
+    // commits ago: it quietly makes every one of them match lowercase too.
+    if (/INTERCEPTED/i.test(clean)) {
+      const passer = clean.match(new RegExp(`(${N}) pass`));
+      if (passer) {
+        const out = [{ name: passer[1], desc: 'INT thrown', stats: { pass_int: 1 } }];
+        // The man it was going to, the same way an incompletion treats its
+        // target. Worth nothing on the house line, so he gets a row rather
+        // than points.
+        const tgt = clean.match(new RegExp(`intended for (${N})`));
+        if (tgt) out.push({ name: tgt[1], desc: 'targeted, picked', stats: { rec_tgt: 1 } });
+        return out;
+      }
+    }
+
     // A completion. Two players move on one play, so two events come back.
     let m = clean.match(new RegExp(
       `(${N}) pass (?:short |deep )?(?:left |right |middle )?to (${N})${SB_BALL_SPOT} for (${YARDS_PHRASE})`
@@ -26960,7 +26986,9 @@
     // so the gap list has to be reachable both on its own and after it.
     const RUN_DIR = '(?:left end|left tackle|left guard|up the middle'
       + '|right guard|right tackle|right end|left|right)';
-    const RUN_GAP = `(?:rush(?:es)?|scrambles?(?: ${RUN_DIR})?|${RUN_DIR})`;
+    // A kneel is a carry for a loss, and reads as one: "D.Watson kneels to
+    // CLV 17 for -1 yards" is a real -0.1 against a quarterback.
+    const RUN_GAP = `(?:rush(?:es)?|kneels?|scrambles?(?: ${RUN_DIR})?|${RUN_DIR})`;
     m = clean.match(new RegExp(`(${N}) ${RUN_GAP}${SB_BALL_SPOT} for (${YARDS_PHRASE})`));
     if (m) {
       const yards = yardsFromWord(m[2]);
@@ -26975,11 +27003,6 @@
     m = clean.match(new RegExp(`(${N}) sacked`));
     if (m) {
       return [{ name: m[1], desc: 'sacked', stats: {} }];
-    }
-
-    m = clean.match(new RegExp(`(${N}) pass intercepted`));
-    if (m) {
-      return [{ name: m[1], desc: 'INT thrown', stats: { pass_int: 1 } }];
     }
 
     // A fumble. Whether it was LOST is not a question this function can
@@ -28340,6 +28363,29 @@
     };
 
     const mineOnly = window.__gcFeedFilter === 'mine';
+
+    // A player's Rooting Score, worked out once per draw. sbExposureIndex
+    // is already cached for ten seconds, so one call is a map lookup plus
+    // a little per-league arithmetic -- but a quarterback is in nearly
+    // every play and this column draws sixty of them, so the same answer
+    // was being recomputed dozens of times for one render.
+    const rootCache = new Map();
+    const rootScoreHtml = (pid) => {
+      if (rootCache.has(pid)) return rootCache.get(pid);
+      let html = '';
+      const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(pid) : null;
+      if (lev && lev.leagues.length) {
+        const score = (typeof sbRootingScore === 'function') ? sbRootingScore(lev.perPoint) : 0;
+        const band = (typeof sbRootingBand === 'function') ? sbRootingBand(score) : '';
+        const cls = score > 2 ? 'ldrec-pos' : (score < -2 ? 'ldrec-neg' : '');
+        const tip = (typeof sbRootingMeaning === 'function') ? sbRootingMeaning(lev.perPoint, score) : '';
+        html = `<span class="gc-feed-root ${cls}" title="${sbFieldEsc(tip)}">`
+          + `${score > 0 ? '+' : ''}${score} ${sbFieldEsc(band)}</span>`;
+      }
+      rootCache.set(pid, html);
+      return html;
+    };
+
     const items = [];
     rows.forEach(({ game, play, players }) => {
       // Every league this play touched, and what it did to that matchup.
@@ -28374,6 +28420,7 @@
             `<span class="gc-feed-name">${sbFieldEsc(nameOf(pl.id))}</span>` +
             (onThisPlay ? `<span class="gc-feed-did">${sbFieldEsc(onThisPlay)}</span>` : '') +
             `<span class="gc-feed-fp${fpCls}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</span>` +
+            rootScoreHtml(pl.id) +
           `</div>` +
           (dayLine ? `<div class="gc-feed-day"><span class="gc-feed-day-label">ON THE DAY</span>${sbFieldEsc(dayLine)}</div>` : '') +
           (impacts.length ? ''
