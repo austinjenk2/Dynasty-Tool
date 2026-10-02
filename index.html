@@ -15527,6 +15527,36 @@
         }).catch(() => { if (note) note.hidden = true; });
       }
 
+      // The season's weeks, for the leagues you have actually traded in.
+      // Two of the share card's lines need them: what your record was the
+      // day you made the deal, and what the players in it have scored
+      // since. Both are week-by-week questions and there is no other
+      // source for either.
+      //
+      // Loaded on the same terms as past seasons above -- only while this
+      // page is the one on screen, and folded in with a repaint when it
+      // arrives rather than holding the cards back. The weeks are shared
+      // with the Record page through one cache, so on a session that has
+      // already been there this costs nothing.
+      window.__tradeWeeksByLeague = window.__tradeWeeksByLeague || {};
+      if (tradesOnScreen && !window.__tradeWeeksLoading && window.sbLoadSeasonAllWeekMatchups) {
+        const want = Array.from(new Set(entries
+          .filter(e => (e.trades || []).length && e.league && e.league.league_id)
+          .map(e => e.league.league_id)));
+        // Keyed on the key EXISTING, not on its value: a league whose weeks
+        // failed to load stores null and is not asked for again, so a
+        // league Sleeper will not answer for cannot spin this forever.
+        const missing = want.filter(id => !Object.prototype.hasOwnProperty.call(window.__tradeWeeksByLeague, id));
+        if (missing.length) {
+          window.__tradeWeeksLoading = true;
+          Promise.all(missing.map(id => window.sbLoadSeasonAllWeekMatchups(id)
+            .then(byWeek => { window.__tradeWeeksByLeague[id] = byWeek || null; })
+            .catch(() => { window.__tradeWeeksByLeague[id] = null; })))
+            .then(() => { window.__tradeWeeksLoading = false; renderRealTrades(); })
+            .catch(() => { window.__tradeWeeksLoading = false; });
+        }
+      }
+
       // Resolve every traded pick against its league's real draft before any
       // card is written, so a pick that has been used can be both NAMED by
       // the player it became and VALUED at what he is worth today. Keyed by
@@ -15603,6 +15633,90 @@
         };
       }
 
+      // ---- Where you stood, and what happened next --------------------
+      //
+      // Both of these read the same 18 weeks of real matchups, split at
+      // the week the trade was processed (Sleeper's `leg`). Before it:
+      // your record going in. From it on: what the players actually did.
+      //
+      // Only ever the current season. A trade out of a finished season is
+      // in a different Sleeper league with its own weeks, and reaching for
+      // those here would be a second round of fetching to answer a
+      // question about a season nobody is still arguing about.
+      function tradeWeeksFor(entry) {
+        if (!entry || entry.isLeftLeague || !entry.league) return null;
+        const weeks = window.__tradeWeeksByLeague[entry.league.league_id];
+        return Array.isArray(weeks) && weeks.length ? weeks : null;
+      }
+
+      function tradeLegOf(t) {
+        const leg = Number(t && t.leg);
+        return Number.isFinite(leg) && leg >= 1 && leg <= 18 ? leg : null;
+      }
+
+      // Your record through the week before the trade. A week counts only
+      // once it has been played -- a matchup where neither side has scored
+      // is a fixture, not a result, so an offseason or week-1 trade
+      // correctly comes back with nothing rather than with 0-0.
+      function tradeRecordBefore(entry, weeks, leg) {
+        if (!weeks || !leg || leg < 2) return null;
+        const rosterId = entry.roster.roster_id;
+        let wins = 0, losses = 0, ties = 0;
+        for (let w = 1; w < leg; w++) {
+          const wk = weeks[w - 1];
+          if (!wk || !wk.length) continue;
+          const mine = wk.find(m => m.roster_id === rosterId);
+          if (!mine) continue;
+          const opp = wk.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== rosterId);
+          if (!opp) continue;
+          const my = mine.points || 0, their = opp.points || 0;
+          if (my === 0 && their === 0) continue;
+          if (my > their) wins++; else if (my < their) losses++; else ties++;
+        }
+        if (!wins && !losses && !ties) return null;
+        return { wins, losses, ties, text: `${wins}-${losses}${ties ? '-' + ties : ''}` };
+      }
+
+      // What each player has actually produced in THIS league since the
+      // trade, in this league's own scoring -- these are Sleeper's own
+      // per-player points for the league, not a re-scored projection, so a
+      // tight end premium or a 5pt passing TD is already in them.
+      //
+      // Points produced, not points started: a player who went for 22 on
+      // your bench still went for 22, and whether you started him is a
+      // separate complaint from whether the trade was good.
+      function tradePointsSince(entry, weeks, leg, assets) {
+        if (!weeks || !leg || !assets.length) return null;
+        const byId = new Map();
+        let weeksCounted = 0;
+        for (let w = leg; w <= weeks.length; w++) {
+          const wk = weeks[w - 1];
+          if (!wk || !wk.length) continue;
+          let played = false;
+          wk.forEach(m => {
+            const pts = m.players_points || {};
+            assets.forEach(a => {
+              const v = Number(pts[a.id]);
+              if (!Number.isFinite(v)) return;
+              played = true;
+              byId.set(a.id, (byId.get(a.id) || 0) + v);
+            });
+          });
+          if (played) weeksCounted++;
+        }
+        if (!byId.size || !weeksCounted) return null;
+        let got = 0, gave = 0;
+        assets.forEach(a => {
+          const v = byId.get(a.id);
+          if (v == null) return;
+          if (a.side === 'got') got += v; else gave += v;
+        });
+        // Nobody has played a down since -- an offseason trade looked at
+        // in the offseason. Say nothing rather than "0.0 to 0.0".
+        if (got === 0 && gave === 0) return null;
+        return { got, gave, weeks: weeksCounted, byId };
+      }
+
       // One real player this trade moved, with everything the recap and the
       // share card need to say something about him: which way he went, what
       // he was worth then and now, and what the deal did to your exposure.
@@ -15610,15 +15724,37 @@
         const p = (dict && dict[pid]) || null;
         const now = ppValueForPlayerId(pid, dict);
         const then = hasThen ? (ppValueForPlayerIdAt(pid, dict, tradeTs) || 0) : null;
+        const age = typeof ppAgeForPlayerId === 'function' ? ppAgeForPlayerId(pid, dict) : null;
         return {
+          kind: 'player',
           id: pid,
           name: name || pid,
           pos: (p && p.position) || '',
           team: (p && p.team) || 'FA',
           side,
+          age: typeof age === 'number' && !isNaN(age) ? age : null,
           now: typeof now === 'number' && !isNaN(now) ? now : 0,
           then,
           exp: tradeExposureFor(pid, side, entry),
+        };
+      }
+
+      // A pick nobody has used yet. It has no age, no exposure and no
+      // points -- it is not anybody yet -- but it is unambiguously future
+      // capital, so it belongs in the win-now/future split and nowhere
+      // else. A pick that HAS been used is recorded as the player it
+      // became instead, by the branch that resolves it.
+      function tradePickRecord(pick, side, value, label) {
+        return {
+          kind: 'pick',
+          id: null,
+          name: label,
+          pos: '',
+          side,
+          age: null,
+          now: typeof value === 'number' && !isNaN(value) ? value : 0,
+          then: null,
+          exp: null,
         };
       }
 
@@ -15781,6 +15917,9 @@
             if (rname) playerNames.push(rname);
             cardAssets.push(tradeAssetRecord(
               resolved.playerId, side, rname || resolved.playerId, entry, dict, tradeTs, hasThen));
+          } else {
+            cardAssets.push(tradePickRecord(
+              pick, side, value, `${pick.season} ${tradeOrdinal(pick.round)}`));
           }
         });
         (t.waiver_budget || []).forEach(wb => {
@@ -15847,6 +15986,11 @@
         // who came and went in leagues that aren't counted contributes
         // nothing, and the row drops out entirely when nobody is left.
         const expRows = cardAssets.filter(a => a.exp);
+        const tradeWeeks = tradeWeeksFor(entry);
+        const tradeLeg = tradeLegOf(t);
+        const recordBefore = tradeRecordBefore(entry, tradeWeeks, tradeLeg);
+        const pointsSince = tradePointsSince(
+          entry, tradeWeeks, tradeLeg, cardAssets.filter(a => a.kind === 'player'));
         const metaLine = [
           `${entry.league.total_rosters || 12} Teams`,
           sbLeagueIsDynasty(entry.league) ? 'Dynasty' : 'Redraft',
@@ -15867,6 +16011,9 @@
           gaveHtml: gaveHtml.join(''),
           assets: cardAssets,
           expRows,
+          leg: tradeLeg,
+          recordBefore,
+          pointsSince,
         };
 
         return { payload: sharePayload, html: `<div class="trade-card" data-league="${entry.league.name}" data-date="${dateIso}" data-ts="${completedAt}" data-players="${players}"
@@ -16151,7 +16298,7 @@
   function tscShapeSection(payload) {
     const byPos = new Map();
     payload.assets.forEach(a => {
-      if (!a.pos) return;
+      if (a.kind !== 'player' || !a.pos) return;
       const signed = a.side === 'got' ? a.now : -a.now;
       byPos.set(a.pos, (byPos.get(a.pos) || 0) + signed);
     });
@@ -16173,6 +16320,98 @@
       row.appendChild(pill);
     });
     sec.appendChild(row);
+
+    // Win-now against future, on the same line, because it answers the
+    // other half of "what did this actually do". Anyone 24 or younger
+    // counts as future along with every pick still unspent; 25 and up is
+    // what you are trying to win with now. A player with no age on file
+    // sits out rather than being guessed into one camp.
+    const YOUTH_MAX_AGE = 24;
+    let future = 0, now = 0, unknown = 0;
+    payload.assets.forEach(a => {
+      const signed = a.side === 'got' ? a.now : -a.now;
+      if (a.kind === 'pick') { future += signed; return; }
+      if (a.age == null) { unknown += Math.abs(signed); return; }
+      if (a.age <= YOUTH_MAX_AGE) future += signed; else now += signed;
+    });
+    if (Math.abs(future) >= 0.005 || Math.abs(now) >= 0.005) {
+      const split = tscEl('div', 'tsc-row');
+      split.style.marginTop = '7px';
+      [['Youth & picks', future], ['Win-now', now]].forEach(([label, v]) => {
+        if (Math.abs(v) < 0.005) return;
+        const pill = tscEl('div', 'tsc-pill tsc-shape-pill');
+        pill.appendChild(tscEl('span', 'tsc-pill-name', label));
+        pill.appendChild(tscEl('span', 'tsc-shape-val ' + (v > 0 ? 'is-up' : 'is-down'), tscSigned(v)));
+        split.appendChild(pill);
+      });
+      if (unknown >= 0.005) {
+        split.appendChild(tscEl('span', 'tsc-pill-note', 'some assets have no age on file'));
+      }
+      sec.appendChild(split);
+    }
+
+    // The age swing, in plain words, under the pills. Straight averages of
+    // the players on each side -- not value-weighted, because the question
+    // here is "did I get younger", not "where is my value concentrated".
+    const avgAge = (side) => {
+      const ages = payload.assets
+        .filter(a => a.kind === 'player' && a.side === side && a.age != null)
+        .map(a => a.age);
+      return ages.length ? ages.reduce((s, x) => s + x, 0) / ages.length : null;
+    };
+    const inAge = avgAge('got'), outAge = avgAge('gave');
+    if (inAge != null && outAge != null) {
+      const swing = inAge - outAge;
+      const word = Math.abs(swing) < 0.1 ? 'the same age'
+        : (swing < 0 ? `${Math.abs(swing).toFixed(1)} years younger` : `${swing.toFixed(1)} years older`);
+      sec.appendChild(tscEl('div', 'tsc-mover',
+        `Age: you took on <b>${inAge.toFixed(1)}</b> and sent away <b>${outAge.toFixed(1)}</b> ` +
+        `— you got ${word}.`));
+    }
+    return sec;
+  }
+
+  // What the players have actually done since. The one section on the card
+  // that is not an opinion about value: these are real points, scored in
+  // this league, under this league's own scoring.
+  function tscSinceSection(payload) {
+    const ps = payload.pointsSince;
+    if (!ps) return null;
+    const sec = tscEl('div', 'tsc-section');
+    sec.appendChild(tscEl('div', 'tsc-section-head',
+      `What Happened Next · Points Scored Over ${ps.weeks} Week${ps.weeks === 1 ? '' : 's'}`));
+    const line = tscEl('div', 'tsc-aged');
+    const diff = ps.got - ps.gave;
+    const flat = Math.abs(diff) < 0.5;
+    line.appendChild(tscEl('span', 'tsc-aged-label', 'Came in'));
+    line.appendChild(tscEl('span', 'tsc-aged-val ' + (diff >= 0 ? 'is-pos' : 'is-neg'), ps.got.toFixed(1)));
+    line.appendChild(tscEl('span', 'tsc-aged-arrow', 'vs'));
+    line.appendChild(tscEl('span', 'tsc-aged-label', 'Went out'));
+    line.appendChild(tscEl('span', 'tsc-aged-val ' + (diff >= 0 ? 'is-neg' : 'is-pos'), ps.gave.toFixed(1)));
+    line.appendChild(tscEl('span', 'tsc-pill',
+      flat ? 'a wash' : tscSigned(diff, 1) + (diff > 0 ? ' your way' : ' their way')));
+    sec.appendChild(line);
+
+    // Who actually did it. Ordered by points, both sides together, so the
+    // one name carrying the whole line is obvious.
+    const scorers = payload.assets
+      .filter(a => a.kind === 'player' && ps.byId.get(a.id) != null)
+      .map(a => ({ a, pts: ps.byId.get(a.id) }))
+      .sort((x, y) => y.pts - x.pts);
+    if (scorers.length) {
+      const row = tscEl('div', 'tsc-row');
+      row.style.marginTop = '8px';
+      scorers.forEach(({ a, pts }) => {
+        const pill = tscEl('div', 'tsc-pill');
+        pill.appendChild(tscEl('span', 'tsc-pill-name', sbFieldEsc(a.name)));
+        pill.appendChild(tscEl('span', 'tsc-pill-to ' + (a.side === 'got' ? 'is-up' : 'is-down'), pts.toFixed(1)));
+        pill.appendChild(tscEl('span', 'tsc-pill-frac', a.side === 'got' ? 'for you' : 'for them'));
+        row.appendChild(pill);
+      });
+      sec.appendChild(row);
+    }
+    sec.appendChild(tscEl('div', 'tsc-mover',
+      'Points he produced, started or not, in this league’s scoring.'));
     return sec;
   }
 
@@ -16253,7 +16492,18 @@
       (payload.others.length ? ' · ' + sbFieldEsc(payload.others.join(', ')) : '') +
       ' · ' + sbFieldEsc(payload.dateLabel);
     left.appendChild(tscEl('div', 'tsc-sub', withLine));
-    left.appendChild(tscEl('div', 'tsc-meta', sbFieldEsc(payload.metaLine)));
+    // Where you stood when you pulled the trigger. A trade read back in
+    // February is a different story from the same trade read as the move
+    // of a 2-4 team in October, and the record is the cheapest way to say
+    // which one it was.
+    // A trade with no week on it says nothing rather than guessing one,
+    // and a trade made before a game had been played says the week without
+    // inventing a 0-0 record to go with it.
+    const standing = payload.recordBefore
+      ? `Week ${payload.leg} · you were ${payload.recordBefore.text} going in`
+      : (payload.leg ? `Week ${payload.leg}` : '');
+    left.appendChild(tscEl('div', 'tsc-meta',
+      sbFieldEsc(payload.metaLine) + (standing ? ' · ' + sbFieldEsc(standing) : '')));
     top.appendChild(left);
     if (payload.showValue) top.appendChild(tscVerdict(payload));
     card.appendChild(top);
@@ -16274,7 +16524,8 @@
     sides.appendChild(cols);
     card.appendChild(sides);
 
-    [tscAgedSection(payload), tscExposureSection(payload), tscShapeSection(payload)]
+    [tscAgedSection(payload), tscSinceSection(payload),
+     tscExposureSection(payload), tscShapeSection(payload)]
       .forEach(sec => { if (sec) card.appendChild(sec); });
 
     const foot = tscEl('div', 'tsc-foot');
@@ -21601,6 +21852,11 @@
       window.__sleeperSeasonMatchupsCache[leagueId] = { byWeek, at: Date.now() };
       return byWeek;
     }
+    // Trade History wants the same 18 weeks, to say what your record was
+    // the day a trade was made and what the players in it have actually
+    // scored since. Same cache, so asking for it there costs nothing if
+    // the Record page has already pulled it.
+    window.sbLoadSeasonAllWeekMatchups = loadSeasonAllWeekMatchups;
 
     function ldrecWeekRow(weekMatchups, rosterId) {
       if (!weekMatchups || !weekMatchups.length) return null;
