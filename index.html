@@ -1654,17 +1654,7 @@
     font-size: 8.5px; font-weight: 800; letter-spacing: 0.5px;
     color: var(--faint); margin-right: 6px;
   }
-  .gc-feed-lgs { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 0 28px; }
   .gc-feed-nostake { font-size: 10px; color: var(--faint); margin-left: 28px; }
-  .gc-feed-lg {
-    font-size: 10px; font-weight: 700; border-radius: 4px; padding: 1px 6px;
-    border: 1px solid var(--border); color: var(--muted); cursor: pointer;
-    font-variant-numeric: tabular-nums;
-  }
-  .gc-feed-lg b { font-weight: 800; }
-  .gc-feed-lg.is-good { color: var(--green); border-color: var(--green); background: var(--green-bg); }
-  .gc-feed-lg.is-bad { color: var(--red); border-color: var(--red); background: var(--red-bg); }
-  .gc-feed-lg.is-flat { color: var(--faint); }
   .gc-feed-net { margin-top: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px; }
   .gc-feed-net.is-pos { color: var(--green); }
   .gc-feed-net.is-neg { color: var(--red); }
@@ -26885,9 +26875,23 @@
   // the NFL-style text and "Joe Burrow" in its own. Matching only the
   // first silently dropped every play on any game served the other way,
   // so both shapes are accepted and the lookup normalises them.
-  const SB_NAME_ABBR = "[A-Z][\\w'-]*\\.\\s?[A-Z][\\w'-]+";
-  const SB_NAME_FULL = "[A-Z][\\w'-]+ [A-Z][\\w'-]+";
+  // The apostrophe class covers both the typewriter and the curly one --
+  // Ja'Marr and Ja’Marr are the same player and only one of them was
+  // matching.
+  const SB_NAME_ABBR = "[A-Z][\\w'’-]*\\.\\s?[A-Z][\\w'’-]+";
+  const SB_NAME_FULL = "[A-Z][\\w'’-]+ [A-Z][\\w'’-]+";
   const SB_PLAYER_NAME_RE = `(?:${SB_NAME_ABBR}|${SB_NAME_FULL})`;
+
+  // Where the ball ended up, written between the player and the yardage:
+  // "to G.Bernard TO CLV 39 for 6 yards", "to D.Metcalf RAN OB AT CLV 12
+  // for 27 yards", "J.Mixon right tackle TO CIN 35 for 3 yards". Every
+  // completion and most carries in a real feed carry one, and requiring
+  // the yardage to follow the name directly is why none of them matched.
+  //
+  // Stops at a comma so it cannot run past ", TOUCHDOWN" into a later
+  // clause, and is non-greedy so it takes the first "for N yards" rather
+  // than one in a trailing "was injured during the play" sentence.
+  const SB_BALL_SPOT = '(?: [^,]*?)?';
 
   // Pulls a fantasy-relevant stat line out of one ESPN play-by-play text
   // description. ESPN's play text is free-form English, not structured
@@ -26926,7 +26930,7 @@
 
     // A completion. Two players move on one play, so two events come back.
     let m = clean.match(new RegExp(
-      `(${N}) pass (?:short |deep )?(?:left |right |middle )?to (${N}) for (${YARDS_PHRASE})`
+      `(${N}) pass (?:short |deep )?(?:left |right |middle )?to (${N})${SB_BALL_SPOT} for (${YARDS_PHRASE})`
     ));
     if (m) {
       const yards = yardsFromWord(m[3]);
@@ -26957,7 +26961,7 @@
     const RUN_DIR = '(?:left end|left tackle|left guard|up the middle'
       + '|right guard|right tackle|right end|left|right)';
     const RUN_GAP = `(?:rush(?:es)?|scrambles?(?: ${RUN_DIR})?|${RUN_DIR})`;
-    m = clean.match(new RegExp(`(${N}) ${RUN_GAP} for (${YARDS_PHRASE})`));
+    m = clean.match(new RegExp(`(${N}) ${RUN_GAP}${SB_BALL_SPOT} for (${YARDS_PHRASE})`));
     if (m) {
       const yards = yardsFromWord(m[2]);
       const tag = is2pt ? ', 2PT' : (isTd ? ', TD' : '');
@@ -26976,6 +26980,21 @@
     m = clean.match(new RegExp(`(${N}) pass intercepted`));
     if (m) {
       return [{ name: m[1], desc: 'INT thrown', stats: { pass_int: 1 } }];
+    }
+
+    // A fumble. Whether it was LOST is not a question this function can
+    // answer: the text names the recovering team, but knowing whether that
+    // is the fumbler's own team needs his team, which only the caller has.
+    // So the recovering team rides out on the event and gcFeedPlays
+    // decides -- and declines to decide when it cannot, because a guessed
+    // fum_lost is a real -2 on somebody's score.
+    m = clean.match(new RegExp(`(${N}) FUMBLES`));
+    if (m) {
+      const rec = clean.match(/RECOVERED by ([A-Z]{2,3})-/);
+      return [{
+        name: m[1], desc: 'fumble', stats: {},
+        fumbleRecoveredBy: rec ? rec[1] : null,
+      }];
     }
 
     return [];
@@ -28199,6 +28218,18 @@
   // indexed under both rather than normalised to one.
   const gcNameKey = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
 
+  // ESPN's play text and its own scoreboard do not agree on team codes --
+  // a game card reads CLE while the plays inside it say CLV. Only the
+  // codes that actually differ are listed; anything else passes through.
+  const GC_TEAM_ALIAS = {
+    CLV: 'CLE', WSH: 'WAS', ARZ: 'ARI', BLT: 'BAL',
+    HST: 'HOU', LA: 'LAR', OAK: 'LV', SD: 'LAC', SL: 'LAR',
+  };
+  const gcTeamKey = (abbr) => {
+    const a = String(abbr || '').toUpperCase();
+    return GC_TEAM_ALIAS[a] || a;
+  };
+
   async function gcFeedPlays(games, dict) {
     const live = games.filter(g => g.state === 'in');
     // Nothing live: show the most recent finished games instead of an
@@ -28248,6 +28279,21 @@
         sbParsePlayEvents(play.text).forEach(ev => {
           const pid = shortNameMap[gcNameKey(ev.name)];
           if (!pid) return;
+          // The fumble the parser could not finish. It is only LOST if the
+          // recovery went to the other team in this game, which is a
+          // question this side can answer: the fumbler's team is in the
+          // dictionary and both teams in the game are known. If the
+          // recovering code resolves to neither, the fumble still shows
+          // but scores nothing -- better a missing -2 than an invented one.
+          if (ev.fumbleRecoveredBy !== undefined) {
+            const own = gcTeamKey((dict[pid] || {}).team);
+            const by = gcTeamKey(ev.fumbleRecoveredBy);
+            const sides = [gcTeamKey(game.away.abbr), gcTeamKey(game.home.abbr)];
+            if (by && own && sides.includes(by) && sides.includes(own) && by !== own) {
+              ev.stats = Object.assign({}, ev.stats, { fum_lost: 1 });
+              ev.desc = 'FUMBLE lost';
+            }
+          }
           const fp = sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING) || 0;
           const existing = players.find(x => x.id === pid);
           // The raw stat line rides along, not just the house-line points:
@@ -28317,17 +28363,10 @@
         // the box score shows, so the running total on a play matches what
         // you get when you open the game.
         const dayLine = gcStatLine((window.__gcStatsMap || {})[pl.id]);
-        const chips = impacts.map(i => {
-          // Green when the play helped you in that league, red when it
-          // cost you -- which is the sign of the swing, not of the play.
-          const cls = i.swing > 0.05 ? ' is-good' : (i.swing < -0.05 ? ' is-bad' : ' is-flat');
-          const sign = i.swing > 0 ? '+' : (i.swing < 0 ? '\u2212' : '');
-          const mag = Math.abs(i.swing);
-          const shown = mag >= 0.05 ? `${sign}${mag.toFixed(1)}%` : '0.0%';
-          return `<span class="gc-feed-lg${cls}" data-gc-league-id="${sbFieldEsc(i.leagueId)}" ` +
-            `title="${sbFieldEsc(`${i.name} — ${i.onMySide ? 'your starter' : 'started against you'}, ${i.pts.toFixed(1)} pts in this league's scoring`)}">` +
-            `${sbFieldEsc(i.name)} <b>${shown}</b></span>`;
-        }).join('');
+        // No per-league chips. A player in a dozen leagues produced a
+        // dozen of them, which buried what the row is actually for --
+        // what happened and what it was worth. The single net figure at
+        // the foot of the play carries the same answer in one line.
         return `<div class="gc-feed-block">` +
           `<div class="gc-feed-who">` +
             (teamLogo ? `<img class="gc-feed-logo" src="${teamLogo}" alt="" loading="lazy" onerror="this.remove()">` : '') +
@@ -28337,7 +28376,7 @@
             `<span class="gc-feed-fp${fpCls}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</span>` +
           `</div>` +
           (dayLine ? `<div class="gc-feed-day"><span class="gc-feed-day-label">ON THE DAY</span>${sbFieldEsc(dayLine)}</div>` : '') +
-          (chips ? `<div class="gc-feed-lgs">${chips}</div>`
+          (impacts.length ? ''
                  : '<div class="gc-feed-nostake">no stake in any of your leagues</div>') +
         `</div>`;
       });
@@ -28582,9 +28621,6 @@
     // A game tag in the feed opens that game's panel on the left.
     if (feed) {
       feed.addEventListener('click', (e) => {
-        // A league chip goes to that matchup; the game tag opens the game.
-        const lg = e.target.closest('.gc-feed-lg[data-gc-league-id]');
-        if (lg && typeof goToLeagueMatchup === 'function') { goToLeagueMatchup(lg.dataset.gcLeagueId); return; }
         const tag = e.target.closest('[data-gc-open]');
         if (tag) openGame(tag.dataset.gcOpen);
       });
