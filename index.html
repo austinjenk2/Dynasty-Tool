@@ -13550,11 +13550,13 @@
     // next to his name reads as "irrelevant" rather than "done". Show what
     // he actually scored instead.
     if (m.settled && m.scored != null) return `${Number(m.scored).toFixed(1)} final`;
-    // A missing projection zeroes the stake for a reason that has nothing
-    // to do with his game. Printing a confident 0.00 there states something
-    // false; fall back to the league count, which is still true.
-    if (mode === 'score' && m.noProj && !m.settled && (m.forCount || m.againstCount)) {
-      return `${m.forCount} for \u00b7 ${m.againstCount} vs`;
+    // A player who is out can swing nothing, so the zero is honest -- but
+    // sbWinsAtStakeText drops the sign under 0.005, which left the one fact
+    // still worth knowing (whose lineup he is in) carried by colour alone.
+    // Sign it here rather than there: every other caller of that formatter
+    // wants the unsigned zero.
+    if (mode === 'score' && m.noProj && !m.settled) {
+      return m.lean > 0 ? '+0.00' : (m.lean < 0 ? '\u22120.00' : '0.00');
     }
     if (mode === 'score') return sbWinsAtStakeText(m.delta);
     if (mode === 'swing') return `${m.delta > 0 ? '+' : '\u2212'}${Math.abs(m.delta).toFixed(2)}%`;
