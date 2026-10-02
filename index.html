@@ -858,6 +858,11 @@
     background: var(--surface); color: var(--muted);
   }
   .gc-team-switch button.active { background: var(--navy); color: #fff; }
+  /* The default view, and about as wide as the two team buttons together
+     so it reads as the main thing rather than a third tab. */
+  .gc-team-switch button.gc-switch-leagues {
+    padding: 4px 16px; border-right: 1px solid var(--border);
+  }
 
   .gc-stat-row {
     display: flex; align-items: center; gap: 10px;
@@ -871,6 +876,9 @@
   .gc-stat-pos { font-size: 9.5px; font-weight: 800; color: var(--faint); margin-left: 4px; }
   .gc-stat-line { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .gc-stat-root { font-size: 10.5px; font-weight: 700; margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+  /* The league count rides behind the score as context, not as the number
+     you read first -- which is the mistake the old counts-only row made. */
+  .gc-stat-root-n { color: var(--faint); font-weight: 600; margin-left: 6px; }
   .gc-stat-nums { flex-shrink: 0; text-align: right; min-width: 62px; }
   .gc-stat-pts { font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 700; color: var(--ink); line-height: 1.1; }
   .gc-stat-proj { font-size: 9.5px; font-weight: 700; color: var(--faint); }
@@ -914,7 +922,13 @@
   .gc-lg-row[data-gc-league-id]:not([data-gc-league-id=""]):hover { background: var(--bg); }
   .gc-lg-name {
     font-size: 10.5px; font-weight: 800; color: var(--muted);
-    flex: 0 0 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    /* 78px was sized for the old panel, where this list shared the column
+       with the box score and most league names clipped to "Dynasty Lea...".
+       The list has the panel to itself now, so the name gets enough room
+       to actually identify the league; it still shrinks before the
+       starters do, and still clips rather than wrapping the row. */
+    flex: 0 1 180px; min-width: 60px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   /* The whole point of this row is that it is one line -- that is why the
      names are stripped to surnames in the first place. Clipping rather than
@@ -1592,6 +1606,9 @@
   .gc-inline-section { margin-top: 10px; }
   .gc-inline-label { font-size: 9px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 6px; }
   .gc-inline-scroll { max-height: 240px; overflow-y: auto; }
+  /* No cap: every league you have a stake in is listed. In a 240px box
+     this list silently ended at about eight, which is the bug it fixes. */
+  .gc-inline-leagues { max-height: none; overflow: visible; }
 
   .gc-feed-col { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; position: sticky; top: 12px; }
   .gc-feed { max-height: calc(100vh - 200px); overflow-y: auto; margin-top: 8px; }
@@ -1631,6 +1648,12 @@
   /* His day so far, not just this play -- four catches for 52 reads very
      differently from the 7-yard catch that got him there. */
   .gc-feed-day { font-size: 10.5px; color: var(--faint); margin: 1px 0 0 28px; }
+  /* Says which line this is: the play above is what just happened, this
+     is his game to this point. Without the label the two read as one. */
+  .gc-feed-day-label {
+    font-size: 8.5px; font-weight: 800; letter-spacing: 0.5px;
+    color: var(--faint); margin-right: 6px;
+  }
   .gc-feed-lgs { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 0 28px; }
   .gc-feed-nostake { font-size: 10px; color: var(--faint); margin-left: 28px; }
   .gc-feed-lg {
@@ -26819,9 +26842,20 @@
         ...((data.drives && data.drives.previous) || []),
         ...(data.drives && data.drives.current ? [data.drives.current] : []),
       ];
+      // A live game's in-progress drive is served as drives.current AND as
+      // the last entry of drives.previous, so every play on it arrived
+      // here twice and the feed showed each one twice. Keyed on ESPN's own
+      // play id, with the sequence and text as the fallback for a feed
+      // that omits it.
+      const seenPlays = new Set();
       driveGroups.forEach(drive => {
         (drive.plays || []).forEach(play => {
           if (!play || !play.text) return;
+          const key = play.id != null
+            ? `id:${play.id}`
+            : `sq:${play.sequenceNumber || ''}|${play.text}`;
+          if (seenPlays.has(key)) return;
+          seenPlays.add(key);
           plays.push({
             text: play.text,
             wallclock: play.wallclock || null,
@@ -26847,48 +26881,99 @@
     }
   }
 
-  const SB_PLAYER_NAME_RE = "[A-Z][\\w'-]*\\.[A-Z][\\w'-]*";
+  // ESPN writes a player two ways depending on the feed: "J.Burrow" in
+  // the NFL-style text and "Joe Burrow" in its own. Matching only the
+  // first silently dropped every play on any game served the other way,
+  // so both shapes are accepted and the lookup normalises them.
+  const SB_NAME_ABBR = "[A-Z][\\w'-]*\\.\\s?[A-Z][\\w'-]+";
+  const SB_NAME_FULL = "[A-Z][\\w'-]+ [A-Z][\\w'-]+";
+  const SB_PLAYER_NAME_RE = `(?:${SB_NAME_ABBR}|${SB_NAME_FULL})`;
 
   // Pulls a fantasy-relevant stat line out of one ESPN play-by-play text
   // description. ESPN's play text is free-form English, not structured
   // data -- these patterns cover the plays that actually move fantasy
-  // scores (completions, rushes, passing/rushing TDs, interceptions).
-  // Anything else (punts, kneels, penalties, incomplete passes) is
-  // intentionally left unmatched rather than guessed at. Not anchored to
-  // the start of the string -- ESPN often prefixes the actual play with a
-  // formation/personnel note in parens ("(Shotgun) J.Burrow pass...",
-  // "(No Huddle, Shotgun) ..."), which an anchored `^` match would never
-  // get past, silently matching nothing on a large share of real plays.
+  // scores. Anything else (punts, kneels, penalties) is intentionally
+  // left unmatched rather than guessed at.
+  //
+  // Deliberately NOT case-insensitive. The `i` flag these used to carry
+  // made every `[A-Z]` in a name pattern match lowercase as well, so a
+  // name class matched any word at all and the patterns leaned entirely
+  // on their keywords to stay honest. ESPN's verbs are lowercase, so the
+  // keywords are written that way and the capitals mean capitals again.
+  //
+  // Fumbles are left out on purpose: the text says a ball came loose and
+  // who recovered it, but not which side that recovery was for, and a
+  // guessed fum_lost is a real -2 on a player's score.
   function sbParsePlayEvents(text) {
-    const isTd = /touchdown/i.test(text);
-    const yardsFromWord = (raw) => {
-      if (/no gain/i.test(raw)) return 0;
-      if (/loss of/i.test(raw)) return -(Number(raw.replace(/\D/g, '')) || 0);
-      return Number(raw.replace(/[^\d.-]/g, '')) || 0;
+    const raw = String(text || '');
+    // Tacklers, formations and penalty notes all arrive in parentheses --
+    // "(Shotgun)", "(T.Watt)". A defender's name in there is not the name
+    // any of these patterns wants, and leaving it in is how a tackler ends
+    // up credited with the carry he just stopped.
+    const clean = raw.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+    const isTd = /touchdown/i.test(clean);
+    const is2pt = /two-point conversion/i.test(raw) && /succeeds|is good|is complete/i.test(raw);
+    const yardsFromWord = (s) => {
+      if (/no gain/i.test(s)) return 0;
+      if (/loss of/i.test(s)) return -(Number(s.replace(/\D/g, '')) || 0);
+      return Number(s.replace(/[^\d.-]/g, '')) || 0;
     };
     // "yards"/"yard" only actually appears in ESPN's text alongside a real
     // number or "a loss of N" -- a bare no-gain play is just "no gain"
     // with nothing after it, so that alternative can't require the word.
     const YARDS_PHRASE = '(?:-?\\d+ yards?|no gain|a loss of \\d+ yards?)';
+    const N = SB_PLAYER_NAME_RE;
 
-    let m = text.match(new RegExp(
-      `(${SB_PLAYER_NAME_RE}) pass (?:short|deep)?\\s*(?:left|right|middle)?\\s*to (${SB_PLAYER_NAME_RE}) for (${YARDS_PHRASE})`, 'i'
+    // A completion. Two players move on one play, so two events come back.
+    let m = clean.match(new RegExp(
+      `(${N}) pass (?:short |deep )?(?:left |right |middle )?to (${N}) for (${YARDS_PHRASE})`
     ));
     if (m) {
       const yards = yardsFromWord(m[3]);
+      const tag = is2pt ? ', 2PT' : (isTd ? ', TD' : '');
       return [
-        { name: m[2], desc: `${yards}-yd catch${isTd ? ', TD' : ''}`, stats: { rec: 1, rec_yd: yards, rec_td: isTd ? 1 : 0 } },
-        { name: m[1], desc: `${yards}-yd pass${isTd ? ', TD' : ''}`, stats: { pass_att: 1, pass_cmp: 1, pass_yd: yards, pass_td: isTd ? 1 : 0 } },
+        { name: m[2], desc: `${yards}-yd catch${tag}`,
+          stats: { rec: 1, rec_yd: yards, rec_td: isTd && !is2pt ? 1 : 0, rec_2pt: is2pt ? 1 : 0 } },
+        { name: m[1], desc: `${yards}-yd pass${tag}`,
+          stats: { pass_att: 1, pass_cmp: 1, pass_yd: yards, pass_td: isTd && !is2pt ? 1 : 0, pass_2pt: is2pt ? 1 : 0 } },
       ];
     }
 
-    m = text.match(new RegExp(`(${SB_PLAYER_NAME_RE}) rush for (${YARDS_PHRASE})`, 'i'));
+    // An incompletion. No points anywhere, but it is the other half of a
+    // quarterback's line and the feed reads as though drives skip plays
+    // without it.
+    m = clean.match(new RegExp(`(${N}) pass incomplete(?:[^.]*? to (${N}))?`));
     if (m) {
-      const yards = yardsFromWord(m[2]);
-      return [{ name: m[1], desc: `${yards}-yd rush${isTd ? ', TD' : ''}`, stats: { rush_att: 1, rush_yd: yards, rush_td: isTd ? 1 : 0 } }];
+      const out = [{ name: m[1], desc: 'incomplete', stats: { pass_att: 1 } }];
+      if (m[2]) out.push({ name: m[2], desc: 'target, no catch', stats: { rec_tgt: 1 } });
+      return out;
     }
 
-    m = text.match(new RegExp(`(${SB_PLAYER_NAME_RE}) pass intercepted`, 'i'));
+    // A carry. ESPN writes most of them by direction -- "J.Mixon right
+    // tackle for 3 yards" -- and almost never with the word "rush", which
+    // is why the old single `rush for` pattern matched so few of them.
+    // A scramble carries a direction of its own ("scrambles right end"),
+    // so the gap list has to be reachable both on its own and after it.
+    const RUN_DIR = '(?:left end|left tackle|left guard|up the middle'
+      + '|right guard|right tackle|right end|left|right)';
+    const RUN_GAP = `(?:rush(?:es)?|scrambles?(?: ${RUN_DIR})?|${RUN_DIR})`;
+    m = clean.match(new RegExp(`(${N}) ${RUN_GAP} for (${YARDS_PHRASE})`));
+    if (m) {
+      const yards = yardsFromWord(m[2]);
+      const tag = is2pt ? ', 2PT' : (isTd ? ', TD' : '');
+      return [{ name: m[1], desc: `${yards}-yd rush${tag}`,
+        stats: { rush_att: 1, rush_yd: yards, rush_td: isTd && !is2pt ? 1 : 0, rush_2pt: is2pt ? 1 : 0 } }];
+    }
+
+    // A sack costs no fantasy points on the house line -- sack yardage is
+    // not charged against passing yards -- but it belongs in the feed, so
+    // it comes back with an empty stat line and scores zero.
+    m = clean.match(new RegExp(`(${N}) sacked`));
+    if (m) {
+      return [{ name: m[1], desc: 'sacked', stats: {} }];
+    }
+
+    m = clean.match(new RegExp(`(${N}) pass intercepted`));
     if (m) {
       return [{ name: m[1], desc: 'INT thrown', stats: { pass_int: 1 } }];
     }
@@ -27027,7 +27112,7 @@
   }
 
   window.__gcOpenEventId = window.__gcOpenEventId || null;  // the game whose panel is open, if any
-  window.__gcStatsTeam = window.__gcStatsTeam || null;      // 'away' | 'home'
+  window.__gcStatsTeam = window.__gcStatsTeam || null;      // 'leagues' | 'away' | 'home'
   window.__gcExpandedPlayer = window.__gcExpandedPlayer || null;
   window.__gcOpenData = window.__gcOpenData || null;
   window.__gcFeedFilter = window.__gcFeedFilter || 'all';   // 'all' | 'mine'
@@ -27464,10 +27549,23 @@
 
     const body = rows.map(r => {
       const name = r.p.full_name || [r.p.first_name, r.p.last_name].filter(Boolean).join(' ');
-      const { forLeagues, againstLeagues } = gcRootingDelta(r.id);
+      // The Rooting Score, not a count of leagues. "rooting for 3,
+      // rooting against 2" says he is in five matchups and nothing about
+      // whether any of them can still move -- three settled blowouts and
+      // two coin flips read the same as the reverse. The score is the one
+      // the Weekly Sweats board already sorts on, so the two pages agree.
       const rootBits = [];
-      if (forLeagues.length) rootBits.push(`<span class="ldrec-pos">&#9650; rooting for ${forLeagues.length}</span>`);
-      if (againstLeagues.length) rootBits.push(`<span class="ldrec-neg">&#9660; rooting against ${againstLeagues.length}</span>`);
+      const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(r.id) : null;
+      if (lev && lev.leagues.length) {
+        const score = (typeof sbRootingScore === 'function') ? sbRootingScore(lev.perPoint) : 0;
+        const band = (typeof sbRootingBand === 'function') ? sbRootingBand(score) : '';
+        const cls = score > 2 ? 'ldrec-pos' : (score < -2 ? 'ldrec-neg' : '');
+        const tip = (typeof sbRootingMeaning === 'function')
+          ? sbRootingMeaning(lev.perPoint, score) : '';
+        rootBits.push(`<span class="${cls}" title="${sbFieldEsc(tip)}">`
+          + `${score > 0 ? '+' : ''}${score} ${sbFieldEsc(band)}`
+          + `</span><span class="gc-stat-root-n">${lev.leagues.length} league${lev.leagues.length === 1 ? '' : 's'}</span>`);
+      }
       const line = gcStatLine(r.s);
       const expanded = window.__gcExpandedPlayer === r.id;
       const poeCls = r.poe == null ? '' : (r.poe > 0 ? 'ldrec-pos' : (r.poe < 0 ? 'ldrec-neg' : ''));
@@ -27629,10 +27727,18 @@
     }).join('');
   }
 
+  // Three ways to read an opened game, and only one of them is up at a
+  // time. Your leagues is the default and the reason the panel exists --
+  // the box score is what you go looking for afterwards, so it costs a
+  // click rather than taking half the panel from the thing you opened it
+  // for. The leagues button is deliberately the width of both team
+  // buttons together: it is the one you want most of the time.
   function gcTeamSwitchHtml(game, active, attr) {
+    const mode = active || 'leagues';
     return `<span class="gc-team-switch">
-      <button type="button" class="${active === 'away' ? 'active' : ''}" data-${attr}="away">${sbFieldEsc(game.away.abbr)}</button>
-      <button type="button" class="${active === 'home' ? 'active' : ''}" data-${attr}="home">${sbFieldEsc(game.home.abbr)}</button>
+      <button type="button" class="gc-switch-leagues${mode === 'leagues' ? ' active' : ''}" data-${attr}="leagues">YOUR LEAGUES IN THIS GAME</button>
+      <button type="button" class="${mode === 'away' ? 'active' : ''}" data-${attr}="away">${sbFieldEsc(game.away.abbr)}</button>
+      <button type="button" class="${mode === 'home' ? 'active' : ''}" data-${attr}="home">${sbFieldEsc(game.home.abbr)}</button>
     </span>`;
   }
 
@@ -28046,27 +28152,28 @@
   function gcInlineHtmlInner(game, dict) {
     const d = window.__gcOpenData;
     const ready = d && d.game && d.game.eventId === game.eventId;
-    const stats = ready
-      ? gcStatsHtml(game, window.__gcStatsTeam || 'away', dict, d.statsMap, d.projMap)
-      : '<div class="ld-loading">Loading box score&hellip;</div>';
-    const leagues = ready
-      ? gcLeagueBreakdownHtml(game, dict, d.statsMap, d.projMap)
-      : '<div class="ld-loading">Loading&hellip;</div>';
+    const mode = window.__gcStatsTeam || 'leagues';
+    // One section, not two. The leagues list is uncapped on purpose: it
+    // used to live in a 240px box that quietly cut you off at about eight
+    // leagues, with the rest reachable only by scrolling inside a panel
+    // most people never realised scrolled at all.
+    const section = mode === 'leagues'
+      ? `<div class="gc-inline-label">YOUR LEAGUES IN THIS GAME &middot; CLOSEST MATCHUP FIRST</div>
+         <div class="gc-inline-leagues" id="gcLeaguesBody">${ready
+           ? gcLeagueBreakdownHtml(game, dict, d.statsMap, d.projMap)
+           : '<div class="ld-loading">Loading&hellip;</div>'}</div>`
+      : `<div class="gc-inline-label">FANTASY STATS &middot; ${GC_SCORING_LABEL.toUpperCase()} &middot; TAP A PLAYER FOR MATCHUP IMPACT</div>
+         <div class="gc-inline-scroll" id="gcStatsBody">${ready
+           ? gcStatsHtml(game, mode, dict, d.statsMap, d.projMap)
+           : '<div class="ld-loading">Loading box score&hellip;</div>'}</div>`;
     return `<div class="gc-inline" data-gc-inline="${sbFieldEsc(game.eventId)}">
       <div class="gc-inline-head">
         <span class="gc-inline-title">${sbFieldEsc(game.away.abbr)} at ${sbFieldEsc(game.home.abbr)}</span>
         <span class="gc-inline-spacer"></span>
-        ${gcTeamSwitchHtml(game, window.__gcStatsTeam || 'away', 'gc-stats-team')}
+        ${gcTeamSwitchHtml(game, mode, 'gc-stats-team')}
         <span class="gc-inline-close" data-gc-close="1">&#10005;</span>
       </div>
-      <div class="gc-inline-section">
-        <div class="gc-inline-label">YOUR LEAGUES IN THIS GAME &middot; CLOSEST MATCHUP FIRST</div>
-        <div class="gc-inline-scroll" id="gcLeaguesBody">${leagues}</div>
-      </div>
-      <div class="gc-inline-section">
-        <div class="gc-inline-label">FANTASY STATS &middot; ${GC_SCORING_LABEL.toUpperCase()} &middot; TAP A PLAYER FOR MATCHUP IMPACT</div>
-        <div class="gc-inline-scroll" id="gcStatsBody">${stats}</div>
-      </div>
+      <div class="gc-inline-section">${section}</div>
     </div>`;
   }
 
@@ -28085,6 +28192,12 @@
   // match until the next reload, never a wrong one.
   const gcShortNameCache = {};
   const GC_FEED_MAX = 60;
+
+  // One key for a name however it was written: case and punctuation out,
+  // so "J.Burrow", "J. Burrow" and "Joe Burrow" collapse to comparable
+  // strings. Short and full forms still differ, which is why a player is
+  // indexed under both rather than normalised to one.
+  const gcNameKey = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
 
   async function gcFeedPlays(games, dict) {
     const live = games.filter(g => g.state === 'in');
@@ -28121,7 +28234,11 @@
           if (!p || !GC_FANTASY_POS.includes(p.position)) return;
           if (p.team !== game.away.abbr && p.team !== game.home.abbr) return;
           const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
-          shortNameMap[sbEspnShortName(full)] = id;
+          // Both shapes the play text can use, under a key that ignores
+          // punctuation and case -- "J.Burrow", "J. Burrow" and "Joe
+          // Burrow" all have to find the same player.
+          shortNameMap[gcNameKey(sbEspnShortName(full))] = id;
+          shortNameMap[gcNameKey(full)] = id;
         });
       }
       // Only the tail of each game is ever shown, so there is no reason to
@@ -28129,7 +28246,7 @@
       plays.slice(-GC_FEED_MAX).forEach(play => {
         const players = [];
         sbParsePlayEvents(play.text).forEach(ev => {
-          const pid = shortNameMap[ev.name];
+          const pid = shortNameMap[gcNameKey(ev.name)];
           if (!pid) return;
           const fp = sbCustomScoreFor(ev.stats, GC_DEFAULT_SCORING) || 0;
           const existing = players.find(x => x.id === pid);
@@ -28219,7 +28336,7 @@
             (onThisPlay ? `<span class="gc-feed-did">${sbFieldEsc(onThisPlay)}</span>` : '') +
             `<span class="gc-feed-fp${fpCls}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</span>` +
           `</div>` +
-          (dayLine ? `<div class="gc-feed-day">${sbFieldEsc(dayLine)}</div>` : '') +
+          (dayLine ? `<div class="gc-feed-day"><span class="gc-feed-day-label">ON THE DAY</span>${sbFieldEsc(dayLine)}</div>` : '') +
           (chips ? `<div class="gc-feed-lgs">${chips}</div>`
                  : '<div class="gc-feed-nostake">no stake in any of your leagues</div>') +
         `</div>`;
@@ -28306,7 +28423,7 @@
     const open = sorted.find(g => g.eventId === window.__gcOpenEventId);
     if (open) {
       window.__gcOpenData = { game: open, dict, statsMap, projMap };
-      if (!window.__gcStatsTeam) window.__gcStatsTeam = 'away';
+      if (!window.__gcStatsTeam) window.__gcStatsTeam = 'leagues';
       gcRefreshInlineBodies();
     } else {
       window.__gcOpenData = null;
@@ -28342,12 +28459,18 @@
 
   // Redraw just the two bodies inside an opened game, so changing the team
   // switch or expanding a player never touches the grid or the feed.
+  // Only one of the two bodies is in the document at a time now, so each
+  // write is guarded by whether its element is actually there rather than
+  // by which mode we think is up.
   function gcRefreshInlineBodies() {
     const cur = window.__gcOpenData;
     if (!cur) return;
-    gcKeepScroll('gcStatsBody', (el) => {
-      el.innerHTML = gcStatsHtml(cur.game, window.__gcStatsTeam || 'away', cur.dict, cur.statsMap, cur.projMap);
-    });
+    const mode = window.__gcStatsTeam || 'leagues';
+    if (mode !== 'leagues') {
+      gcKeepScroll('gcStatsBody', (el) => {
+        el.innerHTML = gcStatsHtml(cur.game, mode, cur.dict, cur.statsMap, cur.projMap);
+      });
+    }
     gcKeepScroll('gcLeaguesBody', (el) => {
       el.innerHTML = gcLeagueBreakdownHtml(cur.game, cur.dict, cur.statsMap, cur.projMap);
     });
@@ -28365,6 +28488,19 @@
     const body = document.getElementById('gcStatsBody');
     if (!cur || !body) return;
     body.innerHTML = gcStatsHtml(cur.game, window.__gcStatsTeam || 'away', cur.dict, cur.statsMap, cur.projMap);
+  }
+
+  // Swap the whole open panel in place -- used when the segmented switch
+  // changes which section the panel is showing. The card above it and the
+  // rest of the grid are untouched, so this stays the cheap local redraw
+  // opening a game already is.
+  function gcRedrawInlinePanel() {
+    const cur = window.__gcOpenData;
+    if (!cur) return;
+    const grid = document.getElementById('gcGrid');
+    const existing = grid && grid.querySelector('.gc-inline');
+    if (!existing) return;
+    existing.outerHTML = gcInlineHtml(cur.game, cur.dict);
   }
 
   (function initGcClicks() {
@@ -28392,7 +28528,7 @@
       window.__gcOpenData = open
         ? { game: open, dict: cache.dict, statsMap: cache.statsMap, projMap: cache.projMap }
         : null;
-      if (open) window.__gcStatsTeam = 'away';
+      if (open) window.__gcStatsTeam = 'leagues';
 
       // Insert or remove just the panel. Redrawing the whole grid to open
       // one game means thirteen cards and twenty-six team logos thrown
@@ -28422,8 +28558,10 @@
         if (statsBtn) {
           window.__gcStatsTeam = statsBtn.dataset.gcStatsTeam;
           window.__gcExpandedPlayer = null;
-          statsBtn.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === statsBtn));
-          gcRefreshStatsBody();
+          // The switch now swaps which section is in the panel at all, not
+          // just which team the one section is showing, so redraw the
+          // panel rather than writing into a body that may not be there.
+          gcRedrawInlinePanel();
           return;
         }
         const lgRow = e.target.closest('.gc-lg-row');
