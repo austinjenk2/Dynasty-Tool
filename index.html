@@ -3260,8 +3260,6 @@
   }
   .league-back:hover { color: var(--ink); }
   .ld-header-icons { display: flex; gap: 6px; color: var(--faint); font-size: 14px; flex-shrink: 0; }
-  .ld-icon-photo { cursor: pointer; }
-  .ld-icon-photo:hover { color: var(--ink); }
   .ld-header-left { display: flex; align-items: center; gap: 12px; }
   .ld-avatar {
     width: 42px; height: 42px;
@@ -4453,9 +4451,29 @@
   .trade-card.trade-row-hidden { display: none; }
   .trade-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
   .trade-card-title { font-size: 13.5px; font-weight: 700; color: var(--ink); }
-  .trade-card-icons { display: flex; gap: 6px; color: var(--faint); font-size: 13px; flex-shrink: 0; }
-  .trade-icon-photo, .trade-icon-calc { cursor: pointer; }
-  .trade-icon-photo:hover, .trade-icon-calc:hover { color: var(--ink); }
+  /* Two real buttons rather than two bare emoji. The emoji camera read as
+     decoration -- nobody could tell it was the thing to press -- so these
+     say what they do, in a pill that looks pressable. The label drops away
+     on a narrow screen and the icon carries it alone. */
+  .trade-card-icons { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .trade-icon {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 9px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: var(--bg); color: var(--muted);
+    font-size: 11px; font-weight: 700; line-height: 1;
+    letter-spacing: 0.2px;
+    cursor: pointer; white-space: nowrap;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .trade-icon:hover { color: var(--ink); border-color: var(--navy); }
+  .trade-icon svg { width: 13px; height: 13px; display: block; flex-shrink: 0; }
+  .trade-icon-photo { color: var(--navy); border-color: var(--navy); }
+  .trade-icon-photo:hover { background: var(--navy); color: var(--surface); }
+  @media (max-width: 700px) {
+    .trade-icon-label { display: none; }
+    .trade-icon { padding: 5px 7px; }
+  }
   .trade-photo-menu {
     position: absolute;
     top: 36px; right: 16px;
@@ -4502,6 +4520,95 @@
     letter-spacing: 0.2px;
     color: var(--faint);
   }
+  /* ---- The shareable trade card -------------------------------------
+     Only ever built off-screen, by buildTradeShareCard, and handed
+     straight to html2canvas. It is deliberately NOT the inline card: a
+     card in a list has to stay scannable next to forty others, while
+     this one is a single image somebody opens in a text thread, so it
+     can afford to be bigger and to spell everything out. Fixed 760px
+     wide so the output is the same size whatever the window is.
+     Everything here is laid out with plain blocks, flex and inline
+     spans -- html2canvas renders no CSS grid, and a grid here came out
+     as one stacked column in the PNG. */
+  .tsc {
+    box-sizing: border-box;
+    width: 760px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px 18px;
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .tsc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+  .tsc-brand { font-size: 11px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--navy); }
+  .tsc-league { font-size: 19px; font-weight: 800; margin-top: 3px; line-height: 1.2; }
+  .tsc-sub { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .tsc-meta { font-size: 10.5px; color: var(--faint); margin-top: 3px; }
+  .tsc-verdict {
+    flex-shrink: 0; text-align: right;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 13px; background: var(--bg);
+  }
+  .tsc-verdict-label { font-size: 8.5px; font-weight: 800; letter-spacing: 0.7px; text-transform: uppercase; color: var(--faint); }
+  .tsc-verdict-val { font-size: 23px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 2px; }
+  .tsc-verdict-val.is-pos { color: var(--green); }
+  .tsc-verdict-val.is-neg { color: var(--red); }
+  .tsc-verdict-val.is-flat { color: var(--muted); }
+  .tsc-verdict-word { font-size: 10px; font-weight: 700; color: var(--muted); margin-top: 1px; }
+
+  .tsc-section { margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--border-soft); }
+  .tsc-section-head { font-size: 9.5px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--faint); margin-bottom: 9px; }
+
+  .tsc-cols { display: flex; gap: 16px; }
+  .tsc-col { flex: 1 1 0; min-width: 0; }
+  .tsc-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .tsc-col-label { font-size: 10px; font-weight: 800; letter-spacing: 0.7px; color: var(--faint); }
+  .tsc-col-total { font-size: 13px; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
+  /* The asset rows are the inline card's own markup, cloned straight in,
+     so the two never drift apart visually. */
+  .tsc-col .trade-asset-player, .tsc-col .trade-asset-pick, .tsc-col .trade-asset-faab { min-height: 54px; }
+
+  .tsc-row { display: flex; flex-wrap: wrap; gap: 7px; }
+  .tsc-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 11px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: var(--bg); font-size: 12px;
+  }
+  .tsc-top-left { flex: 1 1 auto; min-width: 0; }
+  .tsc-pill-move { display: inline-flex; align-items: center; gap: 4px; }
+  .tsc-pill-name { font-weight: 700; }
+  .tsc-pill-from { color: var(--faint); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tsc-pill-arrow { color: var(--faint); font-size: 10px; }
+  .tsc-pill-to { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tsc-pill-to.is-up { color: var(--green); }
+  .tsc-pill-to.is-down { color: var(--red); }
+  .tsc-pill-frac { color: var(--faint); font-size: 10.5px; font-weight: 600; }
+  .tsc-pill-note { color: var(--faint); font-size: 10px; font-style: italic; }
+
+  .tsc-shape-pill .tsc-pill-name { letter-spacing: 0.4px; }
+  .tsc-shape-val { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tsc-shape-val.is-up { color: var(--green); }
+  .tsc-shape-val.is-down { color: var(--red); }
+
+  .tsc-aged { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; font-size: 11.5px; }
+  .tsc-aged-label { font-size: 9px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--faint); }
+  .tsc-aged-val { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .tsc-aged-val.is-pos { color: var(--green); }
+  .tsc-aged-val.is-neg { color: var(--red); }
+  .tsc-aged-arrow { color: var(--faint); }
+  .tsc-mover { font-size: 11.5px; color: var(--muted); margin-top: 7px; }
+  .tsc-mover b { color: var(--ink); }
+
+  .tsc-foot {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    margin-top: 16px; padding-top: 11px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 10px; color: var(--faint);
+  }
+  .tsc-foot-brand { font-weight: 800; letter-spacing: 0.9px; text-transform: uppercase; color: var(--navy); }
+
   .trade-card-meta { font-size: 11px; color: var(--faint); margin-top: 4px; }
   .trade-card-with { font-size: 12px; color: var(--muted); margin-top: 4px; margin-bottom: 12px; }
   /* How a trade has aged, on its own line under the two sides. */
@@ -4527,6 +4634,37 @@
   .trade-aged-drift.is-neg { color: var(--red); border-color: var(--red); }
   .trade-aged-drift.is-flat { color: var(--faint); }
   .trade-aged-note { margin-left: auto; color: var(--faint); font-size: 10.5px; font-style: italic; }
+
+  /* Exposure recap -- what this trade did to how much of your portfolio
+     rides on each player involved. One chip per player: where you were
+     before the deal, where you are after it. The percentages are counted
+     the same way My Guys counts them (leagues rostering him over leagues
+     you're in), so the two pages never disagree. */
+  .trade-exp {
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .trade-exp-head {
+    font-size: 9px; font-weight: 800; letter-spacing: 0.6px;
+    text-transform: uppercase; color: var(--faint); margin-bottom: 7px;
+  }
+  .trade-exp-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .trade-exp-chip {
+    display: flex; align-items: center; gap: 7px;
+    padding: 5px 9px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: var(--bg);
+    font-size: 11px;
+  }
+  .trade-exp-name { font-weight: 700; color: var(--ink); }
+  .trade-exp-move { display: flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+  .trade-exp-from { color: var(--faint); font-weight: 700; }
+  .trade-exp-arrow { color: var(--faint); font-size: 10px; }
+  .trade-exp-to { font-weight: 800; }
+  .trade-exp-to.is-up { color: var(--green); }
+  .trade-exp-to.is-down { color: var(--red); }
+  .trade-exp-frac { color: var(--faint); font-size: 10px; font-weight: 600; }
+  .trade-exp-note { color: var(--faint); font-size: 10px; font-style: italic; }
   .trade-card-with b { color: var(--ink); }
   .trade-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .trade-side-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); margin-bottom: 8px; }
@@ -12107,7 +12245,7 @@
         <div class="trade-card" data-league="PURPLE PEOPLE" data-date="2026-08-29" data-ts="1787961600000" data-players="CeeDee Lamb,Rhamondre Stevenson,A.J. Brown,Breece Hall">
           <div class="trade-card-head">
             <div class="trade-card-title">PURPLE PEOPLE &middot; Aug 29, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 7h7"/><path d="M8.5 12h0M12 12h0M15.5 12h0M8.5 16.5h0M12 16.5h0M15.5 16.5h0"/></svg><span class="trade-icon-label">Trade Desk</span></span><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 5pt Pass TD &middot; Full PPR &middot; 0.75 TEP</div>
           <div class="trade-card-with">with <b>PaulPatterson</b></div>
@@ -12143,7 +12281,7 @@
         <div class="trade-card" data-league="Blockbuster Dynasty" data-date="2026-08-27" data-ts="1787788800000" data-players="Ashton Jeanty">
           <div class="trade-card-head">
             <div class="trade-card-title">Blockbuster Dynasty &middot; Aug 27, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 7h7"/><path d="M8.5 12h0M12 12h0M15.5 12h0M8.5 16.5h0M12 16.5h0M15.5 16.5h0"/></svg><span class="trade-icon-label">Trade Desk</span></span><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Tiered PPR (RB 0.5, WR 1, TE 1.5)</div>
           <div class="trade-card-with">with <b>Heerag</b></div>
@@ -12175,7 +12313,7 @@
         <div class="trade-card" data-league="Grandpa Phil" data-date="2026-08-26" data-ts="1787702400000" data-players="Jordyn Tyson,Elijah Sarratt,Dalton Schultz,Makai Lemon">
           <div class="trade-card-head">
             <div class="trade-card-title">Grandpa Phil &middot; Aug 26, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 7h7"/><path d="M8.5 12h0M12 12h0M15.5 12h0M8.5 16.5h0M12 16.5h0M15.5 16.5h0"/></svg><span class="trade-icon-label">Trade Desk</span></span><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>PaulPatterson</b></div>
@@ -12207,7 +12345,7 @@
         <div class="trade-card" data-league="Degens from Up Country" data-date="2026-08-23" data-ts="1787443200000" data-players="Matt Hibner">
           <div class="trade-card-head">
             <div class="trade-card-title">Degens from Up Country &middot; Aug 23, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 7h7"/><path d="M8.5 12h0M12 12h0M15.5 12h0M8.5 16.5h0M12 16.5h0M15.5 16.5h0"/></svg><span class="trade-icon-label">Trade Desk</span></span><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Prophet93</b></div>
@@ -12231,7 +12369,7 @@
         <div class="trade-card" data-league="Degens from Up Country" data-date="2026-08-21" data-ts="1787270400000" data-players="Stefon Diggs,Marquise Brown,Malachi Fields">
           <div class="trade-card-head">
             <div class="trade-card-title">Degens from Up Country &middot; Aug 21, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 7h7"/><path d="M8.5 12h0M12 12h0M15.5 12h0M8.5 16.5h0M12 16.5h0M15.5 16.5h0"/></svg><span class="trade-icon-label">Trade Desk</span></span><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Prophet93</b></div>
@@ -12259,7 +12397,7 @@
         <div class="trade-card" data-league="The Doctor's" data-date="2026-08-20" data-ts="1787184000000" data-players="Jordyn Tyson,KC Concepcion">
           <div class="trade-card-head">
             <div class="trade-card-title">The Doctor's &middot; Aug 20, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 7h7"/><path d="M8.5 12h0M12 12h0M15.5 12h0M8.5 16.5h0M12 16.5h0M15.5 16.5h0"/></svg><span class="trade-icon-label">Trade Desk</span></span><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 10 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>Maxminette</b></div>
@@ -12295,7 +12433,7 @@
         <div class="trade-card" data-league="Empire Entertainment" data-date="2026-07-30" data-ts="1785369600000" data-players="Chris Olave,Rome Odunze">
           <div class="trade-card-head">
             <div class="trade-card-title">Empire Entertainment &middot; Jul 30, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 7h7"/><path d="M8.5 12h0M12 12h0M15.5 12h0M8.5 16.5h0M12 16.5h0M15.5 16.5h0"/></svg><span class="trade-icon-label">Trade Desk</span></span><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; Non-TEP</div>
           <div class="trade-card-with">with <b>okNikolai</b></div>
@@ -12323,7 +12461,7 @@
         <div class="trade-card" data-league="OTTOMAN" data-date="2026-07-18" data-ts="1784332800000" data-players="Bo Nix,Kyler Murray">
           <div class="trade-card-head">
             <div class="trade-card-title">OTTOMAN &middot; Jul 18, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 7h7"/><path d="M8.5 12h0M12 12h0M15.5 12h0M8.5 16.5h0M12 16.5h0M15.5 16.5h0"/></svg><span class="trade-icon-label">Trade Desk</span></span><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>carsonfrye12</b></div>
@@ -12351,7 +12489,7 @@
         <div class="trade-card" data-league="StatChasers BestBall & Chill 5.0" data-date="2026-06-12" data-ts="1781222400000" data-players="Isaiah Likely,Jonnu Smith">
           <div class="trade-card-head">
             <div class="trade-card-title">StatChasers BestBall & Chill 5.0 &middot; Jun 12, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 7h7"/><path d="M8.5 12h0M12 12h0M15.5 12h0M8.5 16.5h0M12 16.5h0M15.5 16.5h0"/></svg><span class="trade-icon-label">Trade Desk</span></span><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 4pt Pass TD &middot; Full PPR &middot; 1.0 TEP</div>
           <div class="trade-card-with">with <b>WesB69</b></div>
@@ -12379,7 +12517,7 @@
         <div class="trade-card" data-league="Blitz Dynasty Football" data-date="2026-05-05" data-ts="1777939200000" data-players="Kyren Williams">
           <div class="trade-card-head">
             <div class="trade-card-title">Blitz Dynasty Football &middot; May 5, 2026</div>
-            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+            <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 7h7"/><path d="M8.5 12h0M12 12h0M15.5 12h0M8.5 16.5h0M12 16.5h0M15.5 16.5h0"/></svg><span class="trade-icon-label">Trade Desk</span></span><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>
           </div>
           <div class="trade-card-meta">12 Teams &middot; Start 11 &middot; Superflex &middot; 6pt Pass TD &middot; Full PPR &middot; 0.5 TEP</div>
           <div class="trade-card-with">with <b>KingProfitVII</b></div>
@@ -15152,7 +15290,7 @@
         ` data-mine="${list.some(sd => sd.isMine) ? '1' : '0'}">` +
         '<div class="trade-card-head">' +
           `<div class="trade-card-title">${sbFieldEsc(entry.league.name)} &middot; ${dateLabel}</div>` +
-          '<div class="trade-card-icons"><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>' +
+          '<div class="trade-card-icons"><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>' +
         '</div>' +
         `<div class="trade-card-meta">${entry.league.season} season &middot; ${list.length} sides` +
         (unfair != null && showValue ? ` &middot; ${Math.abs(unfair).toFixed(2)} apart` : '') + '</div>' +
@@ -15404,6 +15542,104 @@
 
       const managerLabels = new Map();
 
+      // ---- Exposure, as this trade moved it ---------------------------
+      //
+      // How much of your portfolio rides on a player is just: how many of
+      // your leagues roster him, over how many leagues you are in. Counted
+      // here exactly as My Guys counts it -- same co-managed-leagues
+      // toggle, same denominator -- so a player cannot read 17% on one
+      // page and 22% on the other.
+      //
+      // A trade's effect on that is one league's worth, in or out. Sleeper
+      // only ever hands back a CURRENT roster, so there is no "roster as
+      // of August" to diff against; what there is, is today's count plus
+      // the knowledge of which way this deal pushed. For a player you got
+      // and still hold, today's count already includes this league, so
+      // before the deal it was one lower. For one you gave away and no
+      // longer hold, it is the mirror. The two awkward cases -- a player
+      // you acquired and have since moved on from, a player you gave up
+      // and have since re-acquired -- are labelled rather than papered
+      // over, because there today's count is no longer the after.
+      const tradeExposure = (() => {
+        const includeCo = isCoManagedIncluded();
+        const counted = Object.values(window.sleeperLeagueData || {})
+          .filter(e => e.roster && (includeCo || !e.isCoOwned));
+        const counts = new Map();
+        counted.forEach(e => (e.roster.players || []).forEach(id => {
+          if (!id || id === '0') return;
+          counts.set(id, (counts.get(id) || 0) + 1);
+        }));
+        const leagueIds = new Set(counted.map(e => e.league && e.league.league_id).filter(Boolean));
+        return { total: counted.length, counts, leagueIds };
+      })();
+
+      // One player's before/after, or null when the question has no honest
+      // answer -- no leagues loaded yet, or a league that isn't part of the
+      // count at all (one you have left, or a co-managed one you've chosen
+      // to leave out). A trade in an uncounted league moved your counted
+      // exposure by exactly nothing, and saying "12% -> 12%" would be a
+      // worse answer than saying nothing.
+      function tradeExposureFor(pid, side, entry) {
+        const total = tradeExposure.total;
+        const leagueId = entry.league && entry.league.league_id;
+        if (!total || !leagueId || !tradeExposure.leagueIds.has(leagueId)) return null;
+        const cur = tradeExposure.counts.get(pid) || 0;
+        const heldHere = (entry.roster.players || []).some(id => String(id) === String(pid));
+        let before, after, note = '';
+        if (side === 'got') {
+          if (heldHere) { after = cur; before = cur - 1; }
+          else { before = cur; after = cur + 1; note = 'since moved on'; }
+        } else {
+          if (heldHere) { before = cur; after = cur - 1; note = 'since re-acquired'; }
+          else { before = cur + 1; after = cur; }
+        }
+        before = Math.max(0, Math.min(total, before));
+        after = Math.max(0, Math.min(total, after));
+        const pct = (n) => Math.round((n / total) * 100);
+        return {
+          before, after, total, note,
+          beforePct: pct(before), afterPct: pct(after),
+          dir: after > before ? 'up' : (after < before ? 'down' : 'flat'),
+        };
+      }
+
+      // One real player this trade moved, with everything the recap and the
+      // share card need to say something about him: which way he went, what
+      // he was worth then and now, and what the deal did to your exposure.
+      function tradeAssetRecord(pid, side, name, entry, dict, tradeTs, hasThen) {
+        const p = (dict && dict[pid]) || null;
+        const now = ppValueForPlayerId(pid, dict);
+        const then = hasThen ? (ppValueForPlayerIdAt(pid, dict, tradeTs) || 0) : null;
+        return {
+          id: pid,
+          name: name || pid,
+          pos: (p && p.position) || '',
+          team: (p && p.team) || 'FA',
+          side,
+          now: typeof now === 'number' && !isNaN(now) ? now : 0,
+          then,
+          exp: tradeExposureFor(pid, side, entry),
+        };
+      }
+
+      function tradeExposureRowHtml(rows) {
+        if (!rows.length) return '';
+        return '<div class="trade-exp">' +
+          '<div class="trade-exp-head">Exposure Recap</div>' +
+          '<div class="trade-exp-grid">' +
+          rows.map(r => '<div class="trade-exp-chip">' +
+            `<span class="trade-exp-name">${sbFieldEsc(r.name)}</span>` +
+            '<span class="trade-exp-move">' +
+              `<span class="trade-exp-from">${r.exp.beforePct}%</span>` +
+              '<span class="trade-exp-arrow">&rarr;</span>' +
+              `<span class="trade-exp-to is-${r.exp.dir}">${r.exp.afterPct}%</span>` +
+            '</span>' +
+            `<span class="trade-exp-frac">${r.exp.after} of ${r.exp.total}</span>` +
+            (r.exp.note ? `<span class="trade-exp-note">${r.exp.note}</span>` : '') +
+          '</div>').join('') +
+          '</div></div>';
+      }
+
       // Every player who has been through one of my trades, and how those
       // trades went. Built here rather than from the cards afterwards
       // because a pick that became a player is only known at this point.
@@ -15470,6 +15706,10 @@
         const gaveHtml = [];
         const playerNames = [];
         const cardPlayers = [];   // [{ id, side }] for the ledger below
+        // Every real player this trade moved, for the exposure recap and
+        // for the position-shape and biggest-mover lines on the share
+        // card. A pick is not in here until it has become somebody.
+        const cardAssets = [];
         const showValue = getSiteMode() === 'dynasty' && sbLeagueIsDynasty(entry.league);
         let gotValue = 0;
         let gaveValue = 0;
@@ -15489,6 +15729,7 @@
             cardPlayers.push({ id: pid, side: 'got' });
             gotValue += ppValueForPlayerId(pid, dict);
             if (hasThen) gotThen += ppValueForPlayerIdAt(pid, dict, tradeTs) || 0;
+            cardAssets.push(tradeAssetRecord(pid, 'got', asset.name, entry, dict, tradeTs, hasThen));
           }
         });
         Object.entries(t.drops || {}).forEach(([pid, rid]) => {
@@ -15499,6 +15740,7 @@
             cardPlayers.push({ id: pid, side: 'gave' });
             gaveValue += ppValueForPlayerId(pid, dict);
             if (hasThen) gaveThen += ppValueForPlayerIdAt(pid, dict, tradeTs) || 0;
+            cardAssets.push(tradeAssetRecord(pid, 'gave', asset.name, entry, dict, tradeTs, hasThen));
           }
         });
         (t.draft_picks || []).forEach(pick => {
@@ -15537,6 +15779,8 @@
           if (resolved) {
             cardPlayers.push({ id: resolved.playerId, side });
             if (rname) playerNames.push(rname);
+            cardAssets.push(tradeAssetRecord(
+              resolved.playerId, side, rname || resolved.playerId, entry, dict, tradeTs, hasThen));
           }
         });
         (t.waiver_budget || []).forEach(wb => {
@@ -15599,13 +15843,39 @@
         const dateLabel = completed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const players = playerNames.filter(Boolean).join(',');
 
-        return `<div class="trade-card" data-league="${entry.league.name}" data-date="${dateIso}" data-ts="${completedAt}" data-players="${players}"
+        // Only players whose exposure this deal actually moved. A player
+        // who came and went in leagues that aren't counted contributes
+        // nothing, and the row drops out entirely when nobody is left.
+        const expRows = cardAssets.filter(a => a.exp);
+        const metaLine = [
+          `${entry.league.total_rosters || 12} Teams`,
+          sbLeagueIsDynasty(entry.league) ? 'Dynasty' : 'Redraft',
+        ].join(' · ');
+
+        // Everything the share image needs, kept as data on the element
+        // rather than re-derived from the rendered card. The exporter would
+        // otherwise be reading percentages back out of its own HTML.
+        const sharePayload = {
+          league: entry.league.name,
+          dateLabel,
+          metaLine,
+          withName,
+          others: otherUsers.slice(1).map(u => u.display_name || u.username).filter(Boolean),
+          showValue, hasThen, tradeTs,
+          gotValue, gaveValue, gotThen, gaveThen,
+          gotHtml: gotHtml.join(''),
+          gaveHtml: gaveHtml.join(''),
+          assets: cardAssets,
+          expRows,
+        };
+
+        return { payload: sharePayload, html: `<div class="trade-card" data-league="${entry.league.name}" data-date="${dateIso}" data-ts="${completedAt}" data-players="${players}"
             data-managers="${sbFieldEsc(managerData)}" data-manager-label="${sbFieldEsc(withName)}" data-manager-names="${sbFieldEsc(managerNames.join('|'))}"
             data-has-value="${hasValue}" data-got-value="${gotValue.toFixed(4)}" data-gave-value="${gaveValue.toFixed(4)}"
             data-ratio="${sbTradeRatio(gotValue, gaveValue)}" data-score="${sbTradeScore(gotValue, gaveValue)}">
             <div class="trade-card-head">
               <div class="trade-card-title">${entry.league.name} &middot; ${dateLabel}</div>
-              <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk">&#129518;</span><span class="trade-icon trade-icon-photo" title="Export as image">&#128247;</span></div>
+              <div class="trade-card-icons"><span class="trade-icon trade-icon-calc" title="Open in Trade Desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 7h7"/><path d="M8.5 12h0M12 12h0M15.5 12h0M8.5 16.5h0M12 16.5h0M15.5 16.5h0"/></svg><span class="trade-icon-label">Trade Desk</span></span><span class="trade-icon trade-icon-photo" title="Save or copy this trade as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>
             </div>
             <div class="trade-card-meta">${entry.league.total_rosters || 12} Teams</div>
             <div class="trade-card-with">with <b>${sbFieldEsc(withName)}</b>${otherUsers.length > 1 ? ` &middot; ${sbFieldEsc(otherUsers.slice(1).map(u => u.display_name || u.username).join(', '))}` : ''}</div>
@@ -15620,13 +15890,20 @@
               </div>
             </div>
             ${showValue ? tradeAgedRowHtml(gotThen, gaveThen, gotValue, gaveValue, hasThen, tradeTs) : ''}
-          </div>`;
+            ${tradeExposureRowHtml(expRows)}
+          </div>` };
       });
 
       window.__tradePlayerLedger = playerLedger;
       tradeEntries = allEntries;
-      tradeGrid.innerHTML = cardsHtml.join('') || '<div class="exp-loading">No trades found yet.</div>';
+      tradeGrid.innerHTML = cardsHtml.map(c => c.html).join('') || '<div class="exp-loading">No trades found yet.</div>';
       tradeCards = Array.from(tradeGrid.querySelectorAll('.trade-card'));
+      // The share payload rides on the element. Cards come out of the grid
+      // in the same order they were built, and the filters only hide cards,
+      // never reorder or remove them, so index alignment holds.
+      tradeCards.forEach((el, i) => {
+        if (cardsHtml[i]) el.__deskShare = cardsHtml[i].payload;
+      });
       // Every manager you have ever traded with, offered as you type.
       const managerList = document.getElementById('tradeManagerList');
       if (managerList) {
@@ -15710,7 +15987,11 @@
   // Rasterizes `clone` (already built, not yet in the document) and either
   // copies the PNG to the clipboard or downloads it. `referenceEl` supplies
   // the real background color and real width to render at.
-  async function rasterizeAndExport(clone, referenceEl, filename, action) {
+  // `widthPx`, when given, renders at that fixed width instead of matching
+  // whatever the reference element happens to measure on screen. The
+  // shareable trade card uses it so the PNG comes out the same size from a
+  // phone as from a desktop window.
+  async function rasterizeAndExport(clone, referenceEl, filename, action, widthPx) {
     if (typeof html2canvas !== 'function') {
       // Most likely the html2canvas CDN script (loaded in <head>) didn't
       // load -- blocked by an ad/script blocker, offline, etc. Without
@@ -15735,7 +16016,7 @@
     clone.style.position = 'fixed';
     clone.style.top = '0';
     clone.style.left = '-10000px';
-    clone.style.width = referenceEl.getBoundingClientRect().width + 'px';
+    clone.style.width = (widthPx || referenceEl.getBoundingClientRect().width) + 'px';
     document.body.appendChild(clone);
 
     // Everything from here on (waiting on images, rendering with
@@ -15820,7 +16101,207 @@
     return watermark;
   }
 
+  // ---- The shareable trade card ---------------------------------------
+  //
+  // What the Share button actually produces. Not a screenshot of the row
+  // in the list: a card built for the job, because the two have opposite
+  // constraints. The inline card has to stay skimmable next to forty
+  // others, so it says as little as it can get away with. This one is a
+  // single image somebody opens cold in a group chat, with no page around
+  // it to explain anything, so it says all of it -- who the deal was with,
+  // in what league, what each side was worth the day it happened and what
+  // it is worth now, which way each player's exposure moved, what the deal
+  // did to the shape of the roster, and which asset has moved most since.
+  //
+  // Every number here comes off the payload the renderer attached to the
+  // card, not out of the rendered HTML.
+  const TSC_SHARE_WIDTH = 760;
+
+  function tscSigned(n, digits) {
+    const d = digits == null ? 2 : digits;
+    return (n >= 0 ? '+' : '') + n.toFixed(d);
+  }
+
+  function tscEl(tag, cls, html) {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (html != null) el.innerHTML = html;
+    return el;
+  }
+
+  // The headline. Today's net, in big type, with a word for which side of
+  // the deal it landed on. Under a twentieth of a base 1st is rounding,
+  // not a winner -- the same threshold the inline aged row uses.
+  function tscVerdict(payload) {
+    const net = payload.gotValue - payload.gaveValue;
+    const flat = Math.abs(net) < 0.05;
+    const cls = flat ? 'is-flat' : (net > 0 ? 'is-pos' : 'is-neg');
+    const word = flat ? 'Dead even' : (net > 0 ? 'Your way' : 'Their way');
+    const box = tscEl('div', 'tsc-verdict');
+    box.appendChild(tscEl('div', 'tsc-verdict-label', 'Net today'));
+    box.appendChild(tscEl('div', 'tsc-verdict-val ' + cls, flat ? '0.00' : tscSigned(net)));
+    box.appendChild(tscEl('div', 'tsc-verdict-word', word));
+    return box;
+  }
+
+  // What the deal did to the shape of the roster, by position. Players
+  // only, today's values, got minus gave -- so a WR-for-RB swap reads as
+  // one even when the two sides totalled the same. Positions the trade
+  // never touched are left out.
+  function tscShapeSection(payload) {
+    const byPos = new Map();
+    payload.assets.forEach(a => {
+      if (!a.pos) return;
+      const signed = a.side === 'got' ? a.now : -a.now;
+      byPos.set(a.pos, (byPos.get(a.pos) || 0) + signed);
+    });
+    const order = ['QB', 'RB', 'WR', 'TE'];
+    const rows = Array.from(byPos.entries())
+      .filter(([, v]) => Math.abs(v) >= 0.005)
+      .sort((a, b) => {
+        const ai = order.indexOf(a[0]), bi = order.indexOf(b[0]);
+        return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+      });
+    if (!rows.length) return null;
+    const sec = tscEl('div', 'tsc-section');
+    sec.appendChild(tscEl('div', 'tsc-section-head', 'What It Did To Your Roster'));
+    const row = tscEl('div', 'tsc-row');
+    rows.forEach(([pos, v]) => {
+      const pill = tscEl('div', 'tsc-pill tsc-shape-pill');
+      pill.appendChild(tscEl('span', 'tsc-pill-name', sbFieldEsc(pos)));
+      pill.appendChild(tscEl('span', 'tsc-shape-val ' + (v > 0 ? 'is-up' : 'is-down'), tscSigned(v)));
+      row.appendChild(pill);
+    });
+    sec.appendChild(row);
+    return sec;
+  }
+
+  // The exposure recap, the same before/after the inline card shows, with
+  // room here to say it in words.
+  function tscExposureSection(payload) {
+    if (!payload.expRows.length) return null;
+    const sec = tscEl('div', 'tsc-section');
+    sec.appendChild(tscEl('div', 'tsc-section-head', 'Exposure Recap · Share Of Your Leagues'));
+    const row = tscEl('div', 'tsc-row');
+    payload.expRows.forEach(a => {
+      const pill = tscEl('div', 'tsc-pill');
+      pill.appendChild(tscEl('span', 'tsc-pill-name', sbFieldEsc(a.name)));
+      const move = tscEl('span', 'tsc-pill-move');
+      move.appendChild(tscEl('span', 'tsc-pill-from', a.exp.beforePct + '%'));
+      move.appendChild(tscEl('span', 'tsc-pill-arrow', ' → '));
+      move.appendChild(tscEl('span', 'tsc-pill-to is-' + a.exp.dir, a.exp.afterPct + '%'));
+      pill.appendChild(move);
+      pill.appendChild(tscEl('span', 'tsc-pill-frac', a.exp.after + ' of ' + a.exp.total));
+      if (a.exp.note) pill.appendChild(tscEl('span', 'tsc-pill-note', a.exp.note));
+      row.appendChild(pill);
+    });
+    sec.appendChild(row);
+    return sec;
+  }
+
+  // How it has aged, plus the single asset that has moved most since the
+  // day of the deal -- which is usually the whole story of why the net
+  // changed, and the part worth bragging or complaining about.
+  function tscAgedSection(payload) {
+    if (!payload.showValue) return null;
+    const sec = tscEl('div', 'tsc-section');
+    sec.appendChild(tscEl('div', 'tsc-section-head', 'How It Has Aged'));
+    const now = payload.gotValue - payload.gaveValue;
+    const line = tscEl('div', 'tsc-aged');
+    if (payload.hasThen) {
+      const then = payload.gotThen - payload.gaveThen;
+      line.appendChild(tscEl('span', 'tsc-aged-label', 'At the time'));
+      line.appendChild(tscEl('span', 'tsc-aged-val ' + (then >= 0 ? 'is-pos' : 'is-neg'), tscSigned(then)));
+      line.appendChild(tscEl('span', 'tsc-aged-arrow', '→'));
+      line.appendChild(tscEl('span', 'tsc-aged-label', 'Today'));
+      line.appendChild(tscEl('span', 'tsc-aged-val ' + (now >= 0 ? 'is-pos' : 'is-neg'), tscSigned(now)));
+      const drift = now - then;
+      const flat = Math.abs(drift) < 0.05;
+      line.appendChild(tscEl('span', 'tsc-pill',
+        flat ? 'held' : tscSigned(drift) + (drift > 0 ? ' your way' : ' their way')));
+    } else {
+      line.appendChild(tscEl('span', 'tsc-aged-label', 'Today'));
+      line.appendChild(tscEl('span', 'tsc-aged-val ' + (now >= 0 ? 'is-pos' : 'is-neg'), tscSigned(now)));
+      line.appendChild(tscEl('span', 'tsc-pill-note', 'no rankings from back then to compare against'));
+    }
+    sec.appendChild(line);
+
+    if (payload.hasThen) {
+      const moved = payload.assets
+        .filter(a => typeof a.then === 'number')
+        .map(a => ({ a, d: a.now - a.then }))
+        .sort((x, y) => Math.abs(y.d) - Math.abs(x.d))[0];
+      if (moved && Math.abs(moved.d) >= 0.05) {
+        const dir = moved.d > 0 ? 'up' : 'down';
+        const whose = (moved.d > 0) === (moved.a.side === 'got') ? 'in your favour' : 'against you';
+        sec.appendChild(tscEl('div', 'tsc-mover',
+          `Biggest mover: <b>${sbFieldEsc(moved.a.name)}</b> is ${dir} ` +
+          `${Math.abs(moved.d).toFixed(2)} since the deal — ${whose}.`));
+      }
+    }
+    return sec;
+  }
+
+  function buildTradeShareCard(payload) {
+    const card = tscEl('div', 'tsc');
+
+    const top = tscEl('div', 'tsc-top');
+    const left = tscEl('div', 'tsc-top-left');
+    left.appendChild(tscEl('div', 'tsc-brand', 'Trade Receipt'));
+    left.appendChild(tscEl('div', 'tsc-league', sbFieldEsc(payload.league)));
+    const withLine = 'with <b>' + sbFieldEsc(payload.withName) + '</b>' +
+      (payload.others.length ? ' · ' + sbFieldEsc(payload.others.join(', ')) : '') +
+      ' · ' + sbFieldEsc(payload.dateLabel);
+    left.appendChild(tscEl('div', 'tsc-sub', withLine));
+    left.appendChild(tscEl('div', 'tsc-meta', sbFieldEsc(payload.metaLine)));
+    top.appendChild(left);
+    if (payload.showValue) top.appendChild(tscVerdict(payload));
+    card.appendChild(top);
+
+    const sides = tscEl('div', 'tsc-section');
+    const cols = tscEl('div', 'tsc-cols');
+    [['YOU GOT', payload.gotHtml, payload.gotValue], ['YOU GAVE', payload.gaveHtml, payload.gaveValue]]
+      .forEach(([label, html, total]) => {
+        const col = tscEl('div', 'tsc-col');
+        const head = tscEl('div', 'tsc-col-head');
+        head.appendChild(tscEl('div', 'tsc-col-label', label));
+        if (payload.showValue) head.appendChild(tscEl('div', 'tsc-col-total', total.toFixed(2) + ' val'));
+        col.appendChild(head);
+        col.appendChild(tscEl('div', 'tsc-col-assets',
+          html || '<div class="trade-asset-name" style="color:var(--faint)">Nothing</div>'));
+        cols.appendChild(col);
+      });
+    sides.appendChild(cols);
+    card.appendChild(sides);
+
+    [tscAgedSection(payload), tscExposureSection(payload), tscShapeSection(payload)]
+      .forEach(sec => { if (sec) card.appendChild(sec); });
+
+    const foot = tscEl('div', 'tsc-foot');
+    foot.appendChild(tscEl('span', 'tsc-foot-brand', 'The Desk'));
+    foot.appendChild(tscEl('span', 'tsc-foot-note',
+      'Values are dynasty ranks · exposure is leagues rostering him over leagues you are in'));
+    card.appendChild(foot);
+    return card;
+  }
+
+  // Sleeper is unreachable from the sandbox the card is developed in, so
+  // there are no real trades there to build one from. This lets the card be
+  // rendered from a hand-written payload and checked in a browser.
+  window.__deskBuildTradeShareCard = buildTradeShareCard;
+
   async function exportTradeCardImage(cardEl, action) {
+    const payload = cardEl.__deskShare;
+    // A real trade gets the purpose-built share card. The demo cards in
+    // the static markup carry no payload, so they fall back to the old
+    // behaviour of rasterizing the card as it appears.
+    if (payload) {
+      const name = ('trade-' + payload.league + '-' + payload.dateLabel)
+        .replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase();
+      await rasterizeAndExport(
+        buildTradeShareCard(payload), cardEl, name + '.png', action, TSC_SHARE_WIDTH);
+      return;
+    }
     const clone = cardEl.cloneNode(true);
     const iconsEl = clone.querySelector('.trade-card-icons');
     if (iconsEl) iconsEl.remove();
@@ -23397,7 +23878,7 @@
               ? `<span class="ld-tag" title="${sbFieldEsc(oddsTitle(row.odds, 'bye'))}">BYE <b${oddsCls(row.odds.bye)}>${oddsPctText(row.odds.bye)}</b></span>`
               : '') +
           '</div>' +
-          (isActive ? '<div class="ld-header-icons"><span class="ld-icon ld-icon-photo" title="Export as image">&#128247;</span></div>' : '') +
+          (isActive ? '<div class="ld-header-icons"><span class="ld-icon ld-icon-photo trade-icon" title="Save or copy this roster as an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 18.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3l1.8-2.7h6.4L17 7.5h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13.5" r="3.6"/></svg><span class="trade-icon-label">Share</span></span></div>' : '') +
         '</div>';
       }).join('');
     }
