@@ -6454,11 +6454,11 @@
             <p class="rg-key-line">Not every matchup cares the same amount. A game you are 95% to win is
               already decided &mdash; points there barely move anything. A coin flip moves a lot. The score
               measures that instead of counting leagues, and answers in matchups: how much of a win
-              he can still move, counting only the points he has left to score.</p>
+              he can still move while his game is live.</p>
             <ol class="rg-key-steps">
               <li><b>What does one of his points do to each matchup?</b> Slide your projected final by a point and see how far your win probability moves. Steep at 50/50, flat at 95/5, zero once a matchup is settled.</li>
               <li><b>What is that league worth to you?</b> Half its share of your buy-ins, half simply being one of your leagues &mdash; so a $100 league outweighs a $50 one without two $50 leagues losing to a single $100.</li>
-              <li><b>How many points has he left?</b> His live projection minus what he has already scored. Before kickoff that is his whole game; once it is over it is nothing, which is why a finished player reads 0.00.</li>
+              <li><b>How much can he still swing?</b> The points he has left, plus the touchdown that stays possible for as long as his game is live &mdash; a score with two minutes to go is worth every bit of one in the first quarter. What ends it is the whistle, not the clock running down, which is why a finished player reads 0.00 and a man still on the field never does.</li>
             </ol>
             <div class="rg-key-scale">
               <span class="rg-key-chip rg-key-zero">0.00</span><span class="rg-key-cap">played out, or nothing riding on him</span>
@@ -13602,7 +13602,7 @@
         // the board shows, times what he has left to score.
         deltaNum = mode === 'score'
           ? Number(sbWinsAtStakeFrom(levLeagues, weights,
-              sbRemainingPoints(r.id, { dict, projStats: rgProjStatsMap })).toFixed(3))
+              sbRemainingSwing(r.id, { dict, projStats: rgProjStatsMap })).toFixed(3))
           : Number(net.toFixed(3));
       } else if (mode === 'leagues') {
         deltaNum = f.reduce((s, name) => s + (dollarMap[name] || 0), 0) - a.reduce((s, name) => s + (dollarMap[name] || 0), 0);
@@ -16590,6 +16590,23 @@
   // quarterback implies 0.77. One flat factor cannot fit both.
   const SB_SIGMA_K = { QB: 0.7, RB: 1.0, WR: 1.0, TE: 1.0, K: 0.8, DEF: 0.8, DST: 0.8, DEFAULT: 1.0 };
 
+  // The scoring play that is on the table for as long as his game is live,
+  // and is gone the moment it is not.
+  //
+  // SB_SIGMA_K above scales with a player's REMAINING projection, so it
+  // shrinks to nothing late in a game -- which says a touchdown with two
+  // minutes left is worth nothing, and that is plainly wrong. It is the
+  // same six points it would have been in the first quarter, and arguably
+  // worth more, because there is less football left to undo it. What ends
+  // the possibility is the whistle, not the clock winding down, so this
+  // term is flat while the game is in progress and zero after it.
+  //
+  // These are judgement calls, not measured values: roughly "one touchdown
+  // might still happen", a little lower for a tight end and a quarterback
+  // whose yardage floor already carries more of his range. Worth fitting
+  // against real finishes in calibration/ rather than leaving as guesses.
+  const SB_BIGPLAY_SD = { QB: 4.0, RB: 4.0, WR: 4.5, TE: 3.5, DEFAULT: 3.5 };
+
   // With every starter done there is no football left to change the result,
   // so the spread collapses to zero and the projection IS the outcome. A
   // small floor keeps that from dividing by zero, and leaves room for the
@@ -18602,10 +18619,15 @@
         // This view's own fetched data, not the Press Box's globals -- see
         // sbRemainingPoints. Passing these is what lets the board draw on
         // first paint instead of only after GameCast has rendered once.
-        const remaining = (typeof sbRemainingPoints === 'function' && r.el.dataset.playerId)
-          ? sbRemainingPoints(r.el.dataset.playerId, rgLiveData || undefined)
-          : 0;
-        const stake = sbWinsAtStakeFrom(levLeagues, weights, remaining);
+        const pid = r.el.dataset.playerId;
+        // Points left is what the expand panel talks about in words; swing
+        // is what the badge is priced on. They are different numbers now --
+        // see sbRemainingSwing.
+        const remaining = (typeof sbRemainingPoints === 'function' && pid)
+          ? sbRemainingPoints(pid, rgLiveData || undefined) : 0;
+        const swingLeft = (typeof sbRemainingSwing === 'function' && pid)
+          ? sbRemainingSwing(pid, rgLiveData || undefined) : 0;
+        const stake = sbWinsAtStakeFrom(levLeagues, weights, swingLeft);
         r.el.dataset.score = stake.toFixed(3);
         r.el.dataset.remaining = remaining.toFixed(1);
         // Unweighted per-point, still used by the expand panel's worked
@@ -28063,6 +28085,43 @@
     return Math.max(0, finalProj - live);
   }
 
+  // How much his remaining game could still SWING, which is not the same
+  // as how much he is expected to score.
+  //
+  // Two parts, added in quadrature because they are independent sources of
+  // spread: the ordinary variation around the points he has left, and the
+  // scoring play that stays possible until the whistle. The second is what
+  // keeps a man with two minutes to go from reading as though he were
+  // already in the shower.
+  //
+  // A player who is done, ruled out, or has no projection has neither, and
+  // returns 0 -- the stake really is nothing by then.
+  function sbRemainingSwing(playerId, opts) {
+    const o = opts || {};
+    const dict = o.dict || window.__sleeperPlayerDict || {};
+    const p = dict[playerId];
+    if (!p) return 0;
+    const espnGameData = o.espnGameData !== undefined
+      ? o.espnGameData : (window.__gcEspnGameData || null);
+    const team = p.team;
+    if (sbGameFinishedForTeam(team, espnGameData)) return 0;
+    if (sbCountAsInactive(p, espnGameData)) return 0;
+    const projStats = o.projStats || window.__sleeperProjectionStats || {};
+    // No projection at all means we know nothing about him, which is not
+    // the same as knowing he cannot move -- but inventing a spread for a
+    // player we cannot price is worse, so he reads 0 as before.
+    if (sbHouseScore(playerId, projStats[playerId], dict) == null) return 0;
+    const mean = sbRemainingPoints(playerId, opts);
+    const k = SB_SIGMA_K[p.position] != null ? SB_SIGMA_K[p.position] : SB_SIGMA_K.DEFAULT;
+    const spread = k * mean;
+    // Flat while his game is live, by design -- see SB_BIGPLAY_SD. Before
+    // kickoff it applies too: the touchdown is no less possible for the
+    // game not having started.
+    const big = SB_BIGPLAY_SD[p.position] != null
+      ? SB_BIGPLAY_SD[p.position] : SB_BIGPLAY_SD.DEFAULT;
+    return Math.sqrt(spread * spread + big * big);
+  }
+
   // The weighted per-point slope, summed over his matchups, times what he
   // has left to score. Split out so the Weekly Sweats board can pass the
   // league list it has already filtered rather than rebuilding it.
@@ -28077,7 +28136,7 @@
     if (!lev || !lev.leagues.length) return 0;
     const weights = (typeof sbLeagueWeights === 'function')
       ? sbLeagueWeights(lev.leagues.map(l => l.name)) : {};
-    return sbWinsAtStakeFrom(lev.leagues, weights, sbRemainingPoints(playerId, opts));
+    return sbWinsAtStakeFrom(lev.leagues, weights, sbRemainingSwing(playerId, opts));
   }
 
   function sbWinsAtStakeText(wins) {
@@ -28099,6 +28158,7 @@
   }
 
   window.sbRemainingPoints = sbRemainingPoints;
+  window.sbRemainingSwing = sbRemainingSwing;
   window.sbWinsAtStake = sbWinsAtStake;
   window.sbWinsAtStakeFrom = sbWinsAtStakeFrom;
   window.sbWinsAtStakeText = sbWinsAtStakeText;
