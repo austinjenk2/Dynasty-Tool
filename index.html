@@ -18976,6 +18976,21 @@
       if (window.renderRootingSlates) window.renderRootingSlates(overrideWeek);
     }
     window.renderRealRootingGuide = renderRealRootingGuide;
+
+    // Draw when the page is opened, not only when the next sync comes
+    // round. Every other page that builds itself from league data does
+    // this -- Press Box, Tanking Tracker, The Board, Playoff Picture --
+    // and this one was simply never wired up, so opening it showed three
+    // empty lists until a poll happened to land, up to a minute later.
+    // Clicking a sort toggle appeared to fix it only because that calls
+    // recomputeRootingGuide directly, which appends the rows the previous
+    // sync had already built. The stale Slates underneath had the same
+    // cause: renderRootingSlates runs at the end of this render.
+    document.addEventListener('desk:view', (e) => {
+      if (e.detail === 'rooting') {
+        renderRealRootingGuide(window.__rgSelectedWeek || undefined);
+      }
+    });
   })();
 
   // Rooting Guide player search -- jumps straight to a player's row (Root
