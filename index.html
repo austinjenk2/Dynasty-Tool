@@ -15528,10 +15528,9 @@
       }
 
       // The season's weeks, for the leagues you have actually traded in.
-      // Two of the share card's lines need them: what your record was the
-      // day you made the deal, and what the players in it have scored
-      // since. Both are week-by-week questions and there is no other
-      // source for either.
+      // The share card's "you were 4-2 going in" line needs them: a record
+      // as of a week gone by is a week-by-week question and there is no
+      // other source for it.
       //
       // Loaded on the same terms as past seasons above -- only while this
       // page is the one on screen, and folded in with a repaint when it
@@ -15633,11 +15632,10 @@
         };
       }
 
-      // ---- Where you stood, and what happened next --------------------
+      // ---- Where you stood when you made it ---------------------------
       //
-      // Both of these read the same 18 weeks of real matchups, split at
-      // the week the trade was processed (Sleeper's `leg`). Before it:
-      // your record going in. From it on: what the players actually did.
+      // Reads the season's 18 weeks of real matchups and counts the ones
+      // before the week the trade was processed (Sleeper's `leg`).
       //
       // Only ever the current season. A trade out of a finished season is
       // in a different Sleeper league with its own weeks, and reaching for
@@ -15675,46 +15673,6 @@
         }
         if (!wins && !losses && !ties) return null;
         return { wins, losses, ties, text: `${wins}-${losses}${ties ? '-' + ties : ''}` };
-      }
-
-      // What each player has actually produced in THIS league since the
-      // trade, in this league's own scoring -- these are Sleeper's own
-      // per-player points for the league, not a re-scored projection, so a
-      // tight end premium or a 5pt passing TD is already in them.
-      //
-      // Points produced, not points started: a player who went for 22 on
-      // your bench still went for 22, and whether you started him is a
-      // separate complaint from whether the trade was good.
-      function tradePointsSince(entry, weeks, leg, assets) {
-        if (!weeks || !leg || !assets.length) return null;
-        const byId = new Map();
-        let weeksCounted = 0;
-        for (let w = leg; w <= weeks.length; w++) {
-          const wk = weeks[w - 1];
-          if (!wk || !wk.length) continue;
-          let played = false;
-          wk.forEach(m => {
-            const pts = m.players_points || {};
-            assets.forEach(a => {
-              const v = Number(pts[a.id]);
-              if (!Number.isFinite(v)) return;
-              played = true;
-              byId.set(a.id, (byId.get(a.id) || 0) + v);
-            });
-          });
-          if (played) weeksCounted++;
-        }
-        if (!byId.size || !weeksCounted) return null;
-        let got = 0, gave = 0;
-        assets.forEach(a => {
-          const v = byId.get(a.id);
-          if (v == null) return;
-          if (a.side === 'got') got += v; else gave += v;
-        });
-        // Nobody has played a down since -- an offseason trade looked at
-        // in the offseason. Say nothing rather than "0.0 to 0.0".
-        if (got === 0 && gave === 0) return null;
-        return { got, gave, weeks: weeksCounted, byId };
       }
 
       // One real player this trade moved, with everything the recap and the
@@ -15989,8 +15947,6 @@
         const tradeWeeks = tradeWeeksFor(entry);
         const tradeLeg = tradeLegOf(t);
         const recordBefore = tradeRecordBefore(entry, tradeWeeks, tradeLeg);
-        const pointsSince = tradePointsSince(
-          entry, tradeWeeks, tradeLeg, cardAssets.filter(a => a.kind === 'player'));
         const metaLine = [
           `${entry.league.total_rosters || 12} Teams`,
           sbLeagueIsDynasty(entry.league) ? 'Dynasty' : 'Redraft',
@@ -16013,7 +15969,6 @@
           expRows,
           leg: tradeLeg,
           recordBefore,
-          pointsSince,
         };
 
         return { payload: sharePayload, html: `<div class="trade-card" data-league="${entry.league.name}" data-date="${dateIso}" data-ts="${completedAt}" data-players="${players}"
@@ -16371,50 +16326,6 @@
     return sec;
   }
 
-  // What the players have actually done since. The one section on the card
-  // that is not an opinion about value: these are real points, scored in
-  // this league, under this league's own scoring.
-  function tscSinceSection(payload) {
-    const ps = payload.pointsSince;
-    if (!ps) return null;
-    const sec = tscEl('div', 'tsc-section');
-    sec.appendChild(tscEl('div', 'tsc-section-head',
-      `What Happened Next · Points Scored Over ${ps.weeks} Week${ps.weeks === 1 ? '' : 's'}`));
-    const line = tscEl('div', 'tsc-aged');
-    const diff = ps.got - ps.gave;
-    const flat = Math.abs(diff) < 0.5;
-    line.appendChild(tscEl('span', 'tsc-aged-label', 'Came in'));
-    line.appendChild(tscEl('span', 'tsc-aged-val ' + (diff >= 0 ? 'is-pos' : 'is-neg'), ps.got.toFixed(1)));
-    line.appendChild(tscEl('span', 'tsc-aged-arrow', 'vs'));
-    line.appendChild(tscEl('span', 'tsc-aged-label', 'Went out'));
-    line.appendChild(tscEl('span', 'tsc-aged-val ' + (diff >= 0 ? 'is-neg' : 'is-pos'), ps.gave.toFixed(1)));
-    line.appendChild(tscEl('span', 'tsc-pill',
-      flat ? 'a wash' : tscSigned(diff, 1) + (diff > 0 ? ' your way' : ' their way')));
-    sec.appendChild(line);
-
-    // Who actually did it. Ordered by points, both sides together, so the
-    // one name carrying the whole line is obvious.
-    const scorers = payload.assets
-      .filter(a => a.kind === 'player' && ps.byId.get(a.id) != null)
-      .map(a => ({ a, pts: ps.byId.get(a.id) }))
-      .sort((x, y) => y.pts - x.pts);
-    if (scorers.length) {
-      const row = tscEl('div', 'tsc-row');
-      row.style.marginTop = '8px';
-      scorers.forEach(({ a, pts }) => {
-        const pill = tscEl('div', 'tsc-pill');
-        pill.appendChild(tscEl('span', 'tsc-pill-name', sbFieldEsc(a.name)));
-        pill.appendChild(tscEl('span', 'tsc-pill-to ' + (a.side === 'got' ? 'is-up' : 'is-down'), pts.toFixed(1)));
-        pill.appendChild(tscEl('span', 'tsc-pill-frac', a.side === 'got' ? 'for you' : 'for them'));
-        row.appendChild(pill);
-      });
-      sec.appendChild(row);
-    }
-    sec.appendChild(tscEl('div', 'tsc-mover',
-      'Points he produced, started or not, in this league’s scoring.'));
-    return sec;
-  }
-
   // The exposure recap, the same before/after the inline card shows, with
   // room here to say it in words.
   function tscExposureSection(payload) {
@@ -16524,8 +16435,7 @@
     sides.appendChild(cols);
     card.appendChild(sides);
 
-    [tscAgedSection(payload), tscSinceSection(payload),
-     tscExposureSection(payload), tscShapeSection(payload)]
+    [tscAgedSection(payload), tscExposureSection(payload), tscShapeSection(payload)]
       .forEach(sec => { if (sec) card.appendChild(sec); });
 
     const foot = tscEl('div', 'tsc-foot');
@@ -21853,9 +21763,8 @@
       return byWeek;
     }
     // Trade History wants the same 18 weeks, to say what your record was
-    // the day a trade was made and what the players in it have actually
-    // scored since. Same cache, so asking for it there costs nothing if
-    // the Record page has already pulled it.
+    // the day a trade was made. Same cache, so asking for it there costs
+    // nothing if the Record page has already pulled it.
     window.sbLoadSeasonAllWeekMatchups = loadSeasonAllWeekMatchups;
 
     function ldrecWeekRow(weekMatchups, rosterId) {
