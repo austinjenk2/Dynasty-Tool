@@ -15535,13 +15535,22 @@
       // as of a week gone by is a week-by-week question and there is no
       // other source for it.
       //
-      // Loaded on the same terms as past seasons above -- only while this
-      // page is the one on screen, and folded in with a repaint when it
-      // arrives rather than holding the cards back. The weeks are shared
-      // with the Record page through one cache, so on a session that has
-      // already been there this costs nothing.
+      // NEVER while football is being played. This is eighteen weeks per
+      // league on a cold cache -- three hundred requests on a portfolio
+      // this size, in one burst, to the same host the live poll needs and
+      // against the same six connections. Live scores stop for a cosmetic
+      // line on a card you might not even export, which is a terrible
+      // trade on a Sunday afternoon and a free one on a Wednesday. The
+      // line is simply absent while games are on and fills in afterwards.
+      //
+      // Otherwise on the same terms as past seasons above -- only while
+      // this page is on screen, folded in with a repaint when it arrives
+      // rather than holding the cards back. The weeks are shared with the
+      // Record page through one cache, so on a session that has already
+      // been there this costs nothing.
       window.__tradeWeeksByLeague = window.__tradeWeeksByLeague || {};
-      if (tradesOnScreen && !window.__tradeWeeksLoading && window.sbLoadSeasonAllWeekMatchups) {
+      const weeksAreFree = (typeof deskTempo !== 'function') || deskTempo() === 'idle';
+      if (tradesOnScreen && weeksAreFree && !window.__tradeWeeksLoading && window.sbLoadSeasonAllWeekMatchups) {
         const want = Array.from(new Set(entries
           .filter(e => (e.trades || []).length && e.league && e.league.league_id)
           .map(e => e.league.league_id)));
@@ -29659,22 +29668,21 @@
 
     const mineOnly = window.__gcFeedFilter === 'mine';
 
-    // What he can still do to your week, beside what he just did to it.
-    // Worked out once per draw and cached by player: a quarterback is in
-    // nearly every play and this column draws sixty of them, so the same
-    // answer was otherwise recomputed dozens of times for one render.
-    const stakeCache = new Map();
+    // Every live reading for a player, worked out once per draw and cached
+    // by him: a quarterback is in nearly every play and this column draws
+    // sixty of them, so the same answer was otherwise recomputed dozens of
+    // times for one render.
+    const liveCache = new Map();
+    const liveFor = (pid) => {
+      if (!liveCache.has(pid)) liveCache.set(pid, gcFeedLiveFor(pid, dict));
+      return liveCache.get(pid);
+    };
     const stakeHtml = (pid) => {
-      if (stakeCache.has(pid)) return stakeCache.get(pid);
-      const r = gcFeedLiveFor(pid, dict);
-      let html = '';
-      if (r.stake) {
-        html = `<span class="gc-feed-stat" title="${sbFieldEsc(r.stake.tip)}">`
-          + `<span class="gc-feed-k">At stake</span>`
-          + `<b class="${r.stake.cls}" data-gc-live="stake" data-gc-pid="${sbFieldEsc(pid)}">${r.stake.text}</b></span>`;
-      }
-      stakeCache.set(pid, html);
-      return html;
+      const r = liveFor(pid);
+      if (!r.stake) return '';
+      return `<span class="gc-feed-stat" title="${sbFieldEsc(r.stake.tip)}">`
+        + `<span class="gc-feed-k">At stake</span>`
+        + `<b class="${r.stake.cls}" data-gc-live="stake" data-gc-pid="${sbFieldEsc(pid)}">${r.stake.text}</b></span>`;
     };
 
     const items = [];
@@ -29703,7 +29711,7 @@
         // he recovers has no key at all, so it is worth nothing), full
         // PPR, tight ends +0.5 a catch. The box score reads this through
         // the same function, so the two cannot drift.
-        const live = gcFeedLiveFor(pl.id, dict);
+        const live = liveFor(pl.id);
         // No per-league chips. A player in a dozen leagues produced a
         // dozen of them, which buried what the row is actually for --
         // what happened and what it was worth. The single net figure at
