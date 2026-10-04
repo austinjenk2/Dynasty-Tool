@@ -1660,6 +1660,9 @@
   /* His day so far, not just this play -- four catches for 52 reads very
      differently from the 7-yard catch that got him there. */
   .gc-feed-day { font-size: 10.5px; color: var(--faint); margin: 1px 0 0 28px; }
+  /* Rendered even with nothing in it, so the refresh pass can fill it the
+     moment Sleeper has a line for him -- see gcFeedRefreshLive. */
+  .gc-feed-day.is-empty { display: none; }
   /* Says which line this is: the play above is what just happened, this
      is his game to this point. Without the label the two read as one. */
   .gc-feed-day-label {
@@ -29609,6 +29612,39 @@
   }
 
 
+  // The readings inside a feed row that keep moving after the play that
+  // produced the row is long over: what he can still do to your week, his
+  // running total, and his line on the day. A play is a fixed historical
+  // fact; these three are not, and the feed used to freeze them at
+  // whatever they were the moment the play landed -- see the refresh pass
+  // in gcFeedRefreshLive. One place, so the first draw and every refresh
+  // after it cannot disagree about the same player.
+  function gcFeedLiveFor(pid, dict) {
+    const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(pid) : null;
+    let stake = null;
+    if (lev && lev.leagues.length) {
+      const s = sbWinsAtStake(pid);
+      stake = {
+        text: sbWinsAtStakeText(s),
+        cls: s > 0.005 ? 'is-pos' : (s < -0.005 ? 'is-neg' : 'is-flat'),
+        tip: (typeof sbRootingMeaning === 'function') ? sbRootingMeaning(s, sbRemainingPoints(pid)) : '',
+      };
+    }
+    const statsMap = window.__gcStatsMap || {};
+    // Coloured against his PROJECTION, not against zero -- see the note at
+    // the Total column. Green means he is beating what was expected.
+    const dayTotal = gcScoreStats(pid, statsMap[pid], dict);
+    const dayProj = gcProjectedPoints(pid, dict);
+    return {
+      stake,
+      totalText: dayTotal != null ? dayTotal.toFixed(1) : '—',
+      totalCls: (dayTotal == null || dayProj == null) ? 'is-flat'
+        : (dayTotal > dayProj + 0.05 ? 'is-pos'
+          : (dayTotal < dayProj - 0.05 ? 'is-neg' : 'is-flat')),
+      dayLine: gcStatLine(statsMap[pid]) || '',
+    };
+  }
+
   function gcFeedHtml(rows) {
     if (!rows.length) return '<div class="gc-empty">No plays yet. The feed fills in once a game kicks off.</div>';
 
@@ -29630,23 +29666,19 @@
     const stakeCache = new Map();
     const stakeHtml = (pid) => {
       if (stakeCache.has(pid)) return stakeCache.get(pid);
+      const r = gcFeedLiveFor(pid, dict);
       let html = '';
-      const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(pid) : null;
-      if (lev && lev.leagues.length) {
-        const stake = sbWinsAtStake(pid);
-        const cls = stake > 0.005 ? 'is-pos' : (stake < -0.005 ? 'is-neg' : 'is-flat');
-        const tip = (typeof sbRootingMeaning === 'function')
-          ? sbRootingMeaning(stake, sbRemainingPoints(pid)) : '';
-        html = `<span class="gc-feed-stat" title="${sbFieldEsc(tip)}">`
+      if (r.stake) {
+        html = `<span class="gc-feed-stat" title="${sbFieldEsc(r.stake.tip)}">`
           + `<span class="gc-feed-k">At stake</span>`
-          + `<b class="${cls}">${sbWinsAtStakeText(stake)}</b></span>`;
+          + `<b class="${r.stake.cls}" data-gc-live="stake" data-gc-pid="${sbFieldEsc(pid)}">${r.stake.text}</b></span>`;
       }
       stakeCache.set(pid, html);
       return html;
     };
 
     const items = [];
-    rows.forEach(({ game, play, players }) => {
+    rows.forEach(({ game, play, players }, rowIndex) => {
       // Every league this play touched, and what it did to that matchup.
       // Priced on the real curve: a touchdown in a 50-50 game is worth
       // several points of win probability, the same touchdown in a game
@@ -29664,25 +29696,14 @@
         const teamLogo = sbTeamLogoUrl(p.team);
         const shot = sbHeadshotUrl(pl.id);
         const onThisPlay = (pl.descs || []).join(' · ');
-        // His day so far, from Sleeper's own week stats -- the same numbers
-        // the box score shows, so the running total on a play matches what
-        // you get when you open the game.
-        const dayLine = gcStatLine((window.__gcStatsMap || {})[pl.id]);
-        // What he has in the game so far, on the same house line the play
-        // itself is priced on -- 5pt passing TD, -2 an interception, -2 a
-        // fumble lost (a fumble he recovers has no key at all, so it is
-        // worth nothing), full PPR, tight ends +0.5 a catch. The box score
-        // reads this through the same function, so the two cannot drift.
-        const dayTotal = gcScoreStats(pl.id, (window.__gcStatsMap || {})[pl.id], dict);
-        // Coloured against his PROJECTION, not against zero. Every player
-        // who has done anything at all scores above zero, so colouring by
-        // sign painted the whole feed green and told you nothing -- 13.9
-        // read as good news from a quarterback projected 18. Green now
-        // means he is beating what was expected of him.
-        const dayProj = gcProjectedPoints(pl.id, dict);
-        const totCls = (dayTotal == null || dayProj == null) ? 'is-flat'
-          : (dayTotal > dayProj + 0.05 ? 'is-pos'
-            : (dayTotal < dayProj - 0.05 ? 'is-neg' : 'is-flat'));
+        // His day so far and his running total, both from gcFeedLiveFor so
+        // the refresh pass writes exactly what the first draw wrote. The
+        // total is on the same house line the play itself is priced on --
+        // 5pt passing TD, -2 an interception, -2 a fumble lost (a fumble
+        // he recovers has no key at all, so it is worth nothing), full
+        // PPR, tight ends +0.5 a catch. The box score reads this through
+        // the same function, so the two cannot drift.
+        const live = gcFeedLiveFor(pl.id, dict);
         // No per-league chips. A player in a dozen leagues produced a
         // dozen of them, which buried what the row is actually for --
         // what happened and what it was worth. The single net figure at
@@ -29696,10 +29717,16 @@
             `<span class="gc-feed-stat"><span class="gc-feed-k">Play</span>` +
               `<b class="${fpCls.trim() || 'is-flat'}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</b></span>` +
             `<span class="gc-feed-stat"><span class="gc-feed-k">Total</span>` +
-              `<b class="${totCls}">${dayTotal != null ? dayTotal.toFixed(1) : '&mdash;'}</b></span>` +
+              `<b class="${live.totalCls}" data-gc-live="total" data-gc-pid="${sbFieldEsc(pl.id)}">${sbFieldEsc(live.totalText)}</b></span>` +
             stakeHtml(pl.id) +
           `</div>` +
-          (dayLine ? `<div class="gc-feed-day"><span class="gc-feed-day-label">ON THE DAY</span>${sbFieldEsc(dayLine)}</div>` : '') +
+          // Always present, hidden while empty, so a line that only arrives
+          // once Sleeper has stats for him can be filled in by the refresh
+          // rather than waiting for the next play to rebuild the row.
+          `<div class="gc-feed-day${live.dayLine ? '' : ' is-empty'}">` +
+            `<span class="gc-feed-day-label">ON THE DAY</span>` +
+            `<span data-gc-live="day" data-gc-pid="${sbFieldEsc(pl.id)}">${sbFieldEsc(live.dayLine)}</span>` +
+          `</div>` +
           (impacts.length ? ''
                  : '<div class="gc-feed-nostake">no stake in any of your leagues</div>') +
         `</div>`;
@@ -29717,7 +29744,7 @@
         return url ? `<img class="gc-feed-logo" src="${url}" alt="" loading="lazy" onerror="this.remove()">` : '';
       };
 
-      items.push(`<div class="gc-feed-item${rowCls}">
+      items.push(`<div class="gc-feed-item${rowCls}" data-gc-row="${rowIndex}">
         <div class="gc-feed-top">
           <span class="gc-feed-game" data-gc-open="${sbFieldEsc(game.eventId)}">${logo(game.away.abbr)}${logo(game.home.abbr)}${sbFieldEsc(game.away.abbr)} @ ${sbFieldEsc(game.home.abbr)}</span>
           ${meta.map(m => `<span>${sbFieldEsc(m)}</span>`).join('')}
@@ -29727,7 +29754,7 @@
         <div class="gc-feed-text">${sbFieldEsc(play.text)}</div>
         ${blocks.join('')}
         ${(anyFor || anyAgainst)
-          ? `<div class="gc-feed-net ${netCls}">${netSwing > 0 ? '+' : (netSwing < 0 ? '\u2212' : '')}${Math.abs(netSwing).toFixed(1)}% win probability across your matchups</div>`
+          ? `<div class="gc-feed-net ${netCls}" data-gc-live="swing">${gcFeedSwingText(netSwing)}</div>`
           : ''}
       </div>`);
     });
@@ -29735,6 +29762,81 @@
     return items.length ? items.join('')
       : '<div class="gc-empty">No plays involving your players yet.</div>';
   }
+
+  function gcFeedSwingText(netSwing) {
+    return `${netSwing > 0 ? '+' : (netSwing < 0 ? '\u2212' : '')}${Math.abs(netSwing).toFixed(1)}% win probability across your matchups`;
+  }
+
+  // Re-price what is still live in a feed that is not being rebuilt.
+  //
+  // The feed only rebuilds when the plays themselves change -- sixty rows
+  // of headshots and team logos are not worth throwing away every twenty
+  // seconds to learn that the same plays are still the same plays. But
+  // three things in a row go on moving after the play is over: what the
+  // player can still do to your week, his running total, and what the play
+  // itself is now worth as its matchups tighten or run away. Those used to
+  // sit frozen at whatever they were the moment the play landed, so in a
+  // quiet stretch the feed could disagree with the player row next to it
+  // about the same player -- including, for a player balanced across both
+  // sides of your leagues, about the SIGN.
+  //
+  // So: keep the structural gate, and write the live numbers into the rows
+  // that are already there. No images are touched, so nothing flickers.
+  function gcFeedRefreshLive() {
+    const feed = document.getElementById('gcFeed');
+    if (!feed) return;
+    const dict = window.__sleeperPlayerDict || {};
+    // One answer per player per pass, for the same reason the draw caches
+    // it: a quarterback appears in most of the rows on screen.
+    const cache = new Map();
+    const liveFor = (pid) => {
+      if (!cache.has(pid)) cache.set(pid, gcFeedLiveFor(pid, dict));
+      return cache.get(pid);
+    };
+
+    feed.querySelectorAll('[data-gc-live="stake"],[data-gc-live="total"],[data-gc-live="day"]').forEach(el => {
+      const pid = el.dataset.gcPid;
+      if (!pid) return;
+      const r = liveFor(pid);
+      if (el.dataset.gcLive === 'stake') {
+        // A player who had no stake at all drew no element, so there is
+        // nothing here to update -- he gets one on the next real rebuild.
+        if (!r.stake) return;
+        el.textContent = r.stake.text;
+        el.className = r.stake.cls;
+        const wrap = el.closest('.gc-feed-stat');
+        if (wrap) wrap.title = r.stake.tip;
+      } else if (el.dataset.gcLive === 'total') {
+        el.textContent = r.totalText;
+        el.className = r.totalCls;
+      } else {
+        el.textContent = r.dayLine;
+        const day = el.closest('.gc-feed-day');
+        if (day) day.classList.toggle('is-empty', !r.dayLine);
+      }
+    });
+
+    // And what each play is worth now. Priced off the rows the feed was
+    // drawn from, matched by the index stored on the item, so a filtered
+    // feed still lines up with the plays behind it.
+    const rows = window.__gcFeedRows || [];
+    feed.querySelectorAll('.gc-feed-item[data-gc-row]').forEach(item => {
+      const row = rows[Number(item.dataset.gcRow)];
+      if (!row) return;
+      const net = item.querySelector('[data-gc-live="swing"]');
+      if (!net) return;
+      let netSwing = 0;
+      (row.players || []).forEach(pl => {
+        sbPlayImpact(pl.id, pl.stats, { espnGameData: window.__gcEspnGameData, week: window.__gcWeek })
+          .forEach(i => { netSwing += i.swing; });
+      });
+      net.textContent = gcFeedSwingText(netSwing);
+      net.className = 'gc-feed-net ' + (Math.abs(netSwing) < 0.05 ? 'is-flat' : (netSwing > 0 ? 'is-pos' : 'is-neg'));
+      item.classList.toggle('is-mine', netSwing >= 0);
+      item.classList.toggle('is-against', netSwing < 0);
+    });
+  }
+  window.gcFeedRefreshLive = gcFeedRefreshLive;
 
   // ---- Orchestration ---------------------------------------------------
   // Two independent passes. The grid draws from the scoreboard endpoint
@@ -29805,6 +29907,11 @@
       if (sig !== window.__gcFeedSig) {
         window.__gcFeedSig = sig;
         gcKeepScroll('gcFeed', (feed) => { feed.innerHTML = gcFeedHtml(rows); });
+      } else {
+        // Same plays, so the rows stay. The numbers inside them do not --
+        // re-price them in place rather than leaving the column frozen
+        // between plays.
+        gcFeedRefreshLive();
       }
       const sub = document.getElementById('gcFeedSub');
       if (sub) {
