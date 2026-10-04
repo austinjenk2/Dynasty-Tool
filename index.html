@@ -20775,15 +20775,33 @@
       const cacheKey = `${season}_${week}`;
       const cached = window.__sleeperStatsCache[cacheKey];
       const age = Date.now() - (window.__sleeperStatsFetchedAt[cacheKey] || 0);
-      if (cached && age < WEEK_STATS_FRESH_MS) return cached;
-      if (weekStatsInFlight[cacheKey]) return weekStatsInFlight[cacheKey];
+      if (cached && age < WEEK_STATS_FRESH_MS) return withLivePlays(cached, week);
+      if (weekStatsInFlight[cacheKey]) return weekStatsInFlight[cacheKey].then(s => withLivePlays(s, week));
       const promise = fetchWeekStats(season, week, cacheKey);
       weekStatsInFlight[cacheKey] = promise;
       try {
-        return await promise;
+        return withLivePlays(await promise, week);
       } finally {
         delete weekStatsInFlight[cacheKey];
       }
+    }
+
+    // Everything on the site that asks for this week's stats gets the
+    // play-by-play folded in on the way out -- the box score, over
+    // expected, leverage, the slate, Weekly Sweats, all of it -- so a
+    // catch that has happened is in the numbers everywhere at once rather
+    // than only in the play feed that reported it.
+    //
+    // Only the live week, and only when the plays actually cover it: the
+    // Game Log and the week dropdown ask for other weeks, and a finished
+    // week's numbers are Sleeper's alone. The shared cache stays pure
+    // Sleeper; the merge happens on the way to the caller.
+    function withLivePlays(statsMap, week) {
+      const pbp = window.__gcPbpStats;
+      if (!pbp || !Object.keys(pbp).length) return statsMap;
+      if (window.__gcPbpWeek != null && Number(window.__gcPbpWeek) !== Number(week)) return statsMap;
+      return (typeof window.sbMergeLiveStats === 'function')
+        ? window.sbMergeLiveStats(statsMap, pbp) : statsMap;
     }
     async function fetchWeekStats(season, week, cacheKey) {
       try {
@@ -27914,6 +27932,45 @@
   // Fumbles are left out on purpose: the text says a ball came loose and
   // who recovered it, but not which side that recovery was for, and a
   // guessed fum_lost is a real -2 on a player's score.
+  // Sleeper's stat feed and ESPN's play-by-play are two different clocks,
+  // and the gap between them is why a 9-yard catch worth +1.9 could sit
+  // next to a day total of 1.1 that plainly did not contain it. Neither
+  // number was wrong. ESPN has a play seconds after it happens; Sleeper's
+  // /stats endpoint trails it by a minute or more, and every "points so
+  // far", "over expected" and leverage reading in the app was built on the
+  // slower of the two.
+  //
+  // So: take the larger of the two, key by key. Sleeper is authoritative
+  // and always catches up, so anything the parser misses is corrected the
+  // moment it lands; ESPN is instant but read out of prose and can drop a
+  // play, so it is never allowed to pull a number DOWN. The reading cannot
+  // go backwards, and the newest snap shows immediately.
+  //
+  // The cost of being wrong is asymmetric and this picks the cheap side: a
+  // stat the parser over-reads shows high until Sleeper passes it, which
+  // is a worse number for a minute. Waiting instead means every live
+  // figure on the site is a minute stale all afternoon.
+  function sbMergeLiveStats(base, live) {
+    if (!live || !Object.keys(live).length) return base || {};
+    const out = Object.assign({}, base || {});
+    Object.keys(live).forEach(pid => {
+      const fresh = live[pid];
+      if (!fresh) return;
+      const have = out[pid];
+      if (!have) { out[pid] = Object.assign({}, fresh); return; }
+      const merged = Object.assign({}, have);
+      Object.keys(fresh).forEach(k => {
+        const b = Number(fresh[k]);
+        if (!Number.isFinite(b)) return;
+        const a = Number(merged[k]);
+        merged[k] = Number.isFinite(a) ? Math.max(a, b) : b;
+      });
+      out[pid] = merged;
+    });
+    return out;
+  }
+  window.sbMergeLiveStats = sbMergeLiveStats;
+
   function sbParsePlayEvents(text) {
     const raw = String(text || '');
     // Tacklers, formations and penalty notes all arrive in parentheses --
@@ -29500,6 +29557,13 @@
   // this column would pull a dozen ESPN summaries every twenty seconds
   // for games that ended on Sunday afternoon.
   window.__gcFinalPbpCache = window.__gcFinalPbpCache || {};
+  // Per game: the whole game's stat line, parsed from its play-by-play,
+  // with the play count it was built from so it is only rebuilt when a
+  // play has actually landed.
+  window.__gcPbpAccum = window.__gcPbpAccum || {};
+  // Every player in a live game, by Sleeper id, as the plays have him
+  // right now. Merged over Sleeper's own stat feed by sbMergeLiveStats.
+  window.__gcPbpStats = window.__gcPbpStats || {};
   // Short-name maps live as long as the page does: a rostered player can
   // change teams mid-week, which only ever adds a name that fails to
   // match until the next reload, never a wrong one.
@@ -29540,6 +29604,9 @@
     }));
 
     const out = [];
+    // Per game, so a game that has not had a play since the last refresh
+    // keeps the line it already had instead of being re-read.
+    const pbpStats = {};
     perGame.forEach(({ game, plays }) => {
       // ESPN names players by short name; the map is built per game so a
       // "J.Jones" in one broadcast can never be matched to the other
@@ -29566,9 +29633,24 @@
           shortNameMap[gcNameKey(full)] = id;
         });
       }
-      // Only the tail of each game is ever shown, so there is no reason to
-      // score the whole afternoon's worth of plays on every refresh.
-      plays.slice(-GC_FEED_MAX).forEach(play => {
+      // Every play in the game, parsed once.
+      //
+      // The feed only ever SHOWS the tail, and this used to only parse the
+      // tail to match. But the same parse answers a much more valuable
+      // question for free: run it over the whole game and you have a live
+      // stat line for every player in it, current to the last snap --
+      // which is the thing Sleeper's /stats endpoint is always a minute or
+      // more behind on. The plays are already in hand, so this costs no
+      // network at all, and the result is memoised on the play count so a
+      // refresh that brings nothing new re-parses nothing.
+      const pbpKey = game.eventId;
+      const accum = window.__gcPbpAccum[pbpKey];
+      const needAccum = !accum || accum.count !== plays.length;
+      const gameStats = needAccum ? {} : accum.stats;
+
+      // What one play did, by player. Shared by the accumulation and the
+      // feed rows so the two can never read the same play differently.
+      const playersOn = (play) => {
         const players = [];
         sbParsePlayEvents(play.text).forEach(ev => {
           const pid = shortNameMap[gcNameKey(ev.name)];
@@ -29605,9 +29687,37 @@
             players.push({ id: pid, fp, stats: Object.assign({}, ev.stats), descs: ev.desc ? [ev.desc] : [] });
           }
         });
-        out.push({ game, play, players });
+        return players;
+      };
+
+      // Re-accumulated from scratch whenever the play count moves, rather
+      // than added to incrementally: ESPN revises its own play text during
+      // a game, and a running total that only ever adds can never take a
+      // correction back.
+      const tailFrom = Math.max(0, plays.length - GC_FEED_MAX);
+      plays.forEach((play, i) => {
+        const players = (needAccum || i >= tailFrom) ? playersOn(play) : null;
+        if (needAccum && players) {
+          players.forEach(pl => {
+            const into = gameStats[pl.id] || (gameStats[pl.id] = {});
+            Object.entries(pl.stats || {}).forEach(([k, v]) => {
+              const n = Number(v);
+              if (Number.isFinite(n)) into[k] = (into[k] || 0) + n;
+            });
+          });
+        }
+        if (i >= tailFrom) out.push({ game, play, players: players || [] });
       });
+      if (needAccum) window.__gcPbpAccum[pbpKey] = { count: plays.length, stats: gameStats };
+      pbpStats[game.eventId] = gameStats;
     });
+
+    // One map across every game on the slate, for the merge in getWeekStats.
+    const liveStats = {};
+    Object.keys(pbpStats).forEach(eventId => {
+      Object.keys(pbpStats[eventId]).forEach(pid => { liveStats[pid] = pbpStats[eventId][pid]; });
+    });
+    window.__gcPbpStats = liveStats;
 
     // Newest first across every game. wallclock is ESPN's own timestamp
     // for the play; sequence is the fallback inside one game.
@@ -29857,6 +29967,10 @@
     if (!grid) return;
     if (!window.getNflState) return;
     const { week, season } = await window.getNflState();
+    // Which week the accumulated plays describe, so getWeekStats only
+    // folds them into that week and never into a Game Log or a week the
+    // dropdown has gone looking at.
+    window.__gcPbpWeek = week;
 
     const [games, dict] = await Promise.all([
       gcGetGamesList(season, week),
@@ -29905,6 +30019,20 @@
     if (typeof deskMark === 'function') deskMark('render:gamecast', performance.now() - __gcT0);
     gcFeedPlays(sorted, dict).then(rows => {
       window.__gcFeedRows = rows;
+      // The plays have only just been parsed, and they are the freshest
+      // stat line anywhere in the app. Fold them in before anything on
+      // this page is drawn from them, so the box score, over expected and
+      // the feed's own totals all read the same afternoon -- rather than
+      // the panels showing a number a minute older than the play that is
+      // sitting right next to it.
+      const merged = (typeof sbMergeLiveStats === 'function')
+        ? sbMergeLiveStats(statsMap, window.__gcPbpStats) : statsMap;
+      window.__gcStatsMap = merged;
+      if (window.__gcCache) window.__gcCache.statsMap = merged;
+      if (window.__gcOpenData) {
+        window.__gcOpenData.statsMap = merged;
+        gcRefreshInlineBodies();
+      }
       // This column refreshes under you every twenty seconds. Reading it
       // back to Sunday morning only to be thrown to the top mid-sentence
       // is the whole column failing at its job, so hold the scroll.
