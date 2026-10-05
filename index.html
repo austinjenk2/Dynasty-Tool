@@ -2157,6 +2157,12 @@
   .ld-stat-cell-action .ld-stat-value { display: flex; align-items: center; gap: 5px; margin-top: 0; }
   .ld-stat-cell-action .ld-stat-chev { font-size: 11px; color: var(--faint); }
   .sb-card-meta .sb-delta { color: var(--green); }
+  /* Weekly luck: did the schedule give you more or less than your score
+     earned against the whole league. See sbWeeklyLuck. */
+  .sb-luck { font-weight: 800; font-variant-numeric: tabular-nums; cursor: help; }
+  .sb-luck.is-pos { color: var(--green); }
+  .sb-luck.is-neg { color: var(--red); }
+  .sb-luck.is-flat { color: var(--faint); }
   .sb-card-score { text-align: right; flex-shrink: 0; }
   .sb-score-mine { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--navy); }
   .sb-score-vs { font-size: 10px; color: var(--faint); margin: 0 4px; }
@@ -29811,7 +29817,19 @@
             });
           });
         }
-        if (needAccum && players && players.length) dayRows.push({ game, play, players });
+        if (needAccum && players && players.length) {
+          dayRows.push({ game, play, players });
+          // Priced HERE, as the play lands, not when something later asks
+          // to look at it. gcPlayImpact keeps the first answer it gives,
+          // and until now the first answer for a play nobody had rendered
+          // came whenever Biggest Swings was opened -- by which time the
+          // matchup it decided had been decided for hours, so it priced
+          // against flat ground and came out near zero. A touchdown worth
+          // +48% when it happened was being handed to the one view whose
+          // whole job is to find it, valued at nothing. Pricing on arrival
+          // means the number kept is the number it really had.
+          gcPlayImpact(game, play, players);
+        }
         if (i >= tailFrom) out.push({ game, play, players: players || [] });
       });
       // The game object is rebuilt from the scoreboard on every refresh, so
@@ -30730,6 +30748,57 @@
   // silently dropping leagues back out of the grid. Only the most
   // recently started call is allowed to write the DOM.
   let sbRenderGen = 0;
+  // ---- Weekly luck ------------------------------------------------------
+  // How much of this week's result you earned and how much the schedule
+  // handed you.
+  //
+  // Your score is measured against the whole league rather than against the
+  // one team you happen to have drawn: beat nine of eleven and you have
+  // earned about 0.82 of a win, whoever you were playing. Luck is the
+  // difference between that and what you are actually getting -- +1.00 is
+  // the week you score second-lowest and win anyway, -1.00 is the week you
+  // put up the second-highest score and lose.
+  //
+  // Read off live points, not projections: this is about what has actually
+  // happened so far, and a projection cannot be lucky. Before anyone has
+  // scored there is no result to be lucky about, so it stays blank rather
+  // than reporting a league-wide tie.
+  function sbWeeklyLuck(entry, myPts, oppPts) {
+    const all = (entry && entry.allMatchups) || [];
+    const myRosterId = entry && entry.roster ? entry.roster.roster_id : null;
+    if (!all.length || myRosterId == null) return null;
+    const others = all.filter(m => m && m.roster_id != null && m.roster_id !== myRosterId);
+    if (others.length < 2) return null;
+    if (!all.some(m => Number(m.points) > 0)) return null;
+    let beat = 0, tied = 0;
+    others.forEach(m => {
+      const p = Number(m.points) || 0;
+      if (myPts > p) beat++; else if (myPts === p) tied++;
+    });
+    const earned = (beat + tied * 0.5) / others.length;
+    const actual = myPts > oppPts ? 1 : (myPts < oppPts ? 0 : 0.5);
+    return { luck: actual - earned, earned, beat, of: others.length, winning: myPts > oppPts };
+  }
+
+  function sbWeeklyLuckHtml(luck) {
+    if (!luck) return '';
+    // Under a tenth of a win either way is the schedule being fair, and a
+    // number that small dressed up as "lucky" is just noise on the card.
+    const flat = Math.abs(luck.luck) < 0.1;
+    const cls = flat ? 'is-flat' : (luck.luck > 0 ? 'is-pos' : 'is-neg');
+    const txt = (luck.luck >= 0 ? '+' : '−') + Math.abs(luck.luck).toFixed(2);
+    const word = flat ? 'about fair' : (luck.luck > 0 ? 'lucky' : 'unlucky');
+    const tip = `You are outscoring ${luck.beat} of ${luck.of} teams this week, which is worth about `
+      + `${luck.earned.toFixed(2)} of a win. You are currently ${luck.winning ? 'winning' : 'not winning'} `
+      + `your matchup, so the schedule is ${word} to you by ${Math.abs(luck.luck).toFixed(2)} of a win.`;
+    return ` &middot; <span class="sb-luck ${cls}" title="${sbFieldEsc(tip)}">${txt} luck</span>`;
+  }
+
+  // Sleeper is unreachable from the sandbox this is developed in, so the
+  // luck arithmetic is checked by handing this hand-built leagues in a
+  // browser rather than by waiting for a Sunday.
+  window.__sbWeeklyLuck = sbWeeklyLuck;
+
   async function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
     if (!sbGrid) return;
@@ -30890,7 +30959,7 @@
           <div class="sb-card-logo" style="background:${color}">${sbLeagueLogoImgHtml(entry.league)}</div>
           <div class="sb-card-main">
             <div class="sb-card-name">${entry.league.name}${recordText ? `<span class="sb-card-record">${recordText}</span>` : ''}</div>
-            <div class="sb-card-meta">vs ${oppName}</div>
+            <div class="sb-card-meta">vs ${oppName}${sbWeeklyLuckHtml(sbWeeklyLuck(entry, myPts, oppPts))}</div>
           </div>
           <div class="sb-card-score"><span class="sb-score-mine">${hasData ? headlineMine.toFixed(1) : '&mdash;'}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${hasData ? headlineTheirs.toFixed(1) : '&mdash;'}</span>${liveScoreHtml}</div>
           <div class="sb-badge ${badgeClass}">${badgeText}</div>
