@@ -20818,9 +20818,20 @@
         window.__sleeperStatsCache[cacheKey] = statsMap;
         window.__sleeperStatsMetaCache[cacheKey] = metaMap;
         window.__sleeperStatsFetchedAt[cacheKey] = Date.now();
+        window.__sleeperStatsLastError = null;
         return statsMap;
       } catch (e) {
-        return window.__sleeperStatsCache[cacheKey] || {};
+        // This used to return {} and say nothing, which is the worst
+        // possible answer: an empty stat map is indistinguishable from
+        // "nobody has scored", so a refused or timed-out request painted
+        // every player on the site with no points and left no trace of
+        // why. Keep the last good numbers when there are any, and when
+        // there are none, say out loud that scoring could not be loaded
+        // rather than quietly asserting a zero.
+        window.__sleeperStatsLastError = { at: Date.now(), message: String((e && e.message) || e) };
+        const last = window.__sleeperStatsCache[cacheKey];
+        if (!last) setSyncState('error', 'Live scoring did not load — Sleeper refused the request');
+        return last || {};
       }
     }
     window.sleeperGetWeekStats = getWeekStats;
@@ -21774,19 +21785,32 @@
       const cached = window.__sleeperSeasonMatchupsCache[leagueId];
       if (cached && (Date.now() - cached.at < SEASON_MATCHUPS_TTL)) return cached.byWeek;
       // A week that is over is over: its scores are final and refetching it
-      // returns the same numbers it returned a minute ago. Only the live
-      // week (and anything after it, which can still see lineup changes)
-      // actually needs pulling again. This used to refetch all 18 weeks for
-      // every league every 60 seconds -- on a 14-league portfolio that is
-      // 252 requests a minute, on their own, to learn nothing, while the
-      // browser's six connections per host were wanted by the live data.
+      // returns the same numbers it returned a minute ago. The only week
+      // that can still move is the live one.
+      //
+      // This used to say "the live week AND anything after it, which can
+      // still see lineup changes", and that half-exception was the whole
+      // problem. A future week has no result to report however the lineups
+      // move, and at week 5 of 18 it meant thirteen pointless weeks per
+      // league. The Record Book repaints for EVERY league on EVERY sync,
+      // on screen or not, so on a portfolio this size that was something
+      // like 250 requests a minute, all afternoon, to learn nothing --
+      // while the browser's six connections to Sleeper were wanted by live
+      // scoring, and while Sleeper was entirely within its rights to start
+      // refusing them. A refused /stats call comes back as an empty stat
+      // map, which is why this reads on screen as "points aren't loading".
+      //
+      // So anything already in hand for a week that is not the live one is
+      // reused, including an empty one -- re-asking for a fixture nobody
+      // has played is the exact waste being removed. First call still
+      // fetches all eighteen; every call after it fetches one.
       const entry = (window.sleeperLeagueData || {})[leagueId];
       const liveWeek = (entry && entry.week) || 1;
       const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
       const prev = cached && cached.byWeek;
       const byWeek = await Promise.all(weeks.map((w, i) => {
-        // Index i holds week i+1. A past week we already have is reused.
-        if (prev && w < liveWeek && prev[i] && prev[i].length) return prev[i];
+        // Index i holds week i+1.
+        if (prev && w !== liveWeek && Array.isArray(prev[i])) return prev[i];
         return sleeperFetch(`/league/${leagueId}/matchups/${w}`).catch(() => (prev && prev[i]) || []);
       }));
       window.__sleeperSeasonMatchupsCache[leagueId] = { byWeek, at: Date.now() };
