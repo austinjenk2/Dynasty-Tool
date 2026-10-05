@@ -29660,6 +29660,9 @@
   // Every player in a live game, by Sleeper id, as the plays have him
   // right now. Merged over Sleeper's own stat feed by sbMergeLiveStats.
   window.__gcPbpStats = window.__gcPbpStats || {};
+  // What each play did to your week, worked out once and kept. See
+  // gcPlayImpact for why this must not be re-derived later.
+  window.__gcPlaySwing = window.__gcPlaySwing || {};
   // Short-name maps live as long as the page does: a rostered player can
   // change teams mid-week, which only ever adds a name that fails to
   // match until the next reload, never a wrong one.
@@ -29860,8 +29863,60 @@
     };
   }
 
+  // What a play did to your week.
+  //
+  // This is a fact about the moment it happened, and it was being
+  // re-derived from scratch on every draw, which quietly turned it into a
+  // different question. sbSwingFor answers "what would N more points do
+  // from where this matchup stands RIGHT NOW" -- correct for leverage,
+  // which is about the next point, and wrong for a play already in the
+  // books.
+  //
+  // The two agree only while Sleeper has not yet posted the play. Its
+  // players_points feed is where the matchup margin comes from, and it
+  // trails ESPN by about a minute. In that window the margin is still the
+  // pre-play one, so margin + points lands on the post-play margin and the
+  // answer is right. Once Sleeper catches up the margin already CONTAINS
+  // the play, and the same arithmetic starts pricing the NEXT 5.9 points
+  // instead of the 5.9 that just happened -- measured from the far side of
+  // the curve, where the matchup it just decided has gone flat.
+  //
+  // That is why a 49-yard catch which took a league from a coin flip to
+  // all but won settled at +6.2%. The honest number was the one it had a
+  // minute earlier; by the time it was read it was answering "what would
+  // the NEXT six points be worth, now that you have already won" -- which
+  // is very little, correctly.
+  //
+  // So it is worked out once, on first sight, and kept.
+  function gcPlayKey(game, play) {
+    return [game.eventId, play.seq || '', play.wallclock || '', (play.text || '').slice(0, 40)].join('|');
+  }
+
+  function gcPlayImpact(game, play, players) {
+    const key = gcPlayKey(game, play);
+    const cached = window.__gcPlaySwing[key];
+    if (cached) return cached;
+    let net = 0, anyFor = false, anyAgainst = false, found = 0;
+    const byPlayer = {};
+    (players || []).forEach(pl => {
+      const impacts = sbPlayImpact(pl.id, pl.stats,
+        { espnGameData: window.__gcEspnGameData, week: window.__gcWeek });
+      byPlayer[pl.id] = impacts.length;
+      impacts.forEach(i => {
+        found++;
+        if (i.onMySide) anyFor = true; else anyAgainst = true;
+        net += i.swing;
+      });
+    });
+    const res = { net, anyFor, anyAgainst, byPlayer };
+    // Only kept once there was a real matchup behind it. Before your
+    // leagues have loaded every play prices at nothing, and writing that
+    // down would freeze the column at zero for the rest of the session.
+    if (found) window.__gcPlaySwing[key] = res;
+    return res;
+  }
+
   function gcFeedHtml(rows) {
-    if (!rows.length) return '<div class="gc-empty">No plays yet. The feed fills in once a game kicks off.</div>';
 
     const dict = window.__sleeperPlayerDict || {};
     const nameOf = (pid) => {
@@ -29898,13 +29953,10 @@
       // several points of win probability, the same touchdown in a game
       // you are 95% to win is worth almost nothing, and the page should
       // not pretend otherwise.
-      let anyFor = false, anyAgainst = false, netSwing = 0;
+      const impact = gcPlayImpact(game, play, players);
+      const anyFor = impact.anyFor, anyAgainst = impact.anyAgainst, netSwing = impact.net;
       const blocks = players.map(pl => {
-        const impacts = sbPlayImpact(pl.id, pl.stats, { espnGameData: window.__gcEspnGameData, week: window.__gcWeek });
-        impacts.forEach(i => {
-          if (i.onMySide) anyFor = true; else anyAgainst = true;
-          netSwing += i.swing;
-        });
+        const impactCount = impact.byPlayer[pl.id] || 0;
         const fpCls = pl.fp > 0 ? ' is-pos' : (pl.fp < 0 ? ' is-neg' : '');
         const p = dict[pl.id] || {};
         const teamLogo = sbTeamLogoUrl(p.team);
@@ -29941,7 +29993,7 @@
             `<span class="gc-feed-day-label">ON THE DAY</span>` +
             `<span data-gc-live="day" data-gc-pid="${sbFieldEsc(pl.id)}">${sbFieldEsc(live.dayLine)}</span>` +
           `</div>` +
-          (impacts.length ? ''
+          (impactCount ? ''
                  : '<div class="gc-feed-nostake">no stake in any of your leagues</div>') +
         `</div>`;
       });
@@ -30039,11 +30091,11 @@
       if (!row) return;
       const net = item.querySelector('[data-gc-live="swing"]');
       if (!net) return;
-      let netSwing = 0;
-      (row.players || []).forEach(pl => {
-        sbPlayImpact(pl.id, pl.stats, { espnGameData: window.__gcEspnGameData, week: window.__gcWeek })
-          .forEach(i => { netSwing += i.swing; });
-      });
+      // Cached per play, so this writes the number the play actually
+      // produced rather than re-pricing it against a margin that has since
+      // absorbed it. Still written on every pass because a play first seen
+      // before your leagues loaded prices at nothing and is not kept.
+      const netSwing = gcPlayImpact(row.game, row.play, row.players).net;
       net.textContent = gcFeedSwingText(netSwing);
       net.className = 'gc-feed-net ' + (Math.abs(netSwing) < 0.05 ? 'is-flat' : (netSwing > 0 ? 'is-pos' : 'is-neg'));
       item.classList.toggle('is-mine', netSwing >= 0);
