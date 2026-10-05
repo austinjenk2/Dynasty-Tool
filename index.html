@@ -29550,17 +29550,35 @@
     const espnGameData = o.espnGameData || window.__gcEspnGameData || null;
     const week = o.week != null ? o.week : window.__gcWeek;
     const out = [];
+    // Signed points, per league, from the plays that came AFTER the one
+    // being priced. Given it, each matchup is wound back to where it stood
+    // when this play happened, so a touchdown out of the one o'clock games
+    // is worth what it was worth then rather than what six more points
+    // would be worth now that the matchup it decided is over. Without it
+    // the margin is simply today's, which is only the right answer for a
+    // play that has just this second landed.
+    const since = o.marginSince || null;
     (sbExposureIndex(espnGameData, week).get(playerId) || []).forEach(({ entry: e, onMySide, state }) => {
       // Scored in this league's settings, not on the house line: the same
       // catch is worth 1.0 more in full PPR than in half, and this league
       // is the one whose matchup is being decided.
       const pts = sbCustomScoreFor(stats, e.league.scoring_settings) || 0;
+      let st = state;
+      if (since) {
+        // sbSwingFor treats state.margin as the margin BEFORE the play, so
+        // this play's own points come off as well as everything after it.
+        const signed = onMySide ? pts : -pts;
+        st = {
+          margin: (state.margin || 0) - (since[e.league.league_id] || 0) - signed,
+          sigma: state.sigma,
+        };
+      }
       out.push({
         name: e.league.name,
         leagueId: e.league.league_id,
         onMySide,
         pts,
-        swing: sbSwingFor(state, pts, onMySide),
+        swing: sbSwingFor(st, pts, onMySide),
       });
     });
     out.sort((a, b) => Math.abs(b.swing) - Math.abs(a.swing));
@@ -29698,7 +29716,22 @@
     const live = games.filter(g => g.state === 'in');
     // Nothing live: show the most recent finished games instead of an
     // empty column, which is what a Tuesday looks like.
-    const targets = live.length ? live : games.filter(g => g.state === 'post').slice(-6);
+    const feedGames = live.length ? live : games.filter(g => g.state === 'post').slice(-6);
+    const feedIds = new Set(feedGames.map(g => g.eventId));
+
+    // Every game that has kicked off today, not just the ones still being
+    // played. The column itself still only shows the live ones -- but
+    // Biggest Swings is a claim about the DAY, and a one o'clock game that
+    // has gone final was never being fetched at all once the late window
+    // started. Its plays could not be ranked because they were never
+    // collected; the only reason any of them ever showed up was if this
+    // page happened to be open while that game was live. A touchdown
+    // nobody watched live was invisible for the rest of the afternoon.
+    //
+    // A finished game is pulled once and then served from
+    // __gcFinalPbpCache for the rest of the session, so the steady cost of
+    // this is unchanged -- it is one extra request per game, once.
+    const targets = games.filter(g => g.state === 'in' || g.state === 'post');
 
     const perGame = await Promise.all(targets.map(async (g) => {
       if (g.state === 'post' && window.__gcFinalPbpCache[g.eventId]) {
@@ -29828,14 +29861,29 @@
           // +48% when it happened was being handed to the one view whose
           // whole job is to find it, valued at nothing. Pricing on arrival
           // means the number kept is the number it really had.
-          gcPlayImpact(game, play, players);
         }
-        if (i >= tailFrom) out.push({ game, play, players: players || [] });
+        if (i >= tailFrom && feedIds.has(game.eventId)) out.push({ game, play, players: players || [] });
       });
       // The game object is rebuilt from the scoreboard on every refresh, so
       // rows kept from an earlier pass are re-pointed at the current one --
       // otherwise a kept row would render a stale score line.
       if (!needAccum) dayRows.forEach(r => { r.game = game; });
+      // Price this game's plays newest first, winding each matchup back a
+      // play at a time. Done here, as the plays arrive, rather than when
+      // something gets around to looking at them -- and done backwards so
+      // that a game fetched all at once (a page opened after it finished)
+      // still gets each play valued at the matchup it actually happened
+      // in. gcPlayImpact keeps the first answer, so a play priced on a
+      // previous pass is left alone and only its points are rolled on.
+      if (needAccum) {
+        const since = {};
+        for (let i = dayRows.length - 1; i >= 0; i--) {
+          const r = dayRows[i];
+          const res = gcPlayImpact(game, r.play, r.players, since);
+          const sb = (res && res.signedByLeague) || {};
+          Object.keys(sb).forEach(lid => { since[lid] = (since[lid] || 0) + sb[lid]; });
+        }
+      }
       if (needAccum) window.__gcPbpAccum[pbpKey] = { count: plays.length, stats: gameStats, dayRows };
       pbpStats[game.eventId] = gameStats;
     });
@@ -29921,23 +29969,27 @@
     return [game.eventId, play.seq || '', play.wallclock || '', (play.text || '').slice(0, 40)].join('|');
   }
 
-  function gcPlayImpact(game, play, players) {
+  function gcPlayImpact(game, play, players, since) {
     const key = gcPlayKey(game, play);
     const cached = window.__gcPlaySwing[key];
     if (cached) return cached;
     let net = 0, anyFor = false, anyAgainst = false, found = 0;
     const byPlayer = {};
+    // What this play itself did to each matchup, so the caller walking a
+    // game backwards can wind the margin on to the play before it.
+    const signedByLeague = {};
     (players || []).forEach(pl => {
       const impacts = sbPlayImpact(pl.id, pl.stats,
-        { espnGameData: window.__gcEspnGameData, week: window.__gcWeek });
+        { espnGameData: window.__gcEspnGameData, week: window.__gcWeek, marginSince: since || null });
       byPlayer[pl.id] = impacts.length;
       impacts.forEach(i => {
         found++;
         if (i.onMySide) anyFor = true; else anyAgainst = true;
         net += i.swing;
+        signedByLeague[i.leagueId] = (signedByLeague[i.leagueId] || 0) + (i.onMySide ? i.pts : -i.pts);
       });
     });
-    const res = { net, anyFor, anyAgainst, byPlayer };
+    const res = { net, anyFor, anyAgainst, byPlayer, signedByLeague };
     // Only kept once there was a real matchup behind it. Before your
     // leagues have loaded every play prices at nothing, and writing that
     // down would freeze the column at zero for the rest of the session.
