@@ -18228,7 +18228,7 @@
       }
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
-      return `<tr class="sb-lineup-row${onBench ? ' sb-lineup-bench' : ''}" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}">` +
+      return `<tr class="sb-lineup-row${onBench ? ' sb-lineup-bench' : ''}" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}" data-league-id="${league ? league.league_id : ''}">` +
         '<td class="sb-exp-player">' +
           `<span class="sb-exp-pos sb-pos-${posClass}">${pos}</span>` +
           `<span class="sb-exp-avatar"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>` +
@@ -18384,7 +18384,7 @@
       const pts = sbEffectivePoints(id, pointsMap || {}, projMap, league);
       const season = league ? league.season : '';
       const tierClass = sbFieldPointTierClass(pts);
-      return `<span class="field-player-av${tierClass}" style="left:${pl.x}%;bottom:${bottom}%" title="${sbFieldEsc(name)}" data-player-id="${id}" data-pts="${pts.toFixed(1)}" data-week="${week || ''}" data-season="${season}"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>`;
+      return `<span class="field-player-av${tierClass}" style="left:${pl.x}%;bottom:${bottom}%" title="${sbFieldEsc(name)}" data-player-id="${id}" data-pts="${pts.toFixed(1)}" data-week="${week || ''}" data-season="${season}" data-league-id="${league ? league.league_id : ''}"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>`;
     }).join('');
   }
   function sbFieldPanelHtml(startPct, teams) {
@@ -18788,49 +18788,63 @@
     return window.__sleeperScheduleCache[cacheKey];
   }
 
+  // This popup used to be a one-shot snapshot, and the two halves of it
+  // were read off different clocks. The points came from data-pts, baked
+  // into the row when the page last painted -- which is Sleeper's official
+  // players_points, as of the last sixty-second sync. The stats underneath
+  // were fetched the moment you clicked, and now carry the play-by-play
+  // merge on top, so they are current to the last snap. That is how the
+  // card came to show 1.6 FANTASY PTS above two catches for fourteen
+  // yards: 1.6 was one catch for six, several minutes earlier. Neither
+  // half was wrong and they could never agree.
+  //
+  // So: one clock. The points are scored FROM the stat line the card is
+  // showing, in that league's own settings, which makes disagreement
+  // impossible rather than unlikely. And the card refills itself while it
+  // is open, so both halves -- and the score and clock above them -- move
+  // with the play-by-play instead of freezing at the moment you opened it.
+  let pfmTimer = null;
+  const PFM_REFRESH_MS = 15000;
+
   function closePlayerFieldModal() {
+    if (pfmTimer) { clearInterval(pfmTimer); pfmTimer = null; }
     const overlay = document.querySelector('.pfm-overlay');
     if (overlay) overlay.remove();
   }
 
-  async function openPlayerFieldModal(el) {
-    const id = el.dataset.playerId;
-    if (!id) return;
-    const dict = window.__sleeperPlayerDict || {};
-    const p = dict[id];
-    const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id) : id;
-    const pos = p ? (p.position || '') : '';
-    const team = p ? (p.team || null) : null;
-    const pts = el.dataset.pts || '0.0';
-    const week = el.dataset.week;
-    const season = el.dataset.season;
+  // Scored in the league the row came from, so the number means the same
+  // thing the row meant. Without a league -- a card opened from somewhere
+  // that is not a specific matchup -- the house line stands in.
+  //
+  // Never lower than the number the row already showed: Sleeper's
+  // players_points is the official score and can carry something the play
+  // text did not spell out, while our own reading is the faster of the
+  // two. Taking the higher keeps the card level with the feed without ever
+  // appearing to take points away from a player who has not lost any.
+  function pfmPointsFor(id, stats, leagueId, fallbackPts) {
+    const fallback = Number(fallbackPts);
+    const haveFallback = Number.isFinite(fallback);
+    if (!stats) return haveFallback ? fallback : null;
+    const entry = leagueId ? (window.sleeperLeagueData || {})[leagueId] : null;
+    const scoring = entry && entry.league ? entry.league.scoring_settings : null;
+    let derived = null;
+    try {
+      derived = scoring
+        ? sbCustomScoreFor(stats, scoring)
+        : sbHouseScore(id, stats, window.__sleeperPlayerDict || {});
+    } catch (e) { derived = null; }
+    if (derived == null || isNaN(derived)) return haveFallback ? fallback : null;
+    return haveFallback ? Math.max(fallback, derived) : derived;
+  }
 
-    closePlayerFieldModal();
-    const overlay = document.createElement('div');
-    overlay.className = 'pfm-overlay';
-    overlay.innerHTML =
-      '<div class="pfm-modal">' +
-        '<button class="pfm-close" type="button" aria-label="Close">&times;</button>' +
-        '<div class="pfm-head">' +
-          `<span class="pfm-avatar"><img src="${sbHeadshotUrl(id)}" alt="" onerror="this.remove()"></span>` +
-          `<div class="pfm-headinfo"><div class="pfm-name">${sbFieldEsc(name)}</div><div class="pfm-sub">${pos}${team ? ' &middot; ' + team : ''}</div></div>` +
-          `<div class="pfm-pts"><div class="pfm-pts-value">${pts}</div><div class="pfm-pts-label">FANTASY PTS</div></div>` +
-        '</div>' +
-        '<div class="pfm-game"><div class="ld-loading">Loading matchup&hellip;</div></div>' +
-        '<div class="pfm-stats"><div class="ld-loading">Loading stats&hellip;</div></div>' +
-      '</div>';
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closePlayerFieldModal(); });
-    overlay.querySelector('.pfm-close').addEventListener('click', closePlayerFieldModal);
-
+  // Everything in the card that can change while you are looking at it.
+  // Re-run on a timer; writes into the shell openPlayerFieldModal built.
+  async function pfmFill(overlay, ctx) {
+    if (!overlay || !overlay.isConnected) return;
     const gameEl = overlay.querySelector('.pfm-game');
     const statsEl = overlay.querySelector('.pfm-stats');
-
-    if (!team || !week || !season) {
-      gameEl.innerHTML = '<p class="pfm-empty">No real NFL team on file for this player.</p>';
-      statsEl.innerHTML = '';
-      return;
-    }
+    const ptsEl = overlay.querySelector('.pfm-pts-value');
+    const { id, team, week, season, leagueId, fallbackPts } = ctx;
 
     // Whether this player's own real game has started -- once it has,
     // stats should only ever be their real recorded line, even while
@@ -18845,6 +18859,7 @@
         sbResolveGameInfoForWeek(season, week, currentWeek),
         window.sleeperGetEspnGameData ? window.sleeperGetEspnGameData(week, season) : Promise.resolve({}),
       ]);
+      if (!overlay.isConnected) return;
       const info = gameInfo[team];
       if (!info || !info.opponent) {
         gameEl.innerHTML = '<p class="pfm-empty">No schedule data for this week yet.</p>';
@@ -18883,6 +18898,7 @@
       let stats = null, isActual = false;
       if (window.sleeperGetWeekStats) {
         const actual = await window.sleeperGetWeekStats(season, week);
+        if (!overlay.isConnected) return;
         if (actual && actual[id] && Object.keys(actual[id]).length) { stats = actual[id]; isActual = true; }
       }
       // Once the player's game has actually started, their real recorded
@@ -18892,7 +18908,16 @@
       // early on).
       if (!stats && !gameStarted && window.sleeperGetWeekProjections) {
         const projMap = await window.sleeperGetWeekProjections(season, week);
+        if (!overlay.isConnected) return;
         if (projMap && projMap.__statsMap && projMap.__statsMap[id]) stats = projMap.__statsMap[id];
+      }
+      // The headline number, scored off the very stat line below it.
+      // Only once those are his REAL stats: before kickoff the card is
+      // showing a projection, and the row's own projected total is the
+      // better thing to lead with.
+      if (ptsEl) {
+        const live = isActual ? pfmPointsFor(id, stats, leagueId, fallbackPts) : Number(fallbackPts);
+        if (live != null && !isNaN(live)) ptsEl.textContent = Number(live).toFixed(1);
       }
       const rows = stats
         ? Object.keys(SB_STAT_LABELS).filter(k => stats[k] != null).map(k =>
@@ -18905,6 +18930,53 @@
     } catch (err) {
       statsEl.innerHTML = '<p class="pfm-empty">Could not load stats.</p>';
     }
+  }
+
+  async function openPlayerFieldModal(el) {
+    const id = el.dataset.playerId;
+    if (!id) return;
+    const dict = window.__sleeperPlayerDict || {};
+    const p = dict[id];
+    const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id) : id;
+    const pos = p ? (p.position || '') : '';
+    const team = p ? (p.team || null) : null;
+    const pts = el.dataset.pts || '0.0';
+    const week = el.dataset.week;
+    const season = el.dataset.season;
+    const leagueId = el.dataset.leagueId || '';
+
+    closePlayerFieldModal();
+    const overlay = document.createElement('div');
+    overlay.className = 'pfm-overlay';
+    overlay.innerHTML =
+      '<div class="pfm-modal">' +
+        '<button class="pfm-close" type="button" aria-label="Close">&times;</button>' +
+        '<div class="pfm-head">' +
+          `<span class="pfm-avatar"><img src="${sbHeadshotUrl(id)}" alt="" onerror="this.remove()"></span>` +
+          `<div class="pfm-headinfo"><div class="pfm-name">${sbFieldEsc(name)}</div><div class="pfm-sub">${pos}${team ? ' &middot; ' + team : ''}</div></div>` +
+          `<div class="pfm-pts"><div class="pfm-pts-value">${pts}</div><div class="pfm-pts-label">FANTASY PTS</div></div>` +
+        '</div>' +
+        '<div class="pfm-game"><div class="ld-loading">Loading matchup&hellip;</div></div>' +
+        '<div class="pfm-stats"><div class="ld-loading">Loading stats&hellip;</div></div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closePlayerFieldModal(); });
+    overlay.querySelector('.pfm-close').addEventListener('click', closePlayerFieldModal);
+
+    if (!team || !week || !season) {
+      overlay.querySelector('.pfm-game').innerHTML = '<p class="pfm-empty">No real NFL team on file for this player.</p>';
+      overlay.querySelector('.pfm-stats').innerHTML = '';
+      return;
+    }
+
+    const ctx = { id, team, week, season, leagueId, fallbackPts: pts };
+    await pfmFill(overlay, ctx);
+    // Open on a Sunday afternoon, this is a live card: it keeps pace with
+    // the plays rather than reporting the moment it was opened.
+    pfmTimer = setInterval(() => {
+      if (!overlay.isConnected) { clearInterval(pfmTimer); pfmTimer = null; return; }
+      pfmFill(overlay, ctx);
+    }, PFM_REFRESH_MS);
   }
 
   document.addEventListener('click', (e) => {
