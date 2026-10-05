@@ -2157,12 +2157,6 @@
   .ld-stat-cell-action .ld-stat-value { display: flex; align-items: center; gap: 5px; margin-top: 0; }
   .ld-stat-cell-action .ld-stat-chev { font-size: 11px; color: var(--faint); }
   .sb-card-meta .sb-delta { color: var(--green); }
-  /* Weekly luck: did the schedule give you more or less than your score
-     earned against the whole league. See sbWeeklyLuck. */
-  .sb-luck { font-weight: 800; font-variant-numeric: tabular-nums; cursor: help; }
-  .sb-luck.is-pos { color: var(--green); }
-  .sb-luck.is-neg { color: var(--red); }
-  .sb-luck.is-flat { color: var(--faint); }
   .sb-card-score { text-align: right; flex-shrink: 0; }
   .sb-score-mine { font-family: 'Source Serif 4', serif; font-size: 16px; font-weight: 700; color: var(--navy); }
   .sb-score-vs { font-size: 10px; color: var(--faint); margin: 0 4px; }
@@ -6082,6 +6076,11 @@
           <div class="sb-stat" id="sbStatSwing">
             <div class="sb-stat-value" id="sbStatSwingValue">&plusmn;0.00</div>
             <div class="sb-stat-label" id="sbStatSwingLabel">WEEK VS EXPECTED</div>
+          </div>
+          <div class="sb-stat-divider" id="sbStatLuckDivider"></div>
+          <div class="sb-stat" id="sbStatLuck">
+            <div class="sb-stat-value" id="sbStatLuckValue">&plusmn;0.00</div>
+            <div class="sb-stat-label" id="sbStatLuckLabel">SCHEDULE LUCK</div>
           </div>
         </div>
 
@@ -19417,7 +19416,6 @@
       // matchups you happen to be leading. Which is the point: a week where
       // you are up in four games you were always going to win has not
       // actually gone well.
-      let weekSwingTotal = 0, weekSwingCount = 0;
       const dollarMap = rgLeagueDollarMap();
       // Exposed so other places that read a player's rooting impact off
       // .rg-row (Weekly Schedule's exposure preview, the Rooting Guide's
@@ -19548,8 +19546,6 @@
               const rawNow = levLeagues.reduce((sum, l) => sum + l.perPoint, 0);
               if (poeNow != null && Number.isFinite(poeNow) && Math.abs(rawNow) > 0.0001) {
                 const swung = rawNow / 100 * poeNow;
-                weekSwingTotal += swung;
-                weekSwingCount++;
                 swungEl.hidden = false;
                 swungEl.querySelector('b').textContent =
                   (swung > 0 ? '+' : swung < 0 ? '\u2212' : '') + Math.abs(swung).toFixed(2);
@@ -19675,7 +19671,8 @@
       // you want off this page is "who actually decides my week", and that
       // is a group rather than a rank. Off in the other modes, where the
       // number is dollars or a league count and has no bands.
-      sbSetWeekSwing(weekSwingCount ? weekSwingTotal : null);
+      // WEEK VS EXPECTED belongs to the Slate now -- it is a difference of
+      // two projected records, which is the Scoreboard's own arithmetic.
 
       // No band headings any more: expected wins is a continuous number,
       // and slicing it into "huge" / "worth watching" was the arbitrary
@@ -29452,25 +29449,64 @@
   // halves of it already exist, so the two pages cannot tell different
   // stories. Shown even before kickoff, reading zero: a number that simply
   // is not there on a Wednesday is indistinguishable from a broken one.
-  function sbSetWeekSwing(total) {
-    const el = document.getElementById('sbStatSwingValue');
-    const lab = document.getElementById('sbStatSwingLabel');
+  // Shared shape for the two "signed number of wins" stats in the top bar.
+  function sbSetSignedWinStat(valueId, wrapId, labelId, label, total, title) {
+    const el = document.getElementById(valueId);
     if (!el) return;
     const idle = total == null || !Number.isFinite(total);
     el.className = 'sb-stat-value' + (idle ? '' : (total > 0.005 ? ' sb-green' : (total < -0.005 ? ' sb-red' : '')));
     el.innerHTML = idle
       ? '&plusmn;0.00'
       : (total > 0.005 ? '+' : (total < -0.005 ? '\u2212' : '\u00b1')) + Math.abs(total).toFixed(2);
-    if (lab) lab.textContent = idle ? 'NO GAMES STARTED' : 'WEEK VS EXPECTED';
-    const wrap = document.getElementById('sbStatSwing');
-    if (wrap) {
-      wrap.title = 'Every player in your matchups, priced at what a point of his is worth to you, '
-        + 'multiplied by how far over or under his own projection he is tracking, added up.\n\n'
-        + 'Zero means the week is going exactly as projected -- however many matchups you happen '
-        + 'to be leading. Being up in four games you were always going to win is not a good Sunday.';
-    }
+    const lab = document.getElementById(labelId);
+    if (lab) lab.textContent = idle ? 'NO GAMES STARTED' : label;
+    const wrap = document.getElementById(wrapId);
+    if (wrap) wrap.title = title;
+  }
+
+  // WEEK VS EXPECTED, in wins.
+  //
+  // It used to be every player's points-over-expectation multiplied by
+  // what a point of his was worth, added up -- a derivative, in units
+  // nobody could name. It is now the thing it always claimed to be: your
+  // projected record as it stands, minus your projected record with the
+  // same lineups and nothing played. +1.30 means this week's scoring has
+  // bought you one and a third wins more than the lineups were worth at
+  // kickoff.
+  function sbSetWeekSwing(total, parts) {
+    const p = parts || {};
+    sbSetSignedWinStat('sbStatSwingValue', 'sbStatSwing', 'sbStatSwingLabel', 'WEEK VS EXPECTED', total,
+      'Your projected record right now, minus what the same lineups were worth before anybody played.\n\n'
+      + (p.live != null && p.expected != null
+          ? `Now ${p.live.toFixed(2)} wins, expected ${p.expected.toFixed(2)}.\n\n` : '')
+      + 'The baseline reads your lineups as they stand, so setting or changing a lineup moves it; '
+      + 'it reads projections and never actual points, so a Thursday night player going off does not. '
+      + 'What is left is performance alone.\n\n'
+      + 'Zero means the week is going exactly as the lineups said it would, however many matchups you '
+      + 'happen to be leading. Being up in four games you were always going to win is not a good Sunday.');
   }
   window.sbSetWeekSwing = sbSetWeekSwing;
+
+  // SCHEDULE LUCK, in wins, across every league at once.
+  //
+  // Each week your score is measured against the whole league rather than
+  // the one team you drew: outscore nine of eleven and you have earned
+  // about 0.82 of a win whoever you were playing. Add that up across your
+  // leagues, and compare it with the wins you are actually getting. The
+  // difference is how much the schedule has helped or hurt you -- which is
+  // to say how hard the matchups you drew turned out to be.
+  function sbSetScheduleLuck(earned, actual, count) {
+    const idle = !count;
+    sbSetSignedWinStat('sbStatLuckValue', 'sbStatLuck', 'sbStatLuckLabel', 'SCHEDULE LUCK',
+      idle ? null : actual - earned,
+      idle ? ''
+        : `Your scores have earned ${earned.toFixed(2)} wins against the field this week; `
+          + `the matchups you drew are giving you ${actual.toFixed(2)}.\n\n`
+          + 'Positive means the schedule has been kind -- wins your scores did not really earn. '
+          + 'Negative means you keep running into whoever is having the big week.\n\n'
+          + `Across ${count} league${count === 1 ? '' : 's'}, on points scored so far.`);
+  }
+  window.sbSetScheduleLuck = sbSetScheduleLuck;
 
   // ---- Who is in what, worked out once -------------------------------
   // Every league's two sides, as a map from player to the matchups he is
@@ -30829,27 +30865,41 @@
     });
     const earned = (beat + tied * 0.5) / others.length;
     const actual = myPts > oppPts ? 1 : (myPts < oppPts ? 0 : 0.5);
-    return { luck: actual - earned, earned, beat, of: others.length, winning: myPts > oppPts };
+    return { luck: actual - earned, earned, actual, beat, of: others.length, winning: myPts > oppPts };
   }
 
-  function sbWeeklyLuckHtml(luck) {
-    if (!luck) return '';
-    // Under a tenth of a win either way is the schedule being fair, and a
-    // number that small dressed up as "lucky" is just noise on the card.
-    const flat = Math.abs(luck.luck) < 0.1;
-    const cls = flat ? 'is-flat' : (luck.luck > 0 ? 'is-pos' : 'is-neg');
-    const txt = (luck.luck >= 0 ? '+' : '−') + Math.abs(luck.luck).toFixed(2);
-    const word = flat ? 'about fair' : (luck.luck > 0 ? 'lucky' : 'unlucky');
-    const tip = `You are outscoring ${luck.beat} of ${luck.of} teams this week, which is worth about `
-      + `${luck.earned.toFixed(2)} of a win. You are currently ${luck.winning ? 'winning' : 'not winning'} `
-      + `your matchup, so the schedule is ${word} to you by ${Math.abs(luck.luck).toFixed(2)} of a win.`;
-    return ` &middot; <span class="sb-luck ${cls}" title="${sbFieldEsc(tip)}">${txt} luck</span>`;
+  // The same matchup priced as though no game had been played: every
+  // player on both sides at his own projection, nobody's actual score
+  // counted, full pre-kickoff uncertainty.
+  //
+  // This is the baseline "week vs expected" is measured against, and the
+  // point of it is WHICH things move it. It reads the lineups as they
+  // stand right now, so a lineup set or changed on Sunday morning moves
+  // it. It reads projections, never actual points, so a Thursday night
+  // player going off does not. That is the split you asked for: if your
+  // number goes from 9 to 10 and 0.3 of that was people setting lineups,
+  // the baseline becomes 9.3 on its own and only the 0.7 that was
+  // performance is left showing as the week beating expectation.
+  //
+  // Passing no espnGameData is what does it -- sbEffectivePoints only
+  // reaches for live scores when it has game state to read, so without it
+  // every player falls through to his projection.
+  function sbMatchupExpectedWinPct(myMatchup, oppMatchup, league, projMap, week) {
+    if (!myMatchup || !oppMatchup || !league) return null;
+    const unplayed = (m) => Object.assign({}, m, { players_points: {} });
+    const my = unplayed(myMatchup);
+    const opp = unplayed(oppMatchup);
+    const myProj = sbMatchupProjectedTotal(my, projMap, league, null, week);
+    const oppProj = sbMatchupProjectedTotal(opp, projMap, league, null, week);
+    if (!Number.isFinite(myProj) || !Number.isFinite(oppProj)) return null;
+    return sbWinProbability(myProj, oppProj, sbMatchupSigma(my, opp, projMap, league, null, week));
   }
 
   // Sleeper is unreachable from the sandbox this is developed in, so the
-  // luck arithmetic is checked by handing this hand-built leagues in a
+  // luck arithmetic is checked by handing these hand-built leagues in a
   // browser rather than by waiting for a Sunday.
   window.__sbWeeklyLuck = sbWeeklyLuck;
+  window.__sbMatchupExpectedWinPct = sbMatchupExpectedWinPct;
 
   async function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
@@ -30901,6 +30951,11 @@
     if (myGen !== sbRenderGen) return;
 
     let totalPts = 0, oppTotalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0, currentlyWinningCount = 0;
+    // The week measured against itself: what the lineups as they stand
+    // were worth before a ball was kicked, and what the schedule has made
+    // of the scores so far.
+    let expectedWinSum = 0, expectedCount = 0;
+    let luckEarned = 0, luckActual = 0, luckCount = 0;
     // Which players are in each league's matchup (both sides, starters
     // and bench), so the player search below can narrow the list to the
     // matchups a given player actually appears in. Rebuilt with the grid.
@@ -30969,6 +31024,12 @@
           // distribution, and a sum cannot answer "what are the odds I go
           // 10 of 14". See sbMatchupsWonOdds.
           weekWinProbs.push(winPct / 100);
+          // The same matchup with nothing played, for WEEK VS EXPECTED.
+          const expPct = sbMatchupExpectedWinPct(myMatchup, oppMatchup, entry.league, projMap, cardWeek);
+          if (expPct != null) { expectedWinSum += expPct / 100; expectedCount++; }
+          // And how the schedule is treating the score you actually have.
+          const cardLuck = sbWeeklyLuck(entry, myPts, oppPts);
+          if (cardLuck) { luckEarned += cardLuck.earned; luckActual += cardLuck.actual; luckCount++; }
           // Strict coin-flip split for the badge's color -- >=50% green,
           // <50% red -- rather than a three-way good/close/bad read, since
           // a 51% win probability is still more likely than not to win.
@@ -31011,7 +31072,7 @@
           <div class="sb-card-logo" style="background:${color}">${sbLeagueLogoImgHtml(entry.league)}</div>
           <div class="sb-card-main">
             <div class="sb-card-name">${entry.league.name}${recordText ? `<span class="sb-card-record">${recordText}</span>` : ''}</div>
-            <div class="sb-card-meta">vs ${oppName}${sbWeeklyLuckHtml(sbWeeklyLuck(entry, myPts, oppPts))}</div>
+            <div class="sb-card-meta">vs ${oppName}</div>
           </div>
           <div class="sb-card-score"><span class="sb-score-mine">${hasData ? headlineMine.toFixed(1) : '&mdash;'}</span><span class="sb-score-vs">vs</span><span class="sb-score-theirs">${hasData ? headlineTheirs.toFixed(1) : '&mdash;'}</span>${liveScoreHtml}</div>
           <div class="sb-badge ${badgeClass}">${badgeText}</div>
@@ -31048,6 +31109,9 @@
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
     const currentWinsValue = document.getElementById('sbStatCurrentWinsValue');
     if (currentWinsValue) currentWinsValue.textContent = `${currentlyWinningCount} of ${withMatchup}`;
+    sbSetWeekSwing(expectedCount ? projWinSum - expectedWinSum : null,
+      { live: projWinSum, expected: expectedWinSum });
+    sbSetScheduleLuck(luckEarned, luckActual, luckCount);
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
     const sbWeekLabel = document.getElementById('sbWeekLabel');
     if (sbWeekLabel) sbWeekLabel.textContent = week;
