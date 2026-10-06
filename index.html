@@ -16985,6 +16985,27 @@
     if (!league || !league.roster_positions || !playerDict || !matchup || !matchup.players) return filled;
     const startSlots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
 
+    // A week that has not arrived yet is nobody's lineup.
+    //
+    // Sleeper carries the current lineup forward into future weeks, so a
+    // future matchup usually comes back with a complete-looking starters
+    // array -- and a complete array was taken as declared, which meant
+    // next week's slate was built out of this week's decisions. That is
+    // wrong in both directions: it benches a player who is out this week
+    // in a week he will play, and it starts a player this week's manager
+    // happened to leave in.
+    //
+    // Nobody has set a week 9 lineup in week 5. What a team is worth in
+    // week 9 is its best possible lineup from week 9's projections, for
+    // every team in the league, and that is what the slate now shows --
+    // right up to the moment the week becomes the live one, when the real
+    // lineup takes over because by then it is a real decision.
+    const live = Number(window.__sleeperLiveWeek) || 0;
+    if (live && Number(week) > live) {
+      const best = sbOptimalLineupIds(matchup.players, league, projMap);
+      if (best && best.length) return best;
+    }
+
     // A lineup that is set and covers every slot is taken as it stands.
     if (filled.length === raw.length && raw.length >= startSlots.length) return filled;
 
@@ -17034,12 +17055,16 @@
   // Every other caller omits it and gets this week, which is what they
   // want. Scoring stays league-correct either way: the map carries its own
   // __statsMap and sbProjectionFor applies this league's settings to it.
-  function sbOptimalLineupTotal(playerIds, league, projMap) {
+  // The lineup itself and what it is worth, so the slate can show WHO is
+  // in a future week's best lineup and the strength models can take just
+  // the number, off one implementation.
+  function sbOptimalLineup(playerIds, league, projMap) {
     const playerDict = window.__sleeperPlayerDict;
     if (!league || !league.roster_positions || !playerDict) return null;
     const startSlots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
     const pool = (playerIds || []).filter(id => id && id !== '0');
     const chosen = new Set();
+    const ids = [];
     let total = 0;
     startSlots.forEach(slot => {
       const eligible = SB_SLOT_ELIGIBLE[slot];
@@ -17052,17 +17077,51 @@
         const proj = sbProjectionFor(pid, projMap, league);
         if (proj != null && proj > bestProj) { bestProj = proj; best = pid; }
       });
-      if (best) { chosen.add(best); total += bestProj; }
+      if (best) { chosen.add(best); ids.push(best); total += bestProj; }
     });
-    return total;
+    return { ids, total };
   }
+  function sbOptimalLineupTotal(playerIds, league, projMap) {
+    const r = sbOptimalLineup(playerIds, league, projMap);
+    return r ? r.total : null;
+  }
+  function sbOptimalLineupIds(playerIds, league, projMap) {
+    const r = sbOptimalLineup(playerIds, league, projMap);
+    return r ? r.ids : [];
+  }
+
+  // Who a roster can actually start. Sleeper keeps IR and taxi-squad
+  // players in `players` alongside everybody else and lists them again in
+  // `reserve` and `taxi`; the league will not let either into a lineup.
+  //
+  // Nothing excluded them, so every best-possible-lineup projection on
+  // the site counted a stashed player as a starter -- Contending Rank,
+  // the season simulation's team strength, the trade comparison. It
+  // flatters exactly the rosters that stash the most, which is why a deep
+  // dynasty roster with a full taxi squad read stronger than it can
+  // actually field, and why its first-round bye came out too high.
+  function sbStartablePlayers(roster) {
+    const all = (roster && roster.players) || [];
+    const blocked = new Set([].concat(
+      (roster && roster.reserve) || [],
+      (roster && roster.taxi) || []
+    ).filter(Boolean));
+    if (!blocked.size) return all.filter(id => id && id !== '0');
+    return all.filter(id => id && id !== '0' && !blocked.has(id));
+  }
+  window.sbStartablePlayers = sbStartablePlayers;
+  // Exposed so the future-week lineup rule can be checked without a live
+  // Sunday -- Sleeper is blocked from the sandbox, so the only way to test
+  // which lineup a week resolves to is to call this directly.
+  window.__sbEffectiveStarters = sbEffectiveStarters;
+  window.__sbOptimalLineup = sbOptimalLineup;
 
   function sbContendingRank(entry) {
     const allRosters = entry.allRosters || [];
     if (allRosters.length < 2 || !entry.roster) return null;
     const totals = allRosters.map(r => ({
       rosterId: r.roster_id,
-      total: sbOptimalLineupTotal(r.players, entry.league),
+      total: sbOptimalLineupTotal(sbStartablePlayers(r), entry.league),
     }));
     if (totals.some(t => t.total == null)) return null;
     const sorted = [...totals].sort((a, b) => b.total - a.total);
@@ -17212,7 +17271,7 @@
     if (allRosters.length < 2) return null;
     const totals = allRosters.map(r => ({
       rosterId: r.roster_id,
-      total: sbOptimalLineupTotal(r.players, entry.league),
+      total: sbOptimalLineupTotal(sbStartablePlayers(r), entry.league),
     }));
     if (totals.some(t => t.total == null)) return null;
     const sorted = [...totals].sort((a, b) => b.total - a.total);
@@ -23675,8 +23734,8 @@
         // are the optimal-lineup projections of the rosters as they stand,
         // which is the same assumption the pick and playoff models make.
         if (pct == null && week > liveWeek && window.sbTeamOptimalProjection && oppRoster && me) {
-          const mineProj = window.sbTeamOptimalProjection(me.players, league);
-          const oppProj = window.sbTeamOptimalProjection(oppRoster.players, league);
+          const mineProj = window.sbTeamOptimalProjection(window.sbStartablePlayers(me), league);
+          const oppProj = window.sbTeamOptimalProjection(window.sbStartablePlayers(oppRoster), league);
           if (mineProj > 0 && oppProj > 0) {
             pct = Math.round(sbWinProbability(mineProj, oppProj));
             pctKind = 'PROJ';
@@ -26165,6 +26224,9 @@
       // against: missing one of eleven is not missing one of two.
       const weeksLeftForInjury = Math.max(1, played.filter(p => !p).length);
       rosters.forEach(r => {
+        // IR and taxi players cannot be started, so they are not part of
+        // any lineup this roster could field. See sbStartablePlayers.
+        const startable = sbStartablePlayers(r);
         // One best-possible lineup per remaining week, then the average of
         // them as this roster's overall level. The average is what every
         // existing piece of machinery below works on -- the realism
@@ -26176,12 +26238,12 @@
         remainingWeekNumbers.forEach(w => {
           const pm = weekProjMaps[w];
           if (!pm) return;
-          const v = ppHealthyProjection(r.players, league, weeksLeftForInjury, pm);
+          const v = ppHealthyProjection(startable, league, weeksLeftForInjury, pm);
           if (v != null && v > 0) { perWeek[w] = v; wkSum += v; wkCount++; }
         });
         const opt = wkCount
           ? wkSum / wkCount
-          : ppHealthyProjection(r.players, league, weeksLeftForInjury);
+          : ppHealthyProjection(startable, league, weeksLeftForInjury);
         if (wkCount) weekLevelById[r.roster_id] = perWeek;
         if (opt != null && opt > 0) { strengthById[r.roster_id] = opt; optSum += opt; optCount++; }
         // Depth, measured on the same pass. Deliberately NOT put through
@@ -26197,7 +26259,7 @@
         // out in it.
         const depthWeek = remainingWeekNumbers.length
           ? weekProjMaps[remainingWeekNumbers[remainingWeekNumbers.length - 1]] : null;
-        const risk = ppDepthRisk(r.players, league, depthWeek);
+        const risk = ppDepthRisk(startable, league, depthWeek);
         if (risk != null) depthById[r.roster_id] = risk;
       });
       if (optCount === rosters.length && optSum > 0) {
@@ -34847,8 +34909,8 @@
       const rosters = entry.allRosters || [];
       const ra = rosters.find(r => r.roster_id === idA), rb = rosters.find(r => r.roster_id === idB);
       if (!ra || !rb) return null;
-      const pa = window.sbTeamOptimalProjection(ra.players, entry.league);
-      const pb = window.sbTeamOptimalProjection(rb.players, entry.league);
+      const pa = window.sbTeamOptimalProjection(window.sbStartablePlayers(ra), entry.league);
+      const pb = window.sbTeamOptimalProjection(window.sbStartablePlayers(rb), entry.league);
       // Two rosters that project identically -- or two that could not be
       // projected at all, which comes out as a pair of zeroes -- is not a
       // coin flip, it is no answer. Saying 50/50 there would be inventing
