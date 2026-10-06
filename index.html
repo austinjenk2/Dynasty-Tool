@@ -30142,7 +30142,7 @@
       .map(r => ({ r, n: Math.abs(gcPlayImpact(r.game, r.play, r.players).net) }))
       // Under a twentieth of a point of win probability is not a swing,
       // it is a rounding error with a headshot next to it.
-      .filter(x => x.n >= 0.05)
+      .filter(x => x.n >= GC_SWING_FLAT)
       .sort((a, b) => b.n - a.n)
       .slice(0, GC_SWINGS_MAX)
       .map(x => x.r);
@@ -30243,7 +30243,7 @@
       const scoreText = (play.awayScore != null && play.homeScore != null)
         ? `${game.away.abbr} ${play.awayScore}&ndash;${play.homeScore} ${game.home.abbr}` : '';
       const meta = [play.period ? `Q${play.period}` : '', play.clock, play.downDistance].filter(Boolean);
-      const netCls = Math.abs(netSwing) < 0.05 ? 'is-flat' : (netSwing > 0 ? 'is-pos' : 'is-neg');
+      const netCls = Math.abs(netSwing) < GC_SWING_FLAT ? 'is-flat' : (netSwing > 0 ? 'is-pos' : 'is-neg');
       const rowCls = (anyFor || anyAgainst) ? (netSwing >= 0 ? ' is-mine' : ' is-against') : '';
       const logo = (abbr) => {
         const url = sbTeamLogoUrl(abbr);
@@ -30260,7 +30260,7 @@
         <div class="gc-feed-text">${sbFieldEsc(play.text)}</div>
         ${blocks.join('')}
         ${(anyFor || anyAgainst)
-          ? `<div class="gc-feed-net ${netCls}" data-gc-live="swing">${gcFeedSwingText(netSwing)}</div>`
+          ? `<div class="gc-feed-net ${netCls}" data-gc-live="swing" title="${sbFieldEsc(gcFeedSwingTitle(netSwing))}">${gcFeedSwingText(netSwing)}</div>`
           : ''}
       </div>`);
     });
@@ -30269,8 +30269,43 @@
       : '<div class="gc-empty">No plays involving your players yet.</div>';
   }
 
+  // A play's impact, in the same unit as the projected record in the top
+  // bar -- because it is literally the same quantity.
+  //
+  // Your projected record is the sum of your win probability across every
+  // league. netSwing is the sum of what this play did to each of those
+  // probabilities. So netSwing IS the change in your projected record,
+  // give or take the factor of a hundred between a percentage and a
+  // fraction. Showing it as "+6.3% win probability across your matchups"
+  // made it sound like something had moved six per cent, when what it
+  // meant was six hundredths of a win -- which is why a record pinned at
+  // 8.97 looked like it was ignoring the play. It was not; 8.97 and 9.03
+  // just look the same at a glance.
+  //
+  // Stated in wins it is commensurate with the number above it, and a
+  // play in matchups that are all but decided correctly reads as having
+  // done nothing, instead of as a percentage big enough to argue with.
+  const GC_SWING_FLAT = 0.05;  // unchanged: what already counts as no movement
+  // Below this the record change rounds to 0.00, so saying it adds nothing.
+  const GC_SWING_RECORD_MIN = 0.5;   // half a point of win probability
+  function gcFeedSwingWins(netSwing) { return (Number(netSwing) || 0) / 100; }
   function gcFeedSwingText(netSwing) {
-    return `${netSwing > 0 ? '+' : (netSwing < 0 ? '\u2212' : '')}${Math.abs(netSwing).toFixed(1)}% win probability across your matchups`;
+    const n = Number(netSwing) || 0;
+    const pct = `${n > 0 ? '+' : (n < 0 ? '\u2212' : '')}${Math.abs(n).toFixed(1)}% win probability across your matchups`;
+    const wins = gcFeedSwingWins(n);
+    if (Math.abs(n) < GC_SWING_RECORD_MIN) return pct;
+    return `${pct} \u00b7 ${wins > 0 ? '+' : '\u2212'}${Math.abs(wins).toFixed(2)} projected record`;
+  }
+  // The arithmetic behind it, for anyone who wants to check the sum.
+  window.__gcFeedSwingText = gcFeedSwingText;
+  function gcFeedSwingTitle(netSwing) {
+    const rec = window.__sbProjectedRecord;
+    return `The sum of what this play did to your win probability in every league it touched `
+      + `(${netSwing >= 0 ? '+' : '\u2212'}${Math.abs(Number(netSwing) || 0).toFixed(1)} points of win probability), `
+      + `which is the same thing as the change in your projected record.`
+      + (rec && Number.isFinite(rec.winSum)
+          ? `\n\nYour projected record is ${rec.winSum.toFixed(2)} wins right now.` : '')
+      + `\n\nPriced against the matchups as they stood when the play happened, not as they stand now.`;
   }
 
   // Re-price what is still live in a feed that is not being rebuilt.
@@ -30337,7 +30372,8 @@
       // before your leagues loaded prices at nothing and is not kept.
       const netSwing = gcPlayImpact(row.game, row.play, row.players).net;
       net.textContent = gcFeedSwingText(netSwing);
-      net.className = 'gc-feed-net ' + (Math.abs(netSwing) < 0.05 ? 'is-flat' : (netSwing > 0 ? 'is-pos' : 'is-neg'));
+      net.className = 'gc-feed-net ' + (Math.abs(netSwing) < GC_SWING_FLAT ? 'is-flat' : (netSwing > 0 ? 'is-pos' : 'is-neg'));
+      net.title = gcFeedSwingTitle(netSwing);
       item.classList.toggle('is-mine', netSwing >= 0);
       item.classList.toggle('is-against', netSwing < 0);
     });
