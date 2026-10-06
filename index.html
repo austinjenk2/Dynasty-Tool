@@ -1660,6 +1660,9 @@
   /* His day so far, not just this play -- four catches for 52 reads very
      differently from the 7-yard catch that got him there. */
   .gc-feed-day { font-size: 10.5px; color: var(--faint); margin: 1px 0 0 28px; }
+  /* Rendered even with nothing in it, so the refresh pass can fill it the
+     moment Sleeper has a line for him -- see gcFeedRefreshLive. */
+  .gc-feed-day.is-empty { display: none; }
   /* Says which line this is: the play above is what just happened, this
      is his game to this point. Without the label the two read as one. */
   .gc-feed-day-label {
@@ -6074,6 +6077,11 @@
             <div class="sb-stat-value" id="sbStatSwingValue">&plusmn;0.00</div>
             <div class="sb-stat-label" id="sbStatSwingLabel">WEEK VS EXPECTED</div>
           </div>
+          <div class="sb-stat-divider" id="sbStatLuckDivider"></div>
+          <div class="sb-stat" id="sbStatLuck">
+            <div class="sb-stat-value" id="sbStatLuckValue">&plusmn;0.00</div>
+            <div class="sb-stat-label" id="sbStatLuckLabel">SCHEDULE LUCK</div>
+          </div>
         </div>
 
         <div class="sb-haul" id="sbHaul" hidden></div>
@@ -6588,6 +6596,7 @@
           <span class="ww-toggle-group" id="gcFeedFilter">
             <span class="ww-toggle active" data-gc-feed="all">Every play</span>
             <span class="ww-toggle" data-gc-feed="mine">Mine only</span>
+            <span class="ww-toggle" data-gc-feed="swings">Biggest swings</span>
           </span>
         </div>
         <div class="gc-panel-sub" id="gcFeedSub">Newest first, every game at once.</div>
@@ -15532,13 +15541,22 @@
       // as of a week gone by is a week-by-week question and there is no
       // other source for it.
       //
-      // Loaded on the same terms as past seasons above -- only while this
-      // page is the one on screen, and folded in with a repaint when it
-      // arrives rather than holding the cards back. The weeks are shared
-      // with the Record page through one cache, so on a session that has
-      // already been there this costs nothing.
+      // NEVER while football is being played. This is eighteen weeks per
+      // league on a cold cache -- three hundred requests on a portfolio
+      // this size, in one burst, to the same host the live poll needs and
+      // against the same six connections. Live scores stop for a cosmetic
+      // line on a card you might not even export, which is a terrible
+      // trade on a Sunday afternoon and a free one on a Wednesday. The
+      // line is simply absent while games are on and fills in afterwards.
+      //
+      // Otherwise on the same terms as past seasons above -- only while
+      // this page is on screen, folded in with a repaint when it arrives
+      // rather than holding the cards back. The weeks are shared with the
+      // Record page through one cache, so on a session that has already
+      // been there this costs nothing.
       window.__tradeWeeksByLeague = window.__tradeWeeksByLeague || {};
-      if (tradesOnScreen && !window.__tradeWeeksLoading && window.sbLoadSeasonAllWeekMatchups) {
+      const weeksAreFree = (typeof deskTempo !== 'function') || deskTempo() === 'idle';
+      if (tradesOnScreen && weeksAreFree && !window.__tradeWeeksLoading && window.sbLoadSeasonAllWeekMatchups) {
         const want = Array.from(new Set(entries
           .filter(e => (e.trades || []).length && e.league && e.league.league_id)
           .map(e => e.league.league_id)));
@@ -18216,7 +18234,7 @@
       }
       const effectivePts = sbEffectivePoints(id, pointsMap, projMap, league);
       const season = league ? league.season : '';
-      return `<tr class="sb-lineup-row${onBench ? ' sb-lineup-bench' : ''}" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}">` +
+      return `<tr class="sb-lineup-row${onBench ? ' sb-lineup-bench' : ''}" data-player-id="${id}" data-pts="${effectivePts.toFixed(1)}" data-week="${week != null ? week : ''}" data-season="${season}" data-league-id="${league ? league.league_id : ''}">` +
         '<td class="sb-exp-player">' +
           `<span class="sb-exp-pos sb-pos-${posClass}">${pos}</span>` +
           `<span class="sb-exp-avatar"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>` +
@@ -18372,7 +18390,7 @@
       const pts = sbEffectivePoints(id, pointsMap || {}, projMap, league);
       const season = league ? league.season : '';
       const tierClass = sbFieldPointTierClass(pts);
-      return `<span class="field-player-av${tierClass}" style="left:${pl.x}%;bottom:${bottom}%" title="${sbFieldEsc(name)}" data-player-id="${id}" data-pts="${pts.toFixed(1)}" data-week="${week || ''}" data-season="${season}"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>`;
+      return `<span class="field-player-av${tierClass}" style="left:${pl.x}%;bottom:${bottom}%" title="${sbFieldEsc(name)}" data-player-id="${id}" data-pts="${pts.toFixed(1)}" data-week="${week || ''}" data-season="${season}" data-league-id="${league ? league.league_id : ''}"><img src="${sbHeadshotUrl(id)}" alt="" loading="lazy" onerror="this.remove()"></span>`;
     }).join('');
   }
   function sbFieldPanelHtml(startPct, teams) {
@@ -18776,49 +18794,63 @@
     return window.__sleeperScheduleCache[cacheKey];
   }
 
+  // This popup used to be a one-shot snapshot, and the two halves of it
+  // were read off different clocks. The points came from data-pts, baked
+  // into the row when the page last painted -- which is Sleeper's official
+  // players_points, as of the last sixty-second sync. The stats underneath
+  // were fetched the moment you clicked, and now carry the play-by-play
+  // merge on top, so they are current to the last snap. That is how the
+  // card came to show 1.6 FANTASY PTS above two catches for fourteen
+  // yards: 1.6 was one catch for six, several minutes earlier. Neither
+  // half was wrong and they could never agree.
+  //
+  // So: one clock. The points are scored FROM the stat line the card is
+  // showing, in that league's own settings, which makes disagreement
+  // impossible rather than unlikely. And the card refills itself while it
+  // is open, so both halves -- and the score and clock above them -- move
+  // with the play-by-play instead of freezing at the moment you opened it.
+  let pfmTimer = null;
+  const PFM_REFRESH_MS = 15000;
+
   function closePlayerFieldModal() {
+    if (pfmTimer) { clearInterval(pfmTimer); pfmTimer = null; }
     const overlay = document.querySelector('.pfm-overlay');
     if (overlay) overlay.remove();
   }
 
-  async function openPlayerFieldModal(el) {
-    const id = el.dataset.playerId;
-    if (!id) return;
-    const dict = window.__sleeperPlayerDict || {};
-    const p = dict[id];
-    const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id) : id;
-    const pos = p ? (p.position || '') : '';
-    const team = p ? (p.team || null) : null;
-    const pts = el.dataset.pts || '0.0';
-    const week = el.dataset.week;
-    const season = el.dataset.season;
+  // Scored in the league the row came from, so the number means the same
+  // thing the row meant. Without a league -- a card opened from somewhere
+  // that is not a specific matchup -- the house line stands in.
+  //
+  // Never lower than the number the row already showed: Sleeper's
+  // players_points is the official score and can carry something the play
+  // text did not spell out, while our own reading is the faster of the
+  // two. Taking the higher keeps the card level with the feed without ever
+  // appearing to take points away from a player who has not lost any.
+  function pfmPointsFor(id, stats, leagueId, fallbackPts) {
+    const fallback = Number(fallbackPts);
+    const haveFallback = Number.isFinite(fallback);
+    if (!stats) return haveFallback ? fallback : null;
+    const entry = leagueId ? (window.sleeperLeagueData || {})[leagueId] : null;
+    const scoring = entry && entry.league ? entry.league.scoring_settings : null;
+    let derived = null;
+    try {
+      derived = scoring
+        ? sbCustomScoreFor(stats, scoring)
+        : sbHouseScore(id, stats, window.__sleeperPlayerDict || {});
+    } catch (e) { derived = null; }
+    if (derived == null || isNaN(derived)) return haveFallback ? fallback : null;
+    return haveFallback ? Math.max(fallback, derived) : derived;
+  }
 
-    closePlayerFieldModal();
-    const overlay = document.createElement('div');
-    overlay.className = 'pfm-overlay';
-    overlay.innerHTML =
-      '<div class="pfm-modal">' +
-        '<button class="pfm-close" type="button" aria-label="Close">&times;</button>' +
-        '<div class="pfm-head">' +
-          `<span class="pfm-avatar"><img src="${sbHeadshotUrl(id)}" alt="" onerror="this.remove()"></span>` +
-          `<div class="pfm-headinfo"><div class="pfm-name">${sbFieldEsc(name)}</div><div class="pfm-sub">${pos}${team ? ' &middot; ' + team : ''}</div></div>` +
-          `<div class="pfm-pts"><div class="pfm-pts-value">${pts}</div><div class="pfm-pts-label">FANTASY PTS</div></div>` +
-        '</div>' +
-        '<div class="pfm-game"><div class="ld-loading">Loading matchup&hellip;</div></div>' +
-        '<div class="pfm-stats"><div class="ld-loading">Loading stats&hellip;</div></div>' +
-      '</div>';
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closePlayerFieldModal(); });
-    overlay.querySelector('.pfm-close').addEventListener('click', closePlayerFieldModal);
-
+  // Everything in the card that can change while you are looking at it.
+  // Re-run on a timer; writes into the shell openPlayerFieldModal built.
+  async function pfmFill(overlay, ctx) {
+    if (!overlay || !overlay.isConnected) return;
     const gameEl = overlay.querySelector('.pfm-game');
     const statsEl = overlay.querySelector('.pfm-stats');
-
-    if (!team || !week || !season) {
-      gameEl.innerHTML = '<p class="pfm-empty">No real NFL team on file for this player.</p>';
-      statsEl.innerHTML = '';
-      return;
-    }
+    const ptsEl = overlay.querySelector('.pfm-pts-value');
+    const { id, team, week, season, leagueId, fallbackPts } = ctx;
 
     // Whether this player's own real game has started -- once it has,
     // stats should only ever be their real recorded line, even while
@@ -18833,6 +18865,7 @@
         sbResolveGameInfoForWeek(season, week, currentWeek),
         window.sleeperGetEspnGameData ? window.sleeperGetEspnGameData(week, season) : Promise.resolve({}),
       ]);
+      if (!overlay.isConnected) return;
       const info = gameInfo[team];
       if (!info || !info.opponent) {
         gameEl.innerHTML = '<p class="pfm-empty">No schedule data for this week yet.</p>';
@@ -18871,6 +18904,7 @@
       let stats = null, isActual = false;
       if (window.sleeperGetWeekStats) {
         const actual = await window.sleeperGetWeekStats(season, week);
+        if (!overlay.isConnected) return;
         if (actual && actual[id] && Object.keys(actual[id]).length) { stats = actual[id]; isActual = true; }
       }
       // Once the player's game has actually started, their real recorded
@@ -18880,7 +18914,16 @@
       // early on).
       if (!stats && !gameStarted && window.sleeperGetWeekProjections) {
         const projMap = await window.sleeperGetWeekProjections(season, week);
+        if (!overlay.isConnected) return;
         if (projMap && projMap.__statsMap && projMap.__statsMap[id]) stats = projMap.__statsMap[id];
+      }
+      // The headline number, scored off the very stat line below it.
+      // Only once those are his REAL stats: before kickoff the card is
+      // showing a projection, and the row's own projected total is the
+      // better thing to lead with.
+      if (ptsEl) {
+        const live = isActual ? pfmPointsFor(id, stats, leagueId, fallbackPts) : Number(fallbackPts);
+        if (live != null && !isNaN(live)) ptsEl.textContent = Number(live).toFixed(1);
       }
       const rows = stats
         ? Object.keys(SB_STAT_LABELS).filter(k => stats[k] != null).map(k =>
@@ -18893,6 +18936,53 @@
     } catch (err) {
       statsEl.innerHTML = '<p class="pfm-empty">Could not load stats.</p>';
     }
+  }
+
+  async function openPlayerFieldModal(el) {
+    const id = el.dataset.playerId;
+    if (!id) return;
+    const dict = window.__sleeperPlayerDict || {};
+    const p = dict[id];
+    const name = p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || id) : id;
+    const pos = p ? (p.position || '') : '';
+    const team = p ? (p.team || null) : null;
+    const pts = el.dataset.pts || '0.0';
+    const week = el.dataset.week;
+    const season = el.dataset.season;
+    const leagueId = el.dataset.leagueId || '';
+
+    closePlayerFieldModal();
+    const overlay = document.createElement('div');
+    overlay.className = 'pfm-overlay';
+    overlay.innerHTML =
+      '<div class="pfm-modal">' +
+        '<button class="pfm-close" type="button" aria-label="Close">&times;</button>' +
+        '<div class="pfm-head">' +
+          `<span class="pfm-avatar"><img src="${sbHeadshotUrl(id)}" alt="" onerror="this.remove()"></span>` +
+          `<div class="pfm-headinfo"><div class="pfm-name">${sbFieldEsc(name)}</div><div class="pfm-sub">${pos}${team ? ' &middot; ' + team : ''}</div></div>` +
+          `<div class="pfm-pts"><div class="pfm-pts-value">${pts}</div><div class="pfm-pts-label">FANTASY PTS</div></div>` +
+        '</div>' +
+        '<div class="pfm-game"><div class="ld-loading">Loading matchup&hellip;</div></div>' +
+        '<div class="pfm-stats"><div class="ld-loading">Loading stats&hellip;</div></div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closePlayerFieldModal(); });
+    overlay.querySelector('.pfm-close').addEventListener('click', closePlayerFieldModal);
+
+    if (!team || !week || !season) {
+      overlay.querySelector('.pfm-game').innerHTML = '<p class="pfm-empty">No real NFL team on file for this player.</p>';
+      overlay.querySelector('.pfm-stats').innerHTML = '';
+      return;
+    }
+
+    const ctx = { id, team, week, season, leagueId, fallbackPts: pts };
+    await pfmFill(overlay, ctx);
+    // Open on a Sunday afternoon, this is a live card: it keeps pace with
+    // the plays rather than reporting the moment it was opened.
+    pfmTimer = setInterval(() => {
+      if (!overlay.isConnected) { clearInterval(pfmTimer); pfmTimer = null; return; }
+      pfmFill(overlay, ctx);
+    }, PFM_REFRESH_MS);
   }
 
   document.addEventListener('click', (e) => {
@@ -19326,7 +19416,6 @@
       // matchups you happen to be leading. Which is the point: a week where
       // you are up in four games you were always going to win has not
       // actually gone well.
-      let weekSwingTotal = 0, weekSwingCount = 0;
       const dollarMap = rgLeagueDollarMap();
       // Exposed so other places that read a player's rooting impact off
       // .rg-row (Weekly Schedule's exposure preview, the Rooting Guide's
@@ -19457,8 +19546,6 @@
               const rawNow = levLeagues.reduce((sum, l) => sum + l.perPoint, 0);
               if (poeNow != null && Number.isFinite(poeNow) && Math.abs(rawNow) > 0.0001) {
                 const swung = rawNow / 100 * poeNow;
-                weekSwingTotal += swung;
-                weekSwingCount++;
                 swungEl.hidden = false;
                 swungEl.querySelector('b').textContent =
                   (swung > 0 ? '+' : swung < 0 ? '\u2212' : '') + Math.abs(swung).toFixed(2);
@@ -19584,7 +19671,8 @@
       // you want off this page is "who actually decides my week", and that
       // is a group rather than a rank. Off in the other modes, where the
       // number is dollars or a league count and has no bands.
-      sbSetWeekSwing(weekSwingCount ? weekSwingTotal : null);
+      // WEEK VS EXPECTED belongs to the Slate now -- it is a difference of
+      // two projected records, which is the Scoreboard's own arithmetic.
 
       // No band headings any more: expected wins is a continuous number,
       // and slicing it into "huge" / "worth watching" was the arbitrary
@@ -20763,15 +20851,33 @@
       const cacheKey = `${season}_${week}`;
       const cached = window.__sleeperStatsCache[cacheKey];
       const age = Date.now() - (window.__sleeperStatsFetchedAt[cacheKey] || 0);
-      if (cached && age < WEEK_STATS_FRESH_MS) return cached;
-      if (weekStatsInFlight[cacheKey]) return weekStatsInFlight[cacheKey];
+      if (cached && age < WEEK_STATS_FRESH_MS) return withLivePlays(cached, week);
+      if (weekStatsInFlight[cacheKey]) return weekStatsInFlight[cacheKey].then(s => withLivePlays(s, week));
       const promise = fetchWeekStats(season, week, cacheKey);
       weekStatsInFlight[cacheKey] = promise;
       try {
-        return await promise;
+        return withLivePlays(await promise, week);
       } finally {
         delete weekStatsInFlight[cacheKey];
       }
+    }
+
+    // Everything on the site that asks for this week's stats gets the
+    // play-by-play folded in on the way out -- the box score, over
+    // expected, leverage, the slate, Weekly Sweats, all of it -- so a
+    // catch that has happened is in the numbers everywhere at once rather
+    // than only in the play feed that reported it.
+    //
+    // Only the live week, and only when the plays actually cover it: the
+    // Game Log and the week dropdown ask for other weeks, and a finished
+    // week's numbers are Sleeper's alone. The shared cache stays pure
+    // Sleeper; the merge happens on the way to the caller.
+    function withLivePlays(statsMap, week) {
+      const pbp = window.__gcPbpStats;
+      if (!pbp || !Object.keys(pbp).length) return statsMap;
+      if (window.__gcPbpWeek != null && Number(window.__gcPbpWeek) !== Number(week)) return statsMap;
+      return (typeof window.sbMergeLiveStats === 'function')
+        ? window.sbMergeLiveStats(statsMap, pbp) : statsMap;
     }
     async function fetchWeekStats(season, week, cacheKey) {
       try {
@@ -20788,9 +20894,20 @@
         window.__sleeperStatsCache[cacheKey] = statsMap;
         window.__sleeperStatsMetaCache[cacheKey] = metaMap;
         window.__sleeperStatsFetchedAt[cacheKey] = Date.now();
+        window.__sleeperStatsLastError = null;
         return statsMap;
       } catch (e) {
-        return window.__sleeperStatsCache[cacheKey] || {};
+        // This used to return {} and say nothing, which is the worst
+        // possible answer: an empty stat map is indistinguishable from
+        // "nobody has scored", so a refused or timed-out request painted
+        // every player on the site with no points and left no trace of
+        // why. Keep the last good numbers when there are any, and when
+        // there are none, say out loud that scoring could not be loaded
+        // rather than quietly asserting a zero.
+        window.__sleeperStatsLastError = { at: Date.now(), message: String((e && e.message) || e) };
+        const last = window.__sleeperStatsCache[cacheKey];
+        if (!last) setSyncState('error', 'Live scoring did not load — Sleeper refused the request');
+        return last || {};
       }
     }
     window.sleeperGetWeekStats = getWeekStats;
@@ -21744,19 +21861,32 @@
       const cached = window.__sleeperSeasonMatchupsCache[leagueId];
       if (cached && (Date.now() - cached.at < SEASON_MATCHUPS_TTL)) return cached.byWeek;
       // A week that is over is over: its scores are final and refetching it
-      // returns the same numbers it returned a minute ago. Only the live
-      // week (and anything after it, which can still see lineup changes)
-      // actually needs pulling again. This used to refetch all 18 weeks for
-      // every league every 60 seconds -- on a 14-league portfolio that is
-      // 252 requests a minute, on their own, to learn nothing, while the
-      // browser's six connections per host were wanted by the live data.
+      // returns the same numbers it returned a minute ago. The only week
+      // that can still move is the live one.
+      //
+      // This used to say "the live week AND anything after it, which can
+      // still see lineup changes", and that half-exception was the whole
+      // problem. A future week has no result to report however the lineups
+      // move, and at week 5 of 18 it meant thirteen pointless weeks per
+      // league. The Record Book repaints for EVERY league on EVERY sync,
+      // on screen or not, so on a portfolio this size that was something
+      // like 250 requests a minute, all afternoon, to learn nothing --
+      // while the browser's six connections to Sleeper were wanted by live
+      // scoring, and while Sleeper was entirely within its rights to start
+      // refusing them. A refused /stats call comes back as an empty stat
+      // map, which is why this reads on screen as "points aren't loading".
+      //
+      // So anything already in hand for a week that is not the live one is
+      // reused, including an empty one -- re-asking for a fixture nobody
+      // has played is the exact waste being removed. First call still
+      // fetches all eighteen; every call after it fetches one.
       const entry = (window.sleeperLeagueData || {})[leagueId];
       const liveWeek = (entry && entry.week) || 1;
       const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
       const prev = cached && cached.byWeek;
       const byWeek = await Promise.all(weeks.map((w, i) => {
-        // Index i holds week i+1. A past week we already have is reused.
-        if (prev && w < liveWeek && prev[i] && prev[i].length) return prev[i];
+        // Index i holds week i+1.
+        if (prev && w !== liveWeek && Array.isArray(prev[i])) return prev[i];
         return sleeperFetch(`/league/${leagueId}/matchups/${w}`).catch(() => (prev && prev[i]) || []);
       }));
       window.__sleeperSeasonMatchupsCache[leagueId] = { byWeek, at: Date.now() };
@@ -27902,6 +28032,45 @@
   // Fumbles are left out on purpose: the text says a ball came loose and
   // who recovered it, but not which side that recovery was for, and a
   // guessed fum_lost is a real -2 on a player's score.
+  // Sleeper's stat feed and ESPN's play-by-play are two different clocks,
+  // and the gap between them is why a 9-yard catch worth +1.9 could sit
+  // next to a day total of 1.1 that plainly did not contain it. Neither
+  // number was wrong. ESPN has a play seconds after it happens; Sleeper's
+  // /stats endpoint trails it by a minute or more, and every "points so
+  // far", "over expected" and leverage reading in the app was built on the
+  // slower of the two.
+  //
+  // So: take the larger of the two, key by key. Sleeper is authoritative
+  // and always catches up, so anything the parser misses is corrected the
+  // moment it lands; ESPN is instant but read out of prose and can drop a
+  // play, so it is never allowed to pull a number DOWN. The reading cannot
+  // go backwards, and the newest snap shows immediately.
+  //
+  // The cost of being wrong is asymmetric and this picks the cheap side: a
+  // stat the parser over-reads shows high until Sleeper passes it, which
+  // is a worse number for a minute. Waiting instead means every live
+  // figure on the site is a minute stale all afternoon.
+  function sbMergeLiveStats(base, live) {
+    if (!live || !Object.keys(live).length) return base || {};
+    const out = Object.assign({}, base || {});
+    Object.keys(live).forEach(pid => {
+      const fresh = live[pid];
+      if (!fresh) return;
+      const have = out[pid];
+      if (!have) { out[pid] = Object.assign({}, fresh); return; }
+      const merged = Object.assign({}, have);
+      Object.keys(fresh).forEach(k => {
+        const b = Number(fresh[k]);
+        if (!Number.isFinite(b)) return;
+        const a = Number(merged[k]);
+        merged[k] = Number.isFinite(a) ? Math.max(a, b) : b;
+      });
+      out[pid] = merged;
+    });
+    return out;
+  }
+  window.sbMergeLiveStats = sbMergeLiveStats;
+
   function sbParsePlayEvents(text) {
     const raw = String(text || '');
     // Tacklers, formations and penalty notes all arrive in parentheses --
@@ -28147,7 +28316,7 @@
   window.__gcStatsTeam = window.__gcStatsTeam || null;      // 'leagues' | 'away' | 'home'
   window.__gcExpandedPlayer = window.__gcExpandedPlayer || null;
   window.__gcOpenData = window.__gcOpenData || null;
-  window.__gcFeedFilter = window.__gcFeedFilter || 'all';   // 'all' | 'mine'
+  window.__gcFeedFilter = window.__gcFeedFilter || 'all';   // 'all' | 'mine' | 'swings'
   window.__gcFeedRows = window.__gcFeedRows || [];
 
   // One persistent interval, started once per page. Tying the refresh to
@@ -29280,25 +29449,64 @@
   // halves of it already exist, so the two pages cannot tell different
   // stories. Shown even before kickoff, reading zero: a number that simply
   // is not there on a Wednesday is indistinguishable from a broken one.
-  function sbSetWeekSwing(total) {
-    const el = document.getElementById('sbStatSwingValue');
-    const lab = document.getElementById('sbStatSwingLabel');
+  // Shared shape for the two "signed number of wins" stats in the top bar.
+  function sbSetSignedWinStat(valueId, wrapId, labelId, label, total, title) {
+    const el = document.getElementById(valueId);
     if (!el) return;
     const idle = total == null || !Number.isFinite(total);
     el.className = 'sb-stat-value' + (idle ? '' : (total > 0.005 ? ' sb-green' : (total < -0.005 ? ' sb-red' : '')));
     el.innerHTML = idle
       ? '&plusmn;0.00'
       : (total > 0.005 ? '+' : (total < -0.005 ? '\u2212' : '\u00b1')) + Math.abs(total).toFixed(2);
-    if (lab) lab.textContent = idle ? 'NO GAMES STARTED' : 'WEEK VS EXPECTED';
-    const wrap = document.getElementById('sbStatSwing');
-    if (wrap) {
-      wrap.title = 'Every player in your matchups, priced at what a point of his is worth to you, '
-        + 'multiplied by how far over or under his own projection he is tracking, added up.\n\n'
-        + 'Zero means the week is going exactly as projected -- however many matchups you happen '
-        + 'to be leading. Being up in four games you were always going to win is not a good Sunday.';
-    }
+    const lab = document.getElementById(labelId);
+    if (lab) lab.textContent = idle ? 'NO GAMES STARTED' : label;
+    const wrap = document.getElementById(wrapId);
+    if (wrap) wrap.title = title;
+  }
+
+  // WEEK VS EXPECTED, in wins.
+  //
+  // It used to be every player's points-over-expectation multiplied by
+  // what a point of his was worth, added up -- a derivative, in units
+  // nobody could name. It is now the thing it always claimed to be: your
+  // projected record as it stands, minus your projected record with the
+  // same lineups and nothing played. +1.30 means this week's scoring has
+  // bought you one and a third wins more than the lineups were worth at
+  // kickoff.
+  function sbSetWeekSwing(total, parts) {
+    const p = parts || {};
+    sbSetSignedWinStat('sbStatSwingValue', 'sbStatSwing', 'sbStatSwingLabel', 'WEEK VS EXPECTED', total,
+      'Your projected record right now, minus what the same lineups were worth before anybody played.\n\n'
+      + (p.live != null && p.expected != null
+          ? `Now ${p.live.toFixed(2)} wins, expected ${p.expected.toFixed(2)}.\n\n` : '')
+      + 'The baseline reads your lineups as they stand, so setting or changing a lineup moves it; '
+      + 'it reads projections and never actual points, so a Thursday night player going off does not. '
+      + 'What is left is performance alone.\n\n'
+      + 'Zero means the week is going exactly as the lineups said it would, however many matchups you '
+      + 'happen to be leading. Being up in four games you were always going to win is not a good Sunday.');
   }
   window.sbSetWeekSwing = sbSetWeekSwing;
+
+  // SCHEDULE LUCK, in wins, across every league at once.
+  //
+  // Each week your score is measured against the whole league rather than
+  // the one team you drew: outscore nine of eleven and you have earned
+  // about 0.82 of a win whoever you were playing. Add that up across your
+  // leagues, and compare it with the wins you are actually getting. The
+  // difference is how much the schedule has helped or hurt you -- which is
+  // to say how hard the matchups you drew turned out to be.
+  function sbSetScheduleLuck(earned, actual, count) {
+    const idle = !count;
+    sbSetSignedWinStat('sbStatLuckValue', 'sbStatLuck', 'sbStatLuckLabel', 'SCHEDULE LUCK',
+      idle ? null : actual - earned,
+      idle ? ''
+        : `Your scores have earned ${earned.toFixed(2)} wins against the field this week; `
+          + `the matchups you drew are giving you ${actual.toFixed(2)}.\n\n`
+          + 'Positive means the schedule has been kind -- wins your scores did not really earn. '
+          + 'Negative means you keep running into whoever is having the big week.\n\n'
+          + `Across ${count} league${count === 1 ? '' : 's'}, on points scored so far.`);
+  }
+  window.sbSetScheduleLuck = sbSetScheduleLuck;
 
   // ---- Who is in what, worked out once -------------------------------
   // Every league's two sides, as a map from player to the matchups he is
@@ -29378,17 +29586,35 @@
     const espnGameData = o.espnGameData || window.__gcEspnGameData || null;
     const week = o.week != null ? o.week : window.__gcWeek;
     const out = [];
+    // Signed points, per league, from the plays that came AFTER the one
+    // being priced. Given it, each matchup is wound back to where it stood
+    // when this play happened, so a touchdown out of the one o'clock games
+    // is worth what it was worth then rather than what six more points
+    // would be worth now that the matchup it decided is over. Without it
+    // the margin is simply today's, which is only the right answer for a
+    // play that has just this second landed.
+    const since = o.marginSince || null;
     (sbExposureIndex(espnGameData, week).get(playerId) || []).forEach(({ entry: e, onMySide, state }) => {
       // Scored in this league's settings, not on the house line: the same
       // catch is worth 1.0 more in full PPR than in half, and this league
       // is the one whose matchup is being decided.
       const pts = sbCustomScoreFor(stats, e.league.scoring_settings) || 0;
+      let st = state;
+      if (since) {
+        // sbSwingFor treats state.margin as the margin BEFORE the play, so
+        // this play's own points come off as well as everything after it.
+        const signed = onMySide ? pts : -pts;
+        st = {
+          margin: (state.margin || 0) - (since[e.league.league_id] || 0) - signed,
+          sigma: state.sigma,
+        };
+      }
       out.push({
         name: e.league.name,
         leagueId: e.league.league_id,
         onMySide,
         pts,
-        swing: sbSwingFor(state, pts, onMySide),
+        swing: sbSwingFor(st, pts, onMySide),
       });
     });
     out.sort((a, b) => Math.abs(b.swing) - Math.abs(a.swing));
@@ -29488,6 +29714,16 @@
   // this column would pull a dozen ESPN summaries every twenty seconds
   // for games that ended on Sunday afternoon.
   window.__gcFinalPbpCache = window.__gcFinalPbpCache || {};
+  // Per game: the whole game's stat line, parsed from its play-by-play,
+  // with the play count it was built from so it is only rebuilt when a
+  // play has actually landed.
+  window.__gcPbpAccum = window.__gcPbpAccum || {};
+  // Every player in a live game, by Sleeper id, as the plays have him
+  // right now. Merged over Sleeper's own stat feed by sbMergeLiveStats.
+  window.__gcPbpStats = window.__gcPbpStats || {};
+  // What each play did to your week, worked out once and kept. See
+  // gcPlayImpact for why this must not be re-derived later.
+  window.__gcPlaySwing = window.__gcPlaySwing || {};
   // Short-name maps live as long as the page does: a rostered player can
   // change teams mid-week, which only ever adds a name that fails to
   // match until the next reload, never a wrong one.
@@ -29516,18 +29752,48 @@
     const live = games.filter(g => g.state === 'in');
     // Nothing live: show the most recent finished games instead of an
     // empty column, which is what a Tuesday looks like.
-    const targets = live.length ? live : games.filter(g => g.state === 'post').slice(-6);
+    const feedGames = live.length ? live : games.filter(g => g.state === 'post').slice(-6);
+    const feedIds = new Set(feedGames.map(g => g.eventId));
+
+    // Every game that has kicked off today, not just the ones still being
+    // played. The column itself still only shows the live ones -- but
+    // Biggest Swings is a claim about the DAY, and a one o'clock game that
+    // has gone final was never being fetched at all once the late window
+    // started. Its plays could not be ranked because they were never
+    // collected; the only reason any of them ever showed up was if this
+    // page happened to be open while that game was live. A touchdown
+    // nobody watched live was invisible for the rest of the afternoon.
+    //
+    // A finished game is pulled once and then served from
+    // __gcFinalPbpCache for the rest of the session, so the steady cost of
+    // this is unchanged -- it is one extra request per game, once.
+    const targets = games.filter(g => g.state === 'in' || g.state === 'post');
 
     const perGame = await Promise.all(targets.map(async (g) => {
       if (g.state === 'post' && window.__gcFinalPbpCache[g.eventId]) {
         return { game: g, plays: window.__gcFinalPbpCache[g.eventId] };
       }
       const plays = await getEspnPlayByPlay(g.eventId).catch(() => []);
-      if (g.state === 'post') window.__gcFinalPbpCache[g.eventId] = plays;
+      // A request that failed comes back as an empty list, which is
+      // indistinguishable from a game in which nothing has happened -- and
+      // writing THAT down as a finished game's final play-by-play meant one
+      // bad response wiped that game out for the rest of the session: no
+      // stats for anyone in it, no matchup impact, nothing in Biggest
+      // Swings. Pulling every finished game (rather than only on a quiet
+      // Tuesday) made that a far likelier way to lose an afternoon.
+      //
+      // So nothing is cached as final unless it actually has plays in it,
+      // and an empty answer falls back to whatever is already in hand.
+      const prior = (window.__gcPbpAccum[g.eventId] && window.__gcPbpAccum[g.eventId].plays) || null;
+      if (!plays.length && prior && prior.length) return { game: g, plays: prior };
+      if (g.state === 'post' && plays.length) window.__gcFinalPbpCache[g.eventId] = plays;
       return { game: g, plays };
     }));
 
     const out = [];
+    // Per game, so a game that has not had a play since the last refresh
+    // keeps the line it already had instead of being re-read.
+    const pbpStats = {};
     perGame.forEach(({ game, plays }) => {
       // ESPN names players by short name; the map is built per game so a
       // "J.Jones" in one broadcast can never be matched to the other
@@ -29539,9 +29805,9 @@
       // twenty seconds to produce an answer that cannot change, since the
       // two teams in a game do not.
       const nameKey = game.away.abbr + '@' + game.home.abbr;
-      let shortNameMap = gcShortNameCache[nameKey];
-      if (!shortNameMap) {
-        shortNameMap = gcShortNameCache[nameKey] = {};
+      let names = gcShortNameCache[nameKey];
+      if (!names) {
+        names = gcShortNameCache[nameKey] = { byKey: {}, byLast: {} };
         Object.keys(dict).forEach(id => {
           const p = dict[id];
           if (!p || !GC_FANTASY_POS.includes(p.position)) return;
@@ -29550,16 +29816,70 @@
           // Both shapes the play text can use, under a key that ignores
           // punctuation and case -- "J.Burrow", "J. Burrow" and "Joe
           // Burrow" all have to find the same player.
-          shortNameMap[gcNameKey(sbEspnShortName(full))] = id;
-          shortNameMap[gcNameKey(full)] = id;
+          names.byKey[gcNameKey(sbEspnShortName(full))] = id;
+          names.byKey[gcNameKey(full)] = id;
+          // And by surname, with the first name kept, for the case below.
+          const parts = String(full).trim().split(/\s+/).filter(Boolean);
+          if (parts.length > 1) {
+            const last = gcNameKey(parts[parts.length - 1]);
+            if (last) (names.byLast[last] = names.byLast[last] || []).push({ id, first: gcNameKey(parts[0]) });
+          }
         });
       }
-      // Only the tail of each game is ever shown, so there is no reason to
-      // score the whole afternoon's worth of plays on every refresh.
-      plays.slice(-GC_FEED_MAX).forEach(play => {
+
+      // ESPN lengthens the initial when two players in the same game would
+      // otherwise read the same. Bijan Robinson is "Bi.Robinson", because
+      // "B.Robinson" is taken. Nothing in the map is keyed that way, so the
+      // lookup missed, the player was skipped, and the play rendered with
+      // its text and no players under it at all -- which is exactly what a
+      // 59-yard touchdown did. It is not a Bijan problem; it is every
+      // player ESPN has ever had to disambiguate.
+      //
+      // So: exact key first, and failing that, match the surname and keep
+      // whoever's first name starts with the letters given. Two candidates
+      // still matching means the text was not disambiguating after all, and
+      // guessing between them would be worse than the miss.
+      const resolvePid = (rawName) => {
+        const exact = names.byKey[gcNameKey(rawName)];
+        if (exact) return exact;
+        const m = String(rawName || '').match(/^([A-Za-z'\u2019-]+)\.\s?(.+)$/);
+        if (!m) return null;
+        const prefix = gcNameKey(m[1]);
+        if (!prefix) return null;
+        const hits = (names.byLast[gcNameKey(m[2])] || []).filter(c => c.first.indexOf(prefix) === 0);
+        return hits.length === 1 ? hits[0].id : null;
+      };
+      // Every play in the game, parsed once.
+      //
+      // The feed only ever SHOWS the tail, and this used to only parse the
+      // tail to match. But the same parse answers a much more valuable
+      // question for free: run it over the whole game and you have a live
+      // stat line for every player in it, current to the last snap --
+      // which is the thing Sleeper's /stats endpoint is always a minute or
+      // more behind on. The plays are already in hand, so this costs no
+      // network at all, and the result is memoised on the play count so a
+      // refresh that brings nothing new re-parses nothing.
+      const pbpKey = game.eventId;
+      const accum = window.__gcPbpAccum[pbpKey];
+      // Rebuilt when the play count MOVES UP. A count that has gone down is
+      // a truncated or partial response, never a game un-playing itself,
+      // and rebuilding on it would throw away a whole afternoon of
+      // accumulated stats and day rows in favour of less than we already
+      // had.
+      const needAccum = !accum || plays.length > accum.count;
+      const gameStats = needAccum ? {} : accum.stats;
+      // Every play of this game that touched one of your players, kept for
+      // the whole day rather than only while it is in the newest sixty.
+      // Biggest Swings reads these, and they survive the game going final
+      // and dropping out of the live slate.
+      const dayRows = needAccum ? [] : accum.dayRows;
+
+      // What one play did, by player. Shared by the accumulation and the
+      // feed rows so the two can never read the same play differently.
+      const playersOn = (play) => {
         const players = [];
         sbParsePlayEvents(play.text).forEach(ev => {
-          const pid = shortNameMap[gcNameKey(ev.name)];
+          const pid = resolvePid(ev.name);
           if (!pid) return;
           // The fumble the parser could not finish. It is only LOST if the
           // recovery went to the other team in this game, which is a
@@ -29593,9 +29913,69 @@
             players.push({ id: pid, fp, stats: Object.assign({}, ev.stats), descs: ev.desc ? [ev.desc] : [] });
           }
         });
-        out.push({ game, play, players });
+        return players;
+      };
+
+      // Re-accumulated from scratch whenever the play count moves, rather
+      // than added to incrementally: ESPN revises its own play text during
+      // a game, and a running total that only ever adds can never take a
+      // correction back.
+      const tailFrom = Math.max(0, plays.length - GC_FEED_MAX);
+      plays.forEach((play, i) => {
+        const players = (needAccum || i >= tailFrom) ? playersOn(play) : null;
+        if (needAccum && players) {
+          players.forEach(pl => {
+            const into = gameStats[pl.id] || (gameStats[pl.id] = {});
+            Object.entries(pl.stats || {}).forEach(([k, v]) => {
+              const n = Number(v);
+              if (Number.isFinite(n)) into[k] = (into[k] || 0) + n;
+            });
+          });
+        }
+        if (needAccum && players && players.length) {
+          dayRows.push({ game, play, players });
+          // Priced HERE, as the play lands, not when something later asks
+          // to look at it. gcPlayImpact keeps the first answer it gives,
+          // and until now the first answer for a play nobody had rendered
+          // came whenever Biggest Swings was opened -- by which time the
+          // matchup it decided had been decided for hours, so it priced
+          // against flat ground and came out near zero. A touchdown worth
+          // +48% when it happened was being handed to the one view whose
+          // whole job is to find it, valued at nothing. Pricing on arrival
+          // means the number kept is the number it really had.
+        }
+        if (i >= tailFrom && feedIds.has(game.eventId)) out.push({ game, play, players: players || [] });
       });
+      // The game object is rebuilt from the scoreboard on every refresh, so
+      // rows kept from an earlier pass are re-pointed at the current one --
+      // otherwise a kept row would render a stale score line.
+      if (!needAccum) dayRows.forEach(r => { r.game = game; });
+      // Price this game's plays newest first, winding each matchup back a
+      // play at a time. Done here, as the plays arrive, rather than when
+      // something gets around to looking at them -- and done backwards so
+      // that a game fetched all at once (a page opened after it finished)
+      // still gets each play valued at the matchup it actually happened
+      // in. gcPlayImpact keeps the first answer, so a play priced on a
+      // previous pass is left alone and only its points are rolled on.
+      if (needAccum) {
+        const since = {};
+        for (let i = dayRows.length - 1; i >= 0; i--) {
+          const r = dayRows[i];
+          const res = gcPlayImpact(game, r.play, r.players, since);
+          const sb = (res && res.signedByLeague) || {};
+          Object.keys(sb).forEach(lid => { since[lid] = (since[lid] || 0) + sb[lid]; });
+        }
+      }
+      if (needAccum) window.__gcPbpAccum[pbpKey] = { count: plays.length, stats: gameStats, dayRows, plays };
+      pbpStats[game.eventId] = gameStats;
     });
+
+    // One map across every game on the slate, for the merge in getWeekStats.
+    const liveStats = {};
+    Object.keys(pbpStats).forEach(eventId => {
+      Object.keys(pbpStats[eventId]).forEach(pid => { liveStats[pid] = pbpStats[eventId][pid]; });
+    });
+    window.__gcPbpStats = liveStats;
 
     // Newest first across every game. wallclock is ESPN's own timestamp
     // for the play; sequence is the fallback inside one game.
@@ -29609,8 +29989,146 @@
   }
 
 
+  // The readings inside a feed row that keep moving after the play that
+  // produced the row is long over: what he can still do to your week, his
+  // running total, and his line on the day. A play is a fixed historical
+  // fact; these three are not, and the feed used to freeze them at
+  // whatever they were the moment the play landed -- see the refresh pass
+  // in gcFeedRefreshLive. One place, so the first draw and every refresh
+  // after it cannot disagree about the same player.
+  function gcFeedLiveFor(pid, dict) {
+    const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(pid) : null;
+    let stake = null;
+    if (lev && lev.leagues.length) {
+      const s = sbWinsAtStake(pid);
+      stake = {
+        text: sbWinsAtStakeText(s),
+        cls: s > 0.005 ? 'is-pos' : (s < -0.005 ? 'is-neg' : 'is-flat'),
+        tip: (typeof sbRootingMeaning === 'function') ? sbRootingMeaning(s, sbRemainingPoints(pid)) : '',
+      };
+    }
+    // Read straight off the plays as well as the shared stats map, rather
+    // than trusting the shared one to have caught up. A row in this column
+    // is reporting a play the parser has already read; it would be absurd
+    // for the running total beside it to be waiting on a different source
+    // to agree. Merged per player here so the feed can never show a total
+    // that is behind the play it is sitting next to.
+    const statsMap = window.__gcStatsMap || {};
+    const pbp = window.__gcPbpStats || {};
+    const line = (typeof sbMergeLiveStats === 'function')
+      ? (sbMergeLiveStats(
+          statsMap[pid] ? { [pid]: statsMap[pid] } : {},
+          pbp[pid] ? { [pid]: pbp[pid] } : {})[pid] || null)
+      : (statsMap[pid] || pbp[pid] || null);
+    // Coloured against his PROJECTION, not against zero -- see the note at
+    // the Total column. Green means he is beating what was expected.
+    const dayTotal = gcScoreStats(pid, line, dict);
+    const dayProj = gcProjectedPoints(pid, dict);
+    return {
+      stake,
+      totalText: dayTotal != null ? dayTotal.toFixed(1) : '—',
+      totalCls: (dayTotal == null || dayProj == null) ? 'is-flat'
+        : (dayTotal > dayProj + 0.05 ? 'is-pos'
+          : (dayTotal < dayProj - 0.05 ? 'is-neg' : 'is-flat')),
+      dayLine: gcStatLine(line) || '',
+    };
+  }
+
+  // What a play did to your week.
+  //
+  // This is a fact about the moment it happened, and it was being
+  // re-derived from scratch on every draw, which quietly turned it into a
+  // different question. sbSwingFor answers "what would N more points do
+  // from where this matchup stands RIGHT NOW" -- correct for leverage,
+  // which is about the next point, and wrong for a play already in the
+  // books.
+  //
+  // The two agree only while Sleeper has not yet posted the play. Its
+  // players_points feed is where the matchup margin comes from, and it
+  // trails ESPN by about a minute. In that window the margin is still the
+  // pre-play one, so margin + points lands on the post-play margin and the
+  // answer is right. Once Sleeper catches up the margin already CONTAINS
+  // the play, and the same arithmetic starts pricing the NEXT 5.9 points
+  // instead of the 5.9 that just happened -- measured from the far side of
+  // the curve, where the matchup it just decided has gone flat.
+  //
+  // That is why a 49-yard catch which took a league from a coin flip to
+  // all but won settled at +6.2%. The honest number was the one it had a
+  // minute earlier; by the time it was read it was answering "what would
+  // the NEXT six points be worth, now that you have already won" -- which
+  // is very little, correctly.
+  //
+  // So it is worked out once, on first sight, and kept.
+  function gcPlayKey(game, play) {
+    return [game.eventId, play.seq || '', play.wallclock || '', (play.text || '').slice(0, 40)].join('|');
+  }
+
+  function gcPlayImpact(game, play, players, since) {
+    const key = gcPlayKey(game, play);
+    const cached = window.__gcPlaySwing[key];
+    if (cached) return cached;
+    let net = 0, anyFor = false, anyAgainst = false, found = 0;
+    const byPlayer = {};
+    // What this play itself did to each matchup, so the caller walking a
+    // game backwards can wind the margin on to the play before it.
+    const signedByLeague = {};
+    (players || []).forEach(pl => {
+      const impacts = sbPlayImpact(pl.id, pl.stats,
+        { espnGameData: window.__gcEspnGameData, week: window.__gcWeek, marginSince: since || null });
+      byPlayer[pl.id] = impacts.length;
+      impacts.forEach(i => {
+        found++;
+        if (i.onMySide) anyFor = true; else anyAgainst = true;
+        net += i.swing;
+        signedByLeague[i.leagueId] = (signedByLeague[i.leagueId] || 0) + (i.onMySide ? i.pts : -i.pts);
+      });
+    });
+    const res = { net, anyFor, anyAgainst, byPlayer, signedByLeague };
+    // Only kept once there was a real matchup behind it. Before your
+    // leagues have loaded every play prices at nothing, and writing that
+    // down would freeze the column at zero for the rest of the session.
+    if (found) window.__gcPlaySwing[key] = res;
+    return res;
+  }
+
+  // The day's plays, across every game that has been live at any point --
+  // read off the per-game accumulation rather than the current slate, so a
+  // one o'clock game that decided your week is still there at four.
+  const GC_SWINGS_MAX = 40;
+  function gcDayRows() {
+    const out = [];
+    Object.keys(window.__gcPbpAccum || {}).forEach(eventId => {
+      const a = window.__gcPbpAccum[eventId];
+      if (a && a.dayRows) out.push.apply(out, a.dayRows);
+    });
+    return out;
+  }
+
+  // Which plays the column is showing. Biggest Swings is the whole day
+  // sorted by how far each play actually moved your week -- a different
+  // question from what happened most recently, and one that wants every
+  // play of the day rather than the newest sixty.
+  function gcFeedRowsForView() {
+    if (window.__gcFeedFilter !== 'swings') return window.__gcFeedRows || [];
+    return gcDayRows()
+      .map(r => ({ r, n: Math.abs(gcPlayImpact(r.game, r.play, r.players).net) }))
+      // Under a twentieth of a point of win probability is not a swing,
+      // it is a rounding error with a headshot next to it.
+      .filter(x => x.n >= 0.05)
+      .sort((a, b) => b.n - a.n)
+      .slice(0, GC_SWINGS_MAX)
+      .map(x => x.r);
+  }
+
   function gcFeedHtml(rows) {
-    if (!rows.length) return '<div class="gc-empty">No plays yet. The feed fills in once a game kicks off.</div>';
+    // What is actually on screen, so the in-place refresh can find the play
+    // behind each row by index whichever view built it.
+    window.__gcRenderedRows = rows;
+    if (!rows.length) {
+      return window.__gcFeedFilter === 'swings'
+        ? '<div class="gc-empty">Nothing has moved one of your matchups yet today.</div>'
+        : '<div class="gc-empty">No plays yet. The feed fills in once a game kicks off.</div>';
+    }
 
     const dict = window.__sleeperPlayerDict || {};
     const nameOf = (pid) => {
@@ -29623,66 +30141,47 @@
 
     const mineOnly = window.__gcFeedFilter === 'mine';
 
-    // What he can still do to your week, beside what he just did to it.
-    // Worked out once per draw and cached by player: a quarterback is in
-    // nearly every play and this column draws sixty of them, so the same
-    // answer was otherwise recomputed dozens of times for one render.
-    const stakeCache = new Map();
+    // Every live reading for a player, worked out once per draw and cached
+    // by him: a quarterback is in nearly every play and this column draws
+    // sixty of them, so the same answer was otherwise recomputed dozens of
+    // times for one render.
+    const liveCache = new Map();
+    const liveFor = (pid) => {
+      if (!liveCache.has(pid)) liveCache.set(pid, gcFeedLiveFor(pid, dict));
+      return liveCache.get(pid);
+    };
     const stakeHtml = (pid) => {
-      if (stakeCache.has(pid)) return stakeCache.get(pid);
-      let html = '';
-      const lev = (typeof sbPlayerLeverage === 'function') ? sbPlayerLeverage(pid) : null;
-      if (lev && lev.leagues.length) {
-        const stake = sbWinsAtStake(pid);
-        const cls = stake > 0.005 ? 'is-pos' : (stake < -0.005 ? 'is-neg' : 'is-flat');
-        const tip = (typeof sbRootingMeaning === 'function')
-          ? sbRootingMeaning(stake, sbRemainingPoints(pid)) : '';
-        html = `<span class="gc-feed-stat" title="${sbFieldEsc(tip)}">`
-          + `<span class="gc-feed-k">At stake</span>`
-          + `<b class="${cls}">${sbWinsAtStakeText(stake)}</b></span>`;
-      }
-      stakeCache.set(pid, html);
-      return html;
+      const r = liveFor(pid);
+      if (!r.stake) return '';
+      return `<span class="gc-feed-stat" title="${sbFieldEsc(r.stake.tip)}">`
+        + `<span class="gc-feed-k">At stake</span>`
+        + `<b class="${r.stake.cls}" data-gc-live="stake" data-gc-pid="${sbFieldEsc(pid)}">${r.stake.text}</b></span>`;
     };
 
     const items = [];
-    rows.forEach(({ game, play, players }) => {
+    rows.forEach(({ game, play, players }, rowIndex) => {
       // Every league this play touched, and what it did to that matchup.
       // Priced on the real curve: a touchdown in a 50-50 game is worth
       // several points of win probability, the same touchdown in a game
       // you are 95% to win is worth almost nothing, and the page should
       // not pretend otherwise.
-      let anyFor = false, anyAgainst = false, netSwing = 0;
+      const impact = gcPlayImpact(game, play, players);
+      const anyFor = impact.anyFor, anyAgainst = impact.anyAgainst, netSwing = impact.net;
       const blocks = players.map(pl => {
-        const impacts = sbPlayImpact(pl.id, pl.stats, { espnGameData: window.__gcEspnGameData, week: window.__gcWeek });
-        impacts.forEach(i => {
-          if (i.onMySide) anyFor = true; else anyAgainst = true;
-          netSwing += i.swing;
-        });
+        const impactCount = impact.byPlayer[pl.id] || 0;
         const fpCls = pl.fp > 0 ? ' is-pos' : (pl.fp < 0 ? ' is-neg' : '');
         const p = dict[pl.id] || {};
         const teamLogo = sbTeamLogoUrl(p.team);
         const shot = sbHeadshotUrl(pl.id);
         const onThisPlay = (pl.descs || []).join(' · ');
-        // His day so far, from Sleeper's own week stats -- the same numbers
-        // the box score shows, so the running total on a play matches what
-        // you get when you open the game.
-        const dayLine = gcStatLine((window.__gcStatsMap || {})[pl.id]);
-        // What he has in the game so far, on the same house line the play
-        // itself is priced on -- 5pt passing TD, -2 an interception, -2 a
-        // fumble lost (a fumble he recovers has no key at all, so it is
-        // worth nothing), full PPR, tight ends +0.5 a catch. The box score
-        // reads this through the same function, so the two cannot drift.
-        const dayTotal = gcScoreStats(pl.id, (window.__gcStatsMap || {})[pl.id], dict);
-        // Coloured against his PROJECTION, not against zero. Every player
-        // who has done anything at all scores above zero, so colouring by
-        // sign painted the whole feed green and told you nothing -- 13.9
-        // read as good news from a quarterback projected 18. Green now
-        // means he is beating what was expected of him.
-        const dayProj = gcProjectedPoints(pl.id, dict);
-        const totCls = (dayTotal == null || dayProj == null) ? 'is-flat'
-          : (dayTotal > dayProj + 0.05 ? 'is-pos'
-            : (dayTotal < dayProj - 0.05 ? 'is-neg' : 'is-flat'));
+        // His day so far and his running total, both from gcFeedLiveFor so
+        // the refresh pass writes exactly what the first draw wrote. The
+        // total is on the same house line the play itself is priced on --
+        // 5pt passing TD, -2 an interception, -2 a fumble lost (a fumble
+        // he recovers has no key at all, so it is worth nothing), full
+        // PPR, tight ends +0.5 a catch. The box score reads this through
+        // the same function, so the two cannot drift.
+        const live = liveFor(pl.id);
         // No per-league chips. A player in a dozen leagues produced a
         // dozen of them, which buried what the row is actually for --
         // what happened and what it was worth. The single net figure at
@@ -29696,11 +30195,17 @@
             `<span class="gc-feed-stat"><span class="gc-feed-k">Play</span>` +
               `<b class="${fpCls.trim() || 'is-flat'}">${pl.fp > 0 ? '+' : ''}${pl.fp.toFixed(1)}</b></span>` +
             `<span class="gc-feed-stat"><span class="gc-feed-k">Total</span>` +
-              `<b class="${totCls}">${dayTotal != null ? dayTotal.toFixed(1) : '&mdash;'}</b></span>` +
+              `<b class="${live.totalCls}" data-gc-live="total" data-gc-pid="${sbFieldEsc(pl.id)}">${sbFieldEsc(live.totalText)}</b></span>` +
             stakeHtml(pl.id) +
           `</div>` +
-          (dayLine ? `<div class="gc-feed-day"><span class="gc-feed-day-label">ON THE DAY</span>${sbFieldEsc(dayLine)}</div>` : '') +
-          (impacts.length ? ''
+          // Always present, hidden while empty, so a line that only arrives
+          // once Sleeper has stats for him can be filled in by the refresh
+          // rather than waiting for the next play to rebuild the row.
+          `<div class="gc-feed-day${live.dayLine ? '' : ' is-empty'}">` +
+            `<span class="gc-feed-day-label">ON THE DAY</span>` +
+            `<span data-gc-live="day" data-gc-pid="${sbFieldEsc(pl.id)}">${sbFieldEsc(live.dayLine)}</span>` +
+          `</div>` +
+          (impactCount ? ''
                  : '<div class="gc-feed-nostake">no stake in any of your leagues</div>') +
         `</div>`;
       });
@@ -29717,7 +30222,7 @@
         return url ? `<img class="gc-feed-logo" src="${url}" alt="" loading="lazy" onerror="this.remove()">` : '';
       };
 
-      items.push(`<div class="gc-feed-item${rowCls}">
+      items.push(`<div class="gc-feed-item${rowCls}" data-gc-row="${rowIndex}">
         <div class="gc-feed-top">
           <span class="gc-feed-game" data-gc-open="${sbFieldEsc(game.eventId)}">${logo(game.away.abbr)}${logo(game.home.abbr)}${sbFieldEsc(game.away.abbr)} @ ${sbFieldEsc(game.home.abbr)}</span>
           ${meta.map(m => `<span>${sbFieldEsc(m)}</span>`).join('')}
@@ -29727,7 +30232,7 @@
         <div class="gc-feed-text">${sbFieldEsc(play.text)}</div>
         ${blocks.join('')}
         ${(anyFor || anyAgainst)
-          ? `<div class="gc-feed-net ${netCls}">${netSwing > 0 ? '+' : (netSwing < 0 ? '\u2212' : '')}${Math.abs(netSwing).toFixed(1)}% win probability across your matchups</div>`
+          ? `<div class="gc-feed-net ${netCls}" data-gc-live="swing">${gcFeedSwingText(netSwing)}</div>`
           : ''}
       </div>`);
     });
@@ -29735,6 +30240,81 @@
     return items.length ? items.join('')
       : '<div class="gc-empty">No plays involving your players yet.</div>';
   }
+
+  function gcFeedSwingText(netSwing) {
+    return `${netSwing > 0 ? '+' : (netSwing < 0 ? '\u2212' : '')}${Math.abs(netSwing).toFixed(1)}% win probability across your matchups`;
+  }
+
+  // Re-price what is still live in a feed that is not being rebuilt.
+  //
+  // The feed only rebuilds when the plays themselves change -- sixty rows
+  // of headshots and team logos are not worth throwing away every twenty
+  // seconds to learn that the same plays are still the same plays. But
+  // three things in a row go on moving after the play is over: what the
+  // player can still do to your week, his running total, and what the play
+  // itself is now worth as its matchups tighten or run away. Those used to
+  // sit frozen at whatever they were the moment the play landed, so in a
+  // quiet stretch the feed could disagree with the player row next to it
+  // about the same player -- including, for a player balanced across both
+  // sides of your leagues, about the SIGN.
+  //
+  // So: keep the structural gate, and write the live numbers into the rows
+  // that are already there. No images are touched, so nothing flickers.
+  function gcFeedRefreshLive() {
+    const feed = document.getElementById('gcFeed');
+    if (!feed) return;
+    const dict = window.__sleeperPlayerDict || {};
+    // One answer per player per pass, for the same reason the draw caches
+    // it: a quarterback appears in most of the rows on screen.
+    const cache = new Map();
+    const liveFor = (pid) => {
+      if (!cache.has(pid)) cache.set(pid, gcFeedLiveFor(pid, dict));
+      return cache.get(pid);
+    };
+
+    feed.querySelectorAll('[data-gc-live="stake"],[data-gc-live="total"],[data-gc-live="day"]').forEach(el => {
+      const pid = el.dataset.gcPid;
+      if (!pid) return;
+      const r = liveFor(pid);
+      if (el.dataset.gcLive === 'stake') {
+        // A player who had no stake at all drew no element, so there is
+        // nothing here to update -- he gets one on the next real rebuild.
+        if (!r.stake) return;
+        el.textContent = r.stake.text;
+        el.className = r.stake.cls;
+        const wrap = el.closest('.gc-feed-stat');
+        if (wrap) wrap.title = r.stake.tip;
+      } else if (el.dataset.gcLive === 'total') {
+        el.textContent = r.totalText;
+        el.className = r.totalCls;
+      } else {
+        el.textContent = r.dayLine;
+        const day = el.closest('.gc-feed-day');
+        if (day) day.classList.toggle('is-empty', !r.dayLine);
+      }
+    });
+
+    // And what each play is worth now. Priced off the rows the feed was
+    // drawn from, matched by the index stored on the item, so a filtered
+    // feed still lines up with the plays behind it.
+    const rows = window.__gcRenderedRows || window.__gcFeedRows || [];
+    feed.querySelectorAll('.gc-feed-item[data-gc-row]').forEach(item => {
+      const row = rows[Number(item.dataset.gcRow)];
+      if (!row) return;
+      const net = item.querySelector('[data-gc-live="swing"]');
+      if (!net) return;
+      // Cached per play, so this writes the number the play actually
+      // produced rather than re-pricing it against a margin that has since
+      // absorbed it. Still written on every pass because a play first seen
+      // before your leagues loaded prices at nothing and is not kept.
+      const netSwing = gcPlayImpact(row.game, row.play, row.players).net;
+      net.textContent = gcFeedSwingText(netSwing);
+      net.className = 'gc-feed-net ' + (Math.abs(netSwing) < 0.05 ? 'is-flat' : (netSwing > 0 ? 'is-pos' : 'is-neg'));
+      item.classList.toggle('is-mine', netSwing >= 0);
+      item.classList.toggle('is-against', netSwing < 0);
+    });
+  }
+  window.gcFeedRefreshLive = gcFeedRefreshLive;
 
   // ---- Orchestration ---------------------------------------------------
   // Two independent passes. The grid draws from the scoreboard endpoint
@@ -29747,6 +30327,10 @@
     if (!grid) return;
     if (!window.getNflState) return;
     const { week, season } = await window.getNflState();
+    // Which week the accumulated plays describe, so getWeekStats only
+    // folds them into that week and never into a Game Log or a week the
+    // dropdown has gone looking at.
+    window.__gcPbpWeek = week;
 
     const [games, dict] = await Promise.all([
       gcGetGamesList(season, week),
@@ -29795,23 +30379,46 @@
     if (typeof deskMark === 'function') deskMark('render:gamecast', performance.now() - __gcT0);
     gcFeedPlays(sorted, dict).then(rows => {
       window.__gcFeedRows = rows;
+      // The plays have only just been parsed, and they are the freshest
+      // stat line anywhere in the app. Fold them in before anything on
+      // this page is drawn from them, so the box score, over expected and
+      // the feed's own totals all read the same afternoon -- rather than
+      // the panels showing a number a minute older than the play that is
+      // sitting right next to it.
+      const merged = (typeof sbMergeLiveStats === 'function')
+        ? sbMergeLiveStats(statsMap, window.__gcPbpStats) : statsMap;
+      window.__gcStatsMap = merged;
+      if (window.__gcCache) window.__gcCache.statsMap = merged;
+      if (window.__gcOpenData) {
+        window.__gcOpenData.statsMap = merged;
+        gcRefreshInlineBodies();
+      }
       // This column refreshes under you every twenty seconds. Reading it
       // back to Sunday morning only to be thrown to the top mid-sentence
       // is the whole column failing at its job, so hold the scroll.
       // Most refreshes add nothing: the same plays, re-rendered, which
       // throws away and rebuilds sixty rows of headshots and team logos
       // for no reason. Write only when the feed actually changed.
-      const sig = rows.length + '|' + rows.slice(0, 6).map(r => r.game.eventId + ':' + (r.play.seq || r.play.wallclock || '')).join(',');
+      const shown = gcFeedRowsForView();
+      const sig = (window.__gcFeedFilter || 'all') + '|' + shown.length + '|' +
+        shown.slice(0, 6).map(r => r.game.eventId + ':' + (r.play.seq || r.play.wallclock || '')).join(',');
       if (sig !== window.__gcFeedSig) {
         window.__gcFeedSig = sig;
-        gcKeepScroll('gcFeed', (feed) => { feed.innerHTML = gcFeedHtml(rows); });
+        gcKeepScroll('gcFeed', (feed) => { feed.innerHTML = gcFeedHtml(shown); });
+      } else {
+        // Same plays, so the rows stay. The numbers inside them do not --
+        // re-price them in place rather than leaving the column frozen
+        // between plays.
+        gcFeedRefreshLive();
       }
       const sub = document.getElementById('gcFeedSub');
       if (sub) {
         const liveCount = sorted.filter(g => g.state === 'in').length;
-        sub.textContent = liveCount
-          ? `Newest first, across ${liveCount} live game${liveCount === 1 ? '' : 's'}.`
-          : 'Newest first. Nothing is live, so this is the last of the finished games.';
+        sub.textContent = window.__gcFeedFilter === 'swings'
+          ? 'The day\u2019s plays, biggest mover of your week first.'
+          : (liveCount
+            ? `Newest first, across ${liveCount} live game${liveCount === 1 ? '' : 's'}.`
+            : 'Newest first. Nothing is live, so this is the last of the finished games.');
       }
     }).catch(() => {
       const feed = document.getElementById('gcFeed');
@@ -29958,7 +30565,11 @@
         window.__gcFeedFilter = chip.dataset.gcFeed;
         window.__gcFeedSig = null;   // a different view of the same rows
         // Filtering is a view of rows already in hand -- no refetch.
-        gcKeepScroll('gcFeed', (body) => { body.innerHTML = gcFeedHtml(window.__gcFeedRows || []); });
+        gcKeepScroll('gcFeed', (body) => { body.innerHTML = gcFeedHtml(gcFeedRowsForView()); });
+        const sub = document.getElementById('gcFeedSub');
+        if (sub && window.__gcFeedFilter === 'swings') {
+          sub.textContent = 'The day\u2019s plays, biggest mover of your week first.';
+        }
       });
     }
   })();
@@ -30283,6 +30894,71 @@
   // silently dropping leagues back out of the grid. Only the most
   // recently started call is allowed to write the DOM.
   let sbRenderGen = 0;
+  // ---- Weekly luck ------------------------------------------------------
+  // How much of this week's result you earned and how much the schedule
+  // handed you.
+  //
+  // Your score is measured against the whole league rather than against the
+  // one team you happen to have drawn: beat nine of eleven and you have
+  // earned about 0.82 of a win, whoever you were playing. Luck is the
+  // difference between that and what you are actually getting -- +1.00 is
+  // the week you score second-lowest and win anyway, -1.00 is the week you
+  // put up the second-highest score and lose.
+  //
+  // Read off live points, not projections: this is about what has actually
+  // happened so far, and a projection cannot be lucky. Before anyone has
+  // scored there is no result to be lucky about, so it stays blank rather
+  // than reporting a league-wide tie.
+  function sbWeeklyLuck(entry, myPts, oppPts) {
+    const all = (entry && entry.allMatchups) || [];
+    const myRosterId = entry && entry.roster ? entry.roster.roster_id : null;
+    if (!all.length || myRosterId == null) return null;
+    const others = all.filter(m => m && m.roster_id != null && m.roster_id !== myRosterId);
+    if (others.length < 2) return null;
+    if (!all.some(m => Number(m.points) > 0)) return null;
+    let beat = 0, tied = 0;
+    others.forEach(m => {
+      const p = Number(m.points) || 0;
+      if (myPts > p) beat++; else if (myPts === p) tied++;
+    });
+    const earned = (beat + tied * 0.5) / others.length;
+    const actual = myPts > oppPts ? 1 : (myPts < oppPts ? 0 : 0.5);
+    return { luck: actual - earned, earned, actual, beat, of: others.length, winning: myPts > oppPts };
+  }
+
+  // The same matchup priced as though no game had been played: every
+  // player on both sides at his own projection, nobody's actual score
+  // counted, full pre-kickoff uncertainty.
+  //
+  // This is the baseline "week vs expected" is measured against, and the
+  // point of it is WHICH things move it. It reads the lineups as they
+  // stand right now, so a lineup set or changed on Sunday morning moves
+  // it. It reads projections, never actual points, so a Thursday night
+  // player going off does not. That is the split you asked for: if your
+  // number goes from 9 to 10 and 0.3 of that was people setting lineups,
+  // the baseline becomes 9.3 on its own and only the 0.7 that was
+  // performance is left showing as the week beating expectation.
+  //
+  // Passing no espnGameData is what does it -- sbEffectivePoints only
+  // reaches for live scores when it has game state to read, so without it
+  // every player falls through to his projection.
+  function sbMatchupExpectedWinPct(myMatchup, oppMatchup, league, projMap, week) {
+    if (!myMatchup || !oppMatchup || !league) return null;
+    const unplayed = (m) => Object.assign({}, m, { players_points: {} });
+    const my = unplayed(myMatchup);
+    const opp = unplayed(oppMatchup);
+    const myProj = sbMatchupProjectedTotal(my, projMap, league, null, week);
+    const oppProj = sbMatchupProjectedTotal(opp, projMap, league, null, week);
+    if (!Number.isFinite(myProj) || !Number.isFinite(oppProj)) return null;
+    return sbWinProbability(myProj, oppProj, sbMatchupSigma(my, opp, projMap, league, null, week));
+  }
+
+  // Sleeper is unreachable from the sandbox this is developed in, so the
+  // luck arithmetic is checked by handing these hand-built leagues in a
+  // browser rather than by waiting for a Sunday.
+  window.__sbWeeklyLuck = sbWeeklyLuck;
+  window.__sbMatchupExpectedWinPct = sbMatchupExpectedWinPct;
+
   async function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
     if (!sbGrid) return;
@@ -30333,6 +31009,11 @@
     if (myGen !== sbRenderGen) return;
 
     let totalPts = 0, oppTotalPts = 0, favoredCount = 0, withMatchup = 0, projWinSum = 0, projLossSum = 0, currentlyWinningCount = 0;
+    // The week measured against itself: what the lineups as they stand
+    // were worth before a ball was kicked, and what the schedule has made
+    // of the scores so far.
+    let expectedWinSum = 0, expectedCount = 0;
+    let luckEarned = 0, luckActual = 0, luckCount = 0;
     // Which players are in each league's matchup (both sides, starters
     // and bench), so the player search below can narrow the list to the
     // matchups a given player actually appears in. Rebuilt with the grid.
@@ -30401,6 +31082,12 @@
           // distribution, and a sum cannot answer "what are the odds I go
           // 10 of 14". See sbMatchupsWonOdds.
           weekWinProbs.push(winPct / 100);
+          // The same matchup with nothing played, for WEEK VS EXPECTED.
+          const expPct = sbMatchupExpectedWinPct(myMatchup, oppMatchup, entry.league, projMap, cardWeek);
+          if (expPct != null) { expectedWinSum += expPct / 100; expectedCount++; }
+          // And how the schedule is treating the score you actually have.
+          const cardLuck = sbWeeklyLuck(entry, myPts, oppPts);
+          if (cardLuck) { luckEarned += cardLuck.earned; luckActual += cardLuck.actual; luckCount++; }
           // Strict coin-flip split for the badge's color -- >=50% green,
           // <50% red -- rather than a three-way good/close/bad read, since
           // a 51% win probability is still more likely than not to win.
@@ -30480,6 +31167,9 @@
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
     const currentWinsValue = document.getElementById('sbStatCurrentWinsValue');
     if (currentWinsValue) currentWinsValue.textContent = `${currentlyWinningCount} of ${withMatchup}`;
+    sbSetWeekSwing(expectedCount ? projWinSum - expectedWinSum : null,
+      { live: projWinSum, expected: expectedWinSum });
+    sbSetScheduleLuck(luckEarned, luckActual, luckCount);
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
     const sbWeekLabel = document.getElementById('sbWeekLabel');
     if (sbWeekLabel) sbWeekLabel.textContent = week;
