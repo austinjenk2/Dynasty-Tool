@@ -730,9 +730,12 @@
      palette the app ships (Cream Classic included). */
 
   /* ---- Scores rail ---- */
+  /* The 2px/10px it carried sat the title hard against the rule above it
+     and left all the air underneath. Even margins centre the row between
+     that rule and the top of the first game, which is a 2px nudge down. */
   .gc-rail-head {
     display: flex; align-items: center; gap: 10px;
-    margin: 2px 0 10px;
+    margin: 4px 0 8px;
   }
   .gc-rail-title { font-size: 12.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink); }
   .gc-live-pill {
@@ -743,8 +746,9 @@
   }
   .gc-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: gcLiveBlink 1.6s ease-in-out infinite; }
   @keyframes gcLiveBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-  .gc-rail-spacer { flex: 1; }
-  .gc-rail-hint { font-size: 11px; color: var(--faint); }
+  /* The green/red legend that used to sit here is gone; the colours are
+     self-evident once you have seen one game, and it was the widest thing
+     in a header that is three words long. */
 
 
   .gc-card {
@@ -6585,8 +6589,6 @@
     <div class="gc-rail-head">
       <span class="gc-rail-title">NFL Scores</span>
       <span class="gc-live-pill" id="gcLivePill" hidden><span class="gc-live-dot"></span>LIVE</span>
-      <span class="gc-rail-spacer"></span>
-      <span class="gc-rail-hint">Green = your starters in this game &middot; red = starters against you &middot; tap a game for your leagues and its box score</span>
     </div>
     <div class="gc-split">
       <div class="gc-grid" id="gcGrid"><div class="ld-loading">Loading this week&rsquo;s games&hellip;</div></div>
@@ -17116,12 +17118,14 @@
   window.__sbEffectiveStarters = sbEffectiveStarters;
   window.__sbOptimalLineup = sbOptimalLineup;
 
+  // Same basis as sbLeagueContendingRanks -- see the note there for why
+  // this is the rest of the season rather than this Sunday.
   function sbContendingRank(entry) {
     const allRosters = entry.allRosters || [];
     if (allRosters.length < 2 || !entry.roster) return null;
     const totals = allRosters.map(r => ({
       rosterId: r.roster_id,
-      total: sbOptimalLineupTotal(sbStartablePlayers(r), entry.league),
+      total: sbSeasonLevelFor(entry, r),
     }));
     if (totals.some(t => t.total == null)) return null;
     const sorted = [...totals].sort((a, b) => b.total - a.total);
@@ -17266,12 +17270,38 @@
   // Same optimal-lineup-projection ranking as sbContendingRank, but for
   // every roster in the league at once (used by the League Standings
   // popup, which needs everyone's rank, not just the connected user's).
+  // What Contending Rank is ranking, and why it is not this week.
+  //
+  // It used to be this week's best possible lineup, which answers "who is
+  // strongest on Sunday" -- and that punished a team for a bye week or a
+  // one-week injury, which is the opposite of what the panel is for. The
+  // question is how good a roster is at full strength, over the season it
+  // still has to play.
+  //
+  // So it reads the season model's level: the average of that roster's
+  // best possible lineup across every remaining week, each week optimised
+  // against its own projections. A player out this week costs his team
+  // one week of nine instead of all nine, and a player on bye costs it
+  // nothing at all beyond that week. That is also exactly the number the
+  // playoff odds are built on, so Contending Rank and the odds can no
+  // longer disagree about who the best roster is.
+  //
+  // Before the first simulation of a session lands there is no season
+  // model yet, so it falls back to this week -- the old behaviour, and
+  // only for as long as it takes the sync to finish.
+  function sbSeasonLevelFor(entry, roster) {
+    const cur = ((window.__ppPickModel || {})[entry.league.league_id] || {}).current;
+    const m = cur && cur.model && cur.model[roster.roster_id];
+    if (m && Number.isFinite(m.mean)) return m.mean;
+    return sbOptimalLineupTotal(sbStartablePlayers(roster), entry.league);
+  }
+
   function sbLeagueContendingRanks(entry) {
     const allRosters = entry.allRosters || [];
     if (allRosters.length < 2) return null;
     const totals = allRosters.map(r => ({
       rosterId: r.roster_id,
-      total: sbOptimalLineupTotal(sbStartablePlayers(r), entry.league),
+      total: sbSeasonLevelFor(entry, r),
     }));
     if (totals.some(t => t.total == null)) return null;
     const sorted = [...totals].sort((a, b) => b.total - a.total);
@@ -34905,24 +34935,45 @@
         }
         return null;
       }
-      if (!window.sbTeamOptimalProjection) return null;
-      const rosters = entry.allRosters || [];
-      const ra = rosters.find(r => r.roster_id === idA), rb = rosters.find(r => r.roster_id === idB);
-      if (!ra || !rb) return null;
-      const pa = window.sbTeamOptimalProjection(window.sbStartablePlayers(ra), entry.league);
-      const pb = window.sbTeamOptimalProjection(window.sbStartablePlayers(rb), entry.league);
-      // Two rosters that project identically -- or two that could not be
-      // projected at all, which comes out as a pair of zeroes -- is not a
-      // coin flip, it is no answer. Saying 50/50 there would be inventing
-      // one, so the caller falls back to the simulation instead.
-      if (pa == null || pb == null || Math.abs(pa - pb) < 1e-9) return null;
-      // How far a single week swings around its projection. Taken off the
-      // fitted model where there is one, so this and the odds are reading
-      // the same league rather than two different guesses about it.
+      // A future week is read straight off the season model, and
+      // deliberately off the SAME distribution the simulation draws that
+      // game from -- the two teams' levels for that week, spread by both
+      // their weekly noise and both their level uncertainty.
+      //
+      // This used to be its own estimate: both rosters' best possible
+      // lineups by THIS week's projections, spread by weekly noise alone.
+      // Two things were wrong with that, and together they are why adding
+      // up a schedule's percentages did not come to the projected record.
+      //
+      // It used this week's projections for every future week, so a team
+      // whose quarterback is out on Sunday had every remaining week on the
+      // page priced as though he were out in all of them -- the same bug
+      // as in the simulation, fixed there and still living here.
+      //
+      // And it left out tau. The simulation draws each team's level once
+      // per season and holds it, so a single game's margin carries that
+      // uncertainty too; leaving it out made every game more decisive on
+      // the page than in the odds. A projected record is the sum of the
+      // simulation's per-game probabilities, so a page showing systematically
+      // different probabilities cannot be made to add up to it.
+      //
+      // Now it is the same arithmetic, which means the percentages on a
+      // schedule DO sum to the projected record, for the weeks still to be
+      // played. (The live week is the Slate's number, which is a better
+      // answer than the season model's for a game with real lineups and
+      // real game state -- so that one week can differ, and should.)
       const cur = ((window.__ppPickModel || {})[entry.league.league_id] || {}).current;
       const m = cur && cur.model;
-      const sd = (m && m[idA] && m[idB]) ? Math.sqrt((m[idA].sd * m[idA].sd + m[idB].sd * m[idB].sd) / 2) : 26;
-      const spread = sd * Math.SQRT2;
+      const ma = m && m[idA], mb = m && m[idB];
+      if (!ma || !mb) return null;
+      const levelOf = (mm) => mm.mean + ((mm.weekDelta && mm.weekDelta[week] != null) ? mm.weekDelta[week] : 0);
+      const pa = levelOf(ma), pb = levelOf(mb);
+      // Two teams the model cannot tell apart is not a coin flip, it is no
+      // answer. Saying 50/50 there would be inventing one, so the caller
+      // falls back to the simulation's measured rate instead.
+      if (!Number.isFinite(pa) || !Number.isFinite(pb) || Math.abs(pa - pb) < 1e-9) return null;
+      const spread = Math.sqrt(
+        ma.sd * ma.sd + mb.sd * mb.sd + ma.tau * ma.tau + mb.tau * mb.tau);
       if (!(spread > 0)) return null;
       // Normal CDF via erf, good to about 1e-7 -- plenty for a percentage.
       const z = (pa - pb) / spread;
