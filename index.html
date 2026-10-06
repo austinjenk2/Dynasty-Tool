@@ -17027,7 +17027,11 @@
   // depth on the bench too. Ranked against the other real rosters in the
   // same league -- this is a projection-week snapshot, not a season-long
   // strength score.
-  function sbOptimalLineupTotal(playerIds, league) {
+  // levelMap is optional: {playerId: points} overriding this week's
+  // projection for a player, used by the season simulation, which wants a
+  // typical week rather than this one. See ppRestOfSeasonLevels. Every
+  // other caller omits it and gets this week, which is what they want.
+  function sbOptimalLineupTotal(playerIds, league, levelMap) {
     const playerDict = window.__sleeperPlayerDict;
     if (!league || !league.roster_positions || !playerDict) return null;
     const startSlots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
@@ -17042,12 +17046,23 @@
         if (chosen.has(pid)) return;
         const p = playerDict[pid];
         if (!p || !eligible.includes(p.position)) return;
-        const proj = sbProjectionFor(pid, null, league);
+        const proj = sbPlayerLevel(pid, league, levelMap);
         if (proj != null && proj > bestProj) { bestProj = proj; best = pid; }
       });
       if (best) { chosen.add(best); total += bestProj; }
     });
     return total;
+  }
+
+  // One player's points for whatever week is being asked about: the
+  // override where a caller supplied one, this week's projection
+  // otherwise.
+  function sbPlayerLevel(id, league, levelMap) {
+    if (levelMap) {
+      const v = levelMap[id];
+      if (v != null && Number.isFinite(v)) return v;
+    }
+    return sbProjectionFor(id, null, league);
   }
 
   function sbContendingRank(entry) {
@@ -17071,7 +17086,7 @@
   // declarations, so they are already window properties, and assigning a
   // wrapper over the same name replaces the function with one that calls
   // itself. (Same reason window.ppResolvePick is not window.ppResolveDraftedPick.)
-  window.sbTeamOptimalProjection = (playerIds, league) => sbOptimalLineupTotal(playerIds, league);
+  window.sbTeamOptimalProjection = (playerIds, league, levelMap) => sbOptimalLineupTotal(playerIds, league, levelMap);
   window.sbTeamContendingRanks = (entry) => sbLeagueContendingRanks(entry);
 
   function sbOrdinal(n) {
@@ -25760,6 +25775,97 @@
   // most likely gone for the stretch that decides the race, and is treated
   // that way.
   const PP_LONG_TERM_AVAILABILITY = 0.15;
+
+  // ---- This week is not every week ------------------------------------
+  // sbProjectionFor answers one question: what does this player project
+  // for THIS week. That is the right question nearly everywhere on the
+  // site, and the wrong one in exactly one place -- the season
+  // simulation, which uses a roster's best-lineup total as the level it
+  // will play at for every week still to come.
+  //
+  // A player who is not playing this week projects about zero this week.
+  // On a bye, ruled out, or sitting behind a short-week decision, Sleeper
+  // publishes a number near zero, and that is correct for the week and
+  // badly wrong as a read on the rest of the season.
+  //
+  // It is worst exactly where it is most expensive. In a superflex league
+  // with a roster carrying two quarterbacks, a starter out this week is
+  // not a quarterback-shaped hole for one week -- the optimiser fills
+  // superflex with the best position player on the roster and the season
+  // simulation then believes that is the lineup for all nine remaining
+  // weeks. On a twelve-point-per-week gap, in a league whose best and
+  // worst rosters are twenty-eight points apart, that is most of the
+  // signal. Both of the leagues where the odds read far too low are that
+  // exact shape.
+  //
+  // It was also a double penalty: ppAvailability above already discounts
+  // an injured player's contribution across the weeks he is likely to
+  // miss. Charging him a zero projection AND an availability haircut
+  // counted the same injury twice, and the zero made the haircut
+  // meaningless anyway, since a marginal of zero times any availability
+  // is still zero.
+  //
+  // So the season simulation gets its own level for the players whose
+  // week projection says they are not playing: Sleeper's own full-season
+  // projection, per game. That number does not know about this week, by
+  // construction, which is the whole reason to use it.
+  //
+  // Below this many projected points, a player is taken to be not playing
+  // this week rather than playing badly. Nobody who is actually in a
+  // lineup projects under a point.
+  const PP_LEVEL_PLAYING_FLOOR = 1.0;
+  // Games to assume when Sleeper's season projection carries no `gp`.
+  // The calibration below divides this straight back out, so getting it
+  // wrong costs nothing league-wide -- it only matters for a player whose
+  // real projected games are far from a full season.
+  const PP_ASSUMED_SEASON_GAMES = 17;
+
+  // {playerId: points} for every player whose THIS-WEEK projection would
+  // misrepresent a typical week. Players who are playing are absent from
+  // the map and keep their real week projection.
+  //
+  // Sleeper's season projection is published in its own scoring format,
+  // not this league's, and the map it is cached in keeps only the total
+  // -- no stat line to re-score from. So it is calibrated instead: across
+  // every player who HAS a usable week projection in this league, take
+  // the ratio of the league-scored weekly numbers to the raw per-game
+  // ones. That is one measured number per league, and it maps the season
+  // figures into this league's weekly scoring without needing the stat
+  // lines. It also absorbs any systematic error in the games-played
+  // assumption above, since that divides out of both sides of the ratio.
+  async function ppRestOfSeasonLevels(season, league) {
+    if (!window.sleeperGetSeasonProjections || !window.__sleeperPlayerDict) return null;
+    let seasonProj = null;
+    try { seasonProj = await window.sleeperGetSeasonProjections(season); } catch (e) { return null; }
+    if (!seasonProj) return null;
+    const ids = Object.keys(seasonProj);
+    if (!ids.length) return null;
+    const ppgById = {};
+    let wkSum = 0, ppgSum = 0;
+    ids.forEach(id => {
+      const rec = seasonProj[id];
+      const pts = Number(rec && rec.pts);
+      if (!Number.isFinite(pts) || pts <= 0) return;
+      const gp = Number(rec && rec.gp) > 0 ? Number(rec.gp) : PP_ASSUMED_SEASON_GAMES;
+      const ppg = pts / gp;
+      if (!Number.isFinite(ppg) || ppg <= 0) return;
+      ppgById[id] = ppg;
+      const wk = sbProjectionFor(id, null, league);
+      if (wk != null && wk > PP_LEVEL_PLAYING_FLOOR) { wkSum += wk; ppgSum += ppg; }
+    });
+    // Nothing to calibrate against means no league-scored reading to
+    // anchor on, and an uncalibrated substitution would be worse than
+    // leaving this week's numbers alone.
+    if (!(wkSum > 0 && ppgSum > 0)) return null;
+    const calib = wkSum / ppgSum;
+    const out = {};
+    Object.keys(ppgById).forEach(id => {
+      const wk = sbProjectionFor(id, null, league);
+      if (wk == null || wk <= PP_LEVEL_PLAYING_FLOOR) out[id] = ppgById[id] * calib;
+    });
+    return out;
+  }
+  window.ppRestOfSeasonLevels = ppRestOfSeasonLevels;
   function ppAvailability(p, weeksLeft) {
     if (!p) return 1;
     const w = Math.max(1, Number(weeksLeft) || 1);
@@ -25787,10 +25893,10 @@
   // replacement lineup is paid out at the share of remaining weeks he is
   // expected to play. A player whose slot is covered contributes a
   // marginal of nearly zero either way, which is the right answer.
-  function ppHealthyProjection(playerIds, league, weeksLeft) {
+  function ppHealthyProjection(playerIds, league, weeksLeft, levelMap) {
     const base = window.sbTeamOptimalProjection;
     if (!base) return null;
-    const full = base(playerIds, league);
+    const full = base(playerIds, league, levelMap);
     const dict = window.__sleeperPlayerDict;
     if (full == null || !dict) return full;
     const ids = (playerIds || []).filter(id => id && id !== '0');
@@ -25798,11 +25904,11 @@
     if (!hurt.length) return full;
     const hurtSet = new Set(hurt);
     const healthyIds = ids.filter(id => !hurtSet.has(id));
-    const healthy = base(healthyIds, league);
+    const healthy = base(healthyIds, league, levelMap);
     if (healthy == null) return full;
     let total = healthy;
     hurt.forEach(id => {
-      const withHim = base(healthyIds.concat([id]), league);
+      const withHim = base(healthyIds.concat([id]), league, levelMap);
       if (withHim == null) return;
       total += Math.max(0, withHim - healthy) * ppAvailability(dict[id], weeksLeft);
     });
@@ -25826,21 +25932,24 @@
   // definition of depth at the only place it matters -- the top of the
   // roster, since that is where an injury actually hurts. The greedy
   // slot-fill underneath is cheap enough to run twice per team.
-  function ppDepthRisk(playerIds, league) {
+  function ppDepthRisk(playerIds, league, levelMap) {
     const base = window.sbTeamOptimalProjection;
     const dict = window.__sleeperPlayerDict;
     if (!base || !dict) return null;
     const ids = (playerIds || []).filter(id => id && id !== '0');
     if (ids.length < 2) return null;
-    const full = base(ids, league);
+    const full = base(ids, league, levelMap);
     if (full == null) return null;
+    // The same rest-of-season level the lineup above is built from, so the
+    // player identified as the one worth losing is the roster's best
+    // player and not merely whoever happens to be playing this week.
     let top = null, topProj = -Infinity;
     ids.forEach(id => {
-      const proj = sbProjectionFor(id, null, league);
+      const proj = sbPlayerLevel(id, league, levelMap);
       if (proj != null && proj > topProj) { topProj = proj; top = id; }
     });
     if (!top) return null;
-    const without = base(ids.filter(id => id !== top), league);
+    const without = base(ids.filter(id => id !== top), league, levelMap);
     if (without == null) return null;
     return Math.max(0, full - without);
   }
@@ -26067,6 +26176,12 @@
     // Per roster: the points its replacements cannot cover for its best
     // player. Feeds the depth half of tau. See ppDepthRisk.
     const depthById = {};
+    // Rest-of-season levels for the players whose this-week projection
+    // would misrepresent a typical week -- on a bye, ruled out, resting.
+    // Null when the season projections cannot be had, which leaves every
+    // player on this week's number exactly as before. See
+    // ppRestOfSeasonLevels.
+    const levels = await ppRestOfSeasonLevels(league.season, league).catch(() => null);
     // League-wide "started points / best-possible points". Used twice: to
     // put the optimal projection on the same footing as real started
     // scores for the blend below, and then to undo that at the end, so
@@ -26079,7 +26194,7 @@
       // against: missing one of eleven is not missing one of two.
       const weeksLeftForInjury = Math.max(1, played.filter(p => !p).length);
       rosters.forEach(r => {
-        const opt = ppHealthyProjection(r.players, league, weeksLeftForInjury);
+        const opt = ppHealthyProjection(r.players, league, weeksLeftForInjury, levels);
         if (opt != null && opt > 0) { strengthById[r.roster_id] = opt; optSum += opt; optCount++; }
         // Depth, measured on the same pass. Deliberately NOT put through
         // the realism rescale below: that rescale exists to move the
@@ -26087,7 +26202,7 @@
         // again, and the weeks being simulated are played at
         // best-possible-lineup level, which is the space this is already
         // in.
-        const risk = ppDepthRisk(r.players, league);
+        const risk = ppDepthRisk(r.players, league, levels);
         if (risk != null) depthById[r.roster_id] = risk;
       });
       if (optCount === rosters.length && optSum > 0) {
