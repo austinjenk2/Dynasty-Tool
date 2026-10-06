@@ -29848,6 +29848,8 @@
     // Per game, so a game that has not had a play since the last refresh
     // keeps the line it already had instead of being re-read.
     const pbpStats = {};
+    // Games with new plays, priced together once all of them are in.
+    const toPrice = [];
     perGame.forEach(({ game, plays }) => {
       // ESPN names players by short name; the map is built per game so a
       // "J.Jones" in one broadcast can never be matched to the other
@@ -30004,25 +30006,50 @@
       // rows kept from an earlier pass are re-pointed at the current one --
       // otherwise a kept row would render a stale score line.
       if (!needAccum) dayRows.forEach(r => { r.game = game; });
-      // Price this game's plays newest first, winding each matchup back a
-      // play at a time. Done here, as the plays arrive, rather than when
-      // something gets around to looking at them -- and done backwards so
-      // that a game fetched all at once (a page opened after it finished)
-      // still gets each play valued at the matchup it actually happened
-      // in. gcPlayImpact keeps the first answer, so a play priced on a
-      // previous pass is left alone and only its points are rolled on.
-      if (needAccum) {
-        const since = {};
-        for (let i = dayRows.length - 1; i >= 0; i--) {
-          const r = dayRows[i];
-          const res = gcPlayImpact(game, r.play, r.players, since);
-          const sb = (res && res.signedByLeague) || {};
-          Object.keys(sb).forEach(lid => { since[lid] = (since[lid] || 0) + sb[lid]; });
-        }
-      }
+      // Pricing happens after every game has been read -- see below. A
+      // matchup's margin is moved by the whole slate, so winding it back
+      // one game at a time was only ever unwinding part of the afternoon.
+      if (needAccum) toPrice.push({ game, dayRows });
       if (needAccum) window.__gcPbpAccum[pbpKey] = { count: plays.length, stats: gameStats, dayRows, plays };
       pbpStats[game.eventId] = gameStats;
     });
+
+    // Price every new play across the WHOLE slate, newest first, winding
+    // each matchup back one play at a time.
+    //
+    // This used to run per game, with its own running total, which meant a
+    // one o'clock play was only ever unwound by the rest of ITS game -- the
+    // four o'clock games, and every other game that afternoon, were left in
+    // the margin as though they had already happened when it did. The
+    // reconstruction was of a matchup that never existed: an early play
+    // judged against a margin most of a Sunday ahead of it. Rolling the
+    // whole slate back in time order is the only version of this that is
+    // actually the matchup as it stood.
+    //
+    // Time order across games comes off ESPN's own wallclock; sequence is
+    // the fallback inside one game, and games are kept apart so two plays
+    // without timestamps cannot interleave wrongly.
+    if (toPrice.length) {
+      const all = [];
+      toPrice.forEach(({ game: g, dayRows: rows }) => {
+        rows.forEach((r, i) => {
+          const t = r.play.wallclock ? Date.parse(r.play.wallclock) : NaN;
+          all.push({ g, r, t: Number.isFinite(t) ? t : null, eventId: g.eventId, i });
+        });
+      });
+      all.sort((a, b) => {
+        if (a.t != null && b.t != null && a.t !== b.t) return a.t - b.t;
+        if (a.eventId !== b.eventId) return String(a.eventId).localeCompare(String(b.eventId));
+        return a.i - b.i;
+      });
+      const since = {};
+      for (let k = all.length - 1; k >= 0; k--) {
+        const { g, r } = all[k];
+        const res = gcPlayImpact(g, r.play, r.players, since);
+        const sb = (res && res.signedByLeague) || {};
+        Object.keys(sb).forEach(lid => { since[lid] = (since[lid] || 0) + sb[lid]; });
+      }
+    }
 
     // One map across every game on the slate, for the merge in getWeekStats.
     const liveStats = {};
@@ -30123,8 +30150,9 @@
     if (cached) return cached;
     let net = 0, anyFor = false, anyAgainst = false, found = 0;
     const byPlayer = {};
-    // What this play itself did to each matchup, so the caller walking a
-    // game backwards can wind the margin on to the play before it.
+    const byLeague = [];
+    // What this play itself did to each matchup, so the caller walking the
+    // slate backwards can wind the margin on to the play before it.
     const signedByLeague = {};
     (players || []).forEach(pl => {
       const impacts = sbPlayImpact(pl.id, pl.stats,
@@ -30135,9 +30163,13 @@
         if (i.onMySide) anyFor = true; else anyAgainst = true;
         net += i.swing;
         signedByLeague[i.leagueId] = (signedByLeague[i.leagueId] || 0) + (i.onMySide ? i.pts : -i.pts);
+        // Kept so the footer can show its own arithmetic. A total that
+        // looks wrong is only arguable if you can see which league made it.
+        byLeague.push({ name: i.name, onMySide: i.onMySide, pts: i.pts, swing: i.swing });
       });
     });
-    const res = { net, anyFor, anyAgainst, byPlayer, signedByLeague };
+    byLeague.sort((a, b) => Math.abs(b.swing) - Math.abs(a.swing));
+    const res = { net, anyFor, anyAgainst, byPlayer, signedByLeague, byLeague };
     // Only kept once there was a real matchup behind it. Before your
     // leagues have loaded every play prices at nothing, and writing that
     // down would freeze the column at zero for the rest of the session.
@@ -30286,7 +30318,7 @@
         <div class="gc-feed-text">${sbFieldEsc(play.text)}</div>
         ${blocks.join('')}
         ${(anyFor || anyAgainst)
-          ? `<div class="gc-feed-net ${netCls}" data-gc-live="swing" title="${sbFieldEsc(gcFeedSwingTitle(netSwing))}">${gcFeedSwingText(netSwing)}</div>`
+          ? `<div class="gc-feed-net ${netCls}" data-gc-live="swing" title="${sbFieldEsc(gcFeedSwingTitle(netSwing, impact.byLeague))}">${gcFeedSwingText(netSwing)}</div>`
           : ''}
       </div>`);
     });
@@ -30321,14 +30353,17 @@
   }
   // The arithmetic behind it, for anyone who wants to check the sum.
   window.__gcFeedSwingText = gcFeedSwingText;
-  function gcFeedSwingTitle(netSwing) {
-    const rec = window.__sbProjectedRecord;
-    return `The sum of what this play did to your win probability in every league it touched `
-      + `(${netSwing >= 0 ? '+' : '\u2212'}${Math.abs(Number(netSwing) || 0).toFixed(1)} points of win probability), `
-      + `which is the same thing as the change in your projected record.`
-      + (rec && Number.isFinite(rec.winSum)
-          ? `\n\nYour projected record is ${rec.winSum.toFixed(2)} wins right now.` : '')
-      + `\n\nPriced against the matchups as they stood when the play happened, not as they stand now.`;
+  function gcFeedSwingTitle(netSwing, byLeague) {
+    const lines = (byLeague || []).filter(l => Math.abs(l.swing) >= 0.05).map(l =>
+      `${l.name}: ${l.swing > 0 ? '+' : '\u2212'}${Math.abs(l.swing).toFixed(1)}`
+      + ` (${l.onMySide ? 'yours' : 'against you'}, ${l.pts.toFixed(1)} pts)`);
+    return 'What this play did to your win probability in each league it touched, added up.'
+      + (lines.length ? `\n\n${lines.join('\n')}` : '')
+      + `\n\nTotal: ${netSwing >= 0 ? '+' : '\u2212'}${Math.abs(Number(netSwing) || 0).toFixed(1)} points of win probability.`
+      + '\n\nPriced against the matchups as they stood WHEN THE PLAY HAPPENED, not as they stand now. '
+      + 'A play into matchups that were already decided is worth almost nothing even if they are '
+      + 'still decided hours later; a play into matchups that were live at the time keeps what it '
+      + 'was worth then.';
   }
 
   // Re-price what is still live in a feed that is not being rebuilt.
@@ -30396,7 +30431,7 @@
       const netSwing = gcPlayImpact(row.game, row.play, row.players).net;
       net.textContent = gcFeedSwingText(netSwing);
       net.className = 'gc-feed-net ' + (Math.abs(netSwing) < GC_SWING_FLAT ? 'is-flat' : (netSwing > 0 ? 'is-pos' : 'is-neg'));
-      net.title = gcFeedSwingTitle(netSwing);
+      net.title = gcFeedSwingTitle(netSwing, gcPlayImpact(row.game, row.play, row.players).byLeague);
       item.classList.toggle('is-mine', netSwing >= 0);
       item.classList.toggle('is-against', netSwing < 0);
     });
