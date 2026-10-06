@@ -21301,6 +21301,11 @@
       }
     }
 
+    // So the end of the week can force a full resync from outside this
+    // module -- see deskResyncEverything. Guarded by the same saved-user
+    // check the poll uses, so it is a no-op before anyone has connected.
+    window.sleeperReloadAll = () => { if (getSavedUser()) loadSleeperData(); };
+
     const PLAYER_CACHE_KEY = 'dynastyToolSleeperPlayers';
     const PLAYER_CACHE_AT_KEY = 'dynastyToolSleeperPlayersAt';
     const PLAYER_CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -25872,6 +25877,20 @@
   // lineup and what it actually started move together, and that ratio is
   // stable per roster, so a drawn score of X implies potential points of
   // X * that team's own ratio.
+  // How far a single playoff game can swing: a week's own noise plus how
+  // wrong the read on the team's level could be, added in quadrature.
+  // Used only in the bracket -- see the note there.
+  // The most a single playoff game is ever allowed to favour one side.
+  // A fantasy week is one week: even a clear favourite is around 60-65%,
+  // not 85%. The floor is 1 - this, so a finalist is always live.
+  const PP_PLAYOFF_MAX_EDGE = 0.65;
+
+  function ppPlayoffSd(m) {
+    const sd = Number(m && m.sd) || 0;
+    const tau = Number(m && m.tau) || 0;
+    return Math.sqrt(sd * sd + tau * tau);
+  }
+
   async function ppSimulateSeason(entry, dict) {
     const league = entry.league, rosters = entry.allRosters || [];
     const teamCount = rosters.length;
@@ -26366,9 +26385,42 @@
           const ia2 = alive[k], ib2 = alive[k + 1];
           if (ia2 < 0) { nextAlive[m1++] = ib2; continue; }
           if (ib2 < 0) { nextAlive[m1++] = ia2; continue; }
-          const sa2 = Math.max(0, seasonMean[ia2] + model[ia2].sd * ppRandNormal());
-          const sb2 = Math.max(0, seasonMean[ib2] + model[ib2].sd * ppRandNormal());
-          nextAlive[m1++] = sa2 >= sb2 ? ia2 : ib2;
+          // A playoff game gets the FULL uncertainty, not just a week's
+          // noise around a level we are pretending to know.
+          //
+          // Through the regular season, drawing the level once and then
+          // rolling weekly noise around it is right: thirteen weeks
+          // average the level error away, which is what makes a record
+          // mean something. A single elimination game averages nothing.
+          // Treating the level as settled there made each round far more
+          // decisive than a fantasy playoff game is, and -- worse --
+          // correlated the rounds: a team that drew a high level won the
+          // semi AND the final, so the odds compounded instead of
+          // multiplying out. That is how a very good team reached 55% to
+          // win a twelve team league, and how a team with a real chance of
+          // making the playoffs came out at 1% to win it.
+          //
+          // So the spread of a playoff game is the week's noise and the
+          // uncertainty in the level, added in quadrature. Favourites stay
+          // favourites; they stop being near-certainties three times in a
+          // row.
+          const pa2 = ppPlayoffSd(model[ia2]);
+          const pb2 = ppPlayoffSd(model[ib2]);
+          const spread2 = Math.sqrt(pa2 * pa2 + pb2 * pb2) || 1;
+          const edge2 = sbNormalCdf((seasonMean[ia2] - seasonMean[ib2]) / spread2);
+          // ...and then held inside what one fantasy week can actually
+          // settle. No single game is a near-certainty: the best roster in
+          // the league still has to get through a week in which its
+          // quarterback can throw two picks and somebody's waiver tight end
+          // can go for thirty. PP_PLAYOFF_MAX_EDGE is that ceiling, and the
+          // floor is its mirror, so a team that reaches a final is never
+          // written off in it.
+          //
+          // Without it the rounds compounded: three rounds of 80% is a
+          // league winner at 51% before anybody has played, which is not a
+          // thing that happens in a twelve team league.
+          const pWin2 = Math.min(PP_PLAYOFF_MAX_EDGE, Math.max(1 - PP_PLAYOFF_MAX_EDGE, edge2));
+          nextAlive[m1++] = ppRandom() < pWin2 ? ia2 : ib2;
         }
         for (let k = 0; k < m1; k++) alive[k] = nextAlive[k];
         n1 = m1;
@@ -26633,6 +26685,10 @@
   }
   window.ppMedianSeed = ppMedianSeed;
 
+  // Exposed so the playoff model can be calibrated against synthetic
+  // leagues without waiting for a real season.
+  window.__ppSimulateSeason = ppSimulateSeason;
+
   function ppTeamOdds(entry, rosterId) {
     if (!entry || !entry.league || rosterId == null) return null;
     const model = window.__ppPickModel[entry.league.league_id];
@@ -26699,8 +26755,26 @@
   window.__ppPickModelSig = window.__ppPickModelSig || {};
   function ppModelSignature(entry) {
     const league = entry.league;
+    // Rosters AND results. It used to be rosters alone, which meant that
+    // once a league had been simulated in a given week its odds were
+    // frozen until either the week rolled over on Tuesday or somebody
+    // made a roster move. So when Monday night ended and the records
+    // settled, the leagues with waiver churn picked up a new hash and
+    // rebuilt, and the quiet ones kept showing their pre-game numbers for
+    // another day. That is why only SOME leagues looked stuck.
+    //
+    // Deliberately wins, losses and ties rather than points scored:
+    // records only move when a game settles, which is exactly when these
+    // odds should move. Season points tick throughout a Sunday, and
+    // hashing them would re-run an eighteen league simulation every
+    // minute all afternoon to chase numbers that barely shift.
     const rosterPart = (entry.allRosters || [])
-      .map(r => r.roster_id + ':' + ((r.players || []).slice().sort().join(',')))
+      .map(r => {
+        const st = r.settings || {};
+        return r.roster_id
+          + ':' + ((r.players || []).slice().sort().join(','))
+          + ':' + (st.wins || 0) + '-' + (st.losses || 0) + '-' + (st.ties || 0);
+      })
       .sort()
       .join('|');
     // Hashed rather than kept whole: this is ~18 rosters of ~30 ids and
@@ -26712,6 +26786,9 @@
     }
     return [league.league_id, league.season, entry.week || 0, (h >>> 0).toString(36)].join('|');
   }
+
+  // Exposed so the rebuild gate can be checked without a live Sunday.
+  window.__ppModelSignature = ppModelSignature;
 
   async function ppBuildPickModels(onDone) {
     const run = ++ppPickModelRun;
@@ -27890,8 +27967,73 @@
     // sync anyway, so knowing whether football is being played costs
     // nothing extra.
     window.__deskEspnGames = data;
+    deskCheckWeekSettled(data);
     return data;
   }
+
+  // ---- The week finishing ----------------------------------------------
+  // When the Monday night game ends, the week is over and half the site is
+  // suddenly stale: records settle, playoff odds move, the tanking order
+  // changes, the record book gains a week. The ordinary poll gets there
+  // eventually -- and then drops to a thirty minute cadence because no
+  // football is being played, which is exactly the wrong moment to go
+  // quiet.
+  //
+  // So the last whistle is treated as an event. Everything derived from
+  // the week is thrown away and the whole site is resynced and repainted.
+  //
+  // Then again a few times, because Sleeper does not settle instantly: the
+  // scores are final on ESPN minutes before the win lands on a roster
+  // record. One refresh at the whistle would repaint everything with the
+  // old records and look like nothing happened.
+  const DESK_SETTLE_FOLLOWUPS_MS = [3 * 60000, 15 * 60000, 45 * 60000];
+  window.__deskWeekAllFinal = window.__deskWeekAllFinal == null ? null : window.__deskWeekAllFinal;
+  function deskCheckWeekSettled(games) {
+    const map = games || window.__deskEspnGames;
+    if (!map) return;
+    const list = Object.keys(map).map(t => map[t]).filter(Boolean);
+    if (!list.length) return;
+    const allFinal = list.every(g => g.state === 'post');
+    const prev = window.__deskWeekAllFinal;
+    window.__deskWeekAllFinal = allFinal;
+    // Only the transition, and only a real one: a page opened on a
+    // Thursday already-final slate starts at null and must not fire.
+    if (allFinal && prev === false) deskWeekSettled();
+  }
+
+  function deskWeekSettled() {
+    deskResyncEverything();
+    DESK_SETTLE_FOLLOWUPS_MS.forEach(ms => setTimeout(deskResyncEverything, ms));
+  }
+
+  // Drop everything derived from the week just played, then resync. The
+  // caches below all answer "what happened this week", and every one of
+  // them would otherwise keep answering with the version from before the
+  // last game finished.
+  function deskResyncEverything() {
+    try {
+      window.__sleeperSeasonMatchupsCache = {};
+      window.__sleeperBracketCache = {};
+      window.__rgWeekRowsCache = {};
+      window.__sleeperStatsFetchedAt = {};
+      window.__sbExposureIndex = { at: 0, map: null, key: null };
+      window.__sbLeverageCache = { at: 0, byLeague: {}, week: null };
+      window.__gcGamesCache = {};
+      window.__espnGameDataCache = {};
+      // The playoff and tanking numbers come out of these. Clearing the
+      // signatures is what makes the week's last whistle actually re-run
+      // the simulations rather than skip them as unchanged.
+      window.__ppPickModelSig = {};
+    } catch (e) {}
+    // The sync repaints every page through the render queue, so this is
+    // the one call that updates the whole site rather than a list of
+    // pages somebody has to remember to keep up to date.
+    if (window.sleeperReloadAll) window.sleeperReloadAll();
+  }
+  window.deskResyncEverything = deskResyncEverything;
+  // Exposed so the end-of-week behaviour can be driven in a test without
+  // waiting for a Monday night.
+  window.__deskCheckWeekSettled = deskCheckWeekSettled;
 
   // ---- How fast anything needs to refresh -----------------------------
   // There is no reason to be pulling live scores on a Wednesday. Nothing
@@ -29778,6 +29920,53 @@
   // What each play did to your week, worked out once and kept. See
   // gcPlayImpact for why this must not be re-derived later.
   window.__gcPlaySwing = window.__gcPlaySwing || {};
+
+  // ---- and kept for the whole week -------------------------------------
+  // A play's swing is a fact about the moment it happened, so it should
+  // survive a page reload the way a fact does. Held only in memory it did
+  // not: every refresh re-derived the whole afternoon from whatever the
+  // matchups looked like at that point, which is the entire reason these
+  // numbers kept moving under you. Written down at the moment the play is
+  // first seen, read back on load, and never recomputed.
+  //
+  // Keyed by season and week, so last week's answers are not mixed into
+  // this one and the store cannot grow without bound.
+  window.__gcPlaySwingKey = window.__gcPlaySwingKey || null;
+  function gcPlaySwingStoreKey(season, week) { return `deskPlaySwing_${season}_${week}`; }
+
+  function gcLoadPlaySwings(season, week) {
+    if (season == null || week == null) return;
+    const k = gcPlaySwingStoreKey(season, week);
+    if (window.__gcPlaySwingKey === k) return;
+    window.__gcPlaySwingKey = k;
+    try {
+      const raw = localStorage.getItem(k);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== 'object') return;
+      // Anything already priced this session wins -- it was computed from
+      // live state, which is the better reading of the two.
+      Object.keys(saved).forEach(key => {
+        if (!window.__gcPlaySwing[key]) window.__gcPlaySwing[key] = saved[key];
+      });
+    } catch (e) { /* unreadable or unavailable storage: carry on in memory */ }
+  }
+
+  let gcPlaySwingSaveTimer = null;
+  function gcSavePlaySwings() {
+    if (gcPlaySwingSaveTimer || !window.__gcPlaySwingKey) return;
+    // Coalesced: a refresh can price a hundred plays and there is no sense
+    // serialising the store once per play.
+    gcPlaySwingSaveTimer = setTimeout(() => {
+      gcPlaySwingSaveTimer = null;
+      try {
+        localStorage.setItem(window.__gcPlaySwingKey, JSON.stringify(window.__gcPlaySwing));
+      } catch (e) {
+        // Out of quota, or storage blocked. The in-memory copy still
+        // holds for this session; it simply will not survive a reload.
+      }
+    }, 2000);
+  }
   // Short-name maps live as long as the page does: a rostered player can
   // change teams mid-week, which only ever adds a name that fails to
   // match until the next reload, never a wrong one.
@@ -29848,6 +30037,8 @@
     // Per game, so a game that has not had a play since the last refresh
     // keeps the line it already had instead of being re-read.
     const pbpStats = {};
+    // Games with new plays, priced together once all of them are in.
+    const toPrice = [];
     perGame.forEach(({ game, plays }) => {
       // ESPN names players by short name; the map is built per game so a
       // "J.Jones" in one broadcast can never be matched to the other
@@ -30004,25 +30195,37 @@
       // rows kept from an earlier pass are re-pointed at the current one --
       // otherwise a kept row would render a stale score line.
       if (!needAccum) dayRows.forEach(r => { r.game = game; });
-      // Price this game's plays newest first, winding each matchup back a
-      // play at a time. Done here, as the plays arrive, rather than when
-      // something gets around to looking at them -- and done backwards so
-      // that a game fetched all at once (a page opened after it finished)
-      // still gets each play valued at the matchup it actually happened
-      // in. gcPlayImpact keeps the first answer, so a play priced on a
-      // previous pass is left alone and only its points are rolled on.
-      if (needAccum) {
-        const since = {};
-        for (let i = dayRows.length - 1; i >= 0; i--) {
-          const r = dayRows[i];
-          const res = gcPlayImpact(game, r.play, r.players, since);
-          const sb = (res && res.signedByLeague) || {};
-          Object.keys(sb).forEach(lid => { since[lid] = (since[lid] || 0) + sb[lid]; });
-        }
-      }
+      // Pricing happens after every game has been read -- see below. A
+      // matchup's margin is moved by the whole slate, so winding it back
+      // one game at a time was only ever unwinding part of the afternoon.
+      if (needAccum) toPrice.push({ game, dayRows });
       if (needAccum) window.__gcPbpAccum[pbpKey] = { count: plays.length, stats: gameStats, dayRows, plays };
       pbpStats[game.eventId] = gameStats;
     });
+
+    // Price each game's new plays, newest first, winding that game's
+    // matchups back one play at a time.
+    //
+    // Per game ON PURPOSE, and this is the subtle part. The margin being
+    // wound back is a difference of PROJECTED FINALS, not a running points
+    // total -- a six point catch does not add six to a projected final,
+    // because the projection already expected most of it. Subtracting a
+    // play's full points is an approximation that holds over one game's
+    // worth of scoring and falls apart over a whole slate's: unwinding
+    // every play of every game drove margins hundreds of points negative,
+    // every matchup to a certain loss, and every play on the board to
+    // 0.0%. Keeping it inside one game keeps the approximation inside the
+    // range where it means something.
+    toPrice.forEach(({ game: g, dayRows: rows }) => {
+      const since = {};
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const r = rows[i];
+        const res = gcPlayImpact(g, r.play, r.players, since);
+        const sb = (res && res.signedByLeague) || {};
+        Object.keys(sb).forEach(lid => { since[lid] = (since[lid] || 0) + sb[lid]; });
+      }
+    });
+    if (toPrice.length) gcSavePlaySwings();
 
     // One map across every game on the slate, for the merge in getWeekStats.
     const liveStats = {};
@@ -30123,8 +30326,9 @@
     if (cached) return cached;
     let net = 0, anyFor = false, anyAgainst = false, found = 0;
     const byPlayer = {};
-    // What this play itself did to each matchup, so the caller walking a
-    // game backwards can wind the margin on to the play before it.
+    const byLeague = [];
+    // What this play itself did to each matchup, so the caller walking the
+    // slate backwards can wind the margin on to the play before it.
     const signedByLeague = {};
     (players || []).forEach(pl => {
       const impacts = sbPlayImpact(pl.id, pl.stats,
@@ -30135,9 +30339,13 @@
         if (i.onMySide) anyFor = true; else anyAgainst = true;
         net += i.swing;
         signedByLeague[i.leagueId] = (signedByLeague[i.leagueId] || 0) + (i.onMySide ? i.pts : -i.pts);
+        // Kept so the footer can show its own arithmetic. A total that
+        // looks wrong is only arguable if you can see which league made it.
+        byLeague.push({ name: i.name, onMySide: i.onMySide, pts: i.pts, swing: i.swing });
       });
     });
-    const res = { net, anyFor, anyAgainst, byPlayer, signedByLeague };
+    byLeague.sort((a, b) => Math.abs(b.swing) - Math.abs(a.swing));
+    const res = { net, anyFor, anyAgainst, byPlayer, signedByLeague, byLeague };
     // Only kept once there was a real matchup behind it. Before your
     // leagues have loaded every play prices at nothing, and writing that
     // down would freeze the column at zero for the rest of the session.
@@ -30286,7 +30494,7 @@
         <div class="gc-feed-text">${sbFieldEsc(play.text)}</div>
         ${blocks.join('')}
         ${(anyFor || anyAgainst)
-          ? `<div class="gc-feed-net ${netCls}" data-gc-live="swing" title="${sbFieldEsc(gcFeedSwingTitle(netSwing))}">${gcFeedSwingText(netSwing)}</div>`
+          ? `<div class="gc-feed-net ${netCls}" data-gc-live="swing" title="${sbFieldEsc(gcFeedSwingTitle(netSwing, impact.byLeague))}">${gcFeedSwingText(netSwing)}</div>`
           : ''}
       </div>`);
     });
@@ -30321,14 +30529,17 @@
   }
   // The arithmetic behind it, for anyone who wants to check the sum.
   window.__gcFeedSwingText = gcFeedSwingText;
-  function gcFeedSwingTitle(netSwing) {
-    const rec = window.__sbProjectedRecord;
-    return `The sum of what this play did to your win probability in every league it touched `
-      + `(${netSwing >= 0 ? '+' : '\u2212'}${Math.abs(Number(netSwing) || 0).toFixed(1)} points of win probability), `
-      + `which is the same thing as the change in your projected record.`
-      + (rec && Number.isFinite(rec.winSum)
-          ? `\n\nYour projected record is ${rec.winSum.toFixed(2)} wins right now.` : '')
-      + `\n\nPriced against the matchups as they stood when the play happened, not as they stand now.`;
+  function gcFeedSwingTitle(netSwing, byLeague) {
+    const lines = (byLeague || []).filter(l => Math.abs(l.swing) >= 0.05).map(l =>
+      `${l.name}: ${l.swing > 0 ? '+' : '\u2212'}${Math.abs(l.swing).toFixed(1)}`
+      + ` (${l.onMySide ? 'yours' : 'against you'}, ${l.pts.toFixed(1)} pts)`);
+    return 'What this play did to your win probability in each league it touched, added up.'
+      + (lines.length ? `\n\n${lines.join('\n')}` : '')
+      + `\n\nTotal: ${netSwing >= 0 ? '+' : '\u2212'}${Math.abs(Number(netSwing) || 0).toFixed(1)} points of win probability.`
+      + '\n\nPriced against the matchups as they stood WHEN THE PLAY HAPPENED, not as they stand now. '
+      + 'A play into matchups that were already decided is worth almost nothing even if they are '
+      + 'still decided hours later; a play into matchups that were live at the time keeps what it '
+      + 'was worth then.';
   }
 
   // Re-price what is still live in a feed that is not being rebuilt.
@@ -30396,7 +30607,7 @@
       const netSwing = gcPlayImpact(row.game, row.play, row.players).net;
       net.textContent = gcFeedSwingText(netSwing);
       net.className = 'gc-feed-net ' + (Math.abs(netSwing) < GC_SWING_FLAT ? 'is-flat' : (netSwing > 0 ? 'is-pos' : 'is-neg'));
-      net.title = gcFeedSwingTitle(netSwing);
+      net.title = gcFeedSwingTitle(netSwing, gcPlayImpact(row.game, row.play, row.players).byLeague);
       item.classList.toggle('is-mine', netSwing >= 0);
       item.classList.toggle('is-against', netSwing < 0);
     });
@@ -30418,6 +30629,9 @@
     // folds them into that week and never into a Game Log or a week the
     // dropdown has gone looking at.
     window.__gcPbpWeek = week;
+    // Before any pricing happens, so a play already written down this week
+    // is never re-derived.
+    gcLoadPlaySwings(season, week);
 
     const [games, dict] = await Promise.all([
       gcGetGamesList(season, week),
