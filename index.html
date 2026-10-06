@@ -29774,7 +29774,19 @@
         return { game: g, plays: window.__gcFinalPbpCache[g.eventId] };
       }
       const plays = await getEspnPlayByPlay(g.eventId).catch(() => []);
-      if (g.state === 'post') window.__gcFinalPbpCache[g.eventId] = plays;
+      // A request that failed comes back as an empty list, which is
+      // indistinguishable from a game in which nothing has happened -- and
+      // writing THAT down as a finished game's final play-by-play meant one
+      // bad response wiped that game out for the rest of the session: no
+      // stats for anyone in it, no matchup impact, nothing in Biggest
+      // Swings. Pulling every finished game (rather than only on a quiet
+      // Tuesday) made that a far likelier way to lose an afternoon.
+      //
+      // So nothing is cached as final unless it actually has plays in it,
+      // and an empty answer falls back to whatever is already in hand.
+      const prior = (window.__gcPbpAccum[g.eventId] && window.__gcPbpAccum[g.eventId].plays) || null;
+      if (!plays.length && prior && prior.length) return { game: g, plays: prior };
+      if (g.state === 'post' && plays.length) window.__gcFinalPbpCache[g.eventId] = plays;
       return { game: g, plays };
     }));
 
@@ -29820,7 +29832,12 @@
       // refresh that brings nothing new re-parses nothing.
       const pbpKey = game.eventId;
       const accum = window.__gcPbpAccum[pbpKey];
-      const needAccum = !accum || accum.count !== plays.length;
+      // Rebuilt when the play count MOVES UP. A count that has gone down is
+      // a truncated or partial response, never a game un-playing itself,
+      // and rebuilding on it would throw away a whole afternoon of
+      // accumulated stats and day rows in favour of less than we already
+      // had.
+      const needAccum = !accum || plays.length > accum.count;
       const gameStats = needAccum ? {} : accum.stats;
       // Every play of this game that touched one of your players, kept for
       // the whole day rather than only while it is in the newest sixty.
@@ -29920,7 +29937,7 @@
           Object.keys(sb).forEach(lid => { since[lid] = (since[lid] || 0) + sb[lid]; });
         }
       }
-      if (needAccum) window.__gcPbpAccum[pbpKey] = { count: plays.length, stats: gameStats, dayRows };
+      if (needAccum) window.__gcPbpAccum[pbpKey] = { count: plays.length, stats: gameStats, dayRows, plays };
       pbpStats[game.eventId] = gameStats;
     });
 
@@ -29961,10 +29978,22 @@
         tip: (typeof sbRootingMeaning === 'function') ? sbRootingMeaning(s, sbRemainingPoints(pid)) : '',
       };
     }
+    // Read straight off the plays as well as the shared stats map, rather
+    // than trusting the shared one to have caught up. A row in this column
+    // is reporting a play the parser has already read; it would be absurd
+    // for the running total beside it to be waiting on a different source
+    // to agree. Merged per player here so the feed can never show a total
+    // that is behind the play it is sitting next to.
     const statsMap = window.__gcStatsMap || {};
+    const pbp = window.__gcPbpStats || {};
+    const line = (typeof sbMergeLiveStats === 'function')
+      ? (sbMergeLiveStats(
+          statsMap[pid] ? { [pid]: statsMap[pid] } : {},
+          pbp[pid] ? { [pid]: pbp[pid] } : {})[pid] || null)
+      : (statsMap[pid] || pbp[pid] || null);
     // Coloured against his PROJECTION, not against zero -- see the note at
     // the Total column. Green means he is beating what was expected.
-    const dayTotal = gcScoreStats(pid, statsMap[pid], dict);
+    const dayTotal = gcScoreStats(pid, line, dict);
     const dayProj = gcProjectedPoints(pid, dict);
     return {
       stake,
@@ -29972,7 +30001,7 @@
       totalCls: (dayTotal == null || dayProj == null) ? 'is-flat'
         : (dayTotal > dayProj + 0.05 ? 'is-pos'
           : (dayTotal < dayProj - 0.05 ? 'is-neg' : 'is-flat')),
-      dayLine: gcStatLine(statsMap[pid]) || '',
+      dayLine: gcStatLine(line) || '',
     };
   }
 
