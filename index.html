@@ -21301,6 +21301,11 @@
       }
     }
 
+    // So the end of the week can force a full resync from outside this
+    // module -- see deskResyncEverything. Guarded by the same saved-user
+    // check the poll uses, so it is a no-op before anyone has connected.
+    window.sleeperReloadAll = () => { if (getSavedUser()) loadSleeperData(); };
+
     const PLAYER_CACHE_KEY = 'dynastyToolSleeperPlayers';
     const PLAYER_CACHE_AT_KEY = 'dynastyToolSleeperPlayersAt';
     const PLAYER_CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -27890,8 +27895,69 @@
     // sync anyway, so knowing whether football is being played costs
     // nothing extra.
     window.__deskEspnGames = data;
+    deskCheckWeekSettled(data);
     return data;
   }
+
+  // ---- The week finishing ----------------------------------------------
+  // When the Monday night game ends, the week is over and half the site is
+  // suddenly stale: records settle, playoff odds move, the tanking order
+  // changes, the record book gains a week. The ordinary poll gets there
+  // eventually -- and then drops to a thirty minute cadence because no
+  // football is being played, which is exactly the wrong moment to go
+  // quiet.
+  //
+  // So the last whistle is treated as an event. Everything derived from
+  // the week is thrown away and the whole site is resynced and repainted.
+  //
+  // Then again a few times, because Sleeper does not settle instantly: the
+  // scores are final on ESPN minutes before the win lands on a roster
+  // record. One refresh at the whistle would repaint everything with the
+  // old records and look like nothing happened.
+  const DESK_SETTLE_FOLLOWUPS_MS = [3 * 60000, 15 * 60000, 45 * 60000];
+  window.__deskWeekAllFinal = window.__deskWeekAllFinal == null ? null : window.__deskWeekAllFinal;
+  function deskCheckWeekSettled(games) {
+    const map = games || window.__deskEspnGames;
+    if (!map) return;
+    const list = Object.keys(map).map(t => map[t]).filter(Boolean);
+    if (!list.length) return;
+    const allFinal = list.every(g => g.state === 'post');
+    const prev = window.__deskWeekAllFinal;
+    window.__deskWeekAllFinal = allFinal;
+    // Only the transition, and only a real one: a page opened on a
+    // Thursday already-final slate starts at null and must not fire.
+    if (allFinal && prev === false) deskWeekSettled();
+  }
+
+  function deskWeekSettled() {
+    deskResyncEverything();
+    DESK_SETTLE_FOLLOWUPS_MS.forEach(ms => setTimeout(deskResyncEverything, ms));
+  }
+
+  // Drop everything derived from the week just played, then resync. The
+  // caches below all answer "what happened this week", and every one of
+  // them would otherwise keep answering with the version from before the
+  // last game finished.
+  function deskResyncEverything() {
+    try {
+      window.__sleeperSeasonMatchupsCache = {};
+      window.__sleeperBracketCache = {};
+      window.__rgWeekRowsCache = {};
+      window.__sleeperStatsFetchedAt = {};
+      window.__sbExposureIndex = { at: 0, map: null, key: null };
+      window.__sbLeverageCache = { at: 0, byLeague: {}, week: null };
+      window.__gcGamesCache = {};
+      window.__espnGameDataCache = {};
+    } catch (e) {}
+    // The sync repaints every page through the render queue, so this is
+    // the one call that updates the whole site rather than a list of
+    // pages somebody has to remember to keep up to date.
+    if (window.sleeperReloadAll) window.sleeperReloadAll();
+  }
+  window.deskResyncEverything = deskResyncEverything;
+  // Exposed so the end-of-week behaviour can be driven in a test without
+  // waiting for a Monday night.
+  window.__deskCheckWeekSettled = deskCheckWeekSettled;
 
   // ---- How fast anything needs to refresh -----------------------------
   // There is no reason to be pulling live scores on a Wednesday. Nothing
@@ -29778,6 +29844,53 @@
   // What each play did to your week, worked out once and kept. See
   // gcPlayImpact for why this must not be re-derived later.
   window.__gcPlaySwing = window.__gcPlaySwing || {};
+
+  // ---- and kept for the whole week -------------------------------------
+  // A play's swing is a fact about the moment it happened, so it should
+  // survive a page reload the way a fact does. Held only in memory it did
+  // not: every refresh re-derived the whole afternoon from whatever the
+  // matchups looked like at that point, which is the entire reason these
+  // numbers kept moving under you. Written down at the moment the play is
+  // first seen, read back on load, and never recomputed.
+  //
+  // Keyed by season and week, so last week's answers are not mixed into
+  // this one and the store cannot grow without bound.
+  window.__gcPlaySwingKey = window.__gcPlaySwingKey || null;
+  function gcPlaySwingStoreKey(season, week) { return `deskPlaySwing_${season}_${week}`; }
+
+  function gcLoadPlaySwings(season, week) {
+    if (season == null || week == null) return;
+    const k = gcPlaySwingStoreKey(season, week);
+    if (window.__gcPlaySwingKey === k) return;
+    window.__gcPlaySwingKey = k;
+    try {
+      const raw = localStorage.getItem(k);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== 'object') return;
+      // Anything already priced this session wins -- it was computed from
+      // live state, which is the better reading of the two.
+      Object.keys(saved).forEach(key => {
+        if (!window.__gcPlaySwing[key]) window.__gcPlaySwing[key] = saved[key];
+      });
+    } catch (e) { /* unreadable or unavailable storage: carry on in memory */ }
+  }
+
+  let gcPlaySwingSaveTimer = null;
+  function gcSavePlaySwings() {
+    if (gcPlaySwingSaveTimer || !window.__gcPlaySwingKey) return;
+    // Coalesced: a refresh can price a hundred plays and there is no sense
+    // serialising the store once per play.
+    gcPlaySwingSaveTimer = setTimeout(() => {
+      gcPlaySwingSaveTimer = null;
+      try {
+        localStorage.setItem(window.__gcPlaySwingKey, JSON.stringify(window.__gcPlaySwing));
+      } catch (e) {
+        // Out of quota, or storage blocked. The in-memory copy still
+        // holds for this session; it simply will not survive a reload.
+      }
+    }, 2000);
+  }
   // Short-name maps live as long as the page does: a rostered player can
   // change teams mid-week, which only ever adds a name that fails to
   // match until the next reload, never a wrong one.
@@ -30036,6 +30149,7 @@
         Object.keys(sb).forEach(lid => { since[lid] = (since[lid] || 0) + sb[lid]; });
       }
     });
+    if (toPrice.length) gcSavePlaySwings();
 
     // One map across every game on the slate, for the merge in getWeekStats.
     const liveStats = {};
@@ -30439,6 +30553,9 @@
     // folds them into that week and never into a Game Log or a week the
     // dropdown has gone looking at.
     window.__gcPbpWeek = week;
+    // Before any pricing happens, so a play already written down this week
+    // is never re-derived.
+    gcLoadPlaySwings(season, week);
 
     const [games, dict] = await Promise.all([
       gcGetGamesList(season, week),
