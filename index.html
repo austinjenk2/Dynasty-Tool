@@ -17357,12 +17357,38 @@
   // wildly apart from the lineup on screen -- an opponent adding up to 154
   // was being reported as 63.8. Summing the effective starters keeps the
   // headline score and the table underneath it telling the same story.
+  // What a player has actually scored in this league right now.
+  //
+  // Sleeper's players_points is the official number and trails the
+  // play-by-play by about a minute, which is how a matchup row read 13.3
+  // for a player whose own card -- which reads the parsed plays -- said
+  // 18.1. The two were never going to agree while they were looking at
+  // different sources.
+  //
+  // The higher of the two wins: Sleeper is authoritative and always
+  // catches up, so anything the parser missed is corrected the moment it
+  // lands, and the plays are never allowed to pull a score DOWN. Only for
+  // the week the plays describe -- the week selector shows other weeks,
+  // and their matchups are not what the feed has been reading.
+  function sbLivePointsFor(id, league, recorded, week) {
+    const n = Number(recorded);
+    const base = Number.isFinite(n) ? n : null;
+    const pbp = window.__gcPbpStats;
+    if (!pbp || !pbp[id] || !league || typeof sbCustomScoreFor !== 'function') return base;
+    if (window.__gcPbpWeek != null && week != null && Number(window.__gcPbpWeek) !== Number(week)) return base;
+    const fromPlays = sbCustomScoreFor(pbp[id], league.scoring_settings);
+    if (!Number.isFinite(fromPlays)) return base;
+    return base == null ? fromPlays : Math.max(base, fromPlays);
+  }
+
+  window.__sbLivePointsFor = sbLivePointsFor;
+
   function sbMatchupLivePoints(matchup, league, projMap, espnGameData, week) {
     if (!matchup) return 0;
     const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week);
     const pointsMap = matchup.players_points || {};
     return starters.reduce((sum, id) => {
-      const v = Number(pointsMap[id]);
+      const v = sbLivePointsFor(id, league, pointsMap[id], week);
       return sum + (Number.isFinite(v) ? v : 0);
     }, 0);
   }
@@ -18204,7 +18230,7 @@
       const team = p ? (p.team || 'FA') : '';
       const posClass = pos.toLowerCase();
       const predicted = !rawStarters.has(id);
-      const livePtsNum = pointsMap[id] != null ? Number(pointsMap[id]) : null;
+      const livePtsNum = sbLivePointsFor(id, league, pointsMap[id] != null ? pointsMap[id] : null, week);
       const pts = livePtsNum != null ? livePtsNum.toFixed(1) : '&mdash;';
       const rawProj = sbProjectionFor(id, projMap, league);
       const gameStarted = sbGameStartedForTeam(team, espnGameData);
@@ -30291,10 +30317,7 @@
   function gcFeedSwingWins(netSwing) { return (Number(netSwing) || 0) / 100; }
   function gcFeedSwingText(netSwing) {
     const n = Number(netSwing) || 0;
-    const pct = `${n > 0 ? '+' : (n < 0 ? '\u2212' : '')}${Math.abs(n).toFixed(1)}% win probability across your matchups`;
-    const wins = gcFeedSwingWins(n);
-    if (Math.abs(n) < GC_SWING_RECORD_MIN) return pct;
-    return `${pct} \u00b7 ${wins > 0 ? '+' : '\u2212'}${Math.abs(wins).toFixed(2)} projected record`;
+    return `${n > 0 ? '+' : (n < 0 ? '\u2212' : '')}${Math.abs(n).toFixed(1)}% win probability across your matchups`;
   }
   // The arithmetic behind it, for anyone who wants to check the sum.
   window.__gcFeedSwingText = gcFeedSwingText;
