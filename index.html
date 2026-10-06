@@ -19776,6 +19776,16 @@
       rgLiveData = {
         dict, espnGameData: rgEspnGameData,
         statsMap: rgActualStatsMap, projStats: rgProjStatsMap,
+        // THE WEEK BEING SHOWN, and that week's own matchups. The row
+        // headers were always built from these, which is why "6 for, 3 vs"
+        // was right -- but the breakdown behind a row went through
+        // sbPlayerLeverage, which read the live week's league memberships
+        // whatever week you were looking at. So a future week listed the
+        // leagues you are in TODAY, dropped the ones you only face him in
+        // next week, and then added up a per-point total over the wrong
+        // set. Handing the week and its entries down is what makes the
+        // panel agree with the line above it.
+        week, entries,
       };
       // Thin wrapper so the call sites below read the same as before; all
       // the scoring (and the no-stat-line fallback) lives in sbHouseScore.
@@ -28990,7 +29000,12 @@
   window.__sbLeverageCache = window.__sbLeverageCache || { at: 0, byLeague: {} };
   function sbLiveStateFor(entry, espnGameData, week) {
     const cache = window.__sbLeverageCache;
-    if (Date.now() - cache.at > 10000) { cache.at = Date.now(); cache.byLeague = {}; }
+    // Per league AND per week -- the same league has a different margin and
+    // a different sigma in a week nobody has played yet.
+    const wk = week == null ? 'live' : String(week);
+    if (Date.now() - cache.at > 10000 || cache.week !== wk) {
+      cache.at = Date.now(); cache.week = wk; cache.byLeague = {};
+    }
     const id = entry.league.league_id;
     if (cache.byLeague[id] !== undefined) return cache.byLeague[id];
     let state = { margin: 0, sigma: null };
@@ -29519,9 +29534,15 @@
   // four thousand lineup rebuilds every twenty seconds, which is the page
   // going unresponsive. Thirty-six now, and the plays just read the map.
   window.__sbExposureIndex = window.__sbExposureIndex || { at: 0, map: null };
-  function sbExposureIndex(espnGameData, week) {
+  function sbExposureIndex(espnGameData, week, entries) {
     const cache = window.__sbExposureIndex;
-    if (cache.map && Date.now() - cache.at < 10000) return cache.map;
+    // Keyed on the week, and on whether somebody handed us that week's own
+    // matchups. Without this the cache answered a question about week 5
+    // with the league memberships of the week being played -- which is how
+    // the leagues you are in THIS week turned up again inside a future
+    // week's breakdown, and why the totals built on them were wrong.
+    const key = (week == null ? 'live' : String(week)) + (entries ? '|given' : '');
+    if (cache.map && cache.key === key && Date.now() - cache.at < 10000) return cache.map;
     const __t0 = performance.now();
     const map = new Map();
     const add = (pid, row) => {
@@ -29533,13 +29554,20 @@
       if (list.some(x => x.entry.league.league_id === row.entry.league.league_id)) return;
       list.push(row);
     };
-    (typeof gcVisibleLeagueEntries === 'function' ? gcVisibleLeagueEntries() : []).forEach(entry => {
+    // Supplied entries are a specific week's matchups, already fetched by
+    // whoever is asking. Falling back to the week being played is right
+    // only when nobody has said otherwise.
+    const source = entries && entries.length
+      ? entries
+      : (typeof gcVisibleLeagueEntries === 'function' ? gcVisibleLeagueEntries() : []);
+    source.forEach(entry => {
       if (!entry.myMatchup || !entry.oppMatchup) return;
       const state = sbLiveStateFor(entry, espnGameData, week);
       gcSideIds(entry.myMatchup, entry.league).forEach(pid => add(pid, { entry, onMySide: true, state }));
       gcSideIds(entry.oppMatchup, entry.league).forEach(pid => add(pid, { entry, onMySide: false, state }));
     });
     cache.at = Date.now();
+    cache.key = key;
     cache.map = map;
     if (typeof deskMark === 'function') deskMark('exposureIndex:build', performance.now() - __t0);
     return map;
@@ -29555,7 +29583,7 @@
     const week = o.week != null ? o.week : window.__gcWeek;
     const leagues = [];
     let perPoint = 0;
-    (sbExposureIndex(espnGameData, week).get(playerId) || []).forEach(({ entry: e, onMySide, state }) => {
+    (sbExposureIndex(espnGameData, week, o.entries).get(playerId) || []).forEach(({ entry: e, onMySide, state }) => {
       // sbSwingFor already signs this: points added to your opponent's
       // side lower your win probability, so a player you are facing comes
       // back negative without anything here flipping him. A settled
@@ -29594,7 +29622,7 @@
     // the margin is simply today's, which is only the right answer for a
     // play that has just this second landed.
     const since = o.marginSince || null;
-    (sbExposureIndex(espnGameData, week).get(playerId) || []).forEach(({ entry: e, onMySide, state }) => {
+    (sbExposureIndex(espnGameData, week, o.entries).get(playerId) || []).forEach(({ entry: e, onMySide, state }) => {
       // Scored in this league's settings, not on the house line: the same
       // catch is worth 1.0 more in full PPR than in half, and this league
       // is the one whose matchup is being decided.
