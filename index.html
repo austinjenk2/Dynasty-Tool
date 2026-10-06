@@ -25877,6 +25877,20 @@
   // lineup and what it actually started move together, and that ratio is
   // stable per roster, so a drawn score of X implies potential points of
   // X * that team's own ratio.
+  // How far a single playoff game can swing: a week's own noise plus how
+  // wrong the read on the team's level could be, added in quadrature.
+  // Used only in the bracket -- see the note there.
+  // The most a single playoff game is ever allowed to favour one side.
+  // A fantasy week is one week: even a clear favourite is around 60-65%,
+  // not 85%. The floor is 1 - this, so a finalist is always live.
+  const PP_PLAYOFF_MAX_EDGE = 0.65;
+
+  function ppPlayoffSd(m) {
+    const sd = Number(m && m.sd) || 0;
+    const tau = Number(m && m.tau) || 0;
+    return Math.sqrt(sd * sd + tau * tau);
+  }
+
   async function ppSimulateSeason(entry, dict) {
     const league = entry.league, rosters = entry.allRosters || [];
     const teamCount = rosters.length;
@@ -26371,9 +26385,42 @@
           const ia2 = alive[k], ib2 = alive[k + 1];
           if (ia2 < 0) { nextAlive[m1++] = ib2; continue; }
           if (ib2 < 0) { nextAlive[m1++] = ia2; continue; }
-          const sa2 = Math.max(0, seasonMean[ia2] + model[ia2].sd * ppRandNormal());
-          const sb2 = Math.max(0, seasonMean[ib2] + model[ib2].sd * ppRandNormal());
-          nextAlive[m1++] = sa2 >= sb2 ? ia2 : ib2;
+          // A playoff game gets the FULL uncertainty, not just a week's
+          // noise around a level we are pretending to know.
+          //
+          // Through the regular season, drawing the level once and then
+          // rolling weekly noise around it is right: thirteen weeks
+          // average the level error away, which is what makes a record
+          // mean something. A single elimination game averages nothing.
+          // Treating the level as settled there made each round far more
+          // decisive than a fantasy playoff game is, and -- worse --
+          // correlated the rounds: a team that drew a high level won the
+          // semi AND the final, so the odds compounded instead of
+          // multiplying out. That is how a very good team reached 55% to
+          // win a twelve team league, and how a team with a real chance of
+          // making the playoffs came out at 1% to win it.
+          //
+          // So the spread of a playoff game is the week's noise and the
+          // uncertainty in the level, added in quadrature. Favourites stay
+          // favourites; they stop being near-certainties three times in a
+          // row.
+          const pa2 = ppPlayoffSd(model[ia2]);
+          const pb2 = ppPlayoffSd(model[ib2]);
+          const spread2 = Math.sqrt(pa2 * pa2 + pb2 * pb2) || 1;
+          const edge2 = sbNormalCdf((seasonMean[ia2] - seasonMean[ib2]) / spread2);
+          // ...and then held inside what one fantasy week can actually
+          // settle. No single game is a near-certainty: the best roster in
+          // the league still has to get through a week in which its
+          // quarterback can throw two picks and somebody's waiver tight end
+          // can go for thirty. PP_PLAYOFF_MAX_EDGE is that ceiling, and the
+          // floor is its mirror, so a team that reaches a final is never
+          // written off in it.
+          //
+          // Without it the rounds compounded: three rounds of 80% is a
+          // league winner at 51% before anybody has played, which is not a
+          // thing that happens in a twelve team league.
+          const pWin2 = Math.min(PP_PLAYOFF_MAX_EDGE, Math.max(1 - PP_PLAYOFF_MAX_EDGE, edge2));
+          nextAlive[m1++] = ppRandom() < pWin2 ? ia2 : ib2;
         }
         for (let k = 0; k < m1; k++) alive[k] = nextAlive[k];
         n1 = m1;
@@ -26637,6 +26684,10 @@
     return seedProb.length;
   }
   window.ppMedianSeed = ppMedianSeed;
+
+  // Exposed so the playoff model can be calibrated against synthetic
+  // leagues without waiting for a real season.
+  window.__ppSimulateSeason = ppSimulateSeason;
 
   function ppTeamOdds(entry, rosterId) {
     if (!entry || !entry.league || rosterId == null) return null;
