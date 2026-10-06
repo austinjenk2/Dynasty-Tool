@@ -26704,8 +26704,26 @@
   window.__ppPickModelSig = window.__ppPickModelSig || {};
   function ppModelSignature(entry) {
     const league = entry.league;
+    // Rosters AND results. It used to be rosters alone, which meant that
+    // once a league had been simulated in a given week its odds were
+    // frozen until either the week rolled over on Tuesday or somebody
+    // made a roster move. So when Monday night ended and the records
+    // settled, the leagues with waiver churn picked up a new hash and
+    // rebuilt, and the quiet ones kept showing their pre-game numbers for
+    // another day. That is why only SOME leagues looked stuck.
+    //
+    // Deliberately wins, losses and ties rather than points scored:
+    // records only move when a game settles, which is exactly when these
+    // odds should move. Season points tick throughout a Sunday, and
+    // hashing them would re-run an eighteen league simulation every
+    // minute all afternoon to chase numbers that barely shift.
     const rosterPart = (entry.allRosters || [])
-      .map(r => r.roster_id + ':' + ((r.players || []).slice().sort().join(',')))
+      .map(r => {
+        const st = r.settings || {};
+        return r.roster_id
+          + ':' + ((r.players || []).slice().sort().join(','))
+          + ':' + (st.wins || 0) + '-' + (st.losses || 0) + '-' + (st.ties || 0);
+      })
       .sort()
       .join('|');
     // Hashed rather than kept whole: this is ~18 rosters of ~30 ids and
@@ -26717,6 +26735,9 @@
     }
     return [league.league_id, league.season, entry.week || 0, (h >>> 0).toString(36)].join('|');
   }
+
+  // Exposed so the rebuild gate can be checked without a live Sunday.
+  window.__ppModelSignature = ppModelSignature;
 
   async function ppBuildPickModels(onDone) {
     const run = ++ppPickModelRun;
@@ -27948,6 +27969,10 @@
       window.__sbLeverageCache = { at: 0, byLeague: {}, week: null };
       window.__gcGamesCache = {};
       window.__espnGameDataCache = {};
+      // The playoff and tanking numbers come out of these. Clearing the
+      // signatures is what makes the week's last whistle actually re-run
+      // the simulations rather than skip them as unchanged.
+      window.__ppPickModelSig = {};
     } catch (e) {}
     // The sync repaints every page through the render queue, so this is
     // the one call that updates the whole site rather than a list of
