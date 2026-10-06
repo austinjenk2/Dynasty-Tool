@@ -30014,42 +30014,28 @@
       pbpStats[game.eventId] = gameStats;
     });
 
-    // Price every new play across the WHOLE slate, newest first, winding
-    // each matchup back one play at a time.
+    // Price each game's new plays, newest first, winding that game's
+    // matchups back one play at a time.
     //
-    // This used to run per game, with its own running total, which meant a
-    // one o'clock play was only ever unwound by the rest of ITS game -- the
-    // four o'clock games, and every other game that afternoon, were left in
-    // the margin as though they had already happened when it did. The
-    // reconstruction was of a matchup that never existed: an early play
-    // judged against a margin most of a Sunday ahead of it. Rolling the
-    // whole slate back in time order is the only version of this that is
-    // actually the matchup as it stood.
-    //
-    // Time order across games comes off ESPN's own wallclock; sequence is
-    // the fallback inside one game, and games are kept apart so two plays
-    // without timestamps cannot interleave wrongly.
-    if (toPrice.length) {
-      const all = [];
-      toPrice.forEach(({ game: g, dayRows: rows }) => {
-        rows.forEach((r, i) => {
-          const t = r.play.wallclock ? Date.parse(r.play.wallclock) : NaN;
-          all.push({ g, r, t: Number.isFinite(t) ? t : null, eventId: g.eventId, i });
-        });
-      });
-      all.sort((a, b) => {
-        if (a.t != null && b.t != null && a.t !== b.t) return a.t - b.t;
-        if (a.eventId !== b.eventId) return String(a.eventId).localeCompare(String(b.eventId));
-        return a.i - b.i;
-      });
+    // Per game ON PURPOSE, and this is the subtle part. The margin being
+    // wound back is a difference of PROJECTED FINALS, not a running points
+    // total -- a six point catch does not add six to a projected final,
+    // because the projection already expected most of it. Subtracting a
+    // play's full points is an approximation that holds over one game's
+    // worth of scoring and falls apart over a whole slate's: unwinding
+    // every play of every game drove margins hundreds of points negative,
+    // every matchup to a certain loss, and every play on the board to
+    // 0.0%. Keeping it inside one game keeps the approximation inside the
+    // range where it means something.
+    toPrice.forEach(({ game: g, dayRows: rows }) => {
       const since = {};
-      for (let k = all.length - 1; k >= 0; k--) {
-        const { g, r } = all[k];
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const r = rows[i];
         const res = gcPlayImpact(g, r.play, r.players, since);
         const sb = (res && res.signedByLeague) || {};
         Object.keys(sb).forEach(lid => { since[lid] = (since[lid] || 0) + sb[lid]; });
       }
-    }
+    });
 
     // One map across every game on the slate, for the merge in getWeekStats.
     const liveStats = {};
