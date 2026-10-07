@@ -25732,18 +25732,33 @@
   // which is a visible hitch on a sync that does this for fourteen
   // leagues.
   //
-  // It also does not need the runs. The run count went up so that a
-  // playoff percentage would hold still and a projected record could
-  // honestly show two decimals; a game's leverage is a DIFFERENCE between
-  // two worlds that share their dice, which is the cheapest thing in here
-  // to measure precisely -- it was already stable at 1,500. So the
-  // headline numbers get all ten thousand seasons and this gets the first
-  // two thousand, which is both a finer sample than it had before and
-  // most of the cost back.
+  // It was 2,000 for one release, on the reasoning that a game's leverage
+  // is a DIFFERENCE between two worlds that share their dice and so is
+  // the cheapest thing in here to measure precisely. That reasoning was
+  // right about the difference and wrong about what the number is FOR.
+  //
+  // IF YOU WIN has to be a promise: win, and next week should open within
+  // a point or two of what the chip said. ifwin.mjs tests exactly that --
+  // take the promise, force the result, re-run, compare -- and the
+  // measured worst disagreement across a twelve-team league was:
+  //
+  //     2,000 runs    2.7 points      267ms / 451ms best ball
+  //     5,000 runs    0.9 points      391ms / 575ms
+  //    10,000 runs    0.0 points      607ms / 890ms
+  //
+  // 2.7 points is a chip that lies, and the error is pure sampling noise
+  // from measuring the promise on a fifth of the seasons the answer is
+  // measured on. At the full count the promise and the forced re-run are
+  // read off the same ten thousand seasons and agree exactly, which is
+  // worth most of a second a league in a session that has spent its
+  // whole length on numbers not reconciling.
+  //
+  // 5,000 is the fallback if the cost ever bites: it meets the stated
+  // "within a point or two" at 60% of the price.
   //
   // Nothing downstream needs telling: each game's odds divide by the runs
   // that game actually recorded, not by PP_SIM_RUNS.
-  const PP_LEVERAGE_RUNS = 2000;
+  const PP_LEVERAGE_RUNS = 10000;
   // Every week still to be played is simulated as if both managers start
   // their best possible lineup.
   //
@@ -27552,6 +27567,138 @@
     return Math.max(0, Math.min(1, p));
   }
   window.ppGameWinPct = ppGameWinPct;
+
+  // ppExplain('Pure Potential') -- the whole derivation for one league,
+  // printed.
+  //
+  // Sleeper is blocked from the sandbox this is written in, so I cannot
+  // run the model against a real league and read the numbers off. That
+  // has meant answering "why is my bye 92%" with reasoning about
+  // mechanisms rather than with your league's actual figures, which is
+  // not the same thing and has not been good enough.
+  //
+  // So the model explains itself instead. Call this in the console with
+  // any part of a league's name and it prints every input and every step
+  // between them and the number on screen: each roster's level and where
+  // that level came from, the spread, the calibration factors, every
+  // remaining game with its win probability, the sum that becomes the
+  // projected record, and the seed distribution behind the bye.
+  //
+  // Returns the same data as an object, so it can be pasted back.
+  function ppExplain(nameFragment, rosterId) {
+    const all = Object.values(window.sleeperLeagueData || {}).filter(e => e.league && e.roster);
+    const frag = String(nameFragment || '').toLowerCase();
+    const entry = frag
+      ? all.find(e => String(e.league.name || '').toLowerCase().includes(frag))
+      : all[0];
+    if (!entry) {
+      console.log('No league matching "' + nameFragment + '". Leagues loaded:',
+        all.map(e => e.league.name));
+      return null;
+    }
+    const cur = ((window.__ppPickModel || {})[entry.league.league_id] || {}).current;
+    if (!cur) {
+      console.log(entry.league.name + ': the season simulation has not run yet for this league. '
+        + 'Wait for a sync to finish and call this again.');
+      return null;
+    }
+    const me = rosterId != null ? rosterId : entry.roster.roster_id;
+    const m = cur.model && cur.model[me];
+    const nameOf = (rid) => {
+      const r = (entry.allRosters || []).find(x => x.roster_id === rid);
+      const u = r && (entry.users || []).find(x => x.user_id === r.owner_id);
+      return (u && (u.metadata && u.metadata.team_name || u.display_name)) || ('roster ' + rid);
+    };
+    const pct = (v) => v == null ? '--' : (v * 100).toFixed(1) + '%';
+    const L = [];
+    const say = (s) => { L.push(s); console.log(s); };
+
+    say('=== ' + entry.league.name + ' -- ' + nameOf(me) + ' ===');
+    say('');
+    say('LEAGUE SHAPE');
+    say('  teams ' + cur.teamCount + ', playoff spots ' + cur.playoffTeams
+      + ', byes ' + cur.byeSlots + ', regular weeks ' + cur.regularWeeks
+      + ', games ' + cur.regularGames + (cur.gamesPerWeek > 1 ? ' (median league)' : ''));
+    say('  best ball: ' + (cur.isBestBall ? 'yes' : 'no')
+      + (cur.bestBallScale != null ? ', fitted per-player spread scale ' + cur.bestBallScale.toFixed(3) : ''));
+    say('  projected spread kept: ' + (cur.levelShrink != null ? cur.levelShrink.toFixed(3) : '--')
+      + '  (1.00 = this league\'s results fully back its projections)');
+    say('');
+    say('EVERY TEAM\'S LEVEL  (points a week, best-possible-lineup scale)');
+    const lv = (entry.allRosters || []).map(r => ({
+      id: r.roster_id, name: nameOf(r.roster_id),
+      mean: cur.model[r.roster_id] ? cur.model[r.roster_id].mean : null,
+      sd: cur.model[r.roster_id] ? cur.model[r.roster_id].sd : null,
+      tau: cur.model[r.roster_id] ? cur.model[r.roster_id].tau : null,
+    })).sort((a, b) => (b.mean || 0) - (a.mean || 0));
+    lv.forEach((t, i) => say('  ' + String(i + 1).padStart(2) + '. '
+      + String(t.name).slice(0, 26).padEnd(27)
+      + 'level ' + (t.mean == null ? '--' : t.mean.toFixed(1)).padStart(6)
+      + '   week-to-week sd ' + (t.sd == null ? '--' : t.sd.toFixed(1)).padStart(5)
+      + '   level doubt ' + (t.tau == null ? '--' : t.tau.toFixed(1)).padStart(5)
+      + (t.id === me ? '   <-- you' : '')));
+    say('');
+    say('  level  = what this roster projects to score a week, averaged over the weeks left');
+    say('  sd     = how much a week swings around that');
+    say('  doubt  = how wrong the level itself could be (drawn once a season, never averages out)');
+    say('');
+    say('YOUR REMAINING SCHEDULE  -- this is the projected record, line by line');
+    const banked = m ? (Number(m.wins) || 0) : 0;
+    say('  banked record so far: ' + banked.toFixed(2) + ' wins');
+    let running = banked;
+    (cur.ctx.schedule || []).forEach((wk, wi) => {
+      (wk.rosterPairs || []).forEach((pr, pi) => {
+        const a = pr[0], b = pr[1];
+        if (a !== me && b !== me) return;
+        const opp = a === me ? b : a;
+        let p = ppGameWinPct(entry, wk.week, a, b);
+        let src = 'season model';
+        if (wk.week === (Number(entry.week) || 0)) src = 'the Slate (live lineups)';
+        if (p == null) {
+          const g = cur.games && cur.games[wi] ? cur.games[wi].games[pi] : null;
+          p = g && g.probA != null ? g.probA : null;
+          src = 'simulation rate (model could not answer)';
+        }
+        const mine = p == null ? null : (a === me ? p : 1 - p);
+        if (mine != null) running += mine;
+        say('  wk ' + String(wk.week).padStart(2) + '  vs ' + String(nameOf(opp)).slice(0, 24).padEnd(25)
+          + (mine == null ? '   --  ' : pct(mine).padStart(7))
+          + '   running total ' + running.toFixed(2) + '   [' + src + ']');
+      });
+    });
+    const odds = window.ppTeamOdds(entry, me);
+    say('');
+    say('  sum of the above          = ' + running.toFixed(2) + ' wins');
+    say('  projected record printed  = ' + (odds && odds.projWins != null ? odds.projWins.toFixed(2) : '--')
+      + ' wins'
+      + (odds && odds.projWins != null
+        ? '   (difference ' + (odds.projWins - running).toFixed(2)
+          + (cur.gamesPerWeek > 1 ? ', the median half' : ', should be 0.00') + ')'
+        : ''));
+    say('  the simulation\'s own figure = ' + (odds && odds.projWinsSim != null ? odds.projWinsSim.toFixed(2) : '--')
+      + '   (a separate calculation, kept as a cross-check)');
+    say('');
+    say('WHERE THE BYE COMES FROM');
+    say('  The bye is not computed from the record. Each of ' + (window.PP_SIM_RUNS_SHOWN || '10,000')
+      + ' simulated seasons is');
+    say('  played out game by game, the final standings are sorted, and the share of');
+    say('  seasons finishing in the top ' + cur.byeSlots + ' IS the bye number.');
+    say('');
+    const sp = cur.seedProb && cur.seedProb[me];
+    if (sp) {
+      say('  your finishing seed, across those seasons:');
+      sp.forEach((v, i) => { if (v >= 0.005) say('    seed ' + String(i + 1).padStart(2) + '  ' + pct(v)); });
+      const byeSum = sp.slice(0, cur.byeSlots).reduce((a, b) => a + b, 0);
+      say('    -> top ' + cur.byeSlots + ' = ' + pct(byeSum) + ', which is the bye figure');
+    }
+    say('');
+    say('  playoffs ' + pct(odds && odds.playoff) + '   bye ' + pct(odds && odds.bye)
+      + '   reach final ' + pct(odds && odds.reachFinal) + '   title ' + pct(odds && odds.title));
+    say('  if you win this week ' + pct(odds && odds.ifWin)
+      + '   if you lose ' + pct(odds && odds.ifLoss));
+    return { league: entry.league.name, team: nameOf(me), levels: lv, odds, text: L.join('\n') };
+  }
+  window.ppExplain = ppExplain;
 
   // A projected record that is, by construction, the percentages you can
   // see added up.
