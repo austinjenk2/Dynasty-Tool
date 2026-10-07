@@ -4137,6 +4137,7 @@
   .pm-gl-weeks tbody tr { border-bottom: 1px solid var(--border-soft); }
   .pm-gl-weeks td:first-child { color: var(--faint); }
   .pm-gl-sort { cursor: pointer; user-select: none; }
+  .pm-gl-weeks .pm-gl-weeks-bar td, .pm-gl-weeks .pm-gl-weeks-bar td:first-child { text-align: left; font-weight: 800; color: var(--ink); }
   .pm-gl-sort:hover, .pm-gl-sort.is-sorted { color: var(--ink); }
   .pm-gl-opp-logo { width: 16px; height: 16px; object-fit: contain; vertical-align: -3px; margin-right: 4px; }
   .pm-gl-total-row td { font-weight: 800; color: var(--ink); border-top: 2px solid var(--ink); background: var(--surface); }
@@ -12787,7 +12788,7 @@
       <button type="button" data-pos="RB">RB</button>
       <button type="button" data-pos="WR">WR</button>
       <button type="button" data-pos="TE">TE</button>
-      <button type="button" data-pos="K">K</button>
+      <button type="button" data-pos="FLEX">FLEX</button>
     </div>
 
     <div class="sh-status" id="shStatus"></div>
@@ -33588,7 +33589,7 @@
 
     return `
       <div class="pm-gl-scroll">
-        <table class="pm-gl-table">
+        <table class="pm-gl-table" id="pmGlSummary${idx}">
           <thead>
             <tr>
               <th rowspan="2">Season</th>
@@ -33614,7 +33615,9 @@
           </tbody>
         </table>
         <table class="pm-gl-table pm-gl-weeks" id="pmGlWeeks${idx}" hidden>
-          <thead><tr>
+          <thead><tr class="pm-gl-season-row pm-gl-weeks-bar" data-gl-toggle="${idx}">
+            <td colspan="${5 + groups.reduce((n, gr) => n + gr.cols.length, 0)}"><span class="pm-gl-chevron is-open">&rsaquo;</span>${gl.season} &middot; ${gl.team || ''}</td>
+          </tr><tr>
             <th class="pm-gl-sort is-sorted" data-gl-sort="week" data-gl-idx="${idx}">Wk &#9650;</th>
             <th class="pm-gl-sort" data-gl-sort="opp" data-gl-idx="${idx}">Opp</th>
             <th class="pm-gl-sort" data-gl-sort="snap" data-gl-idx="${idx}">Snp%</th>
@@ -33683,6 +33686,10 @@
         const weeksEl = document.getElementById('pmGlWeeks' + idx);
         if (!weeksEl) return;
         weeksEl.hidden = !weeksEl.hidden;
+        // The season line and the open week list are never both up: the
+        // Total row at the bottom of the weeks already says the same thing.
+        const summaryEl = document.getElementById('pmGlSummary' + idx);
+        if (summaryEl) summaryEl.hidden = !weeksEl.hidden;
         pmGameLogList.querySelectorAll(`[data-gl-chevron="${idx}"]`).forEach(c => c.classList.toggle('is-open', !weeksEl.hidden));
       });
     });
@@ -35014,7 +35021,7 @@
     const bodyEl = document.getElementById('shBody');
     if (!scoringSel || !bodyEl) return;
 
-    const SH_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K'];
+    const SH_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
     const SH_FIRST_SEASON = 2018;
     const seasonCache = {};
 
@@ -35063,6 +35070,17 @@
       ],
     };
     STAT_COLS.TE = STAT_COLS.WR;
+    STAT_COLS.FLEX = [
+      { key: 'tgt', label: 'TGT', v: s => num(s.rec_tgt), f: int },
+      { key: 'rec', label: 'REC', v: s => num(s.rec), f: int },
+      { key: 'recyd', label: 'REC YD', v: s => num(s.rec_yd), f: int },
+      { key: 'rectd', label: 'REC TD', v: s => num(s.rec_td), f: int },
+      { key: 'car', label: 'CAR', v: s => num(s.rush_att), f: int },
+      { key: 'ryd', label: 'RUSH YD', v: s => num(s.rush_yd), f: int },
+      { key: 'rtd', label: 'RUSH TD', v: s => num(s.rush_td), f: int },
+    ];
+    const FLEX_POS = ['RB', 'WR', 'TE'];
+    const multiPos = (p) => p === 'ALL' || p === 'FLEX';
     STAT_COLS.ALL = [
       { key: 'tds', label: 'TOT TD', v: s => num(s.pass_td) + num(s.rush_td) + num(s.rec_td), f: int },
       { key: 'yds', label: 'TOT YD', v: s => num(s.pass_yd) + num(s.rush_yd) + num(s.rec_yd), f: int },
@@ -35167,14 +35185,14 @@
         : col ? (col.v(r.s) ?? -Infinity) : r.ppg;
       const cmp = (a, b) => { const x = val(a), y = val(b); return typeof x === 'string' ? x.localeCompare(y) : x - y; };
       return state.rows
-        .filter(r => (state.pos === 'ALL' || r.pos === state.pos) && r.gp >= minGp)
+        .filter(r => (state.pos === 'ALL' ? true : state.pos === 'FLEX' ? FLEX_POS.includes(r.pos) : r.pos === state.pos) && r.gp >= minGp)
         .filter(r => !q || r.name.toLowerCase().includes(q) || r.team.toLowerCase().includes(q))
         .sort((a, b) => cmp(a, b) * state.sortDir || b.pts - a.pts);
     }
 
     // Tier breaks for the table: QB1/QB2 style bands, the usual 12-team cut.
     function tierLabel(pos, i) {
-      if (pos === 'ALL' || pos === 'K') return null;
+      if (pos === 'ALL') return null;
       return i % 12 === 0 ? `${pos}${i / 12 + 1}` : null;
     }
 
@@ -35186,17 +35204,17 @@
     function renderTable(rows) {
       const cols = STAT_COLS[state.pos] || [];
       const head = '<tr><th>#</th>' + sortTh('name', 'PLAYER', 'sh-th-player') + sortTh('team', 'TEAM', 'sh-th-player')
-        + (state.pos === 'ALL' ? sortTh('posrk', 'POS RK') : '')
+        + (multiPos(state.pos) ? sortTh('posrk', 'POS RK') : '')
         + sortTh('gp', 'GP') + sortTh('pts', 'PTS') + sortTh('ppg', 'PPG')
         + cols.map(c => sortTh(c.key, c.label)).join('') + '</tr>';
       const showTiers = state.sortKey === 'pts' || state.sortKey === 'ppg';
-      const colspan = 6 + cols.length + (state.pos === 'ALL' ? 1 : 0);
+      const colspan = 6 + cols.length + (multiPos(state.pos) ? 1 : 0);
       const body = rows.map((r, i) => {
         const tier = showTiers && state.sortDir < 0 ? tierLabel(state.pos, i) : null;
         return (tier ? `<tr class="sh-tier-row"><td colspan="${colspan}">${tier}</td></tr>` : '')
           + `<tr><td>${i + 1}</td><td class="sh-player-cell" data-player-id="${esc(r.id)}"><span class="sh-pos-chip ${r.pos}">${r.pos}</span><b>${esc(r.name)}</b></td>`
           + `<td class="sh-team-cell">${r.team && r.team !== 'FA' ? `<img class="sh-team-logo" src="${sbTeamLogoUrl(r.team)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(r.team)}</td>`
-          + (state.pos === 'ALL' ? `<td>${r.pos}${r.posRank}</td>` : '')
+          + (multiPos(state.pos) ? `<td>${r.pos}${r.posRank}</td>` : '')
           + `<td>${r.gp}</td><td>${fmt(r.pts)}</td><td class="sh-ppg">${fmt(r.ppg)}</td>`
           + cols.map(c => `<td>${c.f(c.v(r.s))}</td>`).join('') + '</tr>';
       }).join('');
@@ -35255,7 +35273,7 @@
       const b = e.target.closest('[data-pos]');
       if (!b) return;
       state.pos = b.dataset.pos;
-      if (!['pts', 'ppg', 'gp', 'name', 'team'].includes(state.sortKey) && !(state.pos === 'ALL' && state.sortKey === 'posrk')) { state.sortKey = 'ppg'; state.sortDir = -1; }
+      if (!['pts', 'ppg', 'gp', 'name', 'team'].includes(state.sortKey) && !(multiPos(state.pos) && state.sortKey === 'posrk')) { state.sortKey = 'ppg'; state.sortDir = -1; }
       draw();
     });
     bodyEl.addEventListener('click', (e) => {
