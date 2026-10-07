@@ -3613,6 +3613,40 @@
   .ldrec-draft-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 
   /* ---------- Tanking Tracker ---------- */
+  /* ---- The Ledger (season stat hub) ---- */
+  .sh-toolbar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin-bottom: 14px; }
+  .sh-field { display: flex; flex-direction: column; gap: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); text-transform: uppercase; }
+  .sh-field input[type=number] { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 8px; width: 72px; }
+  .sh-field select { font: inherit; font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--ink); background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 8px; max-width: 260px; }
+  .sh-search { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; padding: 5px 8px; flex: 1 1 160px; min-width: 140px; }
+  .sh-search input { border: 0; background: transparent; font: inherit; font-size: 13px; color: var(--ink); outline: none; width: 100%; }
+  .sh-pos-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sh-pos-tabs button { font: inherit; font-size: 12px; font-weight: 700; color: var(--ink); background: var(--surface); border: 2px solid var(--ink); border-radius: 999px; padding: 5px 12px; cursor: pointer; box-shadow: 2px 2px 0 var(--ink); }
+  .sh-pos-tabs button.active { background: var(--ink); color: var(--surface); }
+  .sh-pos-tabs { margin-bottom: 14px; }
+  .sh-pos-tabs button { font-family: 'Anton', sans-serif; font-weight: 400; letter-spacing: 0.6px; font-size: 14px; padding: 4px 14px; }
+  .sh-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .sh-sum-tile { background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; padding: 10px 12px; box-shadow: 3px 3px 0 var(--ink); }
+  .sh-sum-tile .k { font-size: 10px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); text-transform: uppercase; }
+  .sh-sum-tile .v { font-family: 'Anton', sans-serif; font-size: 22px; color: var(--ink); line-height: 1.15; }
+  .sh-sum-tile .s { font-size: 11.5px; color: var(--muted); }
+  .sh-status { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
+  .sh-status.err { color: var(--red); font-weight: 600; }
+  .rb-table td.sh-player-cell, .rb-table th.sh-th-player { text-align: left; }
+  .sh-player-cell { cursor: pointer; }
+  .sh-player-cell:hover b { text-decoration: underline; }
+  .sh-player-cell b { color: var(--ink); }
+  .rb-table td.sh-team-cell { text-align: left; }
+  .sh-team-logo { width: 18px; height: 18px; object-fit: contain; vertical-align: -4px; margin-right: 4px; }
+  .sh-player-cell small { color: var(--faint); margin-left: 6px; font-weight: 600; }
+  .sh-pos-chip { display: inline-block; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-right: 6px; color: #fff; background: var(--navy); }
+  .sh-pos-chip.QB { background: var(--red); } .sh-pos-chip.RB { background: var(--green); }
+  .sh-pos-chip.WR { background: var(--blue); } .sh-pos-chip.TE { background: var(--gold); } .sh-pos-chip.K { background: var(--muted); }
+  .rb-table td.sh-ppg { font-weight: 800; color: var(--ink); }
+  .sh-tier-row td { background: var(--bg); font-size: 10px; font-weight: 800; letter-spacing: 0.6px; color: var(--muted); text-align: left !important; padding: 4px 10px; }
+  @media (max-width: 560px) {
+    .sh-field select { max-width: 100%; }
+  }
   .tt-section { margin-bottom: 28px; }
   .tt-section:first-of-type { margin-top: 18px; }
   .tt-head { margin-bottom: 12px; }
@@ -12735,6 +12769,33 @@
       </div>
     </div>
   </div>
+  <div data-view="stathub">
+    <div class="page-title">
+      <h1>The Ledger</h1>
+      <p>Every fantasy-relevant player's season, scored your way. Pick a league to score everything with that league's own <b>scoring_settings</b>, or leave it on the house line. Pick any season back to 2018 &mdash; past seasons are scored with the chosen league's current settings, so the numbers line up with how your league scores today.</p>
+    </div>
+
+    <div class="sh-toolbar">
+      <label class="sh-field"><span>Scoring</span><select id="shScoring"></select></label>
+      <label class="sh-field"><span>Season</span><select id="shSeason"></select></label>
+      <label class="sh-field"><span>Min games</span><input type="number" id="shMinGp" min="0" max="17" step="1" inputmode="numeric" value="4"></label>
+      <div class="sh-search"><span>&#128269;</span><input type="text" id="shSearch" placeholder="Find a player..."></div>
+    </div>
+
+    <div class="sh-pos-tabs" id="shPosTabs">
+      <button type="button" data-pos="ALL">All</button>
+      <button type="button" data-pos="QB" class="active">QB</button>
+      <button type="button" data-pos="RB">RB</button>
+      <button type="button" data-pos="WR">WR</button>
+      <button type="button" data-pos="TE">TE</button>
+      <button type="button" data-pos="K">K</button>
+    </div>
+
+    <div class="sh-summary" id="shSummary"></div>
+    <div class="sh-status" id="shStatus"></div>
+    <div id="shBody"></div>
+  </div>
+
   <div data-view="rankings">
     <div class="page-title">
       <h1>The Board</h1>
@@ -13490,6 +13551,7 @@
       { view: 'records', label: 'Record' },
       { view: 'tanking', label: 'Tanking Tracker' },
       { view: 'playoff', label: 'Playoff Picture' },
+      { view: 'stathub', label: 'The Ledger' },
     ] },
     { id: 'gameday', label: 'Game Day', pages: [
       { view: 'lineups', label: 'The Slate' },
@@ -33510,7 +33572,7 @@
   }
 
   let pmGameLogToken = 0;
-  async function renderPmGameLog(playerId) {
+  async function renderPmGameLog(playerId, focusSeason) {
     const pmGameLogList = document.getElementById('pmGameLogList');
     if (!pmGameLogList) return;
     if (!playerId) {
@@ -33531,7 +33593,10 @@
     // Every season of this player's real career, bounded by Sleeper's
     // actual years_exp (so a rookie doesn't trigger a decade of empty
     // fetches) and a sane cap for very long careers.
-    const yearsBack = Math.min((dict[playerId].years_exp != null ? dict[playerId].years_exp : 4) + 1, 15);
+    let yearsBack = Math.min((dict[playerId].years_exp != null ? dict[playerId].years_exp : 4) + 1, 15);
+    // A season asked for by name (The Ledger) is always fetched, even when
+    // years_exp would have stopped short of it.
+    if (focusSeason && curSeason - Number(focusSeason) + 1 > yearsBack) yearsBack = Math.min(curSeason - Number(focusSeason) + 1, 15);
     const seasonSpecs = [];
     for (let i = 0; i < yearsBack; i++) {
       const season = curSeason - i;
@@ -33559,6 +33624,14 @@
         pmGameLogList.querySelectorAll(`[data-gl-chevron="${idx}"]`).forEach(c => c.classList.toggle('is-open', !weeksEl.hidden));
       });
     });
+    if (focusSeason) {
+      const i = results.findIndex(gl => Number(gl.season) === Number(focusSeason));
+      const toggle = i >= 0 && pmGameLogList.querySelector(`[data-gl-toggle="${i}"]`);
+      if (toggle) {
+        toggle.click();
+        toggle.scrollIntoView({ block: 'nearest' });
+      }
+    }
   }
 
   // getPlayerDict() itself lives inside loadSleeperData()'s closure and
@@ -33799,7 +33872,7 @@
   // showing when the modal opens -- Exposures opens straight to its own
   // tab (it already has the % on screen); everywhere else defaults to
   // Overview.
-  function openPlayerModalData({ playerId, name, team, pos, leagues, pct, defaultTab }) {
+  function openPlayerModalData({ playerId, name, team, pos, leagues, pct, defaultTab, gameLogSeason }) {
     playerModal.dataset.playerId = playerId;
 
     const pmTradesList = document.getElementById('pmTradesList');
@@ -33842,7 +33915,7 @@
     document.querySelectorAll('.pm-panel').forEach(p => { p.hidden = p.dataset.pmPanel !== tab; });
     if (tab === 'overview') renderPmOverview(playerId);
     if (tab === 'ranks') renderPmRanks(playerId);
-    if (tab === 'gamelog') renderPmGameLog(playerId);
+    if (tab === 'gamelog') renderPmGameLog(playerId, gameLogSeason);
     if (tab === 'contract') renderPmContract(playerId);
 
     playerModal.hidden = false;
@@ -33854,14 +33927,14 @@
   // the page with no click behavior yet (League Detail's roster columns,
   // for one) -- works out the real leagues he's rostered in on the fly
   // and opens the same modal, defaulting to Overview.
-  function openPlayerModalForId(playerId, name, team, pos) {
+  function openPlayerModalForId(playerId, name, team, pos, opts) {
     const leagues = [];
     Object.values(window.sleeperLeagueData || {}).forEach(entry => {
       if (!entry.roster) return;
       const players = (entry.roster.players || []).filter(id => id && id !== '0');
       if (players.includes(playerId)) leagues.push(entry.league.name);
     });
-    openPlayerModalData({ playerId, name, team, pos, leagues, defaultTab: 'overview' });
+    openPlayerModalData(Object.assign({ playerId, name, team, pos, leagues, defaultTab: 'overview' }, opts || {}));
   }
   window.openPlayerModalForId = openPlayerModalForId;
 
@@ -34861,6 +34934,303 @@
     document.addEventListener('desk:view', (e) => {
       if (e.detail === 'tanking') renderRealTankingTracker().catch(() => {});
     });
+  })();
+
+  // ---- The Ledger (season stat hub) ----------------------------------
+  // Season totals for every fantasy position, scored either on the house
+  // line or with one league's own scoring_settings. Past seasons are
+  // scored with that league's *current* settings -- the question is "how
+  // would this season have scored in my league", not "what did it score
+  // in a league that may not have existed yet".
+  (function initStatHub() {
+    const scoringSel = document.getElementById('shScoring');
+    const seasonSel = document.getElementById('shSeason');
+    const minGpSel = document.getElementById('shMinGp');
+    const searchInput = document.getElementById('shSearch');
+    const posTabs = document.getElementById('shPosTabs');
+    const summaryEl = document.getElementById('shSummary');
+    const statusEl = document.getElementById('shStatus');
+    const bodyEl = document.getElementById('shBody');
+    if (!scoringSel || !bodyEl) return;
+
+    const SH_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K'];
+    const SH_FIRST_SEASON = 2018;
+    const seasonCache = {};
+
+    const state = { pos: 'QB', sortKey: 'ppg', sortDir: -1, rows: [] };
+
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const num = (v) => Number(v) || 0;
+    const fmt = (v, d) => v == null || isNaN(v) ? '&mdash;' : Number(v).toFixed(d == null ? 1 : d);
+    const int = (v) => Math.round(num(v)).toLocaleString();
+
+    // Position-specific stat columns. `v` reads the raw season line.
+    const STAT_COLS = {
+      QB: [
+        { key: 'cmp', label: 'CMP', v: s => num(s.pass_cmp), f: int },
+        { key: 'att', label: 'ATT', v: s => num(s.pass_att), f: int },
+        { key: 'pyd', label: 'PASS YD', v: s => num(s.pass_yd), f: int },
+        { key: 'ptd', label: 'PASS TD', v: s => num(s.pass_td), f: int },
+        { key: 'int', label: 'INT', v: s => num(s.pass_int), f: int },
+        { key: 'ryd', label: 'RUSH YD', v: s => num(s.rush_yd), f: int },
+        { key: 'rtd', label: 'RUSH TD', v: s => num(s.rush_td), f: int },
+      ],
+      RB: [
+        { key: 'car', label: 'CAR', v: s => num(s.rush_att), f: int },
+        { key: 'ryd', label: 'RUSH YD', v: s => num(s.rush_yd), f: int },
+        { key: 'ypc', label: 'YPC', v: s => s.rush_att ? num(s.rush_yd) / num(s.rush_att) : null, f: v => fmt(v) },
+        { key: 'rtd', label: 'RUSH TD', v: s => num(s.rush_td), f: int },
+        { key: 'tgt', label: 'TGT', v: s => num(s.rec_tgt), f: int },
+        { key: 'rec', label: 'REC', v: s => num(s.rec), f: int },
+        { key: 'recyd', label: 'REC YD', v: s => num(s.rec_yd), f: int },
+        { key: 'rectd', label: 'REC TD', v: s => num(s.rec_td), f: int },
+      ],
+      WR: [
+        { key: 'tgt', label: 'TGT', v: s => num(s.rec_tgt), f: int },
+        { key: 'rec', label: 'REC', v: s => num(s.rec), f: int },
+        { key: 'recyd', label: 'REC YD', v: s => num(s.rec_yd), f: int },
+        { key: 'ypr', label: 'Y/R', v: s => s.rec ? num(s.rec_yd) / num(s.rec) : null, f: v => fmt(v) },
+        { key: 'rectd', label: 'REC TD', v: s => num(s.rec_td), f: int },
+        { key: 'ryd', label: 'RUSH YD', v: s => num(s.rush_yd), f: int },
+      ],
+      K: [
+        { key: 'fgm', label: 'FGM', v: s => num(s.fgm), f: int },
+        { key: 'fga', label: 'FGA', v: s => num(s.fga), f: int },
+        { key: 'fg50', label: '50+', v: s => num(s.fgm_50p), f: int },
+        { key: 'xpm', label: 'XPM', v: s => num(s.xpm), f: int },
+      ],
+    };
+    STAT_COLS.TE = STAT_COLS.WR;
+    STAT_COLS.ALL = [
+      { key: 'tds', label: 'TOT TD', v: s => num(s.pass_td) + num(s.rush_td) + num(s.rec_td), f: int },
+      { key: 'yds', label: 'TOT YD', v: s => num(s.pass_yd) + num(s.rush_yd) + num(s.rec_yd), f: int },
+    ];
+
+    function leagueEntries() {
+      const seen = new Set();
+      return Object.values(window.sleeperLeagueData || {})
+        .filter(e => e && e.league && e.league.scoring_settings)
+        .filter(e => { const id = e.league.league_id; if (seen.has(id)) return false; seen.add(id); return true; })
+        .sort((a, b) => String(a.league.name).localeCompare(String(b.league.name)));
+    }
+
+    function currentScoring() {
+      const id = scoringSel.value;
+      if (id && id !== 'house') {
+        const e = leagueEntries().find(x => String(x.league.league_id) === id);
+        if (e) return { label: e.league.name, settings: e.league.scoring_settings };
+      }
+      return { label: 'House line', settings: SB_HOUSE_SCORING };
+    }
+
+    // A position premium is its own stat key (bonus_rec_te) that the raw
+    // stat payload doesn't carry, so it's backfilled from receptions --
+    // the same fix sbHouseScore makes -- or every TE would score as plain PPR.
+    function shScore(stats, pos, settings) {
+      const bonusKey = pos ? 'bonus_rec_' + pos.toLowerCase() : null;
+      const line = (bonusKey && settings[bonusKey] != null && stats[bonusKey] == null && stats.rec != null)
+        ? Object.assign({}, stats, { [bonusKey]: stats.rec }) : stats;
+      const pts = sbCustomScoreFor(line, settings);
+      return pts == null ? 0 : pts;
+    }
+
+    function fillScoringOptions() {
+      const prev = scoringSel.value;
+      const opts = [`<option value="house">House line &mdash; ${esc(SB_HOUSE_SCORING_LABEL)}</option>`]
+        .concat(leagueEntries().map(e => `<option value="${esc(e.league.league_id)}">${esc(e.league.name)}</option>`));
+      scoringSel.innerHTML = opts.join('');
+      if (prev && [...scoringSel.options].some(o => o.value === prev)) scoringSel.value = prev;
+    }
+
+    function fillSeasons() {
+      if (seasonSel.options.length) return;
+      // Before September the newest season with stats is last year's.
+      const now = new Date();
+      const latest = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+      const live = Number(window.__sleeperLiveSeason) || latest;
+      const top = Math.max(latest, live);
+      let html = '';
+      for (let y = top; y >= SH_FIRST_SEASON; y--) html += `<option value="${y}">${y}</option>`;
+      seasonSel.innerHTML = html;
+    }
+
+    async function loadSeason(season) {
+      if (seasonCache[season]) return seasonCache[season];
+      const p = (async () => {
+        const qs = SH_POSITIONS.map(x => 'position[]=' + x).join('&');
+        const res = await fetch(`https://api.sleeper.app/stats/nfl/${season}?season_type=regular&${qs}`);
+        if (!res.ok) throw new Error('Sleeper API ' + res.status);
+        return res.json();
+      })();
+      seasonCache[season] = p;
+      p.catch(() => { delete seasonCache[season]; });
+      return p;
+    }
+
+    function buildRows(list, settings) {
+      const dict = window.__sleeperPlayerDict || {};
+      const rows = [];
+      (Array.isArray(list) ? list : Object.entries(list || {}).map(([player_id, stats]) => ({ player_id, stats })))
+        .forEach(item => {
+          if (!item || !item.player_id || !item.stats) return;
+          const meta = item.player || {};
+          const d = dict[item.player_id] || {};
+          const pos = (item.position || d.position || meta.position || '').toUpperCase();
+          if (!SH_POSITIONS.includes(pos)) return;
+          const s = item.stats;
+          const gp = num(s.gp) || num(s.gms_active);
+          if (!gp) return;
+          const name = d.full_name || [d.first_name || meta.first_name, d.last_name || meta.last_name].filter(Boolean).join(' ') || item.player_id;
+          const pts = shScore(s, pos, settings);
+          rows.push({ id: item.player_id, name, pos, team: item.team || d.team || meta.team || 'FA', gp, pts, ppg: pts / gp, s });
+        });
+      // Positional rank on total points, independent of the current sort.
+      SH_POSITIONS.forEach(pos => {
+        rows.filter(r => r.pos === pos).sort((a, b) => b.pts - a.pts).forEach((r, i) => { r.posRank = i + 1; });
+      });
+      return rows;
+    }
+
+    function visibleRows() {
+      const minGp = Math.max(0, Number(minGpSel.value) || 0);
+      const q = (searchInput.value || '').trim().toLowerCase();
+      const cols = STAT_COLS[state.pos] || [];
+      const col = cols.find(c => c.key === state.sortKey);
+      const POS_ORDER = { QB: 0, RB: 1, WR: 2, TE: 3, K: 4 };
+      const val = (r) => state.sortKey === 'pts' ? r.pts : state.sortKey === 'gp' ? r.gp
+        : state.sortKey === 'ppg' ? r.ppg
+        : state.sortKey === 'name' ? r.name.toLowerCase()
+        : state.sortKey === 'team' ? r.team
+        : state.sortKey === 'posrk' ? POS_ORDER[r.pos] * 1000 + r.posRank
+        : col ? (col.v(r.s) ?? -Infinity) : r.ppg;
+      const cmp = (a, b) => { const x = val(a), y = val(b); return typeof x === 'string' ? x.localeCompare(y) : x - y; };
+      return state.rows
+        .filter(r => (state.pos === 'ALL' || r.pos === state.pos) && r.gp >= minGp)
+        .filter(r => !q || r.name.toLowerCase().includes(q) || r.team.toLowerCase().includes(q))
+        .sort((a, b) => cmp(a, b) * state.sortDir || b.pts - a.pts);
+    }
+
+    // Tier breaks for the table: QB1/QB2 style bands, the usual 12-team cut.
+    function tierLabel(pos, i) {
+      if (pos === 'ALL' || pos === 'K') return null;
+      return i % 12 === 0 ? `${pos}${i / 12 + 1}` : null;
+    }
+
+    function renderSummary(rows, scoring) {
+      if (!rows.length) { summaryEl.innerHTML = ''; return; }
+      const byPts = rows.slice().sort((a, b) => b.pts - a.pts);
+      const byPpg = rows.slice().sort((a, b) => b.ppg - a.ppg);
+      const starters = byPts.slice(0, 12);
+      const avg12 = starters.reduce((t, r) => t + r.ppg, 0) / starters.length;
+      const label = state.pos === 'ALL' ? 'Player' : state.pos;
+      summaryEl.innerHTML = [
+        ['Scored with', esc(scoring.label), seasonSel.value + ' regular season'],
+        ['Most points', fmt(byPts[0].pts), esc(byPts[0].name)],
+        ['Best PPG', fmt(byPpg[0].ppg), esc(byPpg[0].name)],
+        [`Top-12 ${label} PPG`, fmt(avg12), `${state.pos === 'ALL' ? '#' : label}12: ${esc((byPts[11] || byPts[byPts.length - 1]).name)}`],
+      ].map(([k, v, s]) => `<div class="sh-sum-tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+    }
+
+    function sortTh(key, label, extraCls) {
+      const active = state.sortKey === key;
+      return `<th class="rb-sort-th${active ? ' active' : ''}${extraCls ? ' ' + extraCls : ''}" data-sort="${key}">${label}${active ? (state.sortDir < 0 ? ' &#9660;' : ' &#9650;') : ''}</th>`;
+    }
+
+    function renderTable(rows) {
+      const cols = STAT_COLS[state.pos] || [];
+      const head = '<tr><th>#</th>' + sortTh('name', 'PLAYER', 'sh-th-player') + sortTh('team', 'TEAM', 'sh-th-player')
+        + (state.pos === 'ALL' ? sortTh('posrk', 'POS RK') : '')
+        + sortTh('gp', 'GP') + sortTh('pts', 'PTS') + sortTh('ppg', 'PPG')
+        + cols.map(c => sortTh(c.key, c.label)).join('') + '</tr>';
+      const showTiers = state.sortKey === 'pts' || state.sortKey === 'ppg';
+      const colspan = 6 + cols.length + (state.pos === 'ALL' ? 1 : 0);
+      const body = rows.map((r, i) => {
+        const tier = showTiers && state.sortDir < 0 ? tierLabel(state.pos, i) : null;
+        return (tier ? `<tr class="sh-tier-row"><td colspan="${colspan}">${tier}</td></tr>` : '')
+          + `<tr><td>${i + 1}</td><td class="sh-player-cell" data-player-id="${esc(r.id)}"><span class="sh-pos-chip ${r.pos}">${r.pos}</span><b>${esc(r.name)}</b></td>`
+          + `<td class="sh-team-cell">${r.team && r.team !== 'FA' ? `<img class="sh-team-logo" src="${sbTeamLogoUrl(r.team)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(r.team)}</td>`
+          + (state.pos === 'ALL' ? `<td>${r.pos}${r.posRank}</td>` : '')
+          + `<td>${r.gp}</td><td>${fmt(r.pts)}</td><td class="sh-ppg">${fmt(r.ppg)}</td>`
+          + cols.map(c => `<td>${c.f(c.v(r.s))}</td>`).join('') + '</tr>';
+      }).join('');
+      bodyEl.innerHTML = `<div class="rb-table-wrap"><table class="rb-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+    }
+
+    function draw() {
+      posTabs.querySelectorAll('[data-pos]').forEach(b => b.classList.toggle('active', b.dataset.pos === state.pos));
+      const rows = visibleRows();
+      renderSummary(rows, currentScoring());
+      if (!rows.length) {
+        bodyEl.innerHTML = state.rows.length ? '<p class="rb-empty">Nobody matches those filters.</p>' : '';
+        return;
+      }
+      renderTable(rows);
+    }
+
+    let loadToken = 0;
+    async function refresh() {
+      fillSeasons();
+      fillScoringOptions();
+      const season = seasonSel.value;
+      const token = ++loadToken;
+      statusEl.className = 'sh-status';
+      statusEl.textContent = `Loading ${season} season stats…`;
+      try {
+        const list = await loadSeason(season);
+        if (token !== loadToken) return;
+        state.rows = buildRows(list, currentScoring().settings);
+        applyDefaultMinGp();
+        statusEl.textContent = state.rows.length ? '' : `No ${season} stats came back from Sleeper.`;
+      } catch (e) {
+        if (token !== loadToken) return;
+        state.rows = [];
+        statusEl.className = 'sh-status err';
+        statusEl.textContent = `Couldn't load ${season} stats from Sleeper (${(e && e.message) || e}).`;
+      }
+      draw();
+    }
+    // Exposed so tests and other pages can feed it a stat list directly.
+    window.shRenderFromList = (list) => { statusEl.textContent = ''; state.rows = buildRows(list, currentScoring().settings); applyDefaultMinGp(); draw(); };
+
+    scoringSel.addEventListener('change', refresh);
+    seasonSel.addEventListener('change', refresh);
+    // Four games is the default bar, but early in a season nobody has
+    // played four yet -- weeks 1-3 default to however many have been played.
+    // Typing a number takes over until the page is reloaded.
+    let minGpTouched = false;
+    function applyDefaultMinGp() {
+      if (minGpTouched) return;
+      const maxGp = state.rows.reduce((m, r) => Math.max(m, r.gp), 0);
+      minGpSel.value = maxGp ? Math.min(4, maxGp) : 4;
+    }
+    minGpSel.addEventListener('input', () => { minGpTouched = true; draw(); });
+    searchInput.addEventListener('input', draw);
+    posTabs.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-pos]');
+      if (!b) return;
+      state.pos = b.dataset.pos;
+      if (!['pts', 'ppg', 'gp', 'name', 'team'].includes(state.sortKey) && !(state.pos === 'ALL' && state.sortKey === 'posrk')) { state.sortKey = 'ppg'; state.sortDir = -1; }
+      draw();
+    });
+    bodyEl.addEventListener('click', (e) => {
+      const cell = e.target.closest('.sh-player-cell[data-player-id]');
+      if (cell && window.openPlayerModalForId) {
+        const r = state.rows.find(x => String(x.id) === cell.dataset.playerId);
+        if (r) window.openPlayerModalForId(r.id, r.name, r.team, r.pos, { defaultTab: 'gamelog', gameLogSeason: Number(seasonSel.value) });
+        return;
+      }
+      const th = e.target.closest('th[data-sort]');
+      if (!th) return;
+      if (state.sortKey === th.dataset.sort) state.sortDir *= -1;
+      else { state.sortKey = th.dataset.sort; state.sortDir = ['name', 'team', 'posrk'].includes(th.dataset.sort) ? 1 : -1; }
+      draw();
+    });
+    document.addEventListener('desk:view', (e) => {
+      if (e.detail === 'stathub') refresh();
+    });
+    fillSeasons();
+    fillScoringOptions();
   })();
 
   // ---- Rankings -------------------------------------------------------
