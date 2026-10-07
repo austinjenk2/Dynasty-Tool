@@ -26052,6 +26052,130 @@
   }
   window.ppDepthRisk = ppDepthRisk;
 
+  // ---- Best ball is a different game, so it gets a different model ----
+  //
+  // Everywhere else on this page a team's level is its best possible
+  // lineup by PROJECTION: fill each slot with the highest projected
+  // eligible player, add it up. For a league where you set a lineup in
+  // advance that is right, because that is what you do -- you pick by
+  // projection and then the week happens.
+  //
+  // Best ball does not work like that. There is no lineup. The week
+  // happens first and the best seven of whatever your whole roster
+  // actually did get counted. So the honest quantity is the expected
+  // value of the MAXIMUM, and filling slots by projection computes the
+  // maximum of the expected values. Those are not the same number, and
+  // the gap between them is the whole of what depth is worth: a bench
+  // player who projects for nine and goes for twenty-six is in your
+  // lineup that week, which is common, and the projection-based
+  // calculation cannot see it at all.
+  //
+  // Measured on six synthetic rosters, naive level against best ball
+  // level, with the per-player spread calibrated so simulated team
+  // variance matches a real league's:
+  //
+  //     roster          naive   best ball    lift
+  //     strong, deep    123.0     152.8     +29.7
+  //     strong, thin    123.0     131.2      +8.1
+  //     weak, deep       91.0     113.0     +22.0
+  //     weak, thin       91.0      97.0      +6.0
+  //
+  // Both strong rosters read 123.0 naively -- identical -- when in best
+  // ball they are 21.6 points a week apart. That is the error, and it is
+  // not small.
+  //
+  // Which way it moves a given team depends entirely on its bench, and
+  // that is the point. Strong-and-deep against weak-and-thin goes from a
+  // 32.1 gap to 55.8. Strong-but-THIN against weak-but-DEEP goes the
+  // other way, from 32.1 down to 18.2. A team whose quality is
+  // concentrated in a few starters is overrated by the naive model in a
+  // best ball league, and is exactly the team whose odds come out too
+  // confident.
+  //
+  // Per-player points are drawn lognormal around the projection, because
+  // a fantasy week is right-skewed -- a floor at zero, a long upper tail
+  // -- and skew is what a max operation feeds on. A normal draw would
+  // understate every lift here.
+  //
+  // The per-player spread is SB_SIGMA_K scaled by one league-wide factor,
+  // fitted so that the average simulated team's weekly variance equals
+  // what this league's teams actually exhibit. Fitted league-wide rather
+  // than per team on purpose: calibrating each team to its own variance
+  // would erase the real differences in how much teams swing, which is
+  // part of the answer. On the synthetic league above the factor came out
+  // at 0.64, which is also an independent sign that SB_SIGMA_K at face
+  // value is wider than real football.
+  const PP_BB_RUNS = 4000;
+  const PP_BB_FIT_RUNS = 900;
+  const PP_BB_FIT_PASSES = 8;
+  function ppBestBallWeek(playerIds, league, projMap, scale, runs) {
+    const dict = window.__sleeperPlayerDict;
+    if (!dict || !league || !league.roster_positions) return null;
+    const slots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+    const pool = [];
+    (playerIds || []).forEach(id => {
+      if (!id || id === '0') return;
+      const p = dict[id];
+      if (!p || !p.position) return;
+      const proj = sbProjectionFor(id, projMap, league);
+      if (proj == null || !(proj > 0)) return;
+      const k = SB_SIGMA_K[p.position] != null ? SB_SIGMA_K[p.position] : SB_SIGMA_K.DEFAULT;
+      const sd = scale * k * proj;
+      // Lognormal parameters for this mean and spread, precomputed per
+      // player rather than per draw.
+      const v = Math.log(1 + (sd * sd) / (proj * proj));
+      pool.push({ pos: p.position, mu: Math.log(proj) - v / 2, sigma: Math.sqrt(v) });
+    });
+    if (pool.length < slots.length) return null;
+    const drawn = new Array(pool.length).fill(0);
+    const used = new Array(pool.length).fill(false);
+    let sum = 0, sumSq = 0;
+    const n = runs || PP_BB_RUNS;
+    for (let it = 0; it < n; it++) {
+      for (let i = 0; i < pool.length; i++) {
+        drawn[i] = Math.exp(pool[i].mu + pool[i].sigma * ppRandNormal());
+        used[i] = false;
+      }
+      let total = 0;
+      for (let s = 0; s < slots.length; s++) {
+        const eligible = SB_SLOT_ELIGIBLE[slots[s]];
+        if (!eligible) continue;
+        let best = -1, bestV = -Infinity;
+        for (let i = 0; i < pool.length; i++) {
+          if (used[i] || !eligible.includes(pool[i].pos)) continue;
+          if (drawn[i] > bestV) { bestV = drawn[i]; best = i; }
+        }
+        if (best >= 0) { used[best] = true; total += bestV; }
+      }
+      sum += total; sumSq += total * total;
+    }
+    const mean = sum / n;
+    return { mean, sd: Math.sqrt(Math.max(0, sumSq / n - mean * mean)) };
+  }
+
+  // One scale for the league, fitted so simulated team variance matches
+  // the variance this league's teams really show. Team sd scales close to
+  // linearly in the per-player scale, so a handful of proportional passes
+  // converges; it is capped because a league whose measured variance is
+  // tiny should not drive the per-player spread to zero.
+  function ppBestBallScale(rosters, league, projMap, targetSd) {
+    if (!(targetSd > 0)) return null;
+    let scale = 0.6;
+    for (let pass = 0; pass < PP_BB_FIT_PASSES; pass++) {
+      let sum = 0, count = 0;
+      for (const r of rosters) {
+        const res = ppBestBallWeek(sbStartablePlayers(r), league, projMap, scale, PP_BB_FIT_RUNS);
+        if (res && res.sd > 0) { sum += res.sd; count++; }
+      }
+      if (!count) return null;
+      const avg = sum / count;
+      if (!(avg > 0)) return null;
+      scale *= targetSd / avg;
+      scale = Math.max(0.15, Math.min(2.5, scale));
+    }
+    return scale;
+  }
+
   // Which division each roster is in, but only for a league actually
   // running divisions -- returns null otherwise, which every caller reads
   // as "seed on record alone".
@@ -26314,6 +26438,36 @@
     // the weeks still to be played are projected at best-possible-lineup
     // level (see PP_ASSUME_OPTIMAL_LINEUPS).
     let realismFactor = null;
+    // Best ball gets the expected-maximum model instead of the projected
+    // best lineup. See ppBestBallWeek for why those differ and by how
+    // much. Fitted on one representative week -- the last remaining one,
+    // the same week depth is measured on, chosen because it is least
+    // likely to have anybody ruled out in it -- and the cheap per-week
+    // deltas still ride on top, so a bye week still moves the week it
+    // falls in. Running the full draw for every remaining week would cost
+    // about a second a league for a correction that is a property of
+    // roster shape rather than of the calendar.
+    const isBestBall = !!(league.settings && league.settings.best_ball);
+    const bbWeekMap = remainingWeekNumbers.length
+      ? weekProjMaps[remainingWeekNumbers[remainingWeekNumbers.length - 1]] : null;
+    let bbScale = null;
+    const bbById = {};
+    if (isBestBall && window.sbTeamOptimalProjection) {
+      bbScale = ppBestBallScale(rosters, league, bbWeekMap, leagueSd);
+      if (bbScale != null) {
+        rosters.forEach(r => {
+          const res = ppBestBallWeek(sbStartablePlayers(r), league, bbWeekMap, bbScale);
+          if (res && res.mean > 0) bbById[r.roster_id] = res;
+        });
+        // All or nothing: a league where only some teams got the best ball
+        // treatment would rank a simulated-maximum level against a
+        // projected-lineup one, which is worse than using either.
+        if (Object.keys(bbById).length !== rosters.length) {
+          Object.keys(bbById).forEach(k => { delete bbById[k]; });
+          bbScale = null;
+        }
+      }
+    }
     if (window.sbTeamOptimalProjection) {
       let optSum = 0, optCount = 0;
       // Weeks still to be played, which is what an injury has to be priced
@@ -26337,9 +26491,15 @@
           const v = ppHealthyProjection(startable, league, weeksLeftForInjury, pm);
           if (v != null && v > 0) { perWeek[w] = v; wkSum += v; wkCount++; }
         });
-        const opt = wkCount
+        let opt = wkCount
           ? wkSum / wkCount
           : ppHealthyProjection(startable, league, weeksLeftForInjury);
+        // In best ball the level is the expected maximum, not the
+        // projected best lineup. The per-week deltas computed above are
+        // kept -- they are differences, so they transfer -- and only the
+        // level they sit around is replaced.
+        const bb = bbById[r.roster_id];
+        if (bb) opt = bb.mean;
         if (wkCount) weekLevelById[r.roster_id] = perWeek;
         if (opt != null && opt > 0) { strengthById[r.roster_id] = opt; optSum += opt; optCount++; }
         // Depth, measured on the same pass. Deliberately NOT put through
@@ -26515,6 +26675,20 @@
         // own number grows with the weeks behind it.
         const wgt = Math.min(1, (n - 2) / 8);
         sd = Math.sqrt(Math.max(1, wgt * v + (1 - wgt) * leagueVar));
+      }
+      // Best ball: how much a team swings is a property of its roster as
+      // much as of its history, and four weeks of scores cannot see that
+      // where a draw over the whole roster can. A deep best ball bench
+      // swings more, not less -- more players with a real chance of
+      // forcing their way into the week means a longer upper tail -- and
+      // the synthetic rosters bear that out: 29.0 for the deep ones
+      // against 21.0 for the thin. The league-wide average is already
+      // pinned to this league's measured variance by the scale fit, so
+      // this adds the per-team shape without moving the league's scale.
+      const bbModel = bbById[r.roster_id];
+      if (bbModel && bbModel.sd > 0) {
+        const wgt = Math.min(1, n / 8);
+        sd = Math.sqrt(Math.max(1, wgt * sd * sd + (1 - wgt) * bbModel.sd * bbModel.sd));
       }
       // Same shrink on the mean: four weeks is not a true talent level.
       const meanWeight = Math.min(1, n / 8);
@@ -26695,6 +26869,11 @@
     // (1 = all of it). Carried out so the calibration can be inspected
     // per league rather than only inferred from the odds it produces.
     out.levelShrink = levelShrink;
+    // Best ball only: the fitted per-player spread scale, so the
+    // expected-maximum model can be inspected per league rather than
+    // inferred from the odds it produces. Null in every other league.
+    out.bestBallScale = bbScale;
+    out.isBestBall = isBestBall;
     return out;
   }
 
