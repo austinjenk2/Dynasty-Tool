@@ -774,6 +774,24 @@
   .gc-exp-for { color: var(--green); }
   .gc-exp-against { color: var(--red); }
   .gc-exp-none { color: var(--faint); font-weight: 700; letter-spacing: 0.3px; }
+  /* Pushed to the right end of the row and given a tint, because it is a
+     different KIND of fact from the counts beside it: those say how much
+     of you is in the game, this says how it is going. */
+  .gc-exp-wins {
+    margin-left: auto; padding: 1px 5px; border-radius: 4px;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .gc-exp-wins.is-up { color: var(--green); background: var(--green-bg); }
+  .gc-exp-wins.is-down { color: var(--red); background: var(--red-bg); }
+  /* The week picker sits after the LIVE pill and before the escape hatch,
+     which only appears once you have gone looking at a past week. */
+  .gc-week-dd { margin-left: 4px; }
+  .gc-rail-back {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.3px;
+    text-transform: uppercase; color: var(--navy); cursor: pointer;
+    padding: 2px 7px; border: 1px solid var(--border); border-radius: 4px;
+  }
+  .gc-rail-back:hover { border-color: var(--navy); }
 
   .gc-card-top {
     display: flex; align-items: center; justify-content: space-between; gap: 6px;
@@ -6591,6 +6609,11 @@
     <div class="gc-rail-head">
       <span class="gc-rail-title">NFL Scores</span>
       <span class="gc-live-pill" id="gcLivePill" hidden><span class="gc-live-dot"></span>LIVE</span>
+      <span class="week-dropdown gc-week-dd" id="gcWeekDropdown">
+        <span class="week-select" id="gcWeekSelect"><span class="week-lead">Week</span> <span class="week-num" id="gcWeekSelectLabel">1</span> <span class="week-caret">&#9662;</span></span>
+        <span class="week-menu" id="gcWeekMenu" hidden></span>
+      </span>
+      <span class="gc-rail-back" id="gcBackToLive" hidden>Back to this week</span>
     </div>
     <div class="gc-split">
       <div class="gc-grid" id="gcGrid"><div class="ld-loading">Loading this week&rsquo;s games&hellip;</div></div>
@@ -24657,6 +24680,32 @@
   }
 
   setupWeekDropdown('weekSelect', 'weekMenu', 'weekSelectLabel', (week) => { loadLeaguesWeek(week); });
+  // The press box's own week. Picking one puts the page into history mode;
+  // "Back to this week" clears it and hands the dropdown back to the
+  // live-week sync, which is why userPicked is reset rather than just the
+  // label being rewritten.
+  setupWeekDropdown('gcWeekSelect', 'gcWeekMenu', 'gcWeekSelectLabel', (week) => {
+    window.__gcViewWeek = Number(week) || null;
+    // A game opened in one week has no counterpart in another.
+    window.__gcOpenEventId = null;
+    window.__gcOpenData = null;
+    if (typeof window.renderRealGameCast === 'function') window.renderRealGameCast();
+  });
+  (function () {
+    const back = document.getElementById('gcBackToLive');
+    if (!back) return;
+    back.addEventListener('click', () => {
+      window.__gcViewWeek = null;
+      window.__gcOpenEventId = null;
+      window.__gcOpenData = null;
+      const sel = document.getElementById('gcWeekSelect');
+      if (sel) delete sel.dataset.userPicked;
+      if (window.__sleeperLiveWeek && window.syncWeekDropdownsToLiveWeek) {
+        window.syncWeekDropdownsToLiveWeek(window.__sleeperLiveWeek);
+      }
+      if (typeof window.renderRealGameCast === 'function') window.renderRealGameCast();
+    });
+  })();
   setupWeekDropdown('scheduleWeekSelect', 'scheduleWeekMenu', 'scheduleWeekLabel', (week) => {
     window.__scheduleSelectedWeek = Number(week);
     if (window.renderRealSchedule) window.renderRealSchedule(Number(week));
@@ -29728,14 +29777,103 @@
     };
   }
 
-  function gcExposureHtml(exp) {
+  // What this game has been worth to you so far, in projected WINS.
+  //
+  // The counts beside it say how many of your players are in the game.
+  // They do not say whether it is going well, and that is the thing you
+  // actually want off a scoreboard: five starters in a game is good news
+  // or bad news depending entirely on what they are doing.
+  //
+  // So: every player of yours in this game is compared to what he was
+  // PROJECTED to have scored by this point -- his live projection against
+  // his pregame one, the same over-expected the box score uses -- and the
+  // same is done for whoever is starting against you. The net is the
+  // points your matchup margin has moved because of this game, in each
+  // league separately, and sbSwingFor turns that into win probability.
+  // Summed across your leagues and divided by 100, that is a number of
+  // wins, which is the same unit as the projected record.
+  //
+  // Computed per league rather than per player on purpose: win
+  // probability is not linear in points, so adding up each player's own
+  // impact overstates a game where several of your players went off
+  // together.
+  //
+  // Null when nothing can be computed -- no stake, no projections, or a
+  // settled matchup, which cannot swing.
+  function gcGameWinsDelta(game, dict) {
+    const d = dict || window.__sleeperPlayerDict || {};
+    const espnGameData = window.__gcEspnGameData || null;
+    const abbrs = [game.away && game.away.abbr, game.home && game.home.abbr].filter(Boolean);
+    if (!abbrs.length) return null;
+    const inGame = new Set(abbrs);
+    const index = (typeof sbExposureIndex === 'function') ? sbExposureIndex() : null;
+    if (!index || !index.size) return null;
+    const byLeague = new Map();
+    let any = false;
+    index.forEach((rows, pid) => {
+      const p = d[pid];
+      if (!p || !p.team || !inGame.has(p.team)) return;
+      const started = sbGameStartedForTeam(p.team, espnGameData);
+      if (!started) return;
+      const finished = sbGameFinishedForTeam(p.team, espnGameData);
+      const elapsed = sbGameElapsedFraction(p.team, espnGameData);
+      rows.forEach((row) => {
+        const e = row.entry;
+        if (!e || !e.myMatchup || !e.oppMatchup) return;
+        const origProj = sbProjectionFor(pid, null, e.league);
+        if (origProj == null) return;
+        const pointsMap = (row.onMySide ? e.myMatchup.players_points : e.oppMatchup.players_points) || {};
+        const pts = Number(pointsMap[pid]) || 0;
+        const baseline = sbCountAsInactive(p, espnGameData) ? 0 : origProj;
+        const liveProj = sbEstimateLiveProjection(pts, baseline, elapsed, started, finished,
+          { position: p.position, team: p.team, espnGameData });
+        if (liveProj == null) return;
+        const delta = liveProj - origProj;
+        if (!Number.isFinite(delta)) return;
+        const key = e.league.league_id;
+        const cur = byLeague.get(key) || { state: row.state, net: 0 };
+        cur.net += row.onMySide ? delta : -delta;
+        byLeague.set(key, cur);
+        any = true;
+      });
+    });
+    if (!any) return null;
+    let wins = 0;
+    byLeague.forEach(({ state, net }) => {
+      if (!state || !(Number(state.sigma) > 0)) return;
+      wins += sbSwingFor(state, net, true) / 100;
+    });
+    return wins;
+  }
+  window.gcGameWinsDelta = gcGameWinsDelta;
+  // Exposed so the chip's formatting and its noise floor can be asserted
+  // without a live Sunday to produce a real swing.
+  window.__gcWinsChip = (wins) => gcWinsDeltaHtml(wins);
+
+  // Below this the number is noise -- a tenth of a tenth of a win is a
+  // rounding artefact of live projections, not news.
+  const GC_WINS_EPSILON = 0.005;
+  function gcWinsDeltaHtml(wins) {
+    if (wins == null || !Number.isFinite(wins) || Math.abs(wins) < GC_WINS_EPSILON) return '';
+    const up = wins > 0;
+    const txt = (up ? '+' : '−') + Math.abs(wins).toFixed(2);
+    return `<span class="gc-exp-wins ${up ? 'is-up' : 'is-down'}" title="${
+      sbFieldEsc('What this game has done to your projected record so far, across every league: '
+        + txt + ' wins. Your players against what they were projected to have scored by now, '
+        + 'less the same for whoever is starting against you.')
+    }">${txt} wins</span>`;
+  }
+
+  function gcExposureHtml(exp, wins) {
+    const winsHtml = gcWinsDeltaHtml(wins);
     if (!exp.forCount && !exp.againstCount) {
-      return '<span class="gc-exp-none">No stake</span>';
+      return '<span class="gc-exp-none">No stake</span>' + winsHtml;
     }
     const tip = (label, names) => names.length ? `${label}:\n${names.slice(0, 25).join('\n')}${names.length > 25 ? `\n+${names.length - 25} more` : ''}` : '';
     return `
       <span class="gc-exp-for" title="${sbFieldEsc(tip('Starting for you', exp.forNames))}">&#9650; +${exp.forCount}</span>
       <span class="gc-exp-against" title="${sbFieldEsc(tip('Started against you', exp.againstNames))}">&#9660; −${exp.againstCount}</span>
+      ${winsHtml}
     `;
   }
 
@@ -30883,7 +31021,7 @@
         </div>`;
       return `
       <div class="gc-card${g.eventId === window.__gcOpenEventId ? ' active' : ''}" data-gc-event="${sbFieldEsc(g.eventId)}">
-        <div class="gc-card-exposure">${gcExposureHtml(exp)}</div>
+        <div class="gc-card-exposure">${gcExposureHtml(exp, gcGameWinsDelta(g, dict))}</div>
         <div class="gc-card-top">
           <span class="gc-card-state${g.state === 'in' ? ' gc-live' : ''}">${gcStateLabel(g)}</span>
           <span class="gc-card-net">${sbFieldEsc(g.broadcast || '')}</span>
@@ -31660,11 +31798,24 @@
     const grid = document.getElementById('gcGrid');
     if (!grid) return;
     if (!window.getNflState) return;
-    const { week, season } = await window.getNflState();
+    const state = await window.getNflState();
+    const season = state.season;
+    const liveWeek = state.week;
+    // The week dropdown. Null means "the week being played", which is the
+    // default and the only state that polls, accumulates plays, or writes
+    // to the shared live stores. Anything else is history: it is fetched,
+    // drawn, and otherwise left alone.
+    const picked = Number(window.__gcViewWeek) || 0;
+    const week = (picked && picked !== liveWeek) ? picked : liveWeek;
+    const isLiveWeek = week === liveWeek;
+    window.__gcIsLiveWeek = isLiveWeek;
+    const backEl = document.getElementById('gcBackToLive');
+    if (backEl) backEl.hidden = isLiveWeek;
     // Which week the accumulated plays describe, so getWeekStats only
     // folds them into that week and never into a Game Log or a week the
-    // dropdown has gone looking at.
-    window.__gcPbpWeek = week;
+    // dropdown has gone looking at. A past week has no live plays to fold,
+    // and claiming it does would merge this afternoon's numbers into it.
+    window.__gcPbpWeek = isLiveWeek ? week : null;
     // Before any pricing happens, so a play already written down this week
     // is never re-derived.
     gcLoadPlaySwings(season, week);
@@ -31687,10 +31838,14 @@
 
     const [statsMap, projMap, espnGameData] = await Promise.all([
       window.sleeperGetWeekStats ? window.sleeperGetWeekStats(season, week) : {},
-      // GameCast's week comes from getNflState, so this IS the live week and
-      // is allowed to populate the shared projection stores. Every other
-      // caller asks for some specific other week and must not.
-      window.sleeperGetWeekProjections ? window.sleeperGetWeekProjections(season, week, true) : {},
+      // Only the live week may populate the shared projection stores.
+      // Passing true for a week the dropdown went looking at would
+      // overwrite the week being played with that one, and every view on
+      // the site reading the shared store would then score the live week
+      // off week 3's numbers -- the exact corruption getWeekProjections
+      // warns about.
+      window.sleeperGetWeekProjections
+        ? window.sleeperGetWeekProjections(season, week, isLiveWeek) : {},
       // Cached for gcMatchupImpact, which runs synchronously during render
       // and needs real game state (kicked off? how far in? finished?) to
       // turn a player's points-so-far into a live projection.
