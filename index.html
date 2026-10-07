@@ -730,12 +730,14 @@
      palette the app ships (Cream Classic included). */
 
   /* ---- Scores rail ---- */
-  /* The 2px/10px it carried sat the title hard against the rule above it
-     and left all the air underneath. Even margins centre the row between
-     that rule and the top of the first game, which is a 2px nudge down. */
+  /* Was 2px/10px, which sat the title hard against the rule above it and
+     left all the air underneath. Then 4px/8px, which you said was still
+     high. Now 7px/5px: slightly past even, since the title's cap height
+     sits above its line box and the optical centre is a touch lower than
+     the geometric one. */
   .gc-rail-head {
     display: flex; align-items: center; gap: 10px;
-    margin: 4px 0 8px;
+    margin: 7px 0 5px;
   }
   .gc-rail-title { font-size: 12.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink); }
   .gc-live-pill {
@@ -25843,6 +25845,70 @@
   // backup in place carries close to none -- which is the whole point of
   // measuring it per roster instead of charging everybody the same drift.
   const PP_DEPTH_RISK_SHARE = 0.4;
+  // Weeks a team needs before its per-game average is allowed to vote on
+  // how far apart this league really is. Three is thin and it is meant to
+  // be: the subtraction of leagueVar / n already discounts a short sample,
+  // and waiting longer means the over-dispersion goes uncorrected through
+  // exactly the early weeks where it is largest.
+  const PP_SHRINK_MIN_WEEKS = 3;
+  // The furthest the projected spread is ever pulled in. At 0.55 the gap
+  // between the best and worst roster can be cut to a bit over half of
+  // what the projections claim, and no further.
+  //
+  // A floor is needed because the measurement is noisy in both
+  // directions. A league whose first month happened to be bunched -- six
+  // close games a week, everyone near the median -- measures almost no
+  // talent spread at all, and taking that literally would simulate twelve
+  // identical teams and hand everybody the same odds. That is not more
+  // honest than being overconfident, it is just wrong in the opposite
+  // direction.
+  const PP_LEVEL_SHRINK_FLOOR = 0.55;
+  // How much evidence the over-dispersion measurement has to clear before
+  // it is believed over the projections.
+  //
+  // Twelve team averages is a small sample and the variance of a variance
+  // is large, so this measurement is noisy. Characterised over 1,000
+  // synthetic leagues per cell (est.mjs), measuring a true shrink of:
+  //
+  //               4 weeks   8 weeks   12 weeks
+  //   true 1.00    0.93      0.94      0.94
+  //   true 0.80    0.87      0.85      0.83
+  //   true 0.60    0.83      0.75      0.71
+  //   true 0.40    0.79      0.67      0.62
+  //
+  // Two things to read off that. It is CONSERVATIVE: it under-corrects at
+  // every level, by design, because the prior pulls it back toward
+  // believing the projections. And it costs about 7% of unnecessary
+  // compression in the case where the projections were right all along
+  // (true 1.00 reading 0.93), which is the price of it working at all.
+  //
+  // Four weeks, not six. At six, a league four games in gave the
+  // measurement only 40% of the say, which left the over-dispersion
+  // running almost uncorrected through exactly the early weeks where it
+  // is largest. Four makes it a near-even split by week four. Lower buys
+  // more correction and more false compression -- at 3 the true-1.00 case
+  // reads 0.91 -- so this is the knob to turn if the odds still read too
+  // confident.
+  const PP_SHRINK_PRIOR_WEEKS = 4;
+  // What to believe about the projections' spread BEFORE this league's own
+  // results have much to say: that about 85% of it is real.
+  //
+  // Not 1.0, which is what this amounted to at first and which is the one
+  // answer we have good reason to think is wrong. Summed projections
+  // over-disperse by construction, and outside best ball they are also
+  // describing a lineup nobody sets for eleven straight weeks. Starting
+  // from "they are exactly right" meant a league four games in asserted
+  // that, since four games cannot overrule a prior.
+  //
+  // With it, over 1,000 synthetic leagues per cell at four weeks played,
+  // a true shrink of 0.60 reads 0.75 rather than 0.83, and 0.40 reads
+  // 0.70 rather than 0.79. The cost is in the column where the
+  // projections really were right: true 1.00 reads 0.87, so a correctly
+  // dispersed league gives up about 13% of its spread. By week twelve the
+  // measurement dominates and the prior stops mattering either way, which
+  // is the behaviour worth having -- it is a starting assumption, not a
+  // thumb on the scale.
+  const PP_SHRINK_PRIOR_SHRINK = 0.85;
   // How wrong a roster's own lineup projection can be about the level it
   // implies, as a share of a weekly standard deviation.
   //
@@ -26324,6 +26390,119 @@
       }
     }
 
+    // ---- How much of the projected spread the season actually supports --
+    //
+    // The levels above are best-possible-lineup projections, and their
+    // spread across a league is WIDER than the spread of real team
+    // scoring. That is a property of projections, not a bug in them: a
+    // projection is each player's expected points, summed over seven or
+    // nine players, and summing expectations compounds roster quality in
+    // a way realised scores do not. Stars miss their number more often
+    // than they beat it, replacement bodies beat theirs, and a roster
+    // that projects thirty points clear of the field does not actually
+    // average thirty points clear of it.
+    //
+    // Nothing corrected for that. PP_PROJECTION_DRIVEN puts the whole
+    // level on the projection and zero weight on what a team has scored,
+    // so an over-dispersed projection went into the simulation
+    // uncorrected -- and since a wider spread of levels means more
+    // decisive games, that is exactly the shape of a good team reading
+    // 92% for a bye.
+    //
+    // So measure it instead of assuming it either way. There are two
+    // readings of how far apart these teams are:
+    //
+    //   the projections say          variance of the projected levels
+    //   the season says              variance of the per-game averages,
+    //                                minus the variance that n games of
+    //                                noise puts there on its own
+    //
+    // The second subtraction matters: four games of scoring spreads teams
+    // out even if they are identical, so the raw spread of per-game
+    // averages overstates the real gap by leagueVar / n. Taking it off is
+    // what leaves talent.
+    //
+    // The ratio of the two is how much of the projected spread the season
+    // bears out, and the projected levels are pulled toward the league
+    // mean by its square root. A league whose results confirm the
+    // projections gets a factor of 1 and is left alone -- and a best ball
+    // league, where everyone really does start their best lineup, should
+    // land nearer 1 than a league where managers set their own lineups.
+    // That is the point of measuring it per league: the model no longer
+    // has to be told which kind of league it is looking at.
+    //
+    // This also answers the lineup question properly. Every team being
+    // simulated at its best possible lineup is an assumption that nobody
+    // mis-starts anybody for nine straight weeks, and it is false in most
+    // leagues. Rather than guess at a haircut, the shrink picks it up from
+    // the gap between what the rosters projected and what the teams
+    // actually scored.
+    let levelShrink = 1;
+    if (Object.keys(strengthById).length === rosters.length && rosters.length > 2) {
+      const lv = rosters.map(r => strengthById[r.roster_id]);
+      const lvMean = lv.reduce((a, b) => a + b, 0) / lv.length;
+      const lvVar = lv.reduce((a, b) => a + (b - lvMean) * (b - lvMean), 0) / (lv.length - 1);
+      // Only teams with enough games for a per-game average to mean
+      // anything, and only when most of the league has them.
+      const obs = rosters
+        .map(r => ({ s: scoresById[r.roster_id] || [] }))
+        .filter(o => o.s.length >= PP_SHRINK_MIN_WEEKS)
+        .map(o => ({ n: o.s.length, m: o.s.reduce((a, b) => a + b, 0) / o.s.length }));
+      if (lvVar > 0 && obs.length >= Math.max(3, Math.ceil(rosters.length * 0.75))) {
+        const oMean = obs.reduce((a, o) => a + o.m, 0) / obs.length;
+        const oVar = obs.reduce((a, o) => a + (o.m - oMean) * (o.m - oMean), 0) / (obs.length - 1);
+        const nAvg = obs.reduce((a, o) => a + o.n, 0) / obs.length;
+        // The noise to subtract is WITHIN-team variance -- how much one
+        // team swings from its own average week to week. Deliberately not
+        // leagueVar, which is measured around the league's grand mean and
+        // therefore has the between-team spread baked into it: using it
+        // subtracts part of the very thing being measured.
+        let wSum = 0, wCount = 0;
+        rosters.forEach(r => {
+          const s = scoresById[r.roster_id] || [];
+          if (s.length < 2) return;
+          const mu = s.reduce((a, b) => a + b, 0) / s.length;
+          wSum += s.reduce((a, b) => a + (b - mu) * (b - mu), 0) / (s.length - 1);
+          wCount++;
+        });
+        const withinVar = wCount ? wSum / wCount : leagueVar;
+        const talentVar = Math.max(0, oVar - withinVar / Math.max(1, nAvg));
+        const rawRatio = talentVar / lvVar;
+        // Twelve team averages is a small sample, and the variance of a
+        // variance is large: one league-month can read 0.7 where the truth
+        // is 0.4, or the reverse. Taken raw this would move a team's odds
+        // on a quantity that is itself mostly noise early on.
+        //
+        // So it is pulled toward "the projections are right" by how little
+        // evidence there is. With PP_SHRINK_PRIOR_WEEKS of 6, four weeks
+        // played gives the measurement 40% of the say and the benefit of
+        // the doubt 60%, and by week twelve the measurement carries most
+        // of it. The correction therefore arrives gradually over a season
+        // instead of lurching in at week three.
+        const w = nAvg / (nAvg + PP_SHRINK_PRIOR_WEEKS);
+        // The prior is NOT "the projections are perfectly calibrated".
+        // Summed point projections over-disperse -- that is a property of
+        // summing expectations over seven or nine players, and in a league
+        // where managers set their own lineups it is compounded by nobody
+        // actually starting their best eleven weeks running. Centring the
+        // prior at 1.0 meant the default assumption was the one thing we
+        // have good reason to think is false, so with four weeks of
+        // evidence the model mostly asserted it.
+        const prior = PP_SHRINK_PRIOR_SHRINK * PP_SHRINK_PRIOR_SHRINK;
+        const ratio = w * rawRatio + (1 - w) * prior;
+        // Held inside a band. Above 1 the season is noisier than the
+        // projections and there is nothing to correct -- stretching the
+        // levels to match would be fitting four weeks of luck. The floor
+        // keeps a league whose early results happen to be bunched from
+        // collapsing to twelve identical teams, which would be its own
+        // kind of wrong answer.
+        levelShrink = Math.max(PP_LEVEL_SHRINK_FLOOR, Math.min(1, Math.sqrt(ratio)));
+        rosters.forEach(r => {
+          strengthById[r.roster_id] = lvMean + (strengthById[r.roster_id] - lvMean) * levelShrink;
+        });
+      }
+    }
+
     const model = rosters.map(r => {
       const st = r.settings || {};
       const mine = scoresById[r.roster_id] || [];
@@ -26512,6 +26691,10 @@
     out.ctx = ctx;
     out.leagueMean = leagueMean;
     out.model = byId;
+    // How much of the projected spread this league's own results bore out
+    // (1 = all of it). Carried out so the calibration can be inspected
+    // per league rather than only inferred from the odds it produces.
+    out.levelShrink = levelShrink;
     return out;
   }
 
