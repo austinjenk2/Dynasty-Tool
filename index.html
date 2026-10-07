@@ -1561,6 +1561,28 @@
      bottom. Sortable on every column, because which end you care about
      changes week to week. */
   .ldst-modal { width: 880px; }
+  .ldwar-modal { width: 900px; }
+  .ldwar-ctrls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; margin: 12px 0; }
+  .ldwar-ctrls select { max-width: 260px; }
+  .ldwar-grid { display: grid; grid-template-columns: 250px 1fr; gap: 16px; max-height: 62vh; overflow: auto; }
+  @media (max-width: 720px) { .ldwar-grid { grid-template-columns: 1fr; } }
+  .ldwar-teams { display: flex; flex-direction: column; gap: 4px; }
+  .ldwar-teams h4, .ldwar-roster h4 { margin: 0 0 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.6px; color: var(--faint); text-transform: uppercase; }
+  .ldwar-team { display: grid; grid-template-columns: 18px 1fr 54px; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; padding: 3px 6px; border-radius: 6px; }
+  .ldwar-team:hover { background: var(--bg); }
+  .ldwar-team.is-sel { background: var(--ink); color: var(--surface); }
+  .ldwar-team .rk { color: var(--faint); font-weight: 700; text-align: right; }
+  .ldwar-team.is-sel .rk { color: var(--surface); }
+  .ldwar-team .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+  .ldwar-team .v { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .ldwar-team .bar { grid-column: 2 / 4; height: 4px; background: var(--border-soft); border-radius: 2px; overflow: hidden; }
+  .ldwar-team .bar i { display: block; height: 100%; background: var(--green); }
+  .ldwar-team.is-sel .bar i { background: var(--gold); }
+  .ldwar-pos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .ldwar-pos div { background: var(--bg); border-radius: 8px; padding: 6px 8px; }
+  .ldwar-pos .k { font-size: 10px; font-weight: 800; color: var(--faint); }
+  .ldwar-pos .v { font-family: 'Anton', sans-serif; font-size: 18px; color: var(--ink); }
+  .ldwar-pos .s { font-size: 10.5px; color: var(--muted); }
   .ldst-wrap { overflow-x: auto; max-height: 62vh; }
   .ldst-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   .ldst-table th {
@@ -3665,6 +3687,14 @@
   .mg-metric button { font: inherit; font-size: 12px; font-weight: 700; border: 0; background: var(--surface); color: var(--ink); padding: 5px 12px; cursor: pointer; }
   .mg-metric button.active { background: var(--ink); color: var(--surface); }
   .mg-chart { position: relative; }
+  .mg-chart-ctrls { display: flex; flex-wrap: wrap; gap: 8px; }
+  .mg-sc-fit { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 6 4; opacity: 0.6; }
+  .mg-sc-name { font-size: 11px; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+  .mg-sc-corner { font-size: 11px; font-weight: 800; letter-spacing: 0.3px; }
+  .mg-sc-corner.mg-pos { fill: var(--green); } .mg-sc-corner.mg-neg { fill: var(--red); }
+  .mg-bargain { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; font-weight: 700; color: var(--muted); }
+  .mg-bargain button { font: inherit; font-size: 11px; font-weight: 700; border: 1.5px solid var(--ink); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 1px 8px; cursor: pointer; }
+  .mg-bargain button.active { background: var(--ink); color: var(--surface); }
   .mg-curve { display: block; width: 100%; height: auto; }
   .mg-tip { position: absolute; transform: translate(-50%, calc(-100% - 12px)); pointer-events: none; background: var(--ink); color: var(--surface); border-radius: 8px; padding: 7px 10px; box-shadow: 3px 3px 0 rgba(0,0,0,0.18); font-size: 12px; white-space: nowrap; z-index: 3; }
   .mg-tip::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent; border-bottom: 0; border-top-color: var(--ink); }
@@ -5882,7 +5912,7 @@
         <div class="ld-nav-btn" id="ldNavStandings"><span class="ld-nav-title">Standings</span><span class="ld-nav-sub">Record &middot; Points &middot; Playoff Odds</span></div>
         <div class="ld-nav-btn" id="ldNavRecords"><span class="ld-nav-title">Records</span><span class="ld-nav-sub">Transactions &middot; League History</span></div>
         <div class="ld-nav-btn" id="ldNavSettings"><span class="ld-nav-title">Settings</span><span class="ld-nav-sub">Scoring &middot; Roster &middot; League Rules</span></div>
-        <div class="ld-nav-btn"><span class="ld-nav-title">Insights</span><span class="ld-nav-sub">WAR &middot; Value &middot; Trade Activity</span></div>
+        <div class="ld-nav-btn" id="ldNavInsights"><span class="ld-nav-title">Insights</span><span class="ld-nav-sub">WAR by Roster</span></div>
         <div class="ld-nav-btn" id="ldNavNotes"><span class="ld-nav-title">Notes</span><span class="ld-nav-sub">Your Notes &middot; Roster Type</span></div>
       </div>
 
@@ -6057,6 +6087,19 @@
     <div class="ldsch-wrap" id="ldschBody"><div class="exp-loading">Loading schedule...</div></div>
   </div>
 
+  <div class="ldrec-overlay" id="ldwarOverlay" hidden></div>
+  <div class="ldrec-modal ldwar-modal" id="ldwarModal" hidden>
+    <div class="ldrec-head">
+      <div class="ldrec-title">WAR by Roster <span class="ldrec-title-sub" id="ldwarTitleLeague">League</span></div>
+      <div class="ldrec-close" id="ldwarClose">&#10005;</div>
+    </div>
+    <div class="ldwar-ctrls">
+      <label class="sh-field"><span>Team</span><select id="ldwarTeam"></select></label>
+      <label class="sh-field"><span>Season</span><select id="ldwarSeason"></select></label>
+      <div class="mg-metric" id="ldwarMetric"><button type="button" data-m="war" class="active">Total WAR</button><button type="button" data-m="warg">WAR / game</button></div>
+    </div>
+    <div id="ldwarBody"><div class="exp-loading">Loading&hellip;</div></div>
+  </div>
   <div class="ldrec-overlay" id="ldstOverlay" hidden></div>
   <div class="ldrec-modal ldst-modal" id="ldstModal" hidden>
     <div class="ldrec-head">
@@ -23488,6 +23531,130 @@
       if (modal) modal.hidden = true;
     }
 
+    // ---- League Detail -> Insights: WAR by Roster ----
+    // Every team's players scored and priced with this league's own
+    // scoring and lineup (the same model as The Margin), totalled per
+    // team. Opens on your own team; click any team to see theirs.
+    let ldwarEntry = null, ldwarResult = null, ldwarMetric = 'war', ldwarToken = 0;
+    const ldwarEsc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const ldwarSigned = (v, d) => (v > 0 ? '+' : v < 0 ? '&minus;' : '') + Math.abs(v).toFixed(d);
+    function ldwarTeams(entry) {
+      const users = entry.users || [];
+      return (entry.allRosters || []).map(r => {
+        const user = users.find(u => u.user_id === r.owner_id);
+        const meta = (user && user.metadata) || {};
+        return { id: r.roster_id, name: meta.team_name || (user && (user.display_name || user.username)) || ('Team ' + r.roster_id), players: (r.players || []).filter(p => p && p !== '0') };
+      });
+    }
+    function ldwarRender() {
+      const body = document.getElementById('ldwarBody');
+      const teamSel = document.getElementById('ldwarTeam');
+      if (!body || !ldwarEntry || !ldwarResult) return;
+      const key = ldwarMetric, d = key === 'warg' ? 3 : 2;
+      const byId = {};
+      ldwarResult.players.forEach(p => { byId[p.id] = p; });
+      const teams = ldwarTeams(ldwarEntry).map(t => {
+        const ps = t.players.map(id => byId[id]).filter(Boolean);
+        return Object.assign(t, { ps, war: ps.reduce((s, p) => s + p.war, 0) });
+      });
+      // WAR/G for a team is its players' summed per-game WAR -- roughly
+      // what the roster is worth on a week it's healthy.
+      teams.forEach(t => { t.warg = t.ps.reduce((s, p) => s + p.warg, 0); });
+      teams.sort((a, b) => b[key] - a[key]);
+      const selId = Number(teamSel.value);
+      const sel = teams.find(t => t.id === selId) || teams[0];
+      const max = Math.max(0.01, ...teams.map(t => Math.abs(t[key])));
+      const list = teams.map((t, i) => `<div class="ldwar-team${t === sel ? ' is-sel' : ''}" data-team="${t.id}">`
+        + `<span class="rk">${i + 1}</span><span class="nm">${ldwarEsc(t.name)}</span><span class="v">${ldwarSigned(t[key], d)}</span>`
+        + `<span class="bar"><i style="width:${Math.max(0, t[key] / max * 100).toFixed(1)}%"></i></span></div>`).join('');
+      const posTiles = MG_POSITIONS.map(pos => {
+        const ps = sel.ps.filter(p => p.pos === pos);
+        const tot = ps.reduce((s, p) => s + p[key], 0);
+        const rank = teams.map(t => t.ps.filter(p => p.pos === pos).reduce((s, p) => s + p[key], 0)).sort((a, b) => b - a).indexOf(tot) + 1;
+        return `<div><div class="k">${pos}</div><div class="v ${tot < 0 ? 'mg-neg' : ''}">${ldwarSigned(tot, d)}</div><div class="s">${rank ? ordinal(rank) : ''} of ${teams.length}</div></div>`;
+      }).join('');
+      const rows = sel.ps.slice().sort((a, b) => b[key] - a[key]).map(p => `<tr data-row-id="${ldwarEsc(p.id)}">`
+        + `<td class="sh-player-cell" data-player-id="${ldwarEsc(p.id)}"><span class="sh-pos-chip ${p.pos}">${p.pos}</span><b>${ldwarEsc(p.name)}</b></td>`
+        + `<td>${p.pos}${p.posRank}</td><td>${p.gp}</td><td>${p.ppg.toFixed(1)}</td>`
+        + `<td class="${p.war < 0 ? 'mg-neg' : 'mg-pos'}"><b>${ldwarSigned(p.war, 2)}</b></td><td class="${p.warg < 0 ? 'mg-neg' : 'mg-pos'}">${ldwarSigned(p.warg, 3)}</td></tr>`).join('');
+      const idle = sel.players.length - sel.ps.length;
+      body.innerHTML = `<div class="ldwar-grid"><div class="ldwar-teams"><h4>League &mdash; ${key === 'war' ? 'total WAR' : 'WAR per game'}</h4>${list}</div>`
+        + `<div class="ldwar-roster"><h4>${ldwarEsc(sel.name)}</h4><div class="ldwar-pos">${posTiles}</div>`
+        + `<div class="rb-table-wrap"><table class="rb-table"><thead><tr><th class="sh-th-player">PLAYER</th><th>POS RK</th><th>GP</th><th>PPG</th><th>WAR</th><th>WAR/G</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="rb-empty">Nobody on this roster has played yet.</td></tr>'}</tbody></table></div>`
+        + (idle > 0 ? `<p class="mg-chart-note">${idle} more on the roster haven't played a snap this season (rookies, injured, kickers and defenses aren't scored).</p>` : '')
+        + `</div></div>`;
+    }
+    function ordinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+    async function ldwarLoad() {
+      const body = document.getElementById('ldwarBody');
+      const season = Number(document.getElementById('ldwarSeason').value);
+      const token = ++ldwarToken;
+      body.innerHTML = `<div class="exp-loading">Scoring ${season} week by week with this league's settings&hellip;</div>`;
+      try {
+        const result = await window.mgWarForLeague(ldwarEntry.league, season);
+        if (token !== ldwarToken) return;
+        if (!result.players.length) { body.innerHTML = `<p class="rb-empty">No ${season} games have been played yet.</p>`; ldwarResult = null; return; }
+        ldwarResult = result;
+        ldwarRender();
+      } catch (e) {
+        if (token !== ldwarToken) return;
+        body.innerHTML = `<p class="rb-empty">Couldn't load ${season} stats from Sleeper (${ldwarEsc((e && e.message) || e)}).</p>`;
+      }
+    }
+    function ldwarOpen() {
+      const listEl = document.getElementById('ldStandingsList');
+      const leagueId = listEl ? listEl.dataset.leagueId : null;
+      const entry = leagueId && window.sleeperLeagueData ? window.sleeperLeagueData[leagueId] : null;
+      if (!entry || !window.mgWarForLeague) return;
+      ldwarEntry = entry;
+      document.getElementById('ldwarTitleLeague').textContent = entry.league.name;
+      const teamSel = document.getElementById('ldwarTeam');
+      teamSel.innerHTML = ldwarTeams(entry).map(t => `<option value="${t.id}">${ldwarEsc(t.name)}</option>`).join('');
+      if (entry.roster) teamSel.value = String(entry.roster.roster_id);
+      // Last season until this one has games in it.
+      const seasonSel = document.getElementById('ldwarSeason');
+      const cur = Number(entry.league.season) || new Date().getFullYear();
+      const liveWeek = Number(window.__sleeperLiveWeek) || 0;
+      let html = '';
+      for (let y = cur; y >= 2018; y--) html += `<option value="${y}">${y}</option>`;
+      seasonSel.innerHTML = html;
+      seasonSel.value = String(liveWeek > 1 || Number(window.__sleeperLiveSeason) > cur ? cur : cur - 1);
+      document.getElementById('ldwarOverlay').hidden = false;
+      document.getElementById('ldwarModal').hidden = false;
+      ldwarLoad();
+    }
+    function ldwarClose() {
+      document.getElementById('ldwarOverlay').hidden = true;
+      document.getElementById('ldwarModal').hidden = true;
+    }
+    window.ldwarOpenFor = (leagueId) => { const l = document.getElementById('ldStandingsList'); if (l) l.dataset.leagueId = leagueId; ldwarOpen(); };
+    const ldNavInsightsEl = document.getElementById('ldNavInsights');
+    if (ldNavInsightsEl) ldNavInsightsEl.addEventListener('click', ldwarOpen);
+    document.getElementById('ldwarClose').addEventListener('click', ldwarClose);
+    document.getElementById('ldwarOverlay').addEventListener('click', ldwarClose);
+    document.getElementById('ldwarTeam').addEventListener('change', ldwarRender);
+    document.getElementById('ldwarSeason').addEventListener('change', ldwarLoad);
+    document.getElementById('ldwarMetric').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-m]');
+      if (!b) return;
+      ldwarMetric = b.dataset.m;
+      document.querySelectorAll('#ldwarMetric [data-m]').forEach(x => x.classList.toggle('active', x === b));
+      ldwarRender();
+    });
+    document.getElementById('ldwarBody').addEventListener('click', (e) => {
+      const t = e.target.closest('[data-team]');
+      if (t) { document.getElementById('ldwarTeam').value = t.dataset.team; ldwarRender(); return; }
+      const c = e.target.closest('.sh-player-cell[data-player-id]');
+      if (c && ldwarResult && window.openPlayerModalForId) {
+        const p = ldwarResult.players.find(x => String(x.id) === c.dataset.playerId);
+        if (p) {
+          const season = Number(document.getElementById('ldwarSeason').value);
+          ldwarClose();
+          window.openPlayerModalForId(p.id, p.name, p.team, p.pos, { defaultTab: 'gamelog', gameLogSeason: season });
+        }
+      }
+    });
+
     const ldNavStandingsEl = document.getElementById('ldNavStandings');
     if (ldNavStandingsEl) ldNavStandingsEl.addEventListener('click', ldstOpen);
     const ldstCloseEl = document.getElementById('ldstClose');
@@ -35561,7 +35728,7 @@
 
     const FIRST_SEASON = 2018;
     const weekCache = {};
-    const state = { pos: 'ALL', sortKey: 'war', sortDir: -1, metric: 'war', result: null, meta: {} };
+    const state = { pos: 'ALL', sortKey: 'war', sortDir: -1, metric: 'war', view: 'rank', bargain: 'tl', result: null, meta: {} };
 
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -35691,9 +35858,87 @@
     // starting, and how steep it falls says how much it costs to wait on
     // one -- the question a ranked list of names can't answer.
     const MG_CURVE_COLOR = { QB: 'var(--red)', RB: 'var(--green)', WR: 'var(--blue)', TE: 'var(--gold)' };
+    function chartHeadHtml(title) {
+      const key = state.metric, v = state.view;
+      return `<div class="mg-chart-head"><h3>${title}</h3><div class="mg-chart-ctrls">`
+        + `<div class="mg-metric"><button type="button" data-chart-view="rank" class="${v === 'rank' ? 'active' : ''}">Position rank</button>`
+        + `<button type="button" data-chart-view="value" class="${v === 'value' ? 'active' : ''}">Trade value</button></div>`
+        + `<div class="mg-metric"><button type="button" data-metric="war" class="${key === 'war' ? 'active' : ''}">Total WAR</button>`
+        + `<button type="button" data-metric="warg" class="${key === 'warg' ? 'active' : ''}">WAR / game</button></div></div></div>`;
+    }
+
+    // WAR against what the market charges for him (The Board's Base 1
+    // value). The dashed curve is the going rate -- the WAR a player at
+    // that price usually produces -- so distance above it is production
+    // you'd be buying cheap, and distance below it is price you'd be
+    // paying for nothing yet. Value runs on a square-root scale: most of
+    // the league is priced under 0.5 and would otherwise be one smear.
+    function renderValueChart(rows) {
+      const key = state.metric;
+      const dict = window.__sleeperPlayerDict || {};
+      const pts = rows.map(r => ({ r, val: ppValueForPlayerId(r.id, dict) })).filter(p => p.val != null && p.val > 0);
+      const title = (key === 'war' ? 'Total WAR' : 'WAR per game') + ' vs. trade value';
+      if (pts.length < 3) {
+        chartEl.innerHTML = chartHeadHtml(title) + '<p class="rb-empty">Not enough of these players have a trade value on The Board to chart.</p>';
+        return;
+      }
+      const W = 760, H = 340, L = 46, R = 16, T = 14, B = 34;
+      const flip = state.bargain === 'tr';
+      const vMax = Math.max(...pts.map(p => p.val));
+      const sx = (v) => Math.sqrt(v / vMax);
+      const x = (v) => L + (flip ? 1 - sx(v) : sx(v)) * (W - L - R);
+      const ys = pts.map(p => p.r[key]);
+      const hi = Math.max(0.01, ...ys), lo = Math.min(0, ...ys);
+      const zeroFrac = lo < 0 ? 0.78 : 1, plotH = H - T - B;
+      const y = (v) => v >= 0 ? T + (hi - v) / hi * plotH * zeroFrac : T + plotH * zeroFrac + (v / lo) * plotH * (1 - zeroFrac);
+      // Going rate: least squares of WAR on sqrt(value).
+      const n = pts.length;
+      const mx = pts.reduce((t, p) => t + sx(p.val), 0) / n, my = ys.reduce((t, v) => t + v, 0) / n;
+      let sxy = 0, sxx = 0;
+      pts.forEach(p => { const dx = sx(p.val) - mx; sxy += dx * (p.r[key] - my); sxx += dx * dx; });
+      const slope = sxx ? sxy / sxx : 0, icpt = my - slope * mx;
+      const fit = (v) => icpt + slope * sx(v);
+      let curve = '';
+      for (let k = 0; k <= 40; k++) {
+        const v = vMax * (k / 40) * (k / 40);
+        const fy = Math.max(lo, Math.min(hi, fit(v)));
+        curve += `${k ? 'L' : 'M'}${x(v).toFixed(1)},${y(fy).toFixed(1)}`;
+      }
+      const raw = hi / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+      const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(v => v >= raw) || raw;
+      const yt = [];
+      for (let v = 0; v <= hi + 1e-9; v += step) yt.push(v);
+      if (lo < 0) yt.push(lo);
+      const grid = yt.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="mg-cv-grid"/>`
+        + `<text x="${L - 6}" y="${(y(v) + 3).toFixed(1)}" class="mg-cv-axis" text-anchor="end">${signed(v, key === 'warg' ? 2 : 1)}</text>`).join('');
+      const xt = [0.05, 0.25, 0.5, 1, 2, 3, 4].filter(v => v <= vMax)
+        .map(v => `<text x="${x(v).toFixed(1)}" y="${H - B + 16}" class="mg-cv-axis" text-anchor="middle">${v}</text>`).join('');
+      // The furthest above and below the going rate get their names on the chart.
+      pts.forEach(p => { p.resid = p.r[key] - fit(p.val); });
+      const named = new Set(pts.slice().sort((a, b) => b.resid - a.resid).slice(0, 4)
+        .concat(pts.slice().sort((a, b) => a.resid - b.resid).slice(0, 3)).map(p => p.r.id));
+      const dots = pts.map(p => `<circle class="mg-pt" data-player-id="${esc(p.r.id)}" data-rank="${p.r.pos}${p.r.posRank}" data-value="${p.val.toFixed(2)}" cx="${x(p.val).toFixed(1)}" cy="${y(p.r[key]).toFixed(1)}" r="4" fill="${MG_CURVE_COLOR[p.r.pos]}"></circle>`).join('');
+      const names = pts.filter(p => named.has(p.r.id)).map(p => {
+        const px = x(p.val), anchor = px > W * 0.75 ? 'end' : 'start', dx = anchor === 'end' ? -7 : 7;
+        return `<text x="${(px + dx).toFixed(1)}" y="${(y(p.r[key]) + 4).toFixed(1)}" class="mg-sc-name" text-anchor="${anchor}">${esc(p.r.name.split(' ').slice(-1)[0])}</text>`;
+      }).join('');
+      const buyX = flip ? W - R - 6 : L + 6, sellX = flip ? L + 6 : W - R - 6;
+      const corners = `<text x="${buyX}" y="${T + 12}" class="mg-sc-corner mg-pos" text-anchor="${flip ? 'end' : 'start'}">&#9650; producing above his price &mdash; buy</text>`
+        + `<text x="${sellX}" y="${(y(Math.max(lo, 0)) - 8).toFixed(1)}" class="mg-sc-corner mg-neg" text-anchor="${flip ? 'start' : 'end'}">priced above his production &mdash; sell &#9660;</text>`;
+      chartEl.innerHTML = chartHeadHtml(title)
+        + `<svg class="mg-curve" viewBox="0 0 ${W} ${H}" role="img" aria-label="WAR against trade value">`
+        + grid + (lo < 0 ? `<line x1="${L}" x2="${W - R}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" class="mg-cv-zero"/>` : '')
+        + `<path d="${curve}" fill="none" class="mg-sc-fit"/>` + xt
+        + `<text x="${(L + W - R) / 2}" y="${H - 2}" class="mg-cv-axis" text-anchor="middle">${flip ? '&larr; pricier' : 'cheaper'} &middot; trade value (Base 1s) &middot; ${flip ? 'cheaper &rarr;' : 'pricier &rarr;'}</text>`
+        + corners + dots + names + '</svg><div class="mg-tip" hidden></div>'
+        + `<div class="mg-chart-note"><span class="mg-bargain">Bargains in the <button type="button" data-bargain="tl" class="${flip ? '' : 'active'}">top left</button><button type="button" data-bargain="tr" class="${flip ? 'active' : ''}">top right</button></span> `
+        + `The dashed curve is the going rate &mdash; the ${key === 'war' ? 'WAR' : 'WAR per game'} a player at that price usually gives you. Above it, he's out-producing his price; below it, the price is paying for something he hasn't done yet (youth, a role coming). Only players with a value on The Board are shown.</div>`;
+    }
+
     function renderChart(rows) {
       if (!rows.length) { chartEl.hidden = true; return; }
       chartEl.hidden = false;
+      if (state.view === 'value') { renderValueChart(rows); return; }
       const key = state.metric;
       const d = key === 'warg' ? 3 : 2;
       const positions = MG_POSITIONS.filter(p => rows.some(r => r.pos === p));
@@ -35746,9 +35991,7 @@
         }).join('');
       const ends = labels.map(({ s, ly }) => `<text x="${W - R + 8}" y="${(ly + 4).toFixed(1)}" class="mg-cv-end" fill="${MG_CURVE_COLOR[s.pos]}">${s.pos}</text>`).join('');
       const summary = series.map(s => `<b style="color:${MG_CURVE_COLOR[s.pos]}">${s.pos}</b> ${s.cross === s.total ? 'all' : s.cross} above replacement`).join(' &middot; ');
-      chartEl.innerHTML = `<div class="mg-chart-head"><h3>${key === 'war' ? 'Total WAR' : 'WAR per game'} by position rank</h3>`
-        + `<div class="mg-metric"><button type="button" data-metric="war" class="${key === 'war' ? 'active' : ''}">Total WAR</button>`
-        + `<button type="button" data-metric="warg" class="${key === 'warg' ? 'active' : ''}">WAR / game</button></div></div>`
+      chartEl.innerHTML = chartHeadHtml(`${key === 'war' ? 'Total WAR' : 'WAR per game'} by position rank`)
         + `<svg class="mg-curve" viewBox="0 0 ${W} ${H}" role="img" aria-label="WAR by position rank for each position">`
         + grid + `<line x1="${L}" x2="${W - R}" y1="${zeroY}" y2="${zeroY}" class="mg-cv-zero"/>`
         + `<text x="${L + 4}" y="${(+zeroY - 5).toFixed(1)}" class="mg-cv-axis">replacement</text>`
@@ -35832,6 +36075,20 @@
       draw();
     }
 
+    // WAR for one league's own scoring and lineup, for League Detail's
+    // Insights. Shares the week cache with this page.
+    window.mgWarForLeague = async (league, season) => {
+      const nWeeks = season >= 2021 ? 18 : 17;
+      const live = season >= (Number(window.__sleeperLiveSeason) || 0);
+      const wk = [];
+      for (let w = 1; w <= nWeeks; w++) wk.push(w);
+      const lists = await Promise.all(wk.map(w => loadWeek(season, w, live)));
+      const { weeks, meta } = shapeWeeks(lists, league.scoring_settings || SB_HOUSE_SCORING);
+      const result = mgComputeWar(weeks, mgLineupFor(league));
+      result.players.forEach(p => Object.assign(p, meta[p.id]));
+      return result;
+    };
+
     // Tests feed weekly lists straight in, skipping the network.
     window.mgRenderFromWeeks = (lists) => {
       fillSeasons(); fillScoringOptions();
@@ -35854,7 +36111,8 @@
       const v = r[key];
       tip.innerHTML = `<div class="mg-tip-name"><span class="sh-pos-chip ${r.pos}">${r.pos}</span>${esc(r.name)}</div>`
         + `<div class="mg-tip-row"><span>${esc(dot.dataset.rank)}${r.team ? ' &middot; ' + esc(r.team) : ''}</span>`
-        + `<b class="${v < 0 ? 'mg-neg' : 'mg-pos'}">${signed(v, key === 'warg' ? 3 : 2)} ${key === 'warg' ? 'WAR/G' : 'WAR'}</b></div>`;
+        + `<b class="${v < 0 ? 'mg-neg' : 'mg-pos'}">${signed(v, key === 'warg' ? 3 : 2)} ${key === 'warg' ? 'WAR/G' : 'WAR'}</b></div>`
+        + (dot.dataset.value ? `<div class="mg-tip-row"><span>Trade value</span><b>${esc(dot.dataset.value)}</b></div>` : '');
       tip.hidden = false;
       const box = chartEl.getBoundingClientRect(), pt = dot.getBoundingClientRect();
       const left = Math.min(Math.max(pt.left - box.left + pt.width / 2, 90), box.width - 90);
@@ -35879,6 +36137,10 @@
       }
     }
     chartEl.addEventListener('click', (e) => {
+      const vw = e.target.closest('[data-chart-view]');
+      if (vw) { state.view = vw.dataset.chartView; draw(); return; }
+      const bg = e.target.closest('[data-bargain]');
+      if (bg) { state.bargain = bg.dataset.bargain; draw(); return; }
       const m = e.target.closest('[data-metric]');
       if (m) { state.metric = state.sortKey = m.dataset.metric; state.sortDir = -1; draw(); return; }
       const d = e.target.closest('.mg-pt');
