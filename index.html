@@ -29777,75 +29777,130 @@
     };
   }
 
-  // What this game has been worth to you so far, in projected WINS.
+  // What each game has been worth to you so far, in projected WINS.
   //
   // The counts beside it say how many of your players are in the game.
   // They do not say whether it is going well, and that is the thing you
   // actually want off a scoreboard: five starters in a game is good news
   // or bad news depending entirely on what they are doing.
   //
-  // So: every player of yours in this game is compared to what he was
-  // PROJECTED to have scored by this point -- his live projection against
-  // his pregame one, the same over-expected the box score uses -- and the
-  // same is done for whoever is starting against you. The net is the
-  // points your matchup margin has moved because of this game, in each
-  // league separately, and sbSwingFor turns that into win probability.
-  // Summed across your leagues and divided by 100, that is a number of
-  // wins, which is the same unit as the projected record.
+  // The arithmetic is the one already used everywhere else for this --
+  // the same over-expected the box score and gcMatchupImpact use. Each of
+  // your players is compared to what he was PROJECTED to have scored by
+  // now: his live projection (sbEstimateLiveProjection, which knows how
+  // far into his game he is) against his pregame one. Same for whoever is
+  // starting against you. The net is how far this game has moved your
+  // matchup margin in each league, and sbSwingFor turns that into win
+  // probability. Summed across leagues and divided by 100 it is a number
+  // of wins -- the same unit as the projected record.
   //
-  // Computed per league rather than per player on purpose: win
-  // probability is not linear in points, so adding up each player's own
-  // impact overstates a game where several of your players went off
-  // together.
+  // Per league rather than per player: win probability is not linear in
+  // points, so adding up each player's own impact overstates a game where
+  // several of your players went off together.
   //
-  // Null when nothing can be computed -- no stake, no projections, or a
-  // settled matchup, which cannot swing.
-  function gcGameWinsDelta(game, dict) {
+  // ---- Why this is one function over the whole slate -------------------
+  //
+  // It used to be gcGameWinsDelta(game), called once per card. Each call
+  // walked the entire exposure index -- every player in every league --
+  // looking for the handful in that one game. A fourteen-game slate
+  // therefore walked it fourteen times, twice per render cycle, and made
+  // the whole press box crawl.
+  //
+  // Now the index is walked ONCE. Each player knows his team, each team
+  // maps to one event, so a single pass can bucket every league's net
+  // delta by event. Same numbers, a fourteenth of the work. The
+  // projection lookup is memoised per player and league on top, since a
+  // player in nine of your leagues was being re-scored nine times.
+  //
+  // Returns a Map of eventId -> wins. Empty when there is nothing to say.
+  function gcWinsByEvent(games, dict) {
+    const out = new Map();
+    // Live week only. A past week's chip would need that week's lineups
+    // and that week's matchup for every league, which is a fetch per
+    // league per week -- the thing that made this page slow in the first
+    // place. The week being played is the only one where the question
+    // "how is this going" is even being asked.
+    if (window.__gcIsLiveWeek === false) return out;
     const d = dict || window.__sleeperPlayerDict || {};
     const espnGameData = window.__gcEspnGameData || null;
-    const abbrs = [game.away && game.away.abbr, game.home && game.home.abbr].filter(Boolean);
-    if (!abbrs.length) return null;
-    const inGame = new Set(abbrs);
+    if (!espnGameData) return out;
     const index = (typeof sbExposureIndex === 'function') ? sbExposureIndex() : null;
-    if (!index || !index.size) return null;
-    const byLeague = new Map();
-    let any = false;
+    if (!index || !index.size) return out;
+
+    // team abbreviation -> the event it is playing in.
+    const eventOfTeam = new Map();
+    (games || []).forEach(g => {
+      if (!g || !g.eventId) return;
+      if (g.away && g.away.abbr) eventOfTeam.set(g.away.abbr, g.eventId);
+      if (g.home && g.home.abbr) eventOfTeam.set(g.home.abbr, g.eventId);
+    });
+    if (!eventOfTeam.size) return out;
+
+    // eventId -> leagueId -> { state, net }
+    const byEvent = new Map();
+    // Per-team game state, resolved once rather than per player.
+    const teamState = new Map();
+    const stateOf = (team) => {
+      let st = teamState.get(team);
+      if (st === undefined) {
+        st = {
+          started: sbGameStartedForTeam(team, espnGameData),
+          finished: sbGameFinishedForTeam(team, espnGameData),
+          elapsed: sbGameElapsedFraction(team, espnGameData),
+        };
+        teamState.set(team, st);
+      }
+      return st;
+    };
+    const projCache = new Map();
+    const projOf = (pid, league) => {
+      const k = pid + '|' + league.league_id;
+      let v = projCache.get(k);
+      if (v === undefined) { v = sbProjectionFor(pid, null, league); projCache.set(k, v); }
+      return v;
+    };
+
     index.forEach((rows, pid) => {
       const p = d[pid];
-      if (!p || !p.team || !inGame.has(p.team)) return;
-      const started = sbGameStartedForTeam(p.team, espnGameData);
-      if (!started) return;
-      const finished = sbGameFinishedForTeam(p.team, espnGameData);
-      const elapsed = sbGameElapsedFraction(p.team, espnGameData);
+      if (!p || !p.team) return;
+      const eventId = eventOfTeam.get(p.team);
+      if (!eventId) return;
+      const st = stateOf(p.team);
+      if (!st.started) return;
+      const inactive = sbCountAsInactive(p, espnGameData);
       rows.forEach((row) => {
         const e = row.entry;
         if (!e || !e.myMatchup || !e.oppMatchup) return;
-        const origProj = sbProjectionFor(pid, null, e.league);
+        const origProj = projOf(pid, e.league);
         if (origProj == null) return;
         const pointsMap = (row.onMySide ? e.myMatchup.players_points : e.oppMatchup.players_points) || {};
         const pts = Number(pointsMap[pid]) || 0;
-        const baseline = sbCountAsInactive(p, espnGameData) ? 0 : origProj;
-        const liveProj = sbEstimateLiveProjection(pts, baseline, elapsed, started, finished,
+        const liveProj = sbEstimateLiveProjection(pts, inactive ? 0 : origProj,
+          st.elapsed, st.started, st.finished,
           { position: p.position, team: p.team, espnGameData });
         if (liveProj == null) return;
         const delta = liveProj - origProj;
-        if (!Number.isFinite(delta)) return;
+        if (!Number.isFinite(delta) || delta === 0) return;
+        let leagues = byEvent.get(eventId);
+        if (!leagues) { leagues = new Map(); byEvent.set(eventId, leagues); }
         const key = e.league.league_id;
-        const cur = byLeague.get(key) || { state: row.state, net: 0 };
+        const cur = leagues.get(key) || { state: row.state, net: 0 };
         cur.net += row.onMySide ? delta : -delta;
-        byLeague.set(key, cur);
-        any = true;
+        leagues.set(key, cur);
       });
     });
-    if (!any) return null;
-    let wins = 0;
-    byLeague.forEach(({ state, net }) => {
-      if (!state || !(Number(state.sigma) > 0)) return;
-      wins += sbSwingFor(state, net, true) / 100;
+
+    byEvent.forEach((leagues, eventId) => {
+      let wins = 0;
+      leagues.forEach(({ state, net }) => {
+        if (!state || !(Number(state.sigma) > 0)) return;
+        wins += sbSwingFor(state, net, true) / 100;
+      });
+      out.set(eventId, wins);
     });
-    return wins;
+    return out;
   }
-  window.gcGameWinsDelta = gcGameWinsDelta;
+  window.gcWinsByEvent = gcWinsByEvent;
   // Exposed so the chip's formatting and its noise floor can be asserted
   // without a live Sunday to produce a real swing.
   window.__gcWinsChip = (wins) => gcWinsDeltaHtml(wins);
@@ -31006,6 +31061,10 @@
     const livePill = document.getElementById('gcLivePill');
     if (livePill) livePill.hidden = !games.some(g => g.state === 'in');
 
+    // One pass over every league's lineups for the whole slate, before any
+    // card is built. See gcWinsByEvent.
+    const winsByEvent = gcWinsByEvent(games, dict);
+
     const cardHtml = (g) => {
       const exp = gcGameExposure(g, dict);
       // A finished game dims whoever lost, the way a scoreboard does.
@@ -31021,7 +31080,7 @@
         </div>`;
       return `
       <div class="gc-card${g.eventId === window.__gcOpenEventId ? ' active' : ''}" data-gc-event="${sbFieldEsc(g.eventId)}">
-        <div class="gc-card-exposure">${gcExposureHtml(exp, gcGameWinsDelta(g, dict))}</div>
+        <div class="gc-card-exposure">${gcExposureHtml(exp, winsByEvent.get(g.eventId))}</div>
         <div class="gc-card-top">
           <span class="gc-card-state${g.state === 'in' ? ' gc-live' : ''}">${gcStateLabel(g)}</span>
           <span class="gc-card-net">${sbFieldEsc(g.broadcast || '')}</span>
@@ -31858,6 +31917,31 @@
     window.__gcStatsMap = statsMap;
     // Everything a click needs, so a click never has to fetch.
     window.__gcCache = { sorted, dict, statsMap, projMap, week, season };
+
+    // Draw the cards AGAIN, but only when doing so would change them.
+    //
+    // The first pass above runs before this await, which is right for the
+    // scores: they come off the games list and should paint the instant it
+    // lands rather than waiting on Sleeper. But the wins figure needs
+    // __gcEspnGameData to know whether a game has kicked off and how far
+    // through it is, and __gcWeek to resolve lineups -- both assigned on
+    // the lines above. So on the first pass of a session the wins chip has
+    // nothing to work with and is not emitted at all, which is the bug
+    // where it only appeared after clicking back to this week.
+    //
+    // Rebuilding the whole grid unconditionally every poll is the wrong
+    // fix: it is a full innerHTML replacement of every card, twice a
+    // minute, for numbers that usually have not moved. So the wins are
+    // computed here and the rebuild happens only when they actually
+    // differ from what is on screen -- which on a quiet evening is never,
+    // and during a live afternoon is exactly as often as the numbers
+    // change.
+    const winsSig = Array.from(gcWinsByEvent(sorted, dict).entries())
+      .map(([id, w]) => id + ':' + w.toFixed(2)).sort().join('|');
+    if (winsSig !== window.__gcWinsSig) {
+      window.__gcWinsSig = winsSig;
+      gcRenderGrid(sorted, dict);
+    }
 
     const open = sorted.find(g => g.eventId === window.__gcOpenEventId);
     if (open) {
