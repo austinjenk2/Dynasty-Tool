@@ -3690,11 +3690,6 @@
   .mg-chart-ctrls { display: flex; flex-wrap: wrap; gap: 8px; }
   .mg-sc-fit { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 6 4; opacity: 0.6; }
   .mg-sc-name { font-size: 11px; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
-  .mg-sc-corner { font-size: 11px; font-weight: 800; letter-spacing: 0.3px; }
-  .mg-sc-corner.mg-pos { fill: var(--green); } .mg-sc-corner.mg-neg { fill: var(--red); }
-  .mg-bargain { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; font-weight: 700; color: var(--muted); }
-  .mg-bargain button { font: inherit; font-size: 11px; font-weight: 700; border: 1.5px solid var(--ink); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 1px 8px; cursor: pointer; }
-  .mg-bargain button.active { background: var(--ink); color: var(--surface); }
   .mg-curve { display: block; width: 100%; height: auto; }
   .mg-tip { position: absolute; transform: translate(-50%, calc(-100% - 12px)); pointer-events: none; background: var(--ink); color: var(--surface); border-radius: 8px; padding: 7px 10px; box-shadow: 3px 3px 0 rgba(0,0,0,0.18); font-size: 12px; white-space: nowrap; z-index: 3; }
   .mg-tip::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent; border-bottom: 0; border-top-color: var(--ink); }
@@ -35728,7 +35723,7 @@
 
     const FIRST_SEASON = 2018;
     const weekCache = {};
-    const state = { pos: 'ALL', sortKey: 'war', sortDir: -1, metric: 'war', view: 'rank', bargain: 'tl', result: null, meta: {} };
+    const state = { pos: 'ALL', sortKey: 'war', sortDir: -1, metric: 'war', view: 'rank', result: null, meta: {} };
 
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -35883,10 +35878,9 @@
         return;
       }
       const W = 760, H = 340, L = 46, R = 16, T = 14, B = 34;
-      const flip = state.bargain === 'tr';
       const vMax = Math.max(...pts.map(p => p.val));
       const sx = (v) => Math.sqrt(v / vMax);
-      const x = (v) => L + (flip ? 1 - sx(v) : sx(v)) * (W - L - R);
+      const x = (v) => L + sx(v) * (W - L - R);
       const ys = pts.map(p => p.r[key]);
       const hi = Math.max(0.01, ...ys), lo = Math.min(0, ...ys);
       const zeroFrac = lo < 0 ? 0.78 : 1, plotH = H - T - B;
@@ -35922,16 +35916,13 @@
         const px = x(p.val), anchor = px > W * 0.75 ? 'end' : 'start', dx = anchor === 'end' ? -7 : 7;
         return `<text x="${(px + dx).toFixed(1)}" y="${(y(p.r[key]) + 4).toFixed(1)}" class="mg-sc-name" text-anchor="${anchor}">${esc(p.r.name.split(' ').slice(-1)[0])}</text>`;
       }).join('');
-      const buyX = flip ? W - R - 6 : L + 6, sellX = flip ? L + 6 : W - R - 6;
-      const corners = `<text x="${buyX}" y="${T + 12}" class="mg-sc-corner mg-pos" text-anchor="${flip ? 'end' : 'start'}">&#9650; producing above his price &mdash; buy</text>`
-        + `<text x="${sellX}" y="${(y(Math.max(lo, 0)) - 8).toFixed(1)}" class="mg-sc-corner mg-neg" text-anchor="${flip ? 'start' : 'end'}">priced above his production &mdash; sell &#9660;</text>`;
       chartEl.innerHTML = chartHeadHtml(title)
         + `<svg class="mg-curve" viewBox="0 0 ${W} ${H}" role="img" aria-label="WAR against trade value">`
         + grid + (lo < 0 ? `<line x1="${L}" x2="${W - R}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" class="mg-cv-zero"/>` : '')
         + `<path d="${curve}" fill="none" class="mg-sc-fit"/>` + xt
-        + `<text x="${(L + W - R) / 2}" y="${H - 2}" class="mg-cv-axis" text-anchor="middle">${flip ? '&larr; pricier' : 'cheaper'} &middot; trade value (Base 1s) &middot; ${flip ? 'cheaper &rarr;' : 'pricier &rarr;'}</text>`
-        + corners + dots + names + '</svg><div class="mg-tip" hidden></div>'
-        + `<div class="mg-chart-note"><span class="mg-bargain">Bargains in the <button type="button" data-bargain="tl" class="${flip ? '' : 'active'}">top left</button><button type="button" data-bargain="tr" class="${flip ? 'active' : ''}">top right</button></span> `
+        + `<text x="${(L + W - R) / 2}" y="${H - 2}" class="mg-cv-axis" text-anchor="middle">cheaper &middot; trade value (Base 1s) &middot; pricier &rarr;</text>`
+        + dots + names + '</svg><div class="mg-tip" hidden></div>'
+        + `<div class="mg-chart-note">`
         + `The dashed curve is the going rate &mdash; the ${key === 'war' ? 'WAR' : 'WAR per game'} a player at that price usually gives you. Above it, he's out-producing his price; below it, the price is paying for something he hasn't done yet (youth, a role coming). Only players with a value on The Board are shown.</div>`;
     }
 
@@ -36139,8 +36130,6 @@
     chartEl.addEventListener('click', (e) => {
       const vw = e.target.closest('[data-chart-view]');
       if (vw) { state.view = vw.dataset.chartView; draw(); return; }
-      const bg = e.target.closest('[data-bargain]');
-      if (bg) { state.bargain = bg.dataset.bargain; draw(); return; }
       const m = e.target.closest('[data-metric]');
       if (m) { state.metric = state.sortKey = m.dataset.metric; state.sortDir = -1; draw(); return; }
       const d = e.target.closest('.mg-pt');
