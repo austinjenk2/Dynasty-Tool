@@ -3664,7 +3664,14 @@
   .mg-metric { display: inline-flex; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; }
   .mg-metric button { font: inherit; font-size: 12px; font-weight: 700; border: 0; background: var(--surface); color: var(--ink); padding: 5px 12px; cursor: pointer; }
   .mg-metric button.active { background: var(--ink); color: var(--surface); }
+  .mg-chart { position: relative; }
   .mg-curve { display: block; width: 100%; height: auto; }
+  .mg-tip { position: absolute; transform: translate(-50%, calc(-100% - 12px)); pointer-events: none; background: var(--ink); color: var(--surface); border-radius: 8px; padding: 7px 10px; box-shadow: 3px 3px 0 rgba(0,0,0,0.18); font-size: 12px; white-space: nowrap; z-index: 3; }
+  .mg-tip::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent; border-bottom: 0; border-top-color: var(--ink); }
+  .mg-tip-name { font-weight: 800; font-size: 13px; margin-bottom: 3px; }
+  .mg-tip-name .sh-pos-chip { margin-right: 6px; }
+  .mg-tip-row { display: flex; justify-content: space-between; gap: 14px; }
+  .mg-tip .mg-pos { color: #9fe0b4; } .mg-tip .mg-neg { color: #ffb3a8; }
   .mg-cv-grid { stroke: var(--border-soft); stroke-width: 1; }
   .mg-cv-zero { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 5 4; }
   .mg-cv-axis { font-size: 10.5px; fill: var(--faint); font-weight: 600; }
@@ -12837,7 +12844,7 @@
   <div data-view="margin">
     <div class="page-title">
       <h1>The Margin</h1>
-      <p>Wins above replacement. Every week a player plays, his score goes into an average starting lineup in place of a replacement-level starter at his position, and The Margin measures how much that moves the lineup's chance of winning the week against an average opponent. Add those weeks up and you get <b>WAR</b>. <b>WAR/G</b> divides by games played only. Replacement level and lineup size come from the chosen league's own roster settings and team count; The Desk Default uses 12 teams with 1 QB, 2 RB, 3 WR, 1 TE and 1 FLEX. Negative WAR means he was worse than a player you could have picked up.</p>
+      <p>Wins above replacement. Every week a player plays, his score goes into an average starting lineup in place of a replacement-level starter at his position, and The Margin measures how much that moves the lineup's chance of winning the week against an average opponent. Add those weeks up and you get <b>WAR</b>. <b>WAR/G</b> divides by games played only. Replacement level and lineup size come from the chosen league's own roster settings and team count; The Desk Default uses 12 teams with 1 QB, 2 RB, 3 WR, 1 TE, 1 FLEX and 1 superflex — and a superflex always goes to a quarterback, so QB replacement is the QB25. Negative WAR means he was worse than a player you could have picked up.</p>
     </div>
 
     <div class="sh-toolbar">
@@ -35427,7 +35434,8 @@
   // next three players past the last starter define replacement. The Desk
   // Default uses 12 teams of 1 QB / 2 RB / 3 WR / 1 TE / 1 FLEX.
   const MG_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
-  const MG_DEFAULT_LINEUP = { teams: 12, slots: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 } };
+  // Superflex by default -- a dynasty league without one is the exception.
+  const MG_DEFAULT_LINEUP = { teams: 12, slots: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1, SUPER_FLEX: 1 } };
   const MG_FLEX_ELIGIBLE = {
     WRRB_FLEX: ['RB', 'WR'],
     REC_FLEX: ['WR', 'TE'],
@@ -35478,7 +35486,11 @@
     ['WRRB_FLEX', 'REC_FLEX', 'FLEX', 'SUPER_FLEX'].forEach(slot => {
       for (let n = (lineup.slots[slot] || 0) * teams; n > 0; n--) {
         let best = null;
-        MG_FLEX_ELIGIBLE[slot].forEach(pos => {
+        // A superflex goes to a quarterback whenever there is one to put
+        // there -- that's what every manager does, so QB replacement in a
+        // 12-team superflex is the QB25, not the QB13.
+        if (slot === 'SUPER_FLEX' && byPos.QB[starters.QB]) best = byPos.QB[starters.QB];
+        else MG_FLEX_ELIGIBLE[slot].forEach(pos => {
           const cand = byPos[pos][starters[pos]];
           if (cand && (!best || cand.pts > best.pts)) best = cand;
         });
@@ -35685,12 +35697,19 @@
       const hi = Math.max(0.01, ...vals), lo = Math.min(0, ...vals);
       const W = 760, H = 300, L = 46, R = 70, T = 12, B = 30;
       const x = (i) => L + (depth <= 1 ? 0 : i / (depth - 1)) * (W - L - R);
-      const y = (v) => T + (hi - v) / ((hi - lo) || 1) * (H - T - B);
+      // Zero sits low: the top ~78% of the plot is the players worth
+      // starting, the strip under the dashed line still shows who's below.
+      const zeroFrac = lo < 0 ? 0.78 : 1;
+      const plotH = H - T - B;
+      const y = (v) => v >= 0
+        ? T + (hi - v) / hi * plotH * zeroFrac
+        : T + plotH * zeroFrac + (v / lo) * plotH * (1 - zeroFrac);
       // Round-number gridlines (0.5, 1, 2...) rather than five even slices.
-      const raw = (hi - lo) / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+      const raw = hi / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
       const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(v => v >= raw) || raw;
       const ticks = [];
-      for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) ticks.push(Math.abs(v) < 1e-9 ? 0 : v);
+      for (let v = 0; v <= hi + 1e-9; v += step) ticks.push(v);
+      if (lo < 0) ticks.push(lo);
       const grid = ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="mg-cv-grid"/>`
         + `<text x="${L - 6}" y="${(y(v) + 3).toFixed(1)}" class="mg-cv-axis" text-anchor="end">${signed(v, key === 'warg' ? 2 : 1)}</text>`).join('');
       const xTicks = [1, 6, 12, 18, 24, 30, 36, 42, 48].filter(n => n <= depth)
@@ -35702,8 +35721,7 @@
       const lines = series.map(s => {
         const c = MG_CURVE_COLOR[s.pos];
         const path = s.pts.map((r, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(r[key]).toFixed(1)}`).join('');
-        const dots = s.pts.map((r, i) => `<circle class="mg-pt" data-player-id="${esc(r.id)}" cx="${x(i).toFixed(1)}" cy="${y(r[key]).toFixed(1)}" r="3.5" fill="${c}">`
-          + `<title>${s.pos}${i + 1} ${esc(r.name)}: ${signed(r[key], d).replace('&minus;', '−')}</title></circle>`).join('');
+        const dots = s.pts.map((r, i) => `<circle class="mg-pt" data-player-id="${esc(r.id)}" data-rank="${s.pos}${i + 1}" cx="${x(i).toFixed(1)}" cy="${y(r[key]).toFixed(1)}" r="3.5" fill="${c}"></circle>`).join('');
         return `<path d="${path}" fill="none" stroke="${c}" stroke-width="2.5" stroke-linejoin="round"/>${dots}`;
       }).join('');
       // Where each line crosses replacement: a tick on the dashed line and
@@ -35723,7 +35741,7 @@
         + grid + `<line x1="${L}" x2="${W - R}" y1="${zeroY}" y2="${zeroY}" class="mg-cv-zero"/>`
         + `<text x="${L + 4}" y="${(+zeroY - 5).toFixed(1)}" class="mg-cv-axis">replacement</text>`
         + xTicks + `<text x="${(L + W - R) / 2}" y="${H - 2}" class="mg-cv-axis" text-anchor="middle">rank at position</text>`
-        + lines + crossings + ends + '</svg>'
+        + lines + crossings + ends + '</svg><div class="mg-tip" hidden></div>'
         + `<div class="mg-chart-note">${summary}. Where a line drops through the dashed line is where that position stops being worth a lineup spot; a steep line means waiting on that position costs you. Hover a dot for the player, click to open him.</div>`;
     }
 
@@ -35812,14 +35830,33 @@
     };
 
     // Hovering a bar lights its row and vice versa.
+    // The card that follows a hovered dot: name, rank at position, and the
+    // number the toggle is on.
+    function showTip(dot, on) {
+      const tip = chartEl.querySelector('.mg-tip');
+      if (!tip) return;
+      if (!on) { tip.hidden = true; return; }
+      const r = state.result && state.result.players.find(p => String(p.id) === dot.dataset.playerId);
+      if (!r) return;
+      const key = state.metric;
+      const v = r[key];
+      tip.innerHTML = `<div class="mg-tip-name"><span class="sh-pos-chip ${r.pos}">${r.pos}</span>${esc(r.name)}</div>`
+        + `<div class="mg-tip-row"><span>${esc(dot.dataset.rank)}${r.team ? ' &middot; ' + esc(r.team) : ''}</span>`
+        + `<b class="${v < 0 ? 'mg-neg' : 'mg-pos'}">${signed(v, key === 'warg' ? 3 : 2)} ${key === 'warg' ? 'WAR/G' : 'WAR'}</b></div>`;
+      tip.hidden = false;
+      const box = chartEl.getBoundingClientRect(), pt = dot.getBoundingClientRect();
+      const left = Math.min(Math.max(pt.left - box.left + pt.width / 2, 90), box.width - 90);
+      tip.style.left = left + 'px';
+      tip.style.top = (pt.top - box.top) + 'px';
+    }
     function setHot(id, on) {
       const bar = chartEl.querySelector(`.mg-pt[data-player-id="${CSS.escape(id)}"]`);
       const row = bodyEl.querySelector(`tr[data-row-id="${CSS.escape(id)}"]`);
       if (bar) bar.classList.toggle('is-hot', on);
       if (row) row.classList.toggle('is-hot', on);
     }
-    chartEl.addEventListener('mouseover', (e) => { const d = e.target.closest('.mg-pt'); if (d) setHot(d.dataset.playerId, true); });
-    chartEl.addEventListener('mouseout', (e) => { const d = e.target.closest('.mg-pt'); if (d) setHot(d.dataset.playerId, false); });
+    chartEl.addEventListener('mouseover', (e) => { const d = e.target.closest('.mg-pt'); if (d) { setHot(d.dataset.playerId, true); showTip(d, true); } });
+    chartEl.addEventListener('mouseout', (e) => { const d = e.target.closest('.mg-pt'); if (d) { setHot(d.dataset.playerId, false); showTip(d, false); } });
     bodyEl.addEventListener('mouseover', (e) => { const tr = e.target.closest('tr[data-row-id]'); if (tr) setHot(tr.dataset.rowId, true); });
     bodyEl.addEventListener('mouseout', (e) => { const tr = e.target.closest('tr[data-row-id]'); if (tr) setHot(tr.dataset.rowId, false); });
 
