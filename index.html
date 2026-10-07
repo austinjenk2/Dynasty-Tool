@@ -730,9 +730,14 @@
      palette the app ships (Cream Classic included). */
 
   /* ---- Scores rail ---- */
+  /* Was 2px/10px, which sat the title hard against the rule above it and
+     left all the air underneath. Then 4px/8px, which you said was still
+     high. Now 7px/5px: slightly past even, since the title's cap height
+     sits above its line box and the optical centre is a touch lower than
+     the geometric one. */
   .gc-rail-head {
     display: flex; align-items: center; gap: 10px;
-    margin: 2px 0 10px;
+    margin: 7px 0 5px;
   }
   .gc-rail-title { font-size: 12.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink); }
   .gc-live-pill {
@@ -743,8 +748,9 @@
   }
   .gc-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: gcLiveBlink 1.6s ease-in-out infinite; }
   @keyframes gcLiveBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-  .gc-rail-spacer { flex: 1; }
-  .gc-rail-hint { font-size: 11px; color: var(--faint); }
+  /* The green/red legend that used to sit here is gone; the colours are
+     self-evident once you have seen one game, and it was the widest thing
+     in a header that is three words long. */
 
 
   .gc-card {
@@ -6585,8 +6591,6 @@
     <div class="gc-rail-head">
       <span class="gc-rail-title">NFL Scores</span>
       <span class="gc-live-pill" id="gcLivePill" hidden><span class="gc-live-dot"></span>LIVE</span>
-      <span class="gc-rail-spacer"></span>
-      <span class="gc-rail-hint">Green = your starters in this game &middot; red = starters against you &middot; tap a game for your leagues and its box score</span>
     </div>
     <div class="gc-split">
       <div class="gc-grid" id="gcGrid"><div class="ld-loading">Loading this week&rsquo;s games&hellip;</div></div>
@@ -16985,6 +16989,27 @@
     if (!league || !league.roster_positions || !playerDict || !matchup || !matchup.players) return filled;
     const startSlots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
 
+    // A week that has not arrived yet is nobody's lineup.
+    //
+    // Sleeper carries the current lineup forward into future weeks, so a
+    // future matchup usually comes back with a complete-looking starters
+    // array -- and a complete array was taken as declared, which meant
+    // next week's slate was built out of this week's decisions. That is
+    // wrong in both directions: it benches a player who is out this week
+    // in a week he will play, and it starts a player this week's manager
+    // happened to leave in.
+    //
+    // Nobody has set a week 9 lineup in week 5. What a team is worth in
+    // week 9 is its best possible lineup from week 9's projections, for
+    // every team in the league, and that is what the slate now shows --
+    // right up to the moment the week becomes the live one, when the real
+    // lineup takes over because by then it is a real decision.
+    const live = Number(window.__sleeperLiveWeek) || 0;
+    if (live && Number(week) > live) {
+      const best = sbOptimalLineupIds(matchup.players, league, projMap);
+      if (best && best.length) return best;
+    }
+
     // A lineup that is set and covers every slot is taken as it stands.
     if (filled.length === raw.length && raw.length >= startSlots.length) return filled;
 
@@ -17027,12 +17052,23 @@
   // depth on the bench too. Ranked against the other real rosters in the
   // same league -- this is a projection-week snapshot, not a season-long
   // strength score.
-  function sbOptimalLineupTotal(playerIds, league) {
+  // projMap is optional, and is a specific week's projections as
+  // sleeperGetWeekProjections returns them. The season simulation passes
+  // one per remaining week, because a best possible lineup is a different
+  // lineup in a week your quarterback is out than in a week he plays.
+  // Every other caller omits it and gets this week, which is what they
+  // want. Scoring stays league-correct either way: the map carries its own
+  // __statsMap and sbProjectionFor applies this league's settings to it.
+  // The lineup itself and what it is worth, so the slate can show WHO is
+  // in a future week's best lineup and the strength models can take just
+  // the number, off one implementation.
+  function sbOptimalLineup(playerIds, league, projMap) {
     const playerDict = window.__sleeperPlayerDict;
     if (!league || !league.roster_positions || !playerDict) return null;
     const startSlots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
     const pool = (playerIds || []).filter(id => id && id !== '0');
     const chosen = new Set();
+    const ids = [];
     let total = 0;
     startSlots.forEach(slot => {
       const eligible = SB_SLOT_ELIGIBLE[slot];
@@ -17042,20 +17078,56 @@
         if (chosen.has(pid)) return;
         const p = playerDict[pid];
         if (!p || !eligible.includes(p.position)) return;
-        const proj = sbProjectionFor(pid, null, league);
+        const proj = sbProjectionFor(pid, projMap, league);
         if (proj != null && proj > bestProj) { bestProj = proj; best = pid; }
       });
-      if (best) { chosen.add(best); total += bestProj; }
+      if (best) { chosen.add(best); ids.push(best); total += bestProj; }
     });
-    return total;
+    return { ids, total };
+  }
+  function sbOptimalLineupTotal(playerIds, league, projMap) {
+    const r = sbOptimalLineup(playerIds, league, projMap);
+    return r ? r.total : null;
+  }
+  function sbOptimalLineupIds(playerIds, league, projMap) {
+    const r = sbOptimalLineup(playerIds, league, projMap);
+    return r ? r.ids : [];
   }
 
+  // Who a roster can actually start. Sleeper keeps IR and taxi-squad
+  // players in `players` alongside everybody else and lists them again in
+  // `reserve` and `taxi`; the league will not let either into a lineup.
+  //
+  // Nothing excluded them, so every best-possible-lineup projection on
+  // the site counted a stashed player as a starter -- Contending Rank,
+  // the season simulation's team strength, the trade comparison. It
+  // flatters exactly the rosters that stash the most, which is why a deep
+  // dynasty roster with a full taxi squad read stronger than it can
+  // actually field, and why its first-round bye came out too high.
+  function sbStartablePlayers(roster) {
+    const all = (roster && roster.players) || [];
+    const blocked = new Set([].concat(
+      (roster && roster.reserve) || [],
+      (roster && roster.taxi) || []
+    ).filter(Boolean));
+    if (!blocked.size) return all.filter(id => id && id !== '0');
+    return all.filter(id => id && id !== '0' && !blocked.has(id));
+  }
+  window.sbStartablePlayers = sbStartablePlayers;
+  // Exposed so the future-week lineup rule can be checked without a live
+  // Sunday -- Sleeper is blocked from the sandbox, so the only way to test
+  // which lineup a week resolves to is to call this directly.
+  window.__sbEffectiveStarters = sbEffectiveStarters;
+  window.__sbOptimalLineup = sbOptimalLineup;
+
+  // Same basis as sbLeagueContendingRanks -- see the note there for why
+  // this is the rest of the season rather than this Sunday.
   function sbContendingRank(entry) {
     const allRosters = entry.allRosters || [];
     if (allRosters.length < 2 || !entry.roster) return null;
     const totals = allRosters.map(r => ({
       rosterId: r.roster_id,
-      total: sbOptimalLineupTotal(r.players, entry.league),
+      total: sbSeasonLevelFor(entry, r),
     }));
     if (totals.some(t => t.total == null)) return null;
     const sorted = [...totals].sort((a, b) => b.total - a.total);
@@ -17071,7 +17143,7 @@
   // declarations, so they are already window properties, and assigning a
   // wrapper over the same name replaces the function with one that calls
   // itself. (Same reason window.ppResolvePick is not window.ppResolveDraftedPick.)
-  window.sbTeamOptimalProjection = (playerIds, league) => sbOptimalLineupTotal(playerIds, league);
+  window.sbTeamOptimalProjection = (playerIds, league, projMap) => sbOptimalLineupTotal(playerIds, league, projMap);
   window.sbTeamContendingRanks = (entry) => sbLeagueContendingRanks(entry);
 
   function sbOrdinal(n) {
@@ -17200,12 +17272,38 @@
   // Same optimal-lineup-projection ranking as sbContendingRank, but for
   // every roster in the league at once (used by the League Standings
   // popup, which needs everyone's rank, not just the connected user's).
+  // What Contending Rank is ranking, and why it is not this week.
+  //
+  // It used to be this week's best possible lineup, which answers "who is
+  // strongest on Sunday" -- and that punished a team for a bye week or a
+  // one-week injury, which is the opposite of what the panel is for. The
+  // question is how good a roster is at full strength, over the season it
+  // still has to play.
+  //
+  // So it reads the season model's level: the average of that roster's
+  // best possible lineup across every remaining week, each week optimised
+  // against its own projections. A player out this week costs his team
+  // one week of nine instead of all nine, and a player on bye costs it
+  // nothing at all beyond that week. That is also exactly the number the
+  // playoff odds are built on, so Contending Rank and the odds can no
+  // longer disagree about who the best roster is.
+  //
+  // Before the first simulation of a session lands there is no season
+  // model yet, so it falls back to this week -- the old behaviour, and
+  // only for as long as it takes the sync to finish.
+  function sbSeasonLevelFor(entry, roster) {
+    const cur = ((window.__ppPickModel || {})[entry.league.league_id] || {}).current;
+    const m = cur && cur.model && cur.model[roster.roster_id];
+    if (m && Number.isFinite(m.mean)) return m.mean;
+    return sbOptimalLineupTotal(sbStartablePlayers(roster), entry.league);
+  }
+
   function sbLeagueContendingRanks(entry) {
     const allRosters = entry.allRosters || [];
     if (allRosters.length < 2) return null;
     const totals = allRosters.map(r => ({
       rosterId: r.roster_id,
-      total: sbOptimalLineupTotal(r.players, entry.league),
+      total: sbSeasonLevelFor(entry, r),
     }));
     if (totals.some(t => t.total == null)) return null;
     const sorted = [...totals].sort((a, b) => b.total - a.total);
@@ -20767,7 +20865,47 @@
     // scored the live week off another week's numbers, which is why the
     // projections kept "going wrong again" and why next week's percentages
     // were nonsense: opening a week was enough to corrupt the others.
+    // A week's projections, kept once per season+week.
+    //
+    // This payload is league-independent and thousands of players wide,
+    // and nothing refetched it: every caller pulled the whole thing again.
+    // That was survivable while the callers were a week dropdown and a
+    // popup. It stopped being survivable when the season simulation began
+    // asking for every remaining week, for every league -- nine weeks
+    // across fourteen leagues is 126 league-wide payloads per sync, which
+    // is the same request storm that starved live scoring once already.
+    //
+    // Only non-live weeks are cached. The current week's projections move
+    // as inactives are announced, and it is the live path's own store
+    // (window.__sleeperProjections, refreshed each sync) that owns them.
+    window.__sleeperWeekProjCache = window.__sleeperWeekProjCache || {};
     async function getWeekProjections(season, week, isLiveWeek) {
+      const cacheKey = `${season}_${week}`;
+      if (!isLiveWeek && window.__sleeperWeekProjCache[cacheKey]) {
+        return window.__sleeperWeekProjCache[cacheKey];
+      }
+      if (!isLiveWeek) {
+        const promise = fetchWeekProjections(season, week, isLiveWeek);
+        // Cached as the PROMISE, so fourteen leagues asking for week 9 at
+        // once share one request instead of racing fourteen.
+        window.__sleeperWeekProjCache[cacheKey] = promise;
+        // A failed or empty fetch must not be remembered as the answer
+        // forever -- but it must not be retried immediately either. Every
+        // league asks for the same weeks, so clearing a failure at once
+        // means fourteen leagues each re-request every week of a season
+        // Sleeper is currently refusing, which is the storm this cache
+        // exists to prevent. Hold the miss briefly, then allow a retry.
+        const forget = () => setTimeout(() => {
+          if (window.__sleeperWeekProjCache[cacheKey] === promise) {
+            delete window.__sleeperWeekProjCache[cacheKey];
+          }
+        }, 60000);
+        promise.then(m => { if (!m || !Object.keys(m).length) forget(); }).catch(forget);
+        return promise;
+      }
+      return fetchWeekProjections(season, week, isLiveWeek);
+    }
+    async function fetchWeekProjections(season, week, isLiveWeek) {
       try {
         const list = await sleeperFetchRoot(
           `/projections/nfl/${season}/${week}?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`
@@ -23628,8 +23766,8 @@
         // are the optimal-lineup projections of the rosters as they stand,
         // which is the same assumption the pick and playoff models make.
         if (pct == null && week > liveWeek && window.sbTeamOptimalProjection && oppRoster && me) {
-          const mineProj = window.sbTeamOptimalProjection(me.players, league);
-          const oppProj = window.sbTeamOptimalProjection(oppRoster.players, league);
+          const mineProj = window.sbTeamOptimalProjection(window.sbStartablePlayers(me), league);
+          const oppProj = window.sbTeamOptimalProjection(window.sbStartablePlayers(oppRoster), league);
           if (mineProj > 0 && oppProj > 0) {
             pct = Math.round(sbWinProbability(mineProj, oppProj));
             pctKind = 'PROJ';
@@ -25576,7 +25714,51 @@
     return u * f;
   }
 
-  const PP_SIM_RUNS = 1500;
+  // Ten thousand seasons. At this count the sampling error on a playoff
+  // percentage is about half a point, so a number that moves on screen
+  // moved because the data moved and not because the dice landed
+  // differently -- which is what makes the second decimal on a projected
+  // record worth printing at all.
+  const PP_SIM_RUNS = 10000;
+  // How many of those seasons also carry the per-game counterfactual --
+  // the "what is this week's game worth" replay, which finishes the
+  // season once and then flips every single game on its own and recomputes
+  // the field each way.
+  //
+  // That replay is quadratic-ish where everything else here is linear: a
+  // twelve-team league with nine weeks left re-seeds the standings 108
+  // times per season, so it was about 85% of the whole simulation's cost.
+  // Running it ten thousand times took one league from 85ms to 570ms,
+  // which is a visible hitch on a sync that does this for fourteen
+  // leagues.
+  //
+  // It was 2,000 for one release, on the reasoning that a game's leverage
+  // is a DIFFERENCE between two worlds that share their dice and so is
+  // the cheapest thing in here to measure precisely. That reasoning was
+  // right about the difference and wrong about what the number is FOR.
+  //
+  // IF YOU WIN has to be a promise: win, and next week should open within
+  // a point or two of what the chip said. ifwin.mjs tests exactly that --
+  // take the promise, force the result, re-run, compare -- and the
+  // measured worst disagreement across a twelve-team league was:
+  //
+  //     2,000 runs    2.7 points      267ms / 451ms best ball
+  //     5,000 runs    0.9 points      391ms / 575ms
+  //    10,000 runs    0.0 points      607ms / 890ms
+  //
+  // 2.7 points is a chip that lies, and the error is pure sampling noise
+  // from measuring the promise on a fifth of the seasons the answer is
+  // measured on. At the full count the promise and the forced re-run are
+  // read off the same ten thousand seasons and agree exactly, which is
+  // worth most of a second a league in a session that has spent its
+  // whole length on numbers not reconciling.
+  //
+  // 5,000 is the fallback if the cost ever bites: it meets the stated
+  // "within a point or two" at 60% of the price.
+  //
+  // Nothing downstream needs telling: each game's odds divide by the runs
+  // that game actually recorded, not by PP_SIM_RUNS.
+  const PP_LEVERAGE_RUNS = 10000;
   // Every week still to be played is simulated as if both managers start
   // their best possible lineup.
   //
@@ -25642,17 +25824,106 @@
   // question asks. Set this back to 0.035 to restore the old behaviour --
   // the code it drives is still below and still correct.
   const PP_VALUE_PULL = 0;
-  // How fast a team's true level drifts away from what it has shown, per
-  // remaining week, as a share of its weekly variance. Rosters change.
+  // RETIRED, and replaced by PP_DEPTH_RISK_SHARE below. This was a blind
+  // drift: every team's level wandered by the same share of its variance
+  // per remaining week, on the grounds that rosters change.
   //
-  // Was 0.035, which over ten remaining weeks came out as 0.59 of a
-  // weekly standard deviation -- about fifteen points of drift in a league
-  // whose best and worst teams are twenty points apart. Stacked on the
-  // standard-error term below it made the model redraw a team's true level
-  // by nearly twenty points a season, which is the same as saying it does
-  // not know which team is good. That is why the best roster in a league
-  // was being given a real chance at the nine seed.
-  const PP_DRIFT_PER_WEEK = 0.012;
+  // Rosters do change, but not blindly and not identically. What actually
+  // moves a team's level between here and week fourteen is losing a
+  // player, and what that costs is a property of the roster -- of who is
+  // behind him -- not of the calendar. ppDepthRisk measures it per team.
+  // A blind drift charged the deep roster and the thin one the same
+  // amount, and charged both of them twice over, since the injuries they
+  // were already carrying were priced separately in ppAvailability.
+  //
+  // At 0.012 over nine remaining weeks it came to 0.33 of a weekly
+  // standard deviation, about eight points, and stacked with the
+  // projection error below it redrew every team's level by eleven points
+  // a season. On a twelve-team league whose best and worst teams are
+  // twenty-eight points apart, that is most of the signal: it took the
+  // best roster in the league from 86% to make the playoffs down to 73%,
+  // and floated the worst from 17% up to 30%. Both of those were wrong in
+  // the way you would notice, which is how this got found.
+  //
+  // Kept as a constant at zero rather than deleted: the code it drove is
+  // still below and still correct, so a non-zero value restores it.
+  const PP_DRIFT_PER_WEEK = 0;
+  // How much of a roster's depth gap -- ppDepthRisk, the points its
+  // replacements cannot cover for its best player -- is carried as
+  // uncertainty in its level for the rest of the season.
+  //
+  // This is the "something small for depth" term, and it is deliberately
+  // small. It is not a prediction that the injury happens; it is the
+  // weight of it possibly happening, spread over the weeks left. At 0.4 a
+  // team whose best player is worth ten points more than his replacement
+  // carries about four points of level uncertainty, and a team with a real
+  // backup in place carries close to none -- which is the whole point of
+  // measuring it per roster instead of charging everybody the same drift.
+  const PP_DEPTH_RISK_SHARE = 0.4;
+  // Weeks a team needs before its per-game average is allowed to vote on
+  // how far apart this league really is. Three is thin and it is meant to
+  // be: the subtraction of leagueVar / n already discounts a short sample,
+  // and waiting longer means the over-dispersion goes uncorrected through
+  // exactly the early weeks where it is largest.
+  const PP_SHRINK_MIN_WEEKS = 3;
+  // The furthest the projected spread is ever pulled in. At 0.55 the gap
+  // between the best and worst roster can be cut to a bit over half of
+  // what the projections claim, and no further.
+  //
+  // A floor is needed because the measurement is noisy in both
+  // directions. A league whose first month happened to be bunched -- six
+  // close games a week, everyone near the median -- measures almost no
+  // talent spread at all, and taking that literally would simulate twelve
+  // identical teams and hand everybody the same odds. That is not more
+  // honest than being overconfident, it is just wrong in the opposite
+  // direction.
+  const PP_LEVEL_SHRINK_FLOOR = 0.55;
+  // How much evidence the over-dispersion measurement has to clear before
+  // it is believed over the projections.
+  //
+  // Twelve team averages is a small sample and the variance of a variance
+  // is large, so this measurement is noisy. Characterised over 1,000
+  // synthetic leagues per cell (est.mjs), measuring a true shrink of:
+  //
+  //               4 weeks   8 weeks   12 weeks
+  //   true 1.00    0.93      0.94      0.94
+  //   true 0.80    0.87      0.85      0.83
+  //   true 0.60    0.83      0.75      0.71
+  //   true 0.40    0.79      0.67      0.62
+  //
+  // Two things to read off that. It is CONSERVATIVE: it under-corrects at
+  // every level, by design, because the prior pulls it back toward
+  // believing the projections. And it costs about 7% of unnecessary
+  // compression in the case where the projections were right all along
+  // (true 1.00 reading 0.93), which is the price of it working at all.
+  //
+  // Four weeks, not six. At six, a league four games in gave the
+  // measurement only 40% of the say, which left the over-dispersion
+  // running almost uncorrected through exactly the early weeks where it
+  // is largest. Four makes it a near-even split by week four. Lower buys
+  // more correction and more false compression -- at 3 the true-1.00 case
+  // reads 0.91 -- so this is the knob to turn if the odds still read too
+  // confident.
+  const PP_SHRINK_PRIOR_WEEKS = 4;
+  // What to believe about the projections' spread BEFORE this league's own
+  // results have much to say: that about 85% of it is real.
+  //
+  // Not 1.0, which is what this amounted to at first and which is the one
+  // answer we have good reason to think is wrong. Summed projections
+  // over-disperse by construction, and outside best ball they are also
+  // describing a lineup nobody sets for eleven straight weeks. Starting
+  // from "they are exactly right" meant a league four games in asserted
+  // that, since four games cannot overrule a prior.
+  //
+  // With it, over 1,000 synthetic leagues per cell at four weeks played,
+  // a true shrink of 0.60 reads 0.75 rather than 0.83, and 0.40 reads
+  // 0.70 rather than 0.79. The cost is in the column where the
+  // projections really were right: true 1.00 reads 0.87, so a correctly
+  // dispersed league gives up about 13% of its spread. By week twelve the
+  // measurement dominates and the prior stops mattering either way, which
+  // is the behaviour worth having -- it is a starting assumption, not a
+  // thumb on the scale.
+  const PP_SHRINK_PRIOR_SHRINK = 0.85;
   // How wrong a roster's own lineup projection can be about the level it
   // implies, as a share of a weekly standard deviation.
   //
@@ -25665,7 +25936,15 @@
   // near sd/2, which is what four weeks of scores implied. Pricing it as a
   // sample mean made the model most unsure exactly when its roster read
   // was strongest, in September.
-  const PP_PROJECTION_LEVEL_ERROR = 0.3;
+  //
+  // Cut from 0.3 to 0.15 when the drift above was retired, and for the
+  // same reason. At 0.3 this was 6.6 points on a 22-point weekly spread:
+  // a 6% error on a team's projected weekly total, every week, on top of
+  // the depth term and on top of the weekly noise. That is more doubt
+  // than a best-possible-lineup projection deserves once the injuries it
+  // carries and the depth behind it are both being priced explicitly --
+  // which is exactly what was double-counted here.
+  const PP_PROJECTION_LEVEL_ERROR = 0.15;
   // Nobody's pick is a sure thing. Even a team that has been the best in
   // the league all year is not locked into the last slot -- it can lose
   // three in a row, its stars can get hurt, it can fall out of the race
@@ -25698,6 +25977,7 @@
   // most likely gone for the stretch that decides the race, and is treated
   // that way.
   const PP_LONG_TERM_AVAILABILITY = 0.15;
+
   function ppAvailability(p, weeksLeft) {
     if (!p) return 1;
     const w = Math.max(1, Number(weeksLeft) || 1);
@@ -25725,10 +26005,10 @@
   // replacement lineup is paid out at the share of remaining weeks he is
   // expected to play. A player whose slot is covered contributes a
   // marginal of nearly zero either way, which is the right answer.
-  function ppHealthyProjection(playerIds, league, weeksLeft) {
+  function ppHealthyProjection(playerIds, league, weeksLeft, projMap) {
     const base = window.sbTeamOptimalProjection;
     if (!base) return null;
-    const full = base(playerIds, league);
+    const full = base(playerIds, league, projMap);
     const dict = window.__sleeperPlayerDict;
     if (full == null || !dict) return full;
     const ids = (playerIds || []).filter(id => id && id !== '0');
@@ -25736,17 +26016,180 @@
     if (!hurt.length) return full;
     const hurtSet = new Set(hurt);
     const healthyIds = ids.filter(id => !hurtSet.has(id));
-    const healthy = base(healthyIds, league);
+    const healthy = base(healthyIds, league, projMap);
     if (healthy == null) return full;
     let total = healthy;
     hurt.forEach(id => {
-      const withHim = base(healthyIds.concat([id]), league);
+      const withHim = base(healthyIds.concat([id]), league, projMap);
       if (withHim == null) return;
       total += Math.max(0, withHim - healthy) * ppAvailability(dict[id], weeksLeft);
     });
     return total;
   }
   window.ppHealthyProjection = ppHealthyProjection;
+
+  // How exposed a roster is to an injury it has not had yet.
+  //
+  // ppAvailability above prices the injuries a roster is CARRYING. This is
+  // the other half: everybody healthy today is one awkward landing from
+  // not being, and how much that costs depends entirely on what is behind
+  // him. Losing a league-winning back off a bench that holds his backup
+  // costs a couple of points a week; losing the same back off a roster
+  // with nothing behind him is most of the difference between playing in
+  // January and not.
+  //
+  // Measured, not guessed: take the best lineup, remove the single
+  // highest-projected player on the roster, and take the best lineup
+  // again. The gap is what his replacement cannot cover, which is the
+  // definition of depth at the only place it matters -- the top of the
+  // roster, since that is where an injury actually hurts. The greedy
+  // slot-fill underneath is cheap enough to run twice per team.
+  function ppDepthRisk(playerIds, league, projMap) {
+    const base = window.sbTeamOptimalProjection;
+    const dict = window.__sleeperPlayerDict;
+    if (!base || !dict) return null;
+    const ids = (playerIds || []).filter(id => id && id !== '0');
+    if (ids.length < 2) return null;
+    const full = base(ids, league, projMap);
+    if (full == null) return null;
+    // The same rest-of-season level the lineup above is built from, so the
+    // player identified as the one worth losing is the roster's best
+    // player and not merely whoever happens to be playing this week.
+    let top = null, topProj = -Infinity;
+    ids.forEach(id => {
+      const proj = sbProjectionFor(id, projMap, league);
+      if (proj != null && proj > topProj) { topProj = proj; top = id; }
+    });
+    if (!top) return null;
+    const without = base(ids.filter(id => id !== top), league, projMap);
+    if (without == null) return null;
+    return Math.max(0, full - without);
+  }
+  window.ppDepthRisk = ppDepthRisk;
+
+  // ---- Best ball is a different game, so it gets a different model ----
+  //
+  // Everywhere else on this page a team's level is its best possible
+  // lineup by PROJECTION: fill each slot with the highest projected
+  // eligible player, add it up. For a league where you set a lineup in
+  // advance that is right, because that is what you do -- you pick by
+  // projection and then the week happens.
+  //
+  // Best ball does not work like that. There is no lineup. The week
+  // happens first and the best seven of whatever your whole roster
+  // actually did get counted. So the honest quantity is the expected
+  // value of the MAXIMUM, and filling slots by projection computes the
+  // maximum of the expected values. Those are not the same number, and
+  // the gap between them is the whole of what depth is worth: a bench
+  // player who projects for nine and goes for twenty-six is in your
+  // lineup that week, which is common, and the projection-based
+  // calculation cannot see it at all.
+  //
+  // Measured on six synthetic rosters, naive level against best ball
+  // level, with the per-player spread calibrated so simulated team
+  // variance matches a real league's:
+  //
+  //     roster          naive   best ball    lift
+  //     strong, deep    123.0     152.8     +29.7
+  //     strong, thin    123.0     131.2      +8.1
+  //     weak, deep       91.0     113.0     +22.0
+  //     weak, thin       91.0      97.0      +6.0
+  //
+  // Both strong rosters read 123.0 naively -- identical -- when in best
+  // ball they are 21.6 points a week apart. That is the error, and it is
+  // not small.
+  //
+  // Which way it moves a given team depends entirely on its bench, and
+  // that is the point. Strong-and-deep against weak-and-thin goes from a
+  // 32.1 gap to 55.8. Strong-but-THIN against weak-but-DEEP goes the
+  // other way, from 32.1 down to 18.2. A team whose quality is
+  // concentrated in a few starters is overrated by the naive model in a
+  // best ball league, and is exactly the team whose odds come out too
+  // confident.
+  //
+  // Per-player points are drawn lognormal around the projection, because
+  // a fantasy week is right-skewed -- a floor at zero, a long upper tail
+  // -- and skew is what a max operation feeds on. A normal draw would
+  // understate every lift here.
+  //
+  // The per-player spread is SB_SIGMA_K scaled by one league-wide factor,
+  // fitted so that the average simulated team's weekly variance equals
+  // what this league's teams actually exhibit. Fitted league-wide rather
+  // than per team on purpose: calibrating each team to its own variance
+  // would erase the real differences in how much teams swing, which is
+  // part of the answer. On the synthetic league above the factor came out
+  // at 0.64, which is also an independent sign that SB_SIGMA_K at face
+  // value is wider than real football.
+  const PP_BB_RUNS = 4000;
+  const PP_BB_FIT_RUNS = 900;
+  const PP_BB_FIT_PASSES = 8;
+  function ppBestBallWeek(playerIds, league, projMap, scale, runs) {
+    const dict = window.__sleeperPlayerDict;
+    if (!dict || !league || !league.roster_positions) return null;
+    const slots = league.roster_positions.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+    const pool = [];
+    (playerIds || []).forEach(id => {
+      if (!id || id === '0') return;
+      const p = dict[id];
+      if (!p || !p.position) return;
+      const proj = sbProjectionFor(id, projMap, league);
+      if (proj == null || !(proj > 0)) return;
+      const k = SB_SIGMA_K[p.position] != null ? SB_SIGMA_K[p.position] : SB_SIGMA_K.DEFAULT;
+      const sd = scale * k * proj;
+      // Lognormal parameters for this mean and spread, precomputed per
+      // player rather than per draw.
+      const v = Math.log(1 + (sd * sd) / (proj * proj));
+      pool.push({ pos: p.position, mu: Math.log(proj) - v / 2, sigma: Math.sqrt(v) });
+    });
+    if (pool.length < slots.length) return null;
+    const drawn = new Array(pool.length).fill(0);
+    const used = new Array(pool.length).fill(false);
+    let sum = 0, sumSq = 0;
+    const n = runs || PP_BB_RUNS;
+    for (let it = 0; it < n; it++) {
+      for (let i = 0; i < pool.length; i++) {
+        drawn[i] = Math.exp(pool[i].mu + pool[i].sigma * ppRandNormal());
+        used[i] = false;
+      }
+      let total = 0;
+      for (let s = 0; s < slots.length; s++) {
+        const eligible = SB_SLOT_ELIGIBLE[slots[s]];
+        if (!eligible) continue;
+        let best = -1, bestV = -Infinity;
+        for (let i = 0; i < pool.length; i++) {
+          if (used[i] || !eligible.includes(pool[i].pos)) continue;
+          if (drawn[i] > bestV) { bestV = drawn[i]; best = i; }
+        }
+        if (best >= 0) { used[best] = true; total += bestV; }
+      }
+      sum += total; sumSq += total * total;
+    }
+    const mean = sum / n;
+    return { mean, sd: Math.sqrt(Math.max(0, sumSq / n - mean * mean)) };
+  }
+
+  // One scale for the league, fitted so simulated team variance matches
+  // the variance this league's teams really show. Team sd scales close to
+  // linearly in the per-player scale, so a handful of proportional passes
+  // converges; it is capped because a league whose measured variance is
+  // tiny should not drive the per-player spread to zero.
+  function ppBestBallScale(rosters, league, projMap, targetSd) {
+    if (!(targetSd > 0)) return null;
+    let scale = 0.6;
+    for (let pass = 0; pass < PP_BB_FIT_PASSES; pass++) {
+      let sum = 0, count = 0;
+      for (const r of rosters) {
+        const res = ppBestBallWeek(sbStartablePlayers(r), league, projMap, scale, PP_BB_FIT_RUNS);
+        if (res && res.sd > 0) { sum += res.sd; count++; }
+      }
+      if (!count) return null;
+      const avg = sum / count;
+      if (!(avg > 0)) return null;
+      scale *= targetSd / avg;
+      scale = Math.max(0.15, Math.min(2.5, scale));
+    }
+    return scale;
+  }
 
   // Which division each roster is in, but only for a league actually
   // running divisions -- returns null otherwise, which every caller reads
@@ -25878,19 +26321,8 @@
   // lineup and what it actually started move together, and that ratio is
   // stable per roster, so a drawn score of X implies potential points of
   // X * that team's own ratio.
-  // How far a single playoff game can swing: a week's own noise plus how
-  // wrong the read on the team's level could be, added in quadrature.
-  // Used only in the bracket -- see the note there.
-  // The most a single playoff game is ever allowed to favour one side.
-  // A fantasy week is one week: even a clear favourite is around 60-65%,
-  // not 85%. The floor is 1 - this, so a finalist is always live.
-  const PP_PLAYOFF_MAX_EDGE = 0.65;
-
-  function ppPlayoffSd(m) {
-    const sd = Number(m && m.sd) || 0;
-    const tau = Number(m && m.tau) || 0;
-    return Math.sqrt(sd * sd + tau * tau);
-  }
+  // A playoff game is priced as the matchup it is. See the note in the
+  // bracket for why it does not get its own spread.
 
   async function ppSimulateSeason(entry, dict) {
     const league = entry.league, rosters = entry.allRosters || [];
@@ -25977,20 +26409,129 @@
     // real started scores (nobody starts their optimal lineup, and the
     // league-wide ratio between the two is what says by how much).
     const strengthById = {};
+    // Per roster: the points its replacements cannot cover for its best
+    // player. Feeds the depth half of tau. See ppDepthRisk.
+    const depthById = {};
+    // Per roster, per remaining week: that week's best possible lineup.
+    // {rosterId: {week: points}}. Empty when no week's projections could
+    // be fetched, which puts every week back on one level.
+    const weekLevelById = {};
+    // ---- Every week gets its own lineup --------------------------------
+    // Sleeper publishes projections per week, so a week in which a
+    // quarterback is out lists him at zero and the week after lists him
+    // normally. That is real information about the season, and using one
+    // week's numbers for all of them threw it away in both directions: it
+    // either wrote a player off for the rest of the year because he is out
+    // on Sunday, or pretended a lineup patched around his absence is the
+    // lineup for every remaining week.
+    //
+    // So each remaining week is optimised against its own projections. A
+    // team loses the week its starter sits -- which it genuinely does --
+    // and gets him back the week after, which it genuinely does too.
+    //
+    // Weeks whose projections cannot be had fall back to the average of
+    // the ones that could, which is the old single-level behaviour for
+    // that week alone.
+    const remainingWeekNumbers = [];
+    for (let i = 0; i < regularWeeks; i++) if (!played[i]) remainingWeekNumbers.push(i + 1);
+    const weekProjMaps = {};
+    if (window.sleeperGetWeekProjections) {
+      // Sequential on purpose. These are league-wide payloads and this
+      // runs for every league; firing nine at once per league is how a
+      // sync starves the requests that matter. The per-week cache means
+      // the second league through pays nothing.
+      for (const w of remainingWeekNumbers) {
+        try {
+          const pm = await window.sleeperGetWeekProjections(league.season, w);
+          if (pm && Object.keys(pm).length) weekProjMaps[w] = pm;
+        } catch (e) { /* that week falls back to the average */ }
+      }
+    }
     // League-wide "started points / best-possible points". Used twice: to
     // put the optimal projection on the same footing as real started
     // scores for the blend below, and then to undo that at the end, so
     // the weeks still to be played are projected at best-possible-lineup
     // level (see PP_ASSUME_OPTIMAL_LINEUPS).
     let realismFactor = null;
+    // Best ball gets the expected-maximum model instead of the projected
+    // best lineup. See ppBestBallWeek for why those differ and by how
+    // much. Fitted on one representative week -- the last remaining one,
+    // the same week depth is measured on, chosen because it is least
+    // likely to have anybody ruled out in it -- and the cheap per-week
+    // deltas still ride on top, so a bye week still moves the week it
+    // falls in. Running the full draw for every remaining week would cost
+    // about a second a league for a correction that is a property of
+    // roster shape rather than of the calendar.
+    const isBestBall = !!(league.settings && league.settings.best_ball);
+    const bbWeekMap = remainingWeekNumbers.length
+      ? weekProjMaps[remainingWeekNumbers[remainingWeekNumbers.length - 1]] : null;
+    let bbScale = null;
+    const bbById = {};
+    if (isBestBall && window.sbTeamOptimalProjection) {
+      bbScale = ppBestBallScale(rosters, league, bbWeekMap, leagueSd);
+      if (bbScale != null) {
+        rosters.forEach(r => {
+          const res = ppBestBallWeek(sbStartablePlayers(r), league, bbWeekMap, bbScale);
+          if (res && res.mean > 0) bbById[r.roster_id] = res;
+        });
+        // All or nothing: a league where only some teams got the best ball
+        // treatment would rank a simulated-maximum level against a
+        // projected-lineup one, which is worse than using either.
+        if (Object.keys(bbById).length !== rosters.length) {
+          Object.keys(bbById).forEach(k => { delete bbById[k]; });
+          bbScale = null;
+        }
+      }
+    }
     if (window.sbTeamOptimalProjection) {
       let optSum = 0, optCount = 0;
       // Weeks still to be played, which is what an injury has to be priced
       // against: missing one of eleven is not missing one of two.
       const weeksLeftForInjury = Math.max(1, played.filter(p => !p).length);
       rosters.forEach(r => {
-        const opt = ppHealthyProjection(r.players, league, weeksLeftForInjury);
+        // IR and taxi players cannot be started, so they are not part of
+        // any lineup this roster could field. See sbStartablePlayers.
+        const startable = sbStartablePlayers(r);
+        // One best-possible lineup per remaining week, then the average of
+        // them as this roster's overall level. The average is what every
+        // existing piece of machinery below works on -- the realism
+        // rescale, the history blend, tau -- and the week-by-week
+        // departures from it ride on top as deltas, so none of that had to
+        // change to make the weeks differ.
+        const perWeek = {};
+        let wkSum = 0, wkCount = 0;
+        remainingWeekNumbers.forEach(w => {
+          const pm = weekProjMaps[w];
+          if (!pm) return;
+          const v = ppHealthyProjection(startable, league, weeksLeftForInjury, pm);
+          if (v != null && v > 0) { perWeek[w] = v; wkSum += v; wkCount++; }
+        });
+        let opt = wkCount
+          ? wkSum / wkCount
+          : ppHealthyProjection(startable, league, weeksLeftForInjury);
+        // In best ball the level is the expected maximum, not the
+        // projected best lineup. The per-week deltas computed above are
+        // kept -- they are differences, so they transfer -- and only the
+        // level they sit around is replaced.
+        const bb = bbById[r.roster_id];
+        if (bb) opt = bb.mean;
+        if (wkCount) weekLevelById[r.roster_id] = perWeek;
         if (opt != null && opt > 0) { strengthById[r.roster_id] = opt; optSum += opt; optCount++; }
+        // Depth, measured on the same pass. Deliberately NOT put through
+        // the realism rescale below: that rescale exists to move the
+        // projection into started-points space for the blend and back out
+        // again, and the weeks being simulated are played at
+        // best-possible-lineup level, which is the space this is already
+        // in.
+        // Depth is measured on a week where the roster is whole, so it
+        // reports what losing a player WOULD cost rather than what an
+        // absence this Sunday already costs. The last remaining week is
+        // the furthest out, and so the least likely to have anybody ruled
+        // out in it.
+        const depthWeek = remainingWeekNumbers.length
+          ? weekProjMaps[remainingWeekNumbers[remainingWeekNumbers.length - 1]] : null;
+        const risk = ppDepthRisk(startable, league, depthWeek);
+        if (risk != null) depthById[r.roster_id] = risk;
       });
       if (optCount === rosters.length && optSum > 0) {
         const optMean = optSum / optCount;
@@ -26024,6 +26565,119 @@
       }
     }
 
+    // ---- How much of the projected spread the season actually supports --
+    //
+    // The levels above are best-possible-lineup projections, and their
+    // spread across a league is WIDER than the spread of real team
+    // scoring. That is a property of projections, not a bug in them: a
+    // projection is each player's expected points, summed over seven or
+    // nine players, and summing expectations compounds roster quality in
+    // a way realised scores do not. Stars miss their number more often
+    // than they beat it, replacement bodies beat theirs, and a roster
+    // that projects thirty points clear of the field does not actually
+    // average thirty points clear of it.
+    //
+    // Nothing corrected for that. PP_PROJECTION_DRIVEN puts the whole
+    // level on the projection and zero weight on what a team has scored,
+    // so an over-dispersed projection went into the simulation
+    // uncorrected -- and since a wider spread of levels means more
+    // decisive games, that is exactly the shape of a good team reading
+    // 92% for a bye.
+    //
+    // So measure it instead of assuming it either way. There are two
+    // readings of how far apart these teams are:
+    //
+    //   the projections say          variance of the projected levels
+    //   the season says              variance of the per-game averages,
+    //                                minus the variance that n games of
+    //                                noise puts there on its own
+    //
+    // The second subtraction matters: four games of scoring spreads teams
+    // out even if they are identical, so the raw spread of per-game
+    // averages overstates the real gap by leagueVar / n. Taking it off is
+    // what leaves talent.
+    //
+    // The ratio of the two is how much of the projected spread the season
+    // bears out, and the projected levels are pulled toward the league
+    // mean by its square root. A league whose results confirm the
+    // projections gets a factor of 1 and is left alone -- and a best ball
+    // league, where everyone really does start their best lineup, should
+    // land nearer 1 than a league where managers set their own lineups.
+    // That is the point of measuring it per league: the model no longer
+    // has to be told which kind of league it is looking at.
+    //
+    // This also answers the lineup question properly. Every team being
+    // simulated at its best possible lineup is an assumption that nobody
+    // mis-starts anybody for nine straight weeks, and it is false in most
+    // leagues. Rather than guess at a haircut, the shrink picks it up from
+    // the gap between what the rosters projected and what the teams
+    // actually scored.
+    let levelShrink = 1;
+    if (Object.keys(strengthById).length === rosters.length && rosters.length > 2) {
+      const lv = rosters.map(r => strengthById[r.roster_id]);
+      const lvMean = lv.reduce((a, b) => a + b, 0) / lv.length;
+      const lvVar = lv.reduce((a, b) => a + (b - lvMean) * (b - lvMean), 0) / (lv.length - 1);
+      // Only teams with enough games for a per-game average to mean
+      // anything, and only when most of the league has them.
+      const obs = rosters
+        .map(r => ({ s: scoresById[r.roster_id] || [] }))
+        .filter(o => o.s.length >= PP_SHRINK_MIN_WEEKS)
+        .map(o => ({ n: o.s.length, m: o.s.reduce((a, b) => a + b, 0) / o.s.length }));
+      if (lvVar > 0 && obs.length >= Math.max(3, Math.ceil(rosters.length * 0.75))) {
+        const oMean = obs.reduce((a, o) => a + o.m, 0) / obs.length;
+        const oVar = obs.reduce((a, o) => a + (o.m - oMean) * (o.m - oMean), 0) / (obs.length - 1);
+        const nAvg = obs.reduce((a, o) => a + o.n, 0) / obs.length;
+        // The noise to subtract is WITHIN-team variance -- how much one
+        // team swings from its own average week to week. Deliberately not
+        // leagueVar, which is measured around the league's grand mean and
+        // therefore has the between-team spread baked into it: using it
+        // subtracts part of the very thing being measured.
+        let wSum = 0, wCount = 0;
+        rosters.forEach(r => {
+          const s = scoresById[r.roster_id] || [];
+          if (s.length < 2) return;
+          const mu = s.reduce((a, b) => a + b, 0) / s.length;
+          wSum += s.reduce((a, b) => a + (b - mu) * (b - mu), 0) / (s.length - 1);
+          wCount++;
+        });
+        const withinVar = wCount ? wSum / wCount : leagueVar;
+        const talentVar = Math.max(0, oVar - withinVar / Math.max(1, nAvg));
+        const rawRatio = talentVar / lvVar;
+        // Twelve team averages is a small sample, and the variance of a
+        // variance is large: one league-month can read 0.7 where the truth
+        // is 0.4, or the reverse. Taken raw this would move a team's odds
+        // on a quantity that is itself mostly noise early on.
+        //
+        // So it is pulled toward "the projections are right" by how little
+        // evidence there is. With PP_SHRINK_PRIOR_WEEKS of 6, four weeks
+        // played gives the measurement 40% of the say and the benefit of
+        // the doubt 60%, and by week twelve the measurement carries most
+        // of it. The correction therefore arrives gradually over a season
+        // instead of lurching in at week three.
+        const w = nAvg / (nAvg + PP_SHRINK_PRIOR_WEEKS);
+        // The prior is NOT "the projections are perfectly calibrated".
+        // Summed point projections over-disperse -- that is a property of
+        // summing expectations over seven or nine players, and in a league
+        // where managers set their own lineups it is compounded by nobody
+        // actually starting their best eleven weeks running. Centring the
+        // prior at 1.0 meant the default assumption was the one thing we
+        // have good reason to think is false, so with four weeks of
+        // evidence the model mostly asserted it.
+        const prior = PP_SHRINK_PRIOR_SHRINK * PP_SHRINK_PRIOR_SHRINK;
+        const ratio = w * rawRatio + (1 - w) * prior;
+        // Held inside a band. Above 1 the season is noisier than the
+        // projections and there is nothing to correct -- stretching the
+        // levels to match would be fitting four weeks of luck. The floor
+        // keeps a league whose early results happen to be bunched from
+        // collapsing to twelve identical teams, which would be its own
+        // kind of wrong answer.
+        levelShrink = Math.max(PP_LEVEL_SHRINK_FLOOR, Math.min(1, Math.sqrt(ratio)));
+        rosters.forEach(r => {
+          strengthById[r.roster_id] = lvMean + (strengthById[r.roster_id] - lvMean) * levelShrink;
+        });
+      }
+    }
+
     const model = rosters.map(r => {
       const st = r.settings || {};
       const mine = scoresById[r.roster_id] || [];
@@ -26036,6 +26690,20 @@
         // own number grows with the weeks behind it.
         const wgt = Math.min(1, (n - 2) / 8);
         sd = Math.sqrt(Math.max(1, wgt * v + (1 - wgt) * leagueVar));
+      }
+      // Best ball: how much a team swings is a property of its roster as
+      // much as of its history, and four weeks of scores cannot see that
+      // where a draw over the whole roster can. A deep best ball bench
+      // swings more, not less -- more players with a real chance of
+      // forcing their way into the week means a longer upper tail -- and
+      // the synthetic rosters bear that out: 29.0 for the deep ones
+      // against 21.0 for the thin. The league-wide average is already
+      // pinned to this league's measured variance by the scale fit, so
+      // this adds the per-team shape without moving the league's scale.
+      const bbModel = bbById[r.roster_id];
+      if (bbModel && bbModel.sd > 0) {
+        const wgt = Math.min(1, n / 8);
+        sd = Math.sqrt(Math.max(1, wgt * sd * sd + (1 - wgt) * bbModel.sd * bbModel.sd));
       }
       // Same shrink on the mean: four weeks is not a true talent level.
       const meanWeight = Math.min(1, n / 8);
@@ -26053,9 +26721,31 @@
       // optimal-lineup projection as the whole of the mean; one when
       // there is no projection to use, which leaves the history as the
       // whole of it.
+      // In BEST BALL the history is not contaminated, so it votes.
+      //
+      // PP_PROJECTION_DRIVEN puts zero weight on what a team has actually
+      // scored, and the reason is sound in a normal league: a realised
+      // score is the lineup somebody SET, so it carries their start-sit
+      // mistakes as well as their roster's quality, and the projection is
+      // the cleaner read on the roster.
+      //
+      // Best ball has no lineup to set. What a team scored IS the best its
+      // roster could do that week -- which is precisely the quantity the
+      // expected-maximum model is trying to compute. So in best ball the
+      // history is a direct, uncontaminated measurement of the model's own
+      // output, and discarding it means a modelled level can run away from
+      // what the team has actually been doing with nothing to pull it back.
+      //
+      // That is the failure this is fixing. Modelling best ball properly
+      // made the levels MORE spread out than the projected lineups were
+      // (1.36 times, measured), and with the history silenced, the only
+      // thing left to check that spread was the over-dispersion shrink,
+      // which at four weeks played is deliberately timid. Net effect: a
+      // more honest level model produced a MORE confident answer, which
+      // is backwards.
       const scoredWeight = strength == null
         ? 1
-        : (PP_PROJECTION_DRIVEN ? 0 : n / (n + PP_STRENGTH_WEEKS));
+        : ((PP_PROJECTION_DRIVEN && !isBestBall) ? 0 : n / (n + PP_STRENGTH_WEEKS));
       let projectedMean = strength == null ? scored : scoredWeight * scored + (1 - scoredWeight) * strength;
       // The blend above lives in "what teams actually start" space,
       // because that is the only space the two halves of it share. The
@@ -26065,7 +26755,31 @@
       // space to begin with. Applied to every team identically, so it
       // does not reshuffle anybody -- it moves the whole league onto the
       // scale the simulated weeks are actually played at.
-      if (PP_ASSUME_OPTIMAL_LINEUPS && realismFactor) projectedMean /= realismFactor;
+      //
+      // THE SPREAD HAS TO MOVE WITH IT. This divided the mean and left sd
+      // alone, and that is not a change of units -- it is a change of
+      // answer. Dividing every team's mean by 0.86 multiplies every GAP
+      // between two teams by 1.16 while the spread they are compared
+      // against stays where it was, so every game in the league comes out
+      // 1.16 times more decisive than the data says. The comment that
+      // used to sit here -- "applied to every team identically, so it
+      // does not reshuffle anybody" -- was true about the ORDER and
+      // missed that the order was never the issue.
+      //
+      // It is worst exactly where the gap between started and
+      // best-possible points is widest, which is a best ball league under
+      // the expected-maximum model: there the factor is nearer 1.4, and
+      // it was quietly inflating every margin by that much on top of
+      // everything else. That is why a bye went UP after best ball was
+      // modelled properly, which is not a thing a more honest level model
+      // should have done.
+      //
+      // Scaling sd with the mean leaves every win probability exactly
+      // where it was before the rescale, which is the whole point of a
+      // rescale.
+      const lineupScale = (PP_ASSUME_OPTIMAL_LINEUPS && realismFactor) ? 1 / realismFactor : 1;
+      projectedMean *= lineupScale;
+      sd *= lineupScale;
       const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
       const ppts = (st.ppts || 0) + (st.ppts_decimal || 0) / 100;
       // How wrong the projected level itself could be. Without this the
@@ -26081,19 +26795,50 @@
       // second is that the level itself moves -- trades, waivers,
       // injuries, a rookie arriving -- and there is more room for that to
       // happen the more weeks are left to play.
-      // Two independent parts, added in quadrature. How wrong the level
-      // itself is -- the projection's own error where the projection is
-      // driving, an ordinary standard error where the history is -- and
-      // how far that level can move before the season ends, which grows
-      // with the weeks still to play.
+      // Three independent parts, added in quadrature.
+      //
+      // How wrong the level itself is: the projection's own error where
+      // the projection is driving, an ordinary standard error where the
+      // history is.
       const levelErr = (PP_PROJECTION_DRIVEN && strength != null)
         ? sd * PP_PROJECTION_LEVEL_ERROR
         : sd / Math.sqrt(Math.max(1, n));
+      // The depth term: what an injury this roster has not had yet would
+      // cost it, which is a fact about its bench and not about the
+      // calendar. Teams with a real backup in place barely feel this.
+      const depth = depthById[r.roster_id] != null
+        ? depthById[r.roster_id] * PP_DEPTH_RISK_SHARE : 0;
+      // The old blind drift, now zero by default. See PP_DRIFT_PER_WEEK.
       const drift = sd * Math.sqrt(PP_DRIFT_PER_WEEK * Math.max(0, regularWeeks - n));
-      const tau = Math.sqrt(levelErr * levelErr + drift * drift);
+      // This is the number that decides whether the model believes its own
+      // read on who is good. It is drawn ONCE per simulated season and
+      // then holds for every week of it, so unlike the weekly noise it
+      // never averages out -- which is why it costs a strong team real
+      // playoff probability rather than just widening its range. Every
+      // point added here comes off the favourites and goes to the field,
+      // so each part of it has to be something we actually believe.
+      const tau = Math.sqrt(levelErr * levelErr + depth * depth + drift * drift);
+      // How much better or worse this roster is in each remaining week
+      // than in an average one, in best-possible-lineup points. The week
+      // your starting quarterback is out is a negative here and the week
+      // he returns is a positive, and they sum to about zero by
+      // construction, so this shifts WHICH weeks a team is strong in
+      // without quietly changing how strong it is overall.
+      //
+      // Deliberately not rescaled by realismFactor: the simulated weeks
+      // are played at best-possible-lineup level, which is the space
+      // these are already measured in.
+      const perWeek = weekLevelById[r.roster_id];
+      const weekDelta = {};
+      if (perWeek && strength != null) {
+        const keys = Object.keys(perWeek);
+        const avg = keys.reduce((a, k) => a + perWeek[k], 0) / keys.length;
+        keys.forEach(k => { weekDelta[k] = perWeek[k] - avg; });
+      }
       return {
         id: r.roster_id,
         mean: projectedMean,
+        weekDelta,
         sd, tau,
         weeksPlayed: n,
         wins: (st.wins || 0) + (st.ties || 0) * 0.5,
@@ -26181,6 +26926,15 @@
     out.ctx = ctx;
     out.leagueMean = leagueMean;
     out.model = byId;
+    // How much of the projected spread this league's own results bore out
+    // (1 = all of it). Carried out so the calibration can be inspected
+    // per league rather than only inferred from the odds it produces.
+    out.levelShrink = levelShrink;
+    // Best ball only: the fitted per-player spread scale, so the
+    // expected-maximum model can be inspected per league rather than
+    // inferred from the odds it produces. Null in every other league.
+    out.bestBallScale = bbScale;
+    out.isBestBall = isBestBall;
     return out;
   }
 
@@ -26283,6 +27037,11 @@
 
     const scratch = model.map((m, i) => ({ id: m.id, idx: i, wins: 0, pf: 0, ppts: 0 }));
     const drawn = new Array(n).fill(0);
+    // Each scheduled week's per-team lineup shift, resolved once here
+    // rather than looked up by week number inside the hot loop ten
+    // thousand times. Indexed [scheduleIndex][teamIndex].
+    const weekShift = schedule.map(wk => model.map(m =>
+      (m.weekDelta && m.weekDelta[wk.week] != null) ? m.weekDelta[wk.week] : 0));
     const seasonMean = new Array(n).fill(0);
     // Scratch space for the weekly median, sorted in place each week
     // rather than allocated 1,500 times.
@@ -26318,7 +27077,11 @@
       for (let w = 0; w < schedule.length; w++) {
         for (let i = 0; i < n; i++) {
           const m = model[i];
-          drawn[i] = Math.max(0, seasonMean[i] + m.sd * ppRandNormal());
+          // The team's level for THIS week: its season level plus however
+          // much better or worse its best possible lineup is this week.
+          // Zero for a week whose projections could not be read, which
+          // leaves that week on the season level.
+          drawn[i] = Math.max(0, seasonMean[i] + weekShift[w][i] + m.sd * ppRandNormal());
         }
         const pairs = schedule[w].pairs;
         for (let j = 0; j < pairs.length; j++) {
@@ -26386,41 +27149,43 @@
           const ia2 = alive[k], ib2 = alive[k + 1];
           if (ia2 < 0) { nextAlive[m1++] = ib2; continue; }
           if (ib2 < 0) { nextAlive[m1++] = ia2; continue; }
-          // A playoff game gets the FULL uncertainty, not just a week's
-          // noise around a level we are pretending to know.
+          // A playoff game is priced as exactly what it is: a matchup.
+          // Same spread the matchup screen puts on a game nobody has
+          // played yet, same normal CDF, same 1-99 bounds. If the matchup
+          // screen would call it 71%, the bracket calls it 71% too.
           //
-          // Through the regular season, drawing the level once and then
-          // rolling weekly noise around it is right: thirteen weeks
-          // average the level error away, which is what makes a record
-          // mean something. A single elimination game averages nothing.
-          // Treating the level as settled there made each round far more
-          // decisive than a fantasy playoff game is, and -- worse --
-          // correlated the rounds: a team that drew a high level won the
-          // semi AND the final, so the odds compounded instead of
-          // multiplying out. That is how a very good team reached 55% to
-          // win a twelve team league, and how a team with a real chance of
-          // making the playoffs came out at 1% to win it.
+          // That is the whole rule, and it replaced two attempts at
+          // giving the playoffs a spread of their own.
           //
-          // So the spread of a playoff game is the week's noise and the
-          // uncertainty in the level, added in quadrature. Favourites stay
-          // favourites; they stop being near-certainties three times in a
-          // row.
-          const pa2 = ppPlayoffSd(model[ia2]);
-          const pb2 = ppPlayoffSd(model[ib2]);
-          const spread2 = Math.sqrt(pa2 * pa2 + pb2 * pb2) || 1;
+          // The first drew the level once and rolled only a week's noise
+          // around it, which is right for the regular season -- thirteen
+          // weeks average the level error away, and that is what makes a
+          // record mean something -- but wrong for one elimination game,
+          // which averages nothing. It also correlated the rounds: a team
+          // that drew a high level won the semi AND the final, so the
+          // odds compounded instead of multiplying out. That is how a
+          // very good team reached 55% to win a twelve team league.
+          //
+          // The second added the level uncertainty in quadrature and then
+          // clamped the result to 65%. The clamp was the tell: a spread
+          // you have to clamp is a spread that is too narrow. That one
+          // ran about 37 points, and SB_SIGMA_FALLBACK's own note says
+          // what goes wrong below 64 -- a pregame number taken from a
+          // smaller spread comes out wildly overconfident, which is
+          // exactly the 79% per game that needed clamping in the first
+          // place.
+          //
+          // 64 is the app's answer for nine starters a side with none of
+          // them played, which is precisely a playoff game's state when
+          // it is simulated. Favourites land in the sixties and low
+          // seventies on their own, with nothing holding them there.
+          const spread2 = SB_SIGMA_FALLBACK;
           const edge2 = sbNormalCdf((seasonMean[ia2] - seasonMean[ib2]) / spread2);
-          // ...and then held inside what one fantasy week can actually
-          // settle. No single game is a near-certainty: the best roster in
-          // the league still has to get through a week in which its
-          // quarterback can throw two picks and somebody's waiver tight end
-          // can go for thirty. PP_PLAYOFF_MAX_EDGE is that ceiling, and the
-          // floor is its mirror, so a team that reaches a final is never
-          // written off in it.
-          //
-          // Without it the rounds compounded: three rounds of 80% is a
-          // league winner at 51% before anybody has played, which is not a
-          // thing that happens in a twelve team league.
-          const pWin2 = Math.min(PP_PLAYOFF_MAX_EDGE, Math.max(1 - PP_PLAYOFF_MAX_EDGE, edge2));
+          // The same 1-99 bounds sbWinProbability uses, so the bracket
+          // cannot claim a certainty the matchup screen would refuse to
+          // print. This is a display convention carried over, not a
+          // calibration knob -- the spread above does that work.
+          const pWin2 = Math.min(0.99, Math.max(0.01, edge2));
           nextAlive[m1++] = ppRandom() < pWin2 ? ia2 : ib2;
         }
         for (let k = 0; k < m1; k++) alive[k] = nextAlive[k];
@@ -26433,7 +27198,11 @@
         h2hCounts[model[i].id][b]++;
       }
 
-      for (let w = 0; w < schedule.length; w++) {
+      // The per-game counterfactual, and ONLY for the first
+      // PP_LEVERAGE_RUNS seasons. See PP_LEVERAGE_RUNS: this block is
+      // where nearly all the time in here goes, and it is answering a
+      // different question from the one the run count was raised for.
+      if (sim < PP_LEVERAGE_RUNS) for (let w = 0; w < schedule.length; w++) {
         const won = wonSide[w], pairs = schedule[w].pairs;
         for (let j = 0; j < won.length; j++) {
           const side = won[j];
@@ -26702,7 +27471,11 @@
       bye: cur.byeProb[rosterId] != null ? cur.byeProb[rosterId] : null,
       seed: cur.avgSeed[rosterId] != null ? cur.avgSeed[rosterId] : null,
       seedProb: cur.seedProb ? cur.seedProb[rosterId] : null,
-      projWins: cur.projWins ? cur.projWins[rosterId] : null,
+      projWins: ppProjWinsDisplayed(entry, cur, rosterId),
+      // The simulation's own answer, kept beside it. The two should agree
+      // to a hundredth; if they ever do not, one of them is wrong and it
+      // is worth being able to see which.
+      projWinsSim: cur.projWins ? cur.projWins[rosterId] : null,
       ifWin: cur.ifWinProb ? cur.ifWinProb[rosterId] : null,
       ifLoss: cur.ifLossProb ? cur.ifLossProb[rosterId] : null,
       // The MEDIAN seed: finish here or better in half the simulated
@@ -26731,6 +27504,268 @@
       weeksLeft: cur.weeksLeft,
     };
   }
+  function ppGameWinPct(entry, week, idA, idB) {
+    if (!entry || !entry.league) return null;
+    const liveWeek = Number(entry.week) || 0;
+    if (week === liveWeek) {
+      const all = entry.allMatchups || [];
+      const a = all.find(m => m.roster_id === idA), b = all.find(m => m.roster_id === idB);
+      if (a && b) {
+        try {
+          const p = sbMatchupWinPct(a, b, entry.league, null, window.__gcEspnGameData, liveWeek);
+          if (p != null && Number.isFinite(p)) return p / 100;
+        } catch (e) {}
+      }
+      return null;
+    }
+    // A future week is read straight off the season model, and
+    // deliberately off the SAME distribution the simulation draws that
+    // game from -- the two teams' levels for that week, spread by both
+    // their weekly noise and both their level uncertainty.
+    //
+    // This used to be its own estimate: both rosters' best possible
+    // lineups by THIS week's projections, spread by weekly noise alone.
+    // Two things were wrong with that, and together they are why adding
+    // up a schedule's percentages did not come to the projected record.
+    //
+    // It used this week's projections for every future week, so a team
+    // whose quarterback is out on Sunday had every remaining week on the
+    // page priced as though he were out in all of them -- the same bug
+    // as in the simulation, fixed there and still living here.
+    //
+    // And it left out tau. The simulation draws each team's level once
+    // per season and holds it, so a single game's margin carries that
+    // uncertainty too; leaving it out made every game more decisive on
+    // the page than in the odds. A projected record is the sum of the
+    // simulation's per-game probabilities, so a page showing systematically
+    // different probabilities cannot be made to add up to it.
+    //
+    // Now it is the same arithmetic, which means the percentages on a
+    // schedule DO sum to the projected record, for the weeks still to be
+    // played. (The live week is the Slate's number, which is a better
+    // answer than the season model's for a game with real lineups and
+    // real game state -- so that one week can differ, and should.)
+    const cur = ((window.__ppPickModel || {})[entry.league.league_id] || {}).current;
+    const m = cur && cur.model;
+    const ma = m && m[idA], mb = m && m[idB];
+    if (!ma || !mb) return null;
+    const levelOf = (mm) => mm.mean + ((mm.weekDelta && mm.weekDelta[week] != null) ? mm.weekDelta[week] : 0);
+    const pa = levelOf(ma), pb = levelOf(mb);
+    // Two teams the model cannot tell apart is not a coin flip, it is no
+    // answer. Saying 50/50 there would be inventing one, so the caller
+    // falls back to the simulation's measured rate instead.
+    if (!Number.isFinite(pa) || !Number.isFinite(pb) || Math.abs(pa - pb) < 1e-9) return null;
+    const spread = Math.sqrt(
+      ma.sd * ma.sd + mb.sd * mb.sd + ma.tau * ma.tau + mb.tau * mb.tau);
+    if (!(spread > 0)) return null;
+    // Normal CDF via erf, good to about 1e-7 -- plenty for a percentage.
+    const z = (pa - pb) / spread;
+    const t = 1 / (1 + 0.2316419 * Math.abs(z));
+    const d = 0.3989422804014327 * Math.exp(-z * z / 2);
+    let p = 1 - d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+    if (z < 0) p = 1 - p;
+    return Math.max(0, Math.min(1, p));
+  }
+  window.ppGameWinPct = ppGameWinPct;
+
+  // ppExplain('Pure Potential') -- the whole derivation for one league,
+  // printed.
+  //
+  // Sleeper is blocked from the sandbox this is written in, so I cannot
+  // run the model against a real league and read the numbers off. That
+  // has meant answering "why is my bye 92%" with reasoning about
+  // mechanisms rather than with your league's actual figures, which is
+  // not the same thing and has not been good enough.
+  //
+  // So the model explains itself instead. Call this in the console with
+  // any part of a league's name and it prints every input and every step
+  // between them and the number on screen: each roster's level and where
+  // that level came from, the spread, the calibration factors, every
+  // remaining game with its win probability, the sum that becomes the
+  // projected record, and the seed distribution behind the bye.
+  //
+  // Returns the same data as an object, so it can be pasted back.
+  function ppExplain(nameFragment, rosterId) {
+    const all = Object.values(window.sleeperLeagueData || {}).filter(e => e.league && e.roster);
+    const frag = String(nameFragment || '').toLowerCase();
+    const entry = frag
+      ? all.find(e => String(e.league.name || '').toLowerCase().includes(frag))
+      : all[0];
+    if (!entry) {
+      console.log('No league matching "' + nameFragment + '". Leagues loaded:',
+        all.map(e => e.league.name));
+      return null;
+    }
+    const cur = ((window.__ppPickModel || {})[entry.league.league_id] || {}).current;
+    if (!cur) {
+      console.log(entry.league.name + ': the season simulation has not run yet for this league. '
+        + 'Wait for a sync to finish and call this again.');
+      return null;
+    }
+    const me = rosterId != null ? rosterId : entry.roster.roster_id;
+    const m = cur.model && cur.model[me];
+    const nameOf = (rid) => {
+      const r = (entry.allRosters || []).find(x => x.roster_id === rid);
+      const u = r && (entry.users || []).find(x => x.user_id === r.owner_id);
+      return (u && (u.metadata && u.metadata.team_name || u.display_name)) || ('roster ' + rid);
+    };
+    const pct = (v) => v == null ? '--' : (v * 100).toFixed(1) + '%';
+    const L = [];
+    const say = (s) => { L.push(s); console.log(s); };
+
+    say('=== ' + entry.league.name + ' -- ' + nameOf(me) + ' ===');
+    say('');
+    say('LEAGUE SHAPE');
+    say('  teams ' + cur.teamCount + ', playoff spots ' + cur.playoffTeams
+      + ', byes ' + cur.byeSlots + ', regular weeks ' + cur.regularWeeks
+      + ', games ' + cur.regularGames + (cur.gamesPerWeek > 1 ? ' (median league)' : ''));
+    say('  best ball: ' + (cur.isBestBall ? 'yes' : 'no')
+      + (cur.bestBallScale != null ? ', fitted per-player spread scale ' + cur.bestBallScale.toFixed(3) : ''));
+    say('  projected spread kept: ' + (cur.levelShrink != null ? cur.levelShrink.toFixed(3) : '--')
+      + '  (1.00 = this league\'s results fully back its projections)');
+    say('');
+    say('EVERY TEAM\'S LEVEL  (points a week, best-possible-lineup scale)');
+    const lv = (entry.allRosters || []).map(r => ({
+      id: r.roster_id, name: nameOf(r.roster_id),
+      mean: cur.model[r.roster_id] ? cur.model[r.roster_id].mean : null,
+      sd: cur.model[r.roster_id] ? cur.model[r.roster_id].sd : null,
+      tau: cur.model[r.roster_id] ? cur.model[r.roster_id].tau : null,
+    })).sort((a, b) => (b.mean || 0) - (a.mean || 0));
+    lv.forEach((t, i) => say('  ' + String(i + 1).padStart(2) + '. '
+      + String(t.name).slice(0, 26).padEnd(27)
+      + 'level ' + (t.mean == null ? '--' : t.mean.toFixed(1)).padStart(6)
+      + '   week-to-week sd ' + (t.sd == null ? '--' : t.sd.toFixed(1)).padStart(5)
+      + '   level doubt ' + (t.tau == null ? '--' : t.tau.toFixed(1)).padStart(5)
+      + (t.id === me ? '   <-- you' : '')));
+    say('');
+    say('  level  = what this roster projects to score a week, averaged over the weeks left');
+    say('  sd     = how much a week swings around that');
+    say('  doubt  = how wrong the level itself could be (drawn once a season, never averages out)');
+    say('');
+    say('YOUR REMAINING SCHEDULE  -- this is the projected record, line by line');
+    const banked = m ? (Number(m.wins) || 0) : 0;
+    say('  banked record so far: ' + banked.toFixed(2) + ' wins');
+    let running = banked;
+    (cur.ctx.schedule || []).forEach((wk, wi) => {
+      (wk.rosterPairs || []).forEach((pr, pi) => {
+        const a = pr[0], b = pr[1];
+        if (a !== me && b !== me) return;
+        const opp = a === me ? b : a;
+        let p = ppGameWinPct(entry, wk.week, a, b);
+        let src = 'season model';
+        if (wk.week === (Number(entry.week) || 0)) src = 'the Slate (live lineups)';
+        if (p == null) {
+          const g = cur.games && cur.games[wi] ? cur.games[wi].games[pi] : null;
+          p = g && g.probA != null ? g.probA : null;
+          src = 'simulation rate (model could not answer)';
+        }
+        const mine = p == null ? null : (a === me ? p : 1 - p);
+        if (mine != null) running += mine;
+        say('  wk ' + String(wk.week).padStart(2) + '  vs ' + String(nameOf(opp)).slice(0, 24).padEnd(25)
+          + (mine == null ? '   --  ' : pct(mine).padStart(7))
+          + '   running total ' + running.toFixed(2) + '   [' + src + ']');
+      });
+    });
+    const odds = window.ppTeamOdds(entry, me);
+    say('');
+    say('  sum of the above          = ' + running.toFixed(2) + ' wins');
+    say('  projected record printed  = ' + (odds && odds.projWins != null ? odds.projWins.toFixed(2) : '--')
+      + ' wins'
+      + (odds && odds.projWins != null
+        ? '   (difference ' + (odds.projWins - running).toFixed(2)
+          + (cur.gamesPerWeek > 1 ? ', the median half' : ', should be 0.00') + ')'
+        : ''));
+    say('  the simulation\'s own figure = ' + (odds && odds.projWinsSim != null ? odds.projWinsSim.toFixed(2) : '--')
+      + '   (a separate calculation, kept as a cross-check)');
+    say('');
+    say('WHERE THE BYE COMES FROM');
+    say('  The bye is not computed from the record. Each of ' + (window.PP_SIM_RUNS_SHOWN || '10,000')
+      + ' simulated seasons is');
+    say('  played out game by game, the final standings are sorted, and the share of');
+    say('  seasons finishing in the top ' + cur.byeSlots + ' IS the bye number.');
+    say('');
+    const sp = cur.seedProb && cur.seedProb[me];
+    if (sp) {
+      say('  your finishing seed, across those seasons:');
+      sp.forEach((v, i) => { if (v >= 0.005) say('    seed ' + String(i + 1).padStart(2) + '  ' + pct(v)); });
+      const byeSum = sp.slice(0, cur.byeSlots).reduce((a, b) => a + b, 0);
+      say('    -> top ' + cur.byeSlots + ' = ' + pct(byeSum) + ', which is the bye figure');
+    }
+    say('');
+    say('  playoffs ' + pct(odds && odds.playoff) + '   bye ' + pct(odds && odds.bye)
+      + '   reach final ' + pct(odds && odds.reachFinal) + '   title ' + pct(odds && odds.title));
+    say('  if you win this week ' + pct(odds && odds.ifWin)
+      + '   if you lose ' + pct(odds && odds.ifLoss));
+    return { league: entry.league.name, team: nameOf(me), levels: lv, odds, text: L.join('\n') };
+  }
+  window.ppExplain = ppExplain;
+
+  // A projected record that is, by construction, the percentages you can
+  // see added up.
+  //
+  // It used to be the simulation's own average final win total. That is a
+  // correct number and it is not the one on the page: the schedule shows
+  // ppGameWinPct for each game, the record came from somewhere else, and
+  // when the two disagreed there was no way to tell which to believe. The
+  // last commit made them agree to within 0.03 of a win on a synthetic
+  // league, but "agrees to a hundredth on a test case" is not the same
+  // promise as "is the same arithmetic", and you have now twice added up
+  // a schedule by hand and not got the record back.
+  //
+  // So now it IS the same arithmetic: banked wins, plus the displayed win
+  // probability of every game still to be played. Add up the percentages
+  // on the schedule and you get this number exactly, because this number
+  // is that sum.
+  //
+  // The median is the one piece that cannot come from a matchup
+  // percentage, since beating the league's median score is not a game
+  // against anybody. In a median league that part is still taken from the
+  // simulation and added on top; in every other league it is zero, and
+  // the record is purely the sum of what you can see.
+  function ppProjWinsDisplayed(entry, cur, rosterId) {
+    const simWins = cur && cur.projWins ? cur.projWins[rosterId] : null;
+    if (simWins == null) return null;
+    const m = cur.model && cur.model[rosterId];
+    const sched = cur.ctx && cur.ctx.schedule;
+    if (!m || !sched) return simWins;
+    const banked = Number(m.wins) || 0;
+    const bankedH2H = m.h2hWins != null ? Number(m.h2hWins) : banked;
+
+    // What the simulation expects this team to add in head-to-head wins,
+    // read off the same win distribution the page plots. Whatever is left
+    // over between that and its projected total is the median half.
+    const dist = cur.winDist && cur.winDist[rosterId];
+    let simH2HFinal = null;
+    if (Array.isArray(dist)) {
+      let acc = 0;
+      for (let b = 0; b < dist.length; b++) acc += b * dist[b];
+      simH2HFinal = acc;
+    }
+    const simFutureMedian = (simH2HFinal == null)
+      ? 0
+      : Math.max(0, (simWins - banked) - (simH2HFinal - bankedH2H));
+
+    let future = 0;
+    for (let wi = 0; wi < sched.length; wi++) {
+      const wk = sched[wi];
+      const pairs = wk.rosterPairs || [];
+      for (let pi = 0; pi < pairs.length; pi++) {
+        const a = pairs[pi][0], b = pairs[pi][1];
+        if (a !== rosterId && b !== rosterId) continue;
+        let p = ppGameWinPct(entry, wk.week, a, b);
+        if (p == null) {
+          // The same fallback the page uses, so the sum still matches
+          // what is on screen even where the model cannot answer.
+          const g = cur.games && cur.games[wi] ? cur.games[wi].games[pi] : null;
+          p = g && g.probA != null ? g.probA : null;
+        }
+        if (p == null) return simWins;
+        future += (a === rosterId) ? p : (1 - p);
+      }
+    }
+    return banked + future + simFutureMedian;
+  }
+
   window.ppTeamOdds = ppTeamOdds;
   window.ppPickValueFuture = ppPickValueFuture;
   window.ppSlotValue = ppSlotValue;
@@ -33899,9 +34934,13 @@
       const games = o.regularGames != null ? o.regularGames : o.regularWeeks;
       if (games == null) return '&mdash;';
       const l = Math.max(0, games - o.projWins);
+      // Two decimals, not one. Ten thousand seasons put the sampling
+      // error on a projected win total at about 0.02, so the second
+      // decimal is real -- give or take a couple in the last place. At the
+      // old 1,500 runs it would have been noise and was not printed.
       return decimals === 0
         ? `${Math.round(o.projWins)}-${Math.round(l)}`
-        : `${o.projWins.toFixed(1)}-${l.toFixed(1)}`;
+        : `${o.projWins.toFixed(2)}-${l.toFixed(2)}`;
     };
 
     const summaryEl = document.getElementById('ppSummary');
@@ -34571,47 +35610,7 @@
     // both rosters' best possible lineups by projection, spread by what
     // the season model says a weekly score swings by. Null when it cannot
     // answer, and the caller falls back to the simulation's own rate.
-    function ppGameWinPct(entry, week, idA, idB) {
-      if (!entry || !entry.league) return null;
-      const liveWeek = Number(entry.week) || 0;
-      if (week === liveWeek) {
-        const all = entry.allMatchups || [];
-        const a = all.find(m => m.roster_id === idA), b = all.find(m => m.roster_id === idB);
-        if (a && b) {
-          try {
-            const p = sbMatchupWinPct(a, b, entry.league, null, window.__gcEspnGameData, liveWeek);
-            if (p != null && Number.isFinite(p)) return p / 100;
-          } catch (e) {}
-        }
-        return null;
-      }
-      if (!window.sbTeamOptimalProjection) return null;
-      const rosters = entry.allRosters || [];
-      const ra = rosters.find(r => r.roster_id === idA), rb = rosters.find(r => r.roster_id === idB);
-      if (!ra || !rb) return null;
-      const pa = window.sbTeamOptimalProjection(ra.players, entry.league);
-      const pb = window.sbTeamOptimalProjection(rb.players, entry.league);
-      // Two rosters that project identically -- or two that could not be
-      // projected at all, which comes out as a pair of zeroes -- is not a
-      // coin flip, it is no answer. Saying 50/50 there would be inventing
-      // one, so the caller falls back to the simulation instead.
-      if (pa == null || pb == null || Math.abs(pa - pb) < 1e-9) return null;
-      // How far a single week swings around its projection. Taken off the
-      // fitted model where there is one, so this and the odds are reading
-      // the same league rather than two different guesses about it.
-      const cur = ((window.__ppPickModel || {})[entry.league.league_id] || {}).current;
-      const m = cur && cur.model;
-      const sd = (m && m[idA] && m[idB]) ? Math.sqrt((m[idA].sd * m[idA].sd + m[idB].sd * m[idB].sd) / 2) : 26;
-      const spread = sd * Math.SQRT2;
-      if (!(spread > 0)) return null;
-      // Normal CDF via erf, good to about 1e-7 -- plenty for a percentage.
-      const z = (pa - pb) / spread;
-      const t = 1 / (1 + 0.2316419 * Math.abs(z));
-      const d = 0.3989422804014327 * Math.exp(-z * z / 2);
-      let p = 1 - d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
-      if (z < 0) p = 1 - p;
-      return Math.max(0, Math.min(1, p));
-    }
+
 
     function ppGamesThatMatter(res, ctx, wi, team, nameOf, wifWeek) {
       const week = res.games && res.games[wi];
