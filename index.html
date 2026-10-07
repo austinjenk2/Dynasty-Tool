@@ -3624,6 +3624,20 @@
   .sh-pos-tabs button { font: inherit; font-size: 12px; font-weight: 700; color: var(--ink); background: var(--surface); border: 2px solid var(--ink); border-radius: 999px; padding: 5px 12px; cursor: pointer; box-shadow: 2px 2px 0 var(--ink); }
   .sh-pos-tabs button.active { background: var(--ink); color: var(--surface); }
   .sh-pos-tabs { margin-bottom: 14px; }
+  .sh-scoring-wrap { position: relative; display: flex; }
+  .sh-scoring-wrap select { padding-right: 52px; }
+  .sh-info-btn { position: absolute; right: 26px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--ink); background: var(--surface); color: var(--ink); font: 800 11px/1 'Source Serif 4', serif; font-style: italic; cursor: pointer; padding: 0; }
+  .sh-info-btn[aria-expanded="true"] { background: var(--ink); color: var(--surface); }
+  .sh-settings { background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); padding: 14px 16px; margin-bottom: 14px; }
+  .sh-settings-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .sh-settings-head h3 { margin: 0; font-family: 'Source Serif 4', serif; font-size: 17px; color: var(--ink); }
+  .sh-settings-head p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+  .sh-settings-close { border: 0; background: none; font-size: 18px; color: var(--muted); cursor: pointer; }
+  .sh-settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 18px; }
+  .sh-settings-grid h4 { margin: 0 0 4px; font-size: 10px; font-weight: 800; letter-spacing: 0.6px; color: var(--faint); text-transform: uppercase; }
+  .sh-settings-grid dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12.5px; }
+  .sh-settings-grid dt { color: var(--muted); }
+  .sh-settings-grid dd { margin: 0; font-weight: 800; color: var(--ink); text-align: right; }
   .sh-pos-tabs button { font-family: 'Anton', sans-serif; font-weight: 400; letter-spacing: 0.6px; font-size: 14px; padding: 4px 14px; }
   .sh-status { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
   .sh-status.err { color: var(--red); font-weight: 600; }
@@ -3638,7 +3652,6 @@
   .sh-pos-chip.QB { background: var(--red); } .sh-pos-chip.RB { background: var(--green); }
   .sh-pos-chip.WR { background: var(--blue); } .sh-pos-chip.TE { background: var(--gold); } .sh-pos-chip.K { background: var(--muted); }
   .rb-table td.sh-ppg { font-weight: 800; color: var(--ink); }
-  .sh-tier-row td { background: var(--bg); font-size: 10px; font-weight: 800; letter-spacing: 0.6px; color: var(--muted); text-align: left !important; padding: 4px 10px; }
   @media (max-width: 560px) {
     .sh-field select { max-width: 100%; }
   }
@@ -12772,11 +12785,11 @@
   <div data-view="stathub">
     <div class="page-title">
       <h1>The Ledger</h1>
-      <p>Every fantasy-relevant player's season, scored your way. Pick a league to score everything with that league's own <b>scoring_settings</b>, or leave it on the house line. Pick any season back to 2018 &mdash; past seasons are scored with the chosen league's current settings, so the numbers line up with how your league scores today.</p>
+      <p>Every fantasy-relevant player's season, scored your way. Pick a league to score everything with that league's own <b>scoring_settings</b>, or leave it on The Desk Default. The <b>i</b> button shows exactly what either one scores. Pick any season back to 2018 &mdash; past seasons are scored with the chosen league's current settings, so the numbers line up with how your league scores today.</p>
     </div>
 
     <div class="sh-toolbar">
-      <label class="sh-field"><span>Scoring</span><select id="shScoring"></select></label>
+      <div class="sh-field"><span>Scoring</span><div class="sh-scoring-wrap"><select id="shScoring" aria-label="Scoring"></select><button type="button" class="sh-info-btn" id="shScoringInfo" aria-expanded="false" title="See these scoring settings">i</button></div></div>
       <label class="sh-field"><span>Season</span><select id="shSeason"></select></label>
       <label class="sh-field"><span>Min games</span><input type="number" id="shMinGp" min="0" max="17" step="1" inputmode="numeric" value="4"></label>
       <div class="sh-search"><span>&#128269;</span><input type="text" id="shSearch" placeholder="Find a player..."></div>
@@ -12791,6 +12804,7 @@
       <button type="button" data-pos="FLEX">FLEX</button>
     </div>
 
+    <div class="sh-settings" id="shSettings" hidden></div>
     <div class="sh-status" id="shStatus"></div>
     <div id="shBody"></div>
   </div>
@@ -35098,9 +35112,9 @@
       const id = scoringSel.value;
       if (id && id !== 'house') {
         const e = leagueEntries().find(x => String(x.league.league_id) === id);
-        if (e) return { label: e.league.name, settings: e.league.scoring_settings };
+        if (e) return { label: e.league.name, settings: e.league.scoring_settings, league: e.league };
       }
-      return { label: 'House line', settings: SB_HOUSE_SCORING };
+      return { label: 'The Desk Default', settings: SB_HOUSE_SCORING };
     }
 
     // A position premium is its own stat key (bonus_rec_te) that the raw
@@ -35116,7 +35130,7 @@
 
     function fillScoringOptions() {
       const prev = scoringSel.value;
-      const opts = [`<option value="house">House line &mdash; ${esc(SB_HOUSE_SCORING_LABEL)}</option>`]
+      const opts = [`<option value="house">The Desk Default</option>`]
         .concat(leagueEntries().map(e => `<option value="${esc(e.league.league_id)}">${esc(e.league.name)}</option>`));
       scoringSel.innerHTML = opts.join('');
       if (prev && [...scoringSel.options].some(o => o.value === prev)) scoringSel.value = prev;
@@ -35190,12 +35204,6 @@
         .sort((a, b) => cmp(a, b) * state.sortDir || b.pts - a.pts);
     }
 
-    // Tier breaks for the table: QB1/QB2 style bands, the usual 12-team cut.
-    function tierLabel(pos, i) {
-      if (pos === 'ALL') return null;
-      return i % 12 === 0 ? `${pos}${i / 12 + 1}` : null;
-    }
-
     function sortTh(key, label, extraCls) {
       const active = state.sortKey === key;
       return `<th class="rb-sort-th${active ? ' active' : ''}${extraCls ? ' ' + extraCls : ''}" data-sort="${key}">${label}${active ? (state.sortDir < 0 ? ' &#9660;' : ' &#9650;') : ''}</th>`;
@@ -35207,12 +35215,8 @@
         + (multiPos(state.pos) ? sortTh('posrk', 'POS RK') : '')
         + sortTh('gp', 'GP') + sortTh('pts', 'PTS') + sortTh('ppg', 'PPG')
         + cols.map(c => sortTh(c.key, c.label)).join('') + '</tr>';
-      const showTiers = state.sortKey === 'pts' || state.sortKey === 'ppg';
-      const colspan = 6 + cols.length + (multiPos(state.pos) ? 1 : 0);
       const body = rows.map((r, i) => {
-        const tier = showTiers && state.sortDir < 0 ? tierLabel(state.pos, i) : null;
-        return (tier ? `<tr class="sh-tier-row"><td colspan="${colspan}">${tier}</td></tr>` : '')
-          + `<tr><td>${i + 1}</td><td class="sh-player-cell" data-player-id="${esc(r.id)}"><span class="sh-pos-chip ${r.pos}">${r.pos}</span><b>${esc(r.name)}</b></td>`
+        return `<tr><td>${i + 1}</td><td class="sh-player-cell" data-player-id="${esc(r.id)}"><span class="sh-pos-chip ${r.pos}">${r.pos}</span><b>${esc(r.name)}</b></td>`
           + `<td class="sh-team-cell">${r.team && r.team !== 'FA' ? `<img class="sh-team-logo" src="${sbTeamLogoUrl(r.team)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(r.team)}</td>`
           + (multiPos(state.pos) ? `<td>${r.pos}${r.posRank}</td>` : '')
           + `<td>${r.gp}</td><td>${fmt(r.pts)}</td><td class="sh-ppg">${fmt(r.ppg)}</td>`
@@ -35254,6 +35258,63 @@
       draw();
     }
     // Exposed so tests and other pages can feed it a stat list directly.
+    // ---- What the chosen scoring actually is ----
+    // A plain-English card of the settings behind the dropdown: the house
+    // line, or the picked league's real scoring_settings (plus its lineup).
+    const settingsEl = document.getElementById('shSettings');
+    const infoBtn = document.getElementById('shScoringInfo');
+    const SETTING_GROUPS = [
+      ['Passing', [['pass_yd', 'Per passing yard'], ['pass_td', 'Passing TD'], ['pass_int', 'Interception'], ['pass_2pt', '2-pt conversion'],
+        ['pass_cmp', 'Completion'], ['pass_inc', 'Incompletion'], ['pass_att', 'Pass attempt'], ['pass_sack', 'Sacked'], ['pass_fd', 'Passing first down'],
+        ['bonus_pass_yd_300', '300+ yard game'], ['bonus_pass_yd_400', '400+ yard game'], ['pass_int_td', 'Pick-six thrown']]],
+      ['Rushing', [['rush_yd', 'Per rushing yard'], ['rush_td', 'Rushing TD'], ['rush_2pt', '2-pt conversion'], ['rush_att', 'Carry'], ['rush_fd', 'Rushing first down'],
+        ['bonus_rush_yd_100', '100+ yard game'], ['bonus_rush_yd_200', '200+ yard game']]],
+      ['Receiving', [['rec', 'Reception'], ['rec_yd', 'Per receiving yard'], ['rec_td', 'Receiving TD'], ['rec_2pt', '2-pt conversion'], ['rec_fd', 'Receiving first down'],
+        ['bonus_rec_rb', 'RB reception bonus'], ['bonus_rec_wr', 'WR reception bonus'], ['bonus_rec_te', 'TE reception bonus'],
+        ['bonus_rec_yd_100', '100+ yard game'], ['bonus_rec_yd_200', '200+ yard game']]],
+      ['Turnovers', [['fum', 'Fumble'], ['fum_lost', 'Fumble lost'], ['fum_rec_td', 'Fumble recovery TD']]],
+    ];
+    const signed = (v) => (v > 0 ? '+' : '') + (Math.round(v * 1000) / 1000);
+    function settingValue(key, v) {
+      // Yardage reads better as "1 pt / 25 yds" than "+0.04".
+      if (/_yd$/.test(key) && v && Math.abs(v) < 1) return `${signed(v)} (1 pt / ${Math.round(1 / Math.abs(v))} yds)`;
+      return signed(v);
+    }
+    function renderSettings() {
+      const sc = currentScoring();
+      const st = sc.settings || {};
+      const groups = SETTING_GROUPS.map(([title, keys]) => {
+        const rows = keys.filter(([k]) => typeof st[k] === 'number' && st[k] !== 0)
+          .map(([k, label]) => `<dt>${label}</dt><dd>${settingValue(k, st[k])}</dd>`).join('');
+        return rows ? `<div><h4>${title}</h4><dl>${rows}</dl></div>` : '';
+      }).join('');
+      const rec = st.rec || 0;
+      const fmtName = rec >= 1 ? 'Full PPR' : rec >= 0.5 ? 'Half PPR' : rec > 0 ? `${rec} PPR` : 'Standard (no PPR)';
+      const te = (st.bonus_rec_te || 0) ? `TE premium +${st.bonus_rec_te}` : 'No TE premium';
+      let lineup = '';
+      const lg = sc.league;
+      if (lg && Array.isArray(lg.roster_positions)) {
+        const counts = {};
+        lg.roster_positions.forEach(p => { counts[p] = (counts[p] || 0) + 1; });
+        const starters = Object.entries(counts).filter(([p]) => p !== 'BN' && p !== 'IR' && p !== 'TAXI')
+          .map(([p, n]) => `<dt>${p === 'SUPER_FLEX' ? 'Superflex' : p}</dt><dd>${n}</dd>`).join('');
+        lineup = `<div><h4>Lineup</h4><dl>${starters}<dt>Bench</dt><dd>${counts.BN || 0}</dd>`
+          + (lg.total_rosters ? `<dt>Teams</dt><dd>${lg.total_rosters}</dd>` : '') + '</dl></div>';
+      }
+      settingsEl.innerHTML = `<div class="sh-settings-head"><div><h3>${esc(sc.label)}</h3>`
+        + `<p>${fmtName} &middot; ${te}${lg ? '' : ' &middot; the line every page uses when no single league is at stake'}</p></div>`
+        + `<button type="button" class="sh-settings-close" aria-label="Close">&times;</button></div>`
+        + `<div class="sh-settings-grid">${groups}${lineup}</div>`;
+    }
+    function setSettingsOpen(open) {
+      settingsEl.hidden = !open;
+      infoBtn.setAttribute('aria-expanded', String(open));
+      if (open) renderSettings();
+    }
+    infoBtn.addEventListener('click', () => setSettingsOpen(settingsEl.hidden));
+    settingsEl.addEventListener('click', (e) => { if (e.target.closest('.sh-settings-close')) setSettingsOpen(false); });
+    scoringSel.addEventListener('change', () => { if (!settingsEl.hidden) renderSettings(); });
+
     window.shRenderFromList = (list) => { statusEl.textContent = ''; state.rows = buildRows(list, currentScoring().settings); applyDefaultMinGp(); draw(); };
 
     scoringSel.addEventListener('change', refresh);
