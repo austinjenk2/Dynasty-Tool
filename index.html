@@ -27410,7 +27410,11 @@
       bye: cur.byeProb[rosterId] != null ? cur.byeProb[rosterId] : null,
       seed: cur.avgSeed[rosterId] != null ? cur.avgSeed[rosterId] : null,
       seedProb: cur.seedProb ? cur.seedProb[rosterId] : null,
-      projWins: cur.projWins ? cur.projWins[rosterId] : null,
+      projWins: ppProjWinsDisplayed(entry, cur, rosterId),
+      // The simulation's own answer, kept beside it. The two should agree
+      // to a hundredth; if they ever do not, one of them is wrong and it
+      // is worth being able to see which.
+      projWinsSim: cur.projWins ? cur.projWins[rosterId] : null,
       ifWin: cur.ifWinProb ? cur.ifWinProb[rosterId] : null,
       ifLoss: cur.ifLossProb ? cur.ifLossProb[rosterId] : null,
       // The MEDIAN seed: finish here or better in half the simulated
@@ -27439,6 +27443,136 @@
       weeksLeft: cur.weeksLeft,
     };
   }
+  function ppGameWinPct(entry, week, idA, idB) {
+    if (!entry || !entry.league) return null;
+    const liveWeek = Number(entry.week) || 0;
+    if (week === liveWeek) {
+      const all = entry.allMatchups || [];
+      const a = all.find(m => m.roster_id === idA), b = all.find(m => m.roster_id === idB);
+      if (a && b) {
+        try {
+          const p = sbMatchupWinPct(a, b, entry.league, null, window.__gcEspnGameData, liveWeek);
+          if (p != null && Number.isFinite(p)) return p / 100;
+        } catch (e) {}
+      }
+      return null;
+    }
+    // A future week is read straight off the season model, and
+    // deliberately off the SAME distribution the simulation draws that
+    // game from -- the two teams' levels for that week, spread by both
+    // their weekly noise and both their level uncertainty.
+    //
+    // This used to be its own estimate: both rosters' best possible
+    // lineups by THIS week's projections, spread by weekly noise alone.
+    // Two things were wrong with that, and together they are why adding
+    // up a schedule's percentages did not come to the projected record.
+    //
+    // It used this week's projections for every future week, so a team
+    // whose quarterback is out on Sunday had every remaining week on the
+    // page priced as though he were out in all of them -- the same bug
+    // as in the simulation, fixed there and still living here.
+    //
+    // And it left out tau. The simulation draws each team's level once
+    // per season and holds it, so a single game's margin carries that
+    // uncertainty too; leaving it out made every game more decisive on
+    // the page than in the odds. A projected record is the sum of the
+    // simulation's per-game probabilities, so a page showing systematically
+    // different probabilities cannot be made to add up to it.
+    //
+    // Now it is the same arithmetic, which means the percentages on a
+    // schedule DO sum to the projected record, for the weeks still to be
+    // played. (The live week is the Slate's number, which is a better
+    // answer than the season model's for a game with real lineups and
+    // real game state -- so that one week can differ, and should.)
+    const cur = ((window.__ppPickModel || {})[entry.league.league_id] || {}).current;
+    const m = cur && cur.model;
+    const ma = m && m[idA], mb = m && m[idB];
+    if (!ma || !mb) return null;
+    const levelOf = (mm) => mm.mean + ((mm.weekDelta && mm.weekDelta[week] != null) ? mm.weekDelta[week] : 0);
+    const pa = levelOf(ma), pb = levelOf(mb);
+    // Two teams the model cannot tell apart is not a coin flip, it is no
+    // answer. Saying 50/50 there would be inventing one, so the caller
+    // falls back to the simulation's measured rate instead.
+    if (!Number.isFinite(pa) || !Number.isFinite(pb) || Math.abs(pa - pb) < 1e-9) return null;
+    const spread = Math.sqrt(
+      ma.sd * ma.sd + mb.sd * mb.sd + ma.tau * ma.tau + mb.tau * mb.tau);
+    if (!(spread > 0)) return null;
+    // Normal CDF via erf, good to about 1e-7 -- plenty for a percentage.
+    const z = (pa - pb) / spread;
+    const t = 1 / (1 + 0.2316419 * Math.abs(z));
+    const d = 0.3989422804014327 * Math.exp(-z * z / 2);
+    let p = 1 - d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+    if (z < 0) p = 1 - p;
+    return Math.max(0, Math.min(1, p));
+  }
+  window.ppGameWinPct = ppGameWinPct;
+
+  // A projected record that is, by construction, the percentages you can
+  // see added up.
+  //
+  // It used to be the simulation's own average final win total. That is a
+  // correct number and it is not the one on the page: the schedule shows
+  // ppGameWinPct for each game, the record came from somewhere else, and
+  // when the two disagreed there was no way to tell which to believe. The
+  // last commit made them agree to within 0.03 of a win on a synthetic
+  // league, but "agrees to a hundredth on a test case" is not the same
+  // promise as "is the same arithmetic", and you have now twice added up
+  // a schedule by hand and not got the record back.
+  //
+  // So now it IS the same arithmetic: banked wins, plus the displayed win
+  // probability of every game still to be played. Add up the percentages
+  // on the schedule and you get this number exactly, because this number
+  // is that sum.
+  //
+  // The median is the one piece that cannot come from a matchup
+  // percentage, since beating the league's median score is not a game
+  // against anybody. In a median league that part is still taken from the
+  // simulation and added on top; in every other league it is zero, and
+  // the record is purely the sum of what you can see.
+  function ppProjWinsDisplayed(entry, cur, rosterId) {
+    const simWins = cur && cur.projWins ? cur.projWins[rosterId] : null;
+    if (simWins == null) return null;
+    const m = cur.model && cur.model[rosterId];
+    const sched = cur.ctx && cur.ctx.schedule;
+    if (!m || !sched) return simWins;
+    const banked = Number(m.wins) || 0;
+    const bankedH2H = m.h2hWins != null ? Number(m.h2hWins) : banked;
+
+    // What the simulation expects this team to add in head-to-head wins,
+    // read off the same win distribution the page plots. Whatever is left
+    // over between that and its projected total is the median half.
+    const dist = cur.winDist && cur.winDist[rosterId];
+    let simH2HFinal = null;
+    if (Array.isArray(dist)) {
+      let acc = 0;
+      for (let b = 0; b < dist.length; b++) acc += b * dist[b];
+      simH2HFinal = acc;
+    }
+    const simFutureMedian = (simH2HFinal == null)
+      ? 0
+      : Math.max(0, (simWins - banked) - (simH2HFinal - bankedH2H));
+
+    let future = 0;
+    for (let wi = 0; wi < sched.length; wi++) {
+      const wk = sched[wi];
+      const pairs = wk.rosterPairs || [];
+      for (let pi = 0; pi < pairs.length; pi++) {
+        const a = pairs[pi][0], b = pairs[pi][1];
+        if (a !== rosterId && b !== rosterId) continue;
+        let p = ppGameWinPct(entry, wk.week, a, b);
+        if (p == null) {
+          // The same fallback the page uses, so the sum still matches
+          // what is on screen even where the model cannot answer.
+          const g = cur.games && cur.games[wi] ? cur.games[wi].games[pi] : null;
+          p = g && g.probA != null ? g.probA : null;
+        }
+        if (p == null) return simWins;
+        future += (a === rosterId) ? p : (1 - p);
+      }
+    }
+    return banked + future + simFutureMedian;
+  }
+
   window.ppTeamOdds = ppTeamOdds;
   window.ppPickValueFuture = ppPickValueFuture;
   window.ppSlotValue = ppSlotValue;
@@ -35283,68 +35417,7 @@
     // both rosters' best possible lineups by projection, spread by what
     // the season model says a weekly score swings by. Null when it cannot
     // answer, and the caller falls back to the simulation's own rate.
-    function ppGameWinPct(entry, week, idA, idB) {
-      if (!entry || !entry.league) return null;
-      const liveWeek = Number(entry.week) || 0;
-      if (week === liveWeek) {
-        const all = entry.allMatchups || [];
-        const a = all.find(m => m.roster_id === idA), b = all.find(m => m.roster_id === idB);
-        if (a && b) {
-          try {
-            const p = sbMatchupWinPct(a, b, entry.league, null, window.__gcEspnGameData, liveWeek);
-            if (p != null && Number.isFinite(p)) return p / 100;
-          } catch (e) {}
-        }
-        return null;
-      }
-      // A future week is read straight off the season model, and
-      // deliberately off the SAME distribution the simulation draws that
-      // game from -- the two teams' levels for that week, spread by both
-      // their weekly noise and both their level uncertainty.
-      //
-      // This used to be its own estimate: both rosters' best possible
-      // lineups by THIS week's projections, spread by weekly noise alone.
-      // Two things were wrong with that, and together they are why adding
-      // up a schedule's percentages did not come to the projected record.
-      //
-      // It used this week's projections for every future week, so a team
-      // whose quarterback is out on Sunday had every remaining week on the
-      // page priced as though he were out in all of them -- the same bug
-      // as in the simulation, fixed there and still living here.
-      //
-      // And it left out tau. The simulation draws each team's level once
-      // per season and holds it, so a single game's margin carries that
-      // uncertainty too; leaving it out made every game more decisive on
-      // the page than in the odds. A projected record is the sum of the
-      // simulation's per-game probabilities, so a page showing systematically
-      // different probabilities cannot be made to add up to it.
-      //
-      // Now it is the same arithmetic, which means the percentages on a
-      // schedule DO sum to the projected record, for the weeks still to be
-      // played. (The live week is the Slate's number, which is a better
-      // answer than the season model's for a game with real lineups and
-      // real game state -- so that one week can differ, and should.)
-      const cur = ((window.__ppPickModel || {})[entry.league.league_id] || {}).current;
-      const m = cur && cur.model;
-      const ma = m && m[idA], mb = m && m[idB];
-      if (!ma || !mb) return null;
-      const levelOf = (mm) => mm.mean + ((mm.weekDelta && mm.weekDelta[week] != null) ? mm.weekDelta[week] : 0);
-      const pa = levelOf(ma), pb = levelOf(mb);
-      // Two teams the model cannot tell apart is not a coin flip, it is no
-      // answer. Saying 50/50 there would be inventing one, so the caller
-      // falls back to the simulation's measured rate instead.
-      if (!Number.isFinite(pa) || !Number.isFinite(pb) || Math.abs(pa - pb) < 1e-9) return null;
-      const spread = Math.sqrt(
-        ma.sd * ma.sd + mb.sd * mb.sd + ma.tau * ma.tau + mb.tau * mb.tau);
-      if (!(spread > 0)) return null;
-      // Normal CDF via erf, good to about 1e-7 -- plenty for a percentage.
-      const z = (pa - pb) / spread;
-      const t = 1 / (1 + 0.2316419 * Math.abs(z));
-      const d = 0.3989422804014327 * Math.exp(-z * z / 2);
-      let p = 1 - d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
-      if (z < 0) p = 1 - p;
-      return Math.max(0, Math.min(1, p));
-    }
+
 
     function ppGamesThatMatter(res, ctx, wi, team, nameOf, wifWeek) {
       const week = res.games && res.games[wi];
