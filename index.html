@@ -3638,7 +3638,6 @@
   .sh-pos-chip.QB { background: var(--red); } .sh-pos-chip.RB { background: var(--green); }
   .sh-pos-chip.WR { background: var(--blue); } .sh-pos-chip.TE { background: var(--gold); } .sh-pos-chip.K { background: var(--muted); }
   .rb-table td.sh-ppg { font-weight: 800; color: var(--ink); }
-  .sh-tier-row td { background: var(--bg); font-size: 10px; font-weight: 800; letter-spacing: 0.6px; color: var(--muted); text-align: left !important; padding: 4px 10px; }
   @media (max-width: 560px) {
     .sh-field select { max-width: 100%; }
   }
@@ -35190,12 +35189,6 @@
         .sort((a, b) => cmp(a, b) * state.sortDir || b.pts - a.pts);
     }
 
-    // Tier breaks for the table: QB1/QB2 style bands, the usual 12-team cut.
-    function tierLabel(pos, i) {
-      if (pos === 'ALL') return null;
-      return i % 12 === 0 ? `${pos}${i / 12 + 1}` : null;
-    }
-
     function sortTh(key, label, extraCls) {
       const active = state.sortKey === key;
       return `<th class="rb-sort-th${active ? ' active' : ''}${extraCls ? ' ' + extraCls : ''}" data-sort="${key}">${label}${active ? (state.sortDir < 0 ? ' &#9660;' : ' &#9650;') : ''}</th>`;
@@ -35207,12 +35200,8 @@
         + (multiPos(state.pos) ? sortTh('posrk', 'POS RK') : '')
         + sortTh('gp', 'GP') + sortTh('pts', 'PTS') + sortTh('ppg', 'PPG')
         + cols.map(c => sortTh(c.key, c.label)).join('') + '</tr>';
-      const showTiers = state.sortKey === 'pts' || state.sortKey === 'ppg';
-      const colspan = 6 + cols.length + (multiPos(state.pos) ? 1 : 0);
       const body = rows.map((r, i) => {
-        const tier = showTiers && state.sortDir < 0 ? tierLabel(state.pos, i) : null;
-        return (tier ? `<tr class="sh-tier-row"><td colspan="${colspan}">${tier}</td></tr>` : '')
-          + `<tr><td>${i + 1}</td><td class="sh-player-cell" data-player-id="${esc(r.id)}"><span class="sh-pos-chip ${r.pos}">${r.pos}</span><b>${esc(r.name)}</b></td>`
+        return `<tr><td>${i + 1}</td><td class="sh-player-cell" data-player-id="${esc(r.id)}"><span class="sh-pos-chip ${r.pos}">${r.pos}</span><b>${esc(r.name)}</b></td>`
           + `<td class="sh-team-cell">${r.team && r.team !== 'FA' ? `<img class="sh-team-logo" src="${sbTeamLogoUrl(r.team)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(r.team)}</td>`
           + (multiPos(state.pos) ? `<td>${r.pos}${r.posRank}</td>` : '')
           + `<td>${r.gp}</td><td>${fmt(r.pts)}</td><td class="sh-ppg">${fmt(r.ppg)}</td>`
