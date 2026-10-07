@@ -26706,9 +26706,31 @@
       // optimal-lineup projection as the whole of the mean; one when
       // there is no projection to use, which leaves the history as the
       // whole of it.
+      // In BEST BALL the history is not contaminated, so it votes.
+      //
+      // PP_PROJECTION_DRIVEN puts zero weight on what a team has actually
+      // scored, and the reason is sound in a normal league: a realised
+      // score is the lineup somebody SET, so it carries their start-sit
+      // mistakes as well as their roster's quality, and the projection is
+      // the cleaner read on the roster.
+      //
+      // Best ball has no lineup to set. What a team scored IS the best its
+      // roster could do that week -- which is precisely the quantity the
+      // expected-maximum model is trying to compute. So in best ball the
+      // history is a direct, uncontaminated measurement of the model's own
+      // output, and discarding it means a modelled level can run away from
+      // what the team has actually been doing with nothing to pull it back.
+      //
+      // That is the failure this is fixing. Modelling best ball properly
+      // made the levels MORE spread out than the projected lineups were
+      // (1.36 times, measured), and with the history silenced, the only
+      // thing left to check that spread was the over-dispersion shrink,
+      // which at four weeks played is deliberately timid. Net effect: a
+      // more honest level model produced a MORE confident answer, which
+      // is backwards.
       const scoredWeight = strength == null
         ? 1
-        : (PP_PROJECTION_DRIVEN ? 0 : n / (n + PP_STRENGTH_WEEKS));
+        : ((PP_PROJECTION_DRIVEN && !isBestBall) ? 0 : n / (n + PP_STRENGTH_WEEKS));
       let projectedMean = strength == null ? scored : scoredWeight * scored + (1 - scoredWeight) * strength;
       // The blend above lives in "what teams actually start" space,
       // because that is the only space the two halves of it share. The
@@ -26718,7 +26740,31 @@
       // space to begin with. Applied to every team identically, so it
       // does not reshuffle anybody -- it moves the whole league onto the
       // scale the simulated weeks are actually played at.
-      if (PP_ASSUME_OPTIMAL_LINEUPS && realismFactor) projectedMean /= realismFactor;
+      //
+      // THE SPREAD HAS TO MOVE WITH IT. This divided the mean and left sd
+      // alone, and that is not a change of units -- it is a change of
+      // answer. Dividing every team's mean by 0.86 multiplies every GAP
+      // between two teams by 1.16 while the spread they are compared
+      // against stays where it was, so every game in the league comes out
+      // 1.16 times more decisive than the data says. The comment that
+      // used to sit here -- "applied to every team identically, so it
+      // does not reshuffle anybody" -- was true about the ORDER and
+      // missed that the order was never the issue.
+      //
+      // It is worst exactly where the gap between started and
+      // best-possible points is widest, which is a best ball league under
+      // the expected-maximum model: there the factor is nearer 1.4, and
+      // it was quietly inflating every margin by that much on top of
+      // everything else. That is why a bye went UP after best ball was
+      // modelled properly, which is not a thing a more honest level model
+      // should have done.
+      //
+      // Scaling sd with the mean leaves every win probability exactly
+      // where it was before the rescale, which is the whole point of a
+      // rescale.
+      const lineupScale = (PP_ASSUME_OPTIMAL_LINEUPS && realismFactor) ? 1 / realismFactor : 1;
+      projectedMean *= lineupScale;
+      sd *= lineupScale;
       const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
       const ppts = (st.ppts || 0) + (st.ppts_decimal || 0) / 100;
       // How wrong the projected level itself could be. Without this the
