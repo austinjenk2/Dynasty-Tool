@@ -3658,19 +3658,27 @@
   /* ---- The Margin (wins above replacement) ---- */
   .mg-repl { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
   .mg-repl b { color: var(--ink); }
-  .mg-chart { background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); padding: 10px 12px 8px; margin-bottom: 14px; position: relative; }
-  .mg-chart { overflow-x: auto; }
-  .mg-chart svg { display: block; width: 100%; min-width: 560px; height: auto; }
-  .mg-chart text { font-family: 'Source Sans 3', sans-serif; }
-  .mg-dot { cursor: pointer; }
-  .mg-dot circle { stroke: var(--surface); stroke-width: 1.5; fill-opacity: 0.8; }
-  .mg-dot.is-hot circle { fill-opacity: 1; stroke: var(--ink); stroke-width: 2; }
-  .mg-dot.QB circle { fill: var(--red); } .mg-dot.RB circle { fill: var(--green); }
-  .mg-dot.WR circle { fill: var(--blue); } .mg-dot.TE circle { fill: var(--gold); }
-  .mg-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--muted); margin-top: 4px; }
-  .mg-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
-  .mg-tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--surface); font-size: 12px; padding: 5px 8px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -100%); margin-top: -10px; }
-  .mg-tip[hidden] { display: none; }
+  .mg-chart { background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); padding: 12px 14px 10px; margin-bottom: 14px; }
+  .mg-chart-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .mg-chart-head h3 { margin: 0; font-family: 'Source Serif 4', serif; font-size: 16px; color: var(--ink); }
+  .mg-metric { display: inline-flex; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; }
+  .mg-metric button { font: inherit; font-size: 12px; font-weight: 700; border: 0; background: var(--surface); color: var(--ink); padding: 5px 12px; cursor: pointer; }
+  .mg-metric button.active { background: var(--ink); color: var(--surface); }
+  .mg-bars { display: grid; grid-template-columns: minmax(0, 170px) 1fr 58px; gap: 3px 10px; align-items: center; font-size: 13px; }
+  .mg-bar-row { display: contents; cursor: pointer; }
+  .mg-bar-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); font-weight: 600; }
+  .mg-bar-name .sh-pos-chip { margin-right: 5px; }
+  .mg-bar-track { position: relative; height: 16px; }
+  .mg-bar-track::before { content: ""; position: absolute; left: var(--zero); top: -2px; bottom: -2px; border-left: 1px dashed var(--faint); }
+  .mg-bar-track i { position: absolute; top: 2px; height: 12px; border-radius: 3px; opacity: 0.85; }
+  .mg-bar-track i.QB { background: var(--red); } .mg-bar-track i.RB { background: var(--green); }
+  .mg-bar-track i.WR { background: var(--blue); } .mg-bar-track i.TE { background: var(--gold); }
+  .mg-bar-row.is-hot .mg-bar-track i { opacity: 1; box-shadow: 0 0 0 2px var(--ink); }
+  .mg-bar-row.is-hot .mg-bar-name { text-decoration: underline; }
+  .mg-bar-val { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .mg-bar-gap { grid-column: 1 / -1; text-align: center; font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--faint); padding: 4px 0; }
+  .mg-chart-note { font-size: 11.5px; color: var(--faint); margin-top: 8px; }
+  @media (max-width: 560px) { .mg-bars { grid-template-columns: minmax(0, 120px) 1fr 50px; font-size: 12px; } }
   .rb-table td.mg-war { font-weight: 800; }
   .mg-pos { color: var(--green); } .mg-neg { color: var(--red); }
   .rb-table tr.is-hot td { background: var(--green-bg); }
@@ -35535,7 +35543,7 @@
 
     const FIRST_SEASON = 2018;
     const weekCache = {};
-    const state = { pos: 'ALL', sortKey: 'war', sortDir: -1, result: null, meta: {} };
+    const state = { pos: 'ALL', sortKey: 'war', sortDir: -1, metric: 'war', result: null, meta: {} };
 
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -35659,50 +35667,35 @@
         + ` &middot; a starting lineup swings about <b>${r.sigmaTeam.toFixed(1)}</b> points week to week`;
     }
 
-    // Small, stable per-player nudge so a column of 17-game players
-    // spreads out instead of stacking into one line.
-    function jitter(id) {
-      let h = 0;
-      for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) | 0;
-      return ((Math.abs(h) % 1000) / 1000 - 0.5) * 0.5;
-    }
-
+    // Ranked bars on whichever number the toggle picks: the best fifteen
+    // and, when there are more, the worst five under a gap, so the
+    // negative end of the scale is always on screen too.
     function renderChart(rows) {
       if (!rows.length) { chartEl.hidden = true; return; }
       chartEl.hidden = false;
-      const W = 900, H = 320, m = { l: 50, r: 18, t: 14, b: 32 };
-      const maxGp = Math.max(17, ...rows.map(r => r.gp));
-      let lo = Math.min(0, ...rows.map(r => r.warg)), hi = Math.max(0, ...rows.map(r => r.warg));
-      const pad = (hi - lo) * 0.08 || 0.02;
-      lo -= pad; hi += pad;
-      const x = g => m.l + (g - 0.5) / maxGp * (W - m.l - m.r);
-      const y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
-      const step = [0.01, 0.02, 0.025, 0.05, 0.1, 0.2].find(s => (hi - lo) / s <= 8) || 0.5;
-      let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="WAR per game against games played">`;
-      for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
-        const vv = Math.abs(v) < 1e-9 ? 0 : v;
-        svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(vv)}" y2="${y(vv)}" stroke="var(--border-soft)"/>`
-          + `<text x="${m.l - 6}" y="${y(vv) + 4}" font-size="11" text-anchor="end" fill="var(--muted)">${signed(vv, 3)}</text>`;
-      }
-      svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--faint)" stroke-dasharray="5 4"/>`
-        + `<text x="${W - m.r}" y="${y(0) - 5}" font-size="11" text-anchor="end" fill="var(--faint)">replacement</text>`;
-      for (let g = 2; g <= maxGp; g += 2) {
-        svg += `<text x="${x(g)}" y="${H - 10}" font-size="11" text-anchor="middle" fill="var(--muted)">${g}</text>`;
-      }
-      svg += `<text x="${m.l}" y="${H - 10}" font-size="11" fill="var(--faint)">GP</text>`;
-      const labelled = new Set(rows.slice().sort((a, b) => b.war - a.war).slice(0, 8).map(r => r.id));
-      // Draw the labelled ones last so they sit on top.
-      rows.slice().sort((a, b) => labelled.has(a.id) - labelled.has(b.id)).forEach(r => {
-        const cx = x(r.gp + jitter(r.id)), cy = y(r.warg);
-        const last = (r.name || '').split(' ').slice(-1)[0];
-        svg += `<g class="mg-dot ${r.pos}" data-player-id="${esc(r.id)}"><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="6"/>`
-          + (labelled.has(r.id) ? `<text x="${(cx + 9).toFixed(1)}" y="${(cy + 4).toFixed(1)}" font-size="11" font-weight="700" fill="var(--ink)">${esc(last)}</text>` : '')
-          + '</g>';
-      });
-      svg += '</svg>';
-      chartEl.innerHTML = svg
-        + `<div class="mg-legend">${MG_POSITIONS.map(p => `<span><i class="sh-pos-chip ${p}"></i>${p}</span>`).join('')}<span>WAR per game (up) against games played (across)</span></div>`
-        + '<div class="mg-tip" hidden></div>';
+      const key = state.metric;
+      const ranked = rows.slice().sort((a, b) => b[key] - a[key]);
+      const top = ranked.length > 20 ? ranked.slice(0, 15) : ranked;
+      const bottom = ranked.length > 20 ? ranked.slice(-5) : [];
+      const shown = top.concat(bottom);
+      const hi = Math.max(0, ...shown.map(r => r[key]));
+      const lo = Math.min(0, ...shown.map(r => r[key]));
+      const span = (hi - lo) || 1;
+      const zero = (-lo / span) * 100;
+      const d = key === 'warg' ? 3 : 2;
+      const bar = (r) => {
+        const v = r[key], len = Math.abs(v) / span * 100;
+        return `<div class="mg-bar-row" data-player-id="${esc(r.id)}">`
+          + `<div class="mg-bar-name"><span class="sh-pos-chip ${r.pos}">${r.pos}</span>${esc(r.name)}</div>`
+          + `<div class="mg-bar-track" style="--zero:${zero.toFixed(1)}%"><i class="${r.pos}" style="left:${(v < 0 ? zero - len : zero).toFixed(1)}%;width:${Math.max(len, 0.4).toFixed(1)}%"></i></div>`
+          + `<div class="mg-bar-val ${v < 0 ? 'mg-neg' : 'mg-pos'}">${signed(v, d)}</div></div>`;
+      };
+      chartEl.innerHTML = `<div class="mg-chart-head"><h3>${key === 'war' ? 'Total WAR' : 'WAR per game'}</h3>`
+        + `<div class="mg-metric"><button type="button" data-metric="war" class="${key === 'war' ? 'active' : ''}">Total WAR</button>`
+        + `<button type="button" data-metric="warg" class="${key === 'warg' ? 'active' : ''}">WAR / game</button></div></div>`
+        + `<div class="mg-bars">${top.map(bar).join('')}`
+        + (bottom.length ? `<div class="mg-bar-gap">&middot;&middot;&middot; ${ranked.length - 20} more &middot;&middot;&middot; bottom five</div>${bottom.map(bar).join('')}` : '')
+        + `</div><div class="mg-chart-note">Dashed line is replacement level. Every player is in the table below.</div>`;
     }
 
     function renderTable(rows) {
@@ -35789,29 +35782,15 @@
       draw();
     };
 
-    // Hovering a dot lights its row and vice versa.
-    const tip = () => chartEl.querySelector('.mg-tip');
+    // Hovering a bar lights its row and vice versa.
     function setHot(id, on) {
-      const dot = chartEl.querySelector(`.mg-dot[data-player-id="${CSS.escape(id)}"]`);
+      const bar = chartEl.querySelector(`.mg-bar-row[data-player-id="${CSS.escape(id)}"]`);
       const row = bodyEl.querySelector(`tr[data-row-id="${CSS.escape(id)}"]`);
-      if (dot) dot.classList.toggle('is-hot', on);
+      if (bar) bar.classList.toggle('is-hot', on);
       if (row) row.classList.toggle('is-hot', on);
-      const t = tip();
-      if (!t) return;
-      const r = on && state.result && state.result.players.find(p => String(p.id) === id);
-      if (!r || !dot) { t.hidden = true; return; }
-      const c = dot.querySelector('circle').getBoundingClientRect();
-      const box = chartEl.getBoundingClientRect();
-      t.innerHTML = `<b>${esc(r.name)}</b> ${r.pos} &middot; ${r.gp} GP &middot; ${signed(r.war, 2)} WAR &middot; ${signed(r.warg, 3)}/G`;
-      t.hidden = false;
-      // Kept inside the panel, so a dot at either edge doesn't push it off.
-      const half = t.offsetWidth / 2;
-      const cx = c.left + c.width / 2 - box.left + chartEl.scrollLeft;
-      t.style.left = Math.min(Math.max(cx, half + 4 + chartEl.scrollLeft), chartEl.scrollLeft + box.width - half - 4) + 'px';
-      t.style.top = (c.top - box.top) + 'px';
     }
-    chartEl.addEventListener('mouseover', (e) => { const d = e.target.closest('.mg-dot'); if (d) setHot(d.dataset.playerId, true); });
-    chartEl.addEventListener('mouseout', (e) => { const d = e.target.closest('.mg-dot'); if (d) setHot(d.dataset.playerId, false); });
+    chartEl.addEventListener('mouseover', (e) => { const d = e.target.closest('.mg-bar-row'); if (d) setHot(d.dataset.playerId, true); });
+    chartEl.addEventListener('mouseout', (e) => { const d = e.target.closest('.mg-bar-row'); if (d) setHot(d.dataset.playerId, false); });
     bodyEl.addEventListener('mouseover', (e) => { const tr = e.target.closest('tr[data-row-id]'); if (tr) setHot(tr.dataset.rowId, true); });
     bodyEl.addEventListener('mouseout', (e) => { const tr = e.target.closest('tr[data-row-id]'); if (tr) setHot(tr.dataset.rowId, false); });
 
@@ -35821,7 +35800,12 @@
         window.openPlayerModalForId(r.id, r.name, r.team, r.pos, { defaultTab: 'gamelog', gameLogSeason: Number(seasonSel.value) });
       }
     }
-    chartEl.addEventListener('click', (e) => { const d = e.target.closest('.mg-dot'); if (d) openPlayer(d.dataset.playerId); });
+    chartEl.addEventListener('click', (e) => {
+      const m = e.target.closest('[data-metric]');
+      if (m) { state.metric = state.sortKey = m.dataset.metric; state.sortDir = -1; draw(); return; }
+      const d = e.target.closest('.mg-bar-row');
+      if (d) openPlayer(d.dataset.playerId);
+    });
     bodyEl.addEventListener('click', (e) => {
       const cell = e.target.closest('.sh-player-cell[data-player-id]');
       if (cell) { openPlayer(cell.dataset.playerId); return; }
@@ -35829,6 +35813,7 @@
       if (!th) return;
       if (state.sortKey === th.dataset.sort) state.sortDir *= -1;
       else { state.sortKey = th.dataset.sort; state.sortDir = ['name', 'team'].includes(th.dataset.sort) ? 1 : -1; }
+      if (state.sortKey === 'war' || state.sortKey === 'warg') state.metric = state.sortKey;
       draw();
     });
 
