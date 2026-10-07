@@ -3664,21 +3664,15 @@
   .mg-metric { display: inline-flex; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; }
   .mg-metric button { font: inherit; font-size: 12px; font-weight: 700; border: 0; background: var(--surface); color: var(--ink); padding: 5px 12px; cursor: pointer; }
   .mg-metric button.active { background: var(--ink); color: var(--surface); }
-  .mg-bars { display: grid; grid-template-columns: minmax(0, 170px) 1fr 58px; gap: 3px 10px; align-items: center; font-size: 13px; }
-  .mg-bar-row { display: contents; cursor: pointer; }
-  .mg-bar-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); font-weight: 600; }
-  .mg-bar-name .sh-pos-chip { margin-right: 5px; }
-  .mg-bar-track { position: relative; height: 16px; }
-  .mg-bar-track::before { content: ""; position: absolute; left: var(--zero); top: -2px; bottom: -2px; border-left: 1px dashed var(--faint); }
-  .mg-bar-track i { position: absolute; top: 2px; height: 12px; border-radius: 3px; opacity: 0.85; }
-  .mg-bar-track i.QB { background: var(--red); } .mg-bar-track i.RB { background: var(--green); }
-  .mg-bar-track i.WR { background: var(--blue); } .mg-bar-track i.TE { background: var(--gold); }
-  .mg-bar-row.is-hot .mg-bar-track i { opacity: 1; box-shadow: 0 0 0 2px var(--ink); }
-  .mg-bar-row.is-hot .mg-bar-name { text-decoration: underline; }
-  .mg-bar-val { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .mg-bar-gap { grid-column: 1 / -1; text-align: center; font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--faint); padding: 4px 0; }
+  .mg-curve { display: block; width: 100%; height: auto; }
+  .mg-cv-grid { stroke: var(--border-soft); stroke-width: 1; }
+  .mg-cv-zero { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .mg-cv-axis { font-size: 10.5px; fill: var(--faint); font-weight: 600; }
+  .mg-cv-end { font-family: 'Anton', sans-serif; font-size: 13px; letter-spacing: 0.5px; }
+  .mg-cv-cross { font-size: 10.5px; font-weight: 800; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+  .mg-pt { cursor: pointer; stroke: var(--surface); stroke-width: 1.5; }
+  .mg-pt:hover, .mg-pt.is-hot { r: 6; stroke: var(--ink); stroke-width: 2; }
   .mg-chart-note { font-size: 11.5px; color: var(--faint); margin-top: 8px; }
-  @media (max-width: 560px) { .mg-bars { grid-template-columns: minmax(0, 120px) 1fr 50px; font-size: 12px; } }
   .rb-table td.mg-war { font-weight: 800; }
   .mg-pos { color: var(--green); } .mg-neg { color: var(--red); }
   .rb-table tr.is-hot td { background: var(--green-bg); }
@@ -35667,35 +35661,70 @@
         + ` &middot; a starting lineup swings about <b>${r.sigmaTeam.toFixed(1)}</b> points week to week`;
     }
 
-    // Ranked bars on whichever number the toggle picks: the best fifteen
-    // and, when there are more, the worst five under a gap, so the
-    // negative end of the scale is always on screen too.
+    // Positional value curves: each position's players ranked 1, 2, 3...
+    // down the x axis, their WAR up the y. Where a line falls through the
+    // dashed zero is where that position runs out of players worth
+    // starting, and how steep it falls says how much it costs to wait on
+    // one -- the question a ranked list of names can't answer.
+    const MG_CURVE_COLOR = { QB: 'var(--red)', RB: 'var(--green)', WR: 'var(--blue)', TE: 'var(--gold)' };
     function renderChart(rows) {
       if (!rows.length) { chartEl.hidden = true; return; }
       chartEl.hidden = false;
       const key = state.metric;
-      const ranked = rows.slice().sort((a, b) => b[key] - a[key]);
-      const top = ranked.length > 20 ? ranked.slice(0, 15) : ranked;
-      const bottom = ranked.length > 20 ? ranked.slice(-5) : [];
-      const shown = top.concat(bottom);
-      const hi = Math.max(0, ...shown.map(r => r[key]));
-      const lo = Math.min(0, ...shown.map(r => r[key]));
-      const span = (hi - lo) || 1;
-      const zero = (-lo / span) * 100;
       const d = key === 'warg' ? 3 : 2;
-      const bar = (r) => {
-        const v = r[key], len = Math.abs(v) / span * 100;
-        return `<div class="mg-bar-row" data-player-id="${esc(r.id)}">`
-          + `<div class="mg-bar-name"><span class="sh-pos-chip ${r.pos}">${r.pos}</span>${esc(r.name)}</div>`
-          + `<div class="mg-bar-track" style="--zero:${zero.toFixed(1)}%"><i class="${r.pos}" style="left:${(v < 0 ? zero - len : zero).toFixed(1)}%;width:${Math.max(len, 0.4).toFixed(1)}%"></i></div>`
-          + `<div class="mg-bar-val ${v < 0 ? 'mg-neg' : 'mg-pos'}">${signed(v, d)}</div></div>`;
-      };
-      chartEl.innerHTML = `<div class="mg-chart-head"><h3>${key === 'war' ? 'Total WAR' : 'WAR per game'}</h3>`
+      const positions = MG_POSITIONS.filter(p => rows.some(r => r.pos === p));
+      const series = positions.map(pos => ({
+        pos, pts: rows.filter(r => r.pos === pos).sort((a, b) => b[key] - a[key]),
+      }));
+      // Deep enough to show every position cross replacement, capped so
+      // the top of the curve keeps its room.
+      const crossAt = (s) => { const i = s.pts.findIndex(r => r[key] < 0); return i < 0 ? s.pts.length : i; };
+      const depth = Math.max(12, Math.min(48, Math.max(...series.map(crossAt)) + 6));
+      series.forEach(s => { s.cross = crossAt(s); s.total = s.pts.length; s.pts = s.pts.slice(0, depth); });
+      const vals = series.flatMap(s => s.pts.map(r => r[key]));
+      const hi = Math.max(0.01, ...vals), lo = Math.min(0, ...vals);
+      const W = 760, H = 300, L = 46, R = 70, T = 12, B = 30;
+      const x = (i) => L + (depth <= 1 ? 0 : i / (depth - 1)) * (W - L - R);
+      const y = (v) => T + (hi - v) / ((hi - lo) || 1) * (H - T - B);
+      // Round-number gridlines (0.5, 1, 2...) rather than five even slices.
+      const raw = (hi - lo) / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+      const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(v => v >= raw) || raw;
+      const ticks = [];
+      for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) ticks.push(Math.abs(v) < 1e-9 ? 0 : v);
+      const grid = ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="mg-cv-grid"/>`
+        + `<text x="${L - 6}" y="${(y(v) + 3).toFixed(1)}" class="mg-cv-axis" text-anchor="end">${signed(v, key === 'warg' ? 2 : 1)}</text>`).join('');
+      const xTicks = [1, 6, 12, 18, 24, 30, 36, 42, 48].filter(n => n <= depth)
+        .map(n => `<text x="${x(n - 1).toFixed(1)}" y="${H - B + 16}" class="mg-cv-axis" text-anchor="middle">${n}</text>`).join('');
+      const zeroY = y(0).toFixed(1);
+      // End labels, nudged apart so two positions finishing level don't overlap.
+      const labels = series.map(s => ({ s, ly: y(s.pts[s.pts.length - 1][key]) })).sort((a, b) => a.ly - b.ly);
+      for (let i = 1; i < labels.length; i++) if (labels[i].ly - labels[i - 1].ly < 13) labels[i].ly = labels[i - 1].ly + 13;
+      const lines = series.map(s => {
+        const c = MG_CURVE_COLOR[s.pos];
+        const path = s.pts.map((r, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(r[key]).toFixed(1)}`).join('');
+        const dots = s.pts.map((r, i) => `<circle class="mg-pt" data-player-id="${esc(r.id)}" cx="${x(i).toFixed(1)}" cy="${y(r[key]).toFixed(1)}" r="3.5" fill="${c}">`
+          + `<title>${s.pos}${i + 1} ${esc(r.name)}: ${signed(r[key], d).replace('&minus;', '−')}</title></circle>`).join('');
+        return `<path d="${path}" fill="none" stroke="${c}" stroke-width="2.5" stroke-linejoin="round"/>${dots}`;
+      }).join('');
+      // Where each line crosses replacement: a tick on the dashed line and
+      // its label below, stacked so two positions crossing together stay legible.
+      const crossings = series.filter(s => s.cross > 0 && s.cross < s.pts.length).sort((a, b) => a.cross - b.cross)
+        .map((s, k) => {
+          const cx = x(s.cross - 0.5).toFixed(1), c = MG_CURVE_COLOR[s.pos];
+          return `<line x1="${cx}" x2="${cx}" y1="${+zeroY - 6}" y2="${+zeroY + 6}" stroke="${c}" stroke-width="2.5"/>`
+            + `<text x="${cx}" y="${(+zeroY + 18 + 12 * k).toFixed(1)}" class="mg-cv-cross" fill="${c}" text-anchor="middle">${s.pos}${s.cross}</text>`;
+        }).join('');
+      const ends = labels.map(({ s, ly }) => `<text x="${W - R + 8}" y="${(ly + 4).toFixed(1)}" class="mg-cv-end" fill="${MG_CURVE_COLOR[s.pos]}">${s.pos}</text>`).join('');
+      const summary = series.map(s => `<b style="color:${MG_CURVE_COLOR[s.pos]}">${s.pos}</b> ${s.cross === s.total ? 'all' : s.cross} above replacement`).join(' &middot; ');
+      chartEl.innerHTML = `<div class="mg-chart-head"><h3>${key === 'war' ? 'Total WAR' : 'WAR per game'} by position rank</h3>`
         + `<div class="mg-metric"><button type="button" data-metric="war" class="${key === 'war' ? 'active' : ''}">Total WAR</button>`
         + `<button type="button" data-metric="warg" class="${key === 'warg' ? 'active' : ''}">WAR / game</button></div></div>`
-        + `<div class="mg-bars">${top.map(bar).join('')}`
-        + (bottom.length ? `<div class="mg-bar-gap">&middot;&middot;&middot; ${ranked.length - 20} more &middot;&middot;&middot; bottom five</div>${bottom.map(bar).join('')}` : '')
-        + `</div><div class="mg-chart-note">Dashed line is replacement level. Every player is in the table below.</div>`;
+        + `<svg class="mg-curve" viewBox="0 0 ${W} ${H}" role="img" aria-label="WAR by position rank for each position">`
+        + grid + `<line x1="${L}" x2="${W - R}" y1="${zeroY}" y2="${zeroY}" class="mg-cv-zero"/>`
+        + `<text x="${L + 4}" y="${(+zeroY - 5).toFixed(1)}" class="mg-cv-axis">replacement</text>`
+        + xTicks + `<text x="${(L + W - R) / 2}" y="${H - 2}" class="mg-cv-axis" text-anchor="middle">rank at position</text>`
+        + lines + crossings + ends + '</svg>'
+        + `<div class="mg-chart-note">${summary}. Where a line drops through the dashed line is where that position stops being worth a lineup spot; a steep line means waiting on that position costs you. Hover a dot for the player, click to open him.</div>`;
     }
 
     function renderTable(rows) {
@@ -35784,13 +35813,13 @@
 
     // Hovering a bar lights its row and vice versa.
     function setHot(id, on) {
-      const bar = chartEl.querySelector(`.mg-bar-row[data-player-id="${CSS.escape(id)}"]`);
+      const bar = chartEl.querySelector(`.mg-pt[data-player-id="${CSS.escape(id)}"]`);
       const row = bodyEl.querySelector(`tr[data-row-id="${CSS.escape(id)}"]`);
       if (bar) bar.classList.toggle('is-hot', on);
       if (row) row.classList.toggle('is-hot', on);
     }
-    chartEl.addEventListener('mouseover', (e) => { const d = e.target.closest('.mg-bar-row'); if (d) setHot(d.dataset.playerId, true); });
-    chartEl.addEventListener('mouseout', (e) => { const d = e.target.closest('.mg-bar-row'); if (d) setHot(d.dataset.playerId, false); });
+    chartEl.addEventListener('mouseover', (e) => { const d = e.target.closest('.mg-pt'); if (d) setHot(d.dataset.playerId, true); });
+    chartEl.addEventListener('mouseout', (e) => { const d = e.target.closest('.mg-pt'); if (d) setHot(d.dataset.playerId, false); });
     bodyEl.addEventListener('mouseover', (e) => { const tr = e.target.closest('tr[data-row-id]'); if (tr) setHot(tr.dataset.rowId, true); });
     bodyEl.addEventListener('mouseout', (e) => { const tr = e.target.closest('tr[data-row-id]'); if (tr) setHot(tr.dataset.rowId, false); });
 
@@ -35803,7 +35832,7 @@
     chartEl.addEventListener('click', (e) => {
       const m = e.target.closest('[data-metric]');
       if (m) { state.metric = state.sortKey = m.dataset.metric; state.sortDir = -1; draw(); return; }
-      const d = e.target.closest('.mg-bar-row');
+      const d = e.target.closest('.mg-pt');
       if (d) openPlayer(d.dataset.playerId);
     });
     bodyEl.addEventListener('click', (e) => {
