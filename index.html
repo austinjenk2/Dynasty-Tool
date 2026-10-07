@@ -3616,6 +3616,7 @@
   /* ---- The Ledger (season stat hub) ---- */
   .sh-toolbar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin-bottom: 14px; }
   .sh-field { display: flex; flex-direction: column; gap: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.4px; color: var(--faint); text-transform: uppercase; }
+  .sh-field input[type=number] { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 8px; width: 72px; }
   .sh-field select { font: inherit; font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--ink); background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 8px; max-width: 260px; }
   .sh-search { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 2px solid var(--ink); border-radius: 8px; padding: 5px 8px; flex: 1 1 160px; min-width: 140px; }
   .sh-search input { border: 0; background: transparent; font: inherit; font-size: 13px; color: var(--ink); outline: none; width: 100%; }
@@ -3632,7 +3633,11 @@
   .sh-status { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
   .sh-status.err { color: var(--red); font-weight: 600; }
   .rb-table td.sh-player-cell, .rb-table th.sh-th-player { text-align: left; }
+  .sh-player-cell { cursor: pointer; }
+  .sh-player-cell:hover b { text-decoration: underline; }
   .sh-player-cell b { color: var(--ink); }
+  .rb-table td.sh-team-cell { text-align: left; }
+  .sh-team-logo { width: 18px; height: 18px; object-fit: contain; vertical-align: -4px; margin-right: 4px; }
   .sh-player-cell small { color: var(--faint); margin-left: 6px; font-weight: 600; }
   .sh-pos-chip { display: inline-block; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-right: 6px; color: #fff; background: var(--navy); }
   .sh-pos-chip.QB { background: var(--red); } .sh-pos-chip.RB { background: var(--green); }
@@ -12773,9 +12778,7 @@
     <div class="sh-toolbar">
       <label class="sh-field"><span>Scoring</span><select id="shScoring"></select></label>
       <label class="sh-field"><span>Season</span><select id="shSeason"></select></label>
-      <label class="sh-field"><span>Min games</span><select id="shMinGp">
-        <option value="1">1+</option><option value="4" selected>4+</option><option value="8">8+</option><option value="12">12+</option>
-      </select></label>
+      <label class="sh-field"><span>Min games</span><input type="number" id="shMinGp" min="0" max="17" step="1" inputmode="numeric" value="4"></label>
       <div class="sh-search"><span>&#128269;</span><input type="text" id="shSearch" placeholder="Find a player..."></div>
     </div>
 
@@ -33569,7 +33572,7 @@
   }
 
   let pmGameLogToken = 0;
-  async function renderPmGameLog(playerId) {
+  async function renderPmGameLog(playerId, focusSeason) {
     const pmGameLogList = document.getElementById('pmGameLogList');
     if (!pmGameLogList) return;
     if (!playerId) {
@@ -33590,7 +33593,10 @@
     // Every season of this player's real career, bounded by Sleeper's
     // actual years_exp (so a rookie doesn't trigger a decade of empty
     // fetches) and a sane cap for very long careers.
-    const yearsBack = Math.min((dict[playerId].years_exp != null ? dict[playerId].years_exp : 4) + 1, 15);
+    let yearsBack = Math.min((dict[playerId].years_exp != null ? dict[playerId].years_exp : 4) + 1, 15);
+    // A season asked for by name (The Ledger) is always fetched, even when
+    // years_exp would have stopped short of it.
+    if (focusSeason && curSeason - Number(focusSeason) + 1 > yearsBack) yearsBack = Math.min(curSeason - Number(focusSeason) + 1, 15);
     const seasonSpecs = [];
     for (let i = 0; i < yearsBack; i++) {
       const season = curSeason - i;
@@ -33618,6 +33624,14 @@
         pmGameLogList.querySelectorAll(`[data-gl-chevron="${idx}"]`).forEach(c => c.classList.toggle('is-open', !weeksEl.hidden));
       });
     });
+    if (focusSeason) {
+      const i = results.findIndex(gl => Number(gl.season) === Number(focusSeason));
+      const toggle = i >= 0 && pmGameLogList.querySelector(`[data-gl-toggle="${i}"]`);
+      if (toggle) {
+        toggle.click();
+        toggle.scrollIntoView({ block: 'nearest' });
+      }
+    }
   }
 
   // getPlayerDict() itself lives inside loadSleeperData()'s closure and
@@ -33858,7 +33872,7 @@
   // showing when the modal opens -- Exposures opens straight to its own
   // tab (it already has the % on screen); everywhere else defaults to
   // Overview.
-  function openPlayerModalData({ playerId, name, team, pos, leagues, pct, defaultTab }) {
+  function openPlayerModalData({ playerId, name, team, pos, leagues, pct, defaultTab, gameLogSeason }) {
     playerModal.dataset.playerId = playerId;
 
     const pmTradesList = document.getElementById('pmTradesList');
@@ -33901,7 +33915,7 @@
     document.querySelectorAll('.pm-panel').forEach(p => { p.hidden = p.dataset.pmPanel !== tab; });
     if (tab === 'overview') renderPmOverview(playerId);
     if (tab === 'ranks') renderPmRanks(playerId);
-    if (tab === 'gamelog') renderPmGameLog(playerId);
+    if (tab === 'gamelog') renderPmGameLog(playerId, gameLogSeason);
     if (tab === 'contract') renderPmContract(playerId);
 
     playerModal.hidden = false;
@@ -33913,14 +33927,14 @@
   // the page with no click behavior yet (League Detail's roster columns,
   // for one) -- works out the real leagues he's rostered in on the fly
   // and opens the same modal, defaulting to Overview.
-  function openPlayerModalForId(playerId, name, team, pos) {
+  function openPlayerModalForId(playerId, name, team, pos, opts) {
     const leagues = [];
     Object.values(window.sleeperLeagueData || {}).forEach(entry => {
       if (!entry.roster) return;
       const players = (entry.roster.players || []).filter(id => id && id !== '0');
       if (players.includes(playerId)) leagues.push(entry.league.name);
     });
-    openPlayerModalData({ playerId, name, team, pos, leagues, defaultTab: 'overview' });
+    openPlayerModalData(Object.assign({ playerId, name, team, pos, leagues, defaultTab: 'overview' }, opts || {}));
   }
   window.openPlayerModalForId = openPlayerModalForId;
 
@@ -35079,16 +35093,22 @@
     }
 
     function visibleRows() {
-      const minGp = Number(minGpSel.value) || 1;
+      const minGp = Math.max(0, Number(minGpSel.value) || 0);
       const q = (searchInput.value || '').trim().toLowerCase();
       const cols = STAT_COLS[state.pos] || [];
       const col = cols.find(c => c.key === state.sortKey);
+      const POS_ORDER = { QB: 0, RB: 1, WR: 2, TE: 3, K: 4 };
       const val = (r) => state.sortKey === 'pts' ? r.pts : state.sortKey === 'gp' ? r.gp
-        : state.sortKey === 'ppg' ? r.ppg : col ? (col.v(r.s) ?? -Infinity) : r.ppg;
+        : state.sortKey === 'ppg' ? r.ppg
+        : state.sortKey === 'name' ? r.name.toLowerCase()
+        : state.sortKey === 'team' ? r.team
+        : state.sortKey === 'posrk' ? POS_ORDER[r.pos] * 1000 + r.posRank
+        : col ? (col.v(r.s) ?? -Infinity) : r.ppg;
+      const cmp = (a, b) => { const x = val(a), y = val(b); return typeof x === 'string' ? x.localeCompare(y) : x - y; };
       return state.rows
         .filter(r => (state.pos === 'ALL' || r.pos === state.pos) && r.gp >= minGp)
         .filter(r => !q || r.name.toLowerCase().includes(q) || r.team.toLowerCase().includes(q))
-        .sort((a, b) => (val(a) - val(b)) * state.sortDir || b.pts - a.pts);
+        .sort((a, b) => cmp(a, b) * state.sortDir || b.pts - a.pts);
     }
 
     // Tier breaks for the table: QB1/QB2 style bands, the usual 12-team cut.
@@ -35119,15 +35139,17 @@
 
     function renderTable(rows) {
       const cols = STAT_COLS[state.pos] || [];
-      const head = `<tr><th>#</th><th class="sh-th-player">PLAYER</th>${state.pos === 'ALL' ? '<th>POS RK</th>' : ''}`
+      const head = '<tr><th>#</th>' + sortTh('name', 'PLAYER', 'sh-th-player') + sortTh('team', 'TEAM', 'sh-th-player')
+        + (state.pos === 'ALL' ? sortTh('posrk', 'POS RK') : '')
         + sortTh('gp', 'GP') + sortTh('pts', 'PTS') + sortTh('ppg', 'PPG')
         + cols.map(c => sortTh(c.key, c.label)).join('') + '</tr>';
       const showTiers = state.sortKey === 'pts' || state.sortKey === 'ppg';
-      const colspan = 5 + cols.length + (state.pos === 'ALL' ? 1 : 0);
+      const colspan = 6 + cols.length + (state.pos === 'ALL' ? 1 : 0);
       const body = rows.map((r, i) => {
         const tier = showTiers && state.sortDir < 0 ? tierLabel(state.pos, i) : null;
         return (tier ? `<tr class="sh-tier-row"><td colspan="${colspan}">${tier}</td></tr>` : '')
-          + `<tr><td>${i + 1}</td><td class="sh-player-cell"><span class="sh-pos-chip ${r.pos}">${r.pos}</span><b>${esc(r.name)}</b><small>${esc(r.team)}</small></td>`
+          + `<tr><td>${i + 1}</td><td class="sh-player-cell" data-player-id="${esc(r.id)}"><span class="sh-pos-chip ${r.pos}">${r.pos}</span><b>${esc(r.name)}</b></td>`
+          + `<td class="sh-team-cell">${r.team && r.team !== 'FA' ? `<img class="sh-team-logo" src="${sbTeamLogoUrl(r.team)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(r.team)}</td>`
           + (state.pos === 'ALL' ? `<td>${r.pos}${r.posRank}</td>` : '')
           + `<td>${r.gp}</td><td>${fmt(r.pts)}</td><td class="sh-ppg">${fmt(r.ppg)}</td>`
           + cols.map(c => `<td>${c.f(c.v(r.s))}</td>`).join('') + '</tr>';
@@ -35158,6 +35180,7 @@
         const list = await loadSeason(season);
         if (token !== loadToken) return;
         state.rows = buildRows(list, currentScoring().settings);
+        applyDefaultMinGp();
         statusEl.textContent = state.rows.length ? '' : `No ${season} stats came back from Sleeper.`;
       } catch (e) {
         if (token !== loadToken) return;
@@ -35168,24 +35191,39 @@
       draw();
     }
     // Exposed so tests and other pages can feed it a stat list directly.
-    window.shRenderFromList = (list) => { statusEl.textContent = ''; state.rows = buildRows(list, currentScoring().settings); draw(); };
+    window.shRenderFromList = (list) => { statusEl.textContent = ''; state.rows = buildRows(list, currentScoring().settings); applyDefaultMinGp(); draw(); };
 
     scoringSel.addEventListener('change', refresh);
     seasonSel.addEventListener('change', refresh);
-    minGpSel.addEventListener('change', draw);
+    // Four games is the default bar, but early in a season nobody has
+    // played four yet -- weeks 1-3 default to however many have been played.
+    // Typing a number takes over until the page is reloaded.
+    let minGpTouched = false;
+    function applyDefaultMinGp() {
+      if (minGpTouched) return;
+      const maxGp = state.rows.reduce((m, r) => Math.max(m, r.gp), 0);
+      minGpSel.value = maxGp ? Math.min(4, maxGp) : 4;
+    }
+    minGpSel.addEventListener('input', () => { minGpTouched = true; draw(); });
     searchInput.addEventListener('input', draw);
     posTabs.addEventListener('click', (e) => {
       const b = e.target.closest('[data-pos]');
       if (!b) return;
       state.pos = b.dataset.pos;
-      if (!['pts', 'ppg', 'gp'].includes(state.sortKey)) { state.sortKey = 'ppg'; state.sortDir = -1; }
+      if (!['pts', 'ppg', 'gp', 'name', 'team'].includes(state.sortKey) && !(state.pos === 'ALL' && state.sortKey === 'posrk')) { state.sortKey = 'ppg'; state.sortDir = -1; }
       draw();
     });
     bodyEl.addEventListener('click', (e) => {
+      const cell = e.target.closest('.sh-player-cell[data-player-id]');
+      if (cell && window.openPlayerModalForId) {
+        const r = state.rows.find(x => String(x.id) === cell.dataset.playerId);
+        if (r) window.openPlayerModalForId(r.id, r.name, r.team, r.pos, { defaultTab: 'gamelog', gameLogSeason: Number(seasonSel.value) });
+        return;
+      }
       const th = e.target.closest('th[data-sort]');
       if (!th) return;
       if (state.sortKey === th.dataset.sort) state.sortDir *= -1;
-      else { state.sortKey = th.dataset.sort; state.sortDir = -1; }
+      else { state.sortKey = th.dataset.sort; state.sortDir = ['name', 'team', 'posrk'].includes(th.dataset.sort) ? 1 : -1; }
       draw();
     });
     document.addEventListener('desk:view', (e) => {
