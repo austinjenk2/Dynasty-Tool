@@ -12844,7 +12844,7 @@
   <div data-view="margin">
     <div class="page-title">
       <h1>The Margin</h1>
-      <p>Wins above replacement. Every week a player plays, his score goes into an average starting lineup in place of a replacement-level starter at his position, and The Margin measures how much that moves the lineup's chance of winning the week against an average opponent. Add those weeks up and you get <b>WAR</b>. <b>WAR/G</b> divides by games played only. Replacement level and lineup size come from the chosen league's own roster settings and team count; The Desk Default uses 12 teams with 1 QB, 2 RB, 3 WR, 1 TE, 1 FLEX and 1 superflex — and a superflex always goes to a quarterback, so QB replacement is the QB25. Negative WAR means he was worse than a player you could have picked up.</p>
+      <p>Wins above replacement. Every week a player plays, his score goes into an average starting lineup in place of a replacement-level starter at his position, and The Margin measures how much that moves the lineup's chance of winning the week against an average opponent. Add those weeks up and you get <b>WAR</b>. <b>WAR/G</b> divides by games played only. Replacement level and lineup size come from the chosen league's own roster settings and team count; The Desk Default uses 12 teams with 1 QB, 2 RB, 3 WR, 1 TE, 2 FLEX and 1 superflex (ten starters) — and a superflex always goes to a quarterback, so QB replacement is the QB25. Negative WAR means he was worse than a player you could have picked up.</p>
     </div>
 
     <div class="sh-toolbar">
@@ -35435,7 +35435,7 @@
   // Default uses 12 teams of 1 QB / 2 RB / 3 WR / 1 TE / 1 FLEX.
   const MG_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
   // Superflex by default -- a dynasty league without one is the exception.
-  const MG_DEFAULT_LINEUP = { teams: 12, slots: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1, SUPER_FLEX: 1 } };
+  const MG_DEFAULT_LINEUP = { teams: 12, slots: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 2, SUPER_FLEX: 1 } };
   const MG_FLEX_ELIGIBLE = {
     WRRB_FLEX: ['RB', 'WR'],
     REC_FLEX: ['WR', 'TE'],
@@ -35477,6 +35477,14 @@
       byPos[pos] = all.filter(p => p.pos === pos).sort((a, b) => b.pts - a.pts);
     });
 
+    // Everyone who played enough to count, best points per game first --
+    // the order lineups are actually filled in.
+    const weeksPlayed = weeks.filter(wk => Object.keys(wk).length).length;
+    const minQ = Math.max(1, Math.min(4, Math.ceil(weeksPlayed * 0.4)));
+    const ppgOf = (p) => p.pts / p.gp;
+    const rk = {};
+    MG_POSITIONS.forEach(pos => { rk[pos] = byPos[pos].filter(p => p.gp >= minQ).sort((a, b) => ppgOf(b) - ppgOf(a)); });
+
     // How many of each position the league starts, across every team.
     const teams = lineup.teams;
     const starters = {};
@@ -35489,10 +35497,10 @@
         // A superflex goes to a quarterback whenever there is one to put
         // there -- that's what every manager does, so QB replacement in a
         // 12-team superflex is the QB25, not the QB13.
-        if (slot === 'SUPER_FLEX' && byPos.QB[starters.QB]) best = byPos.QB[starters.QB];
+        if (slot === 'SUPER_FLEX' && rk.QB[starters.QB]) best = rk.QB[starters.QB];
         else MG_FLEX_ELIGIBLE[slot].forEach(pos => {
-          const cand = byPos[pos][starters[pos]];
-          if (cand && (!best || cand.pts > best.pts)) best = cand;
+          const cand = rk[pos][starters[pos]];
+          if (cand && (!best || ppgOf(cand) > ppgOf(best))) best = cand;
         });
         if (!best) break;
         starters[best.pos] += 1;
@@ -35502,15 +35510,19 @@
     const mean = (xs) => xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0;
     const level = {};
     let teamVar = 0;
+    // Starter and replacement levels come off points per game among
+    // players who played enough to count, not off season totals. Ranking
+    // by totals drops a star who missed six games below the cut, where his
+    // per-game number inflates "replacement" and pushes real starters
+    // under zero.
     MG_POSITIONS.forEach(pos => {
       const n = starters[pos];
-      const list = byPos[pos];
-      const top = list.slice(0, n);
+      const ranked = rk[pos];
       const scores = [];
-      top.forEach(p => p.games.forEach(g => scores.push(g.pts)));
+      ranked.slice(0, n).forEach(p => p.games.forEach(g => scores.push(g.pts)));
+      const repl = ranked.slice(n, n + 3);
       const avg = mean(scores);
       const variance = scores.length > 1 ? scores.reduce((s, x) => s + (x - avg) * (x - avg), 0) / (scores.length - 1) : 0;
-      const repl = list.slice(n, n + 3);
       level[pos] = {
         starters: n,
         avg,
