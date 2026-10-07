@@ -3655,6 +3655,29 @@
   @media (max-width: 560px) {
     .sh-field select { max-width: 100%; }
   }
+  /* ---- The Margin (wins above replacement) ---- */
+  .mg-repl { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
+  .mg-repl b { color: var(--ink); }
+  .mg-chart { background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); padding: 10px 12px 8px; margin-bottom: 14px; position: relative; }
+  .mg-chart { overflow-x: auto; }
+  .mg-chart svg { display: block; width: 100%; min-width: 560px; height: auto; }
+  .mg-chart text { font-family: 'Source Sans 3', sans-serif; }
+  .mg-dot { cursor: pointer; }
+  .mg-dot circle { stroke: var(--surface); stroke-width: 1.5; fill-opacity: 0.8; }
+  .mg-dot.is-hot circle { fill-opacity: 1; stroke: var(--ink); stroke-width: 2; }
+  .mg-dot.QB circle { fill: var(--red); } .mg-dot.RB circle { fill: var(--green); }
+  .mg-dot.WR circle { fill: var(--blue); } .mg-dot.TE circle { fill: var(--gold); }
+  .mg-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .mg-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+  .mg-tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--surface); font-size: 12px; padding: 5px 8px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -100%); margin-top: -10px; }
+  .mg-tip[hidden] { display: none; }
+  .rb-table td.mg-war { font-weight: 800; }
+  .mg-pos { color: var(--green); } .mg-neg { color: var(--red); }
+  .rb-table tr.is-hot td { background: var(--green-bg); }
+  .mg-bar { position: relative; width: 130px; height: 10px; }
+  .mg-bar::before { content: ""; position: absolute; left: 30%; top: -3px; bottom: -3px; border-left: 1px solid var(--faint); }
+  .mg-bar i { position: absolute; top: 1px; height: 8px; border-radius: 2px; }
+  .rb-table tr.mg-repl-row td { padding: 3px; font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--faint); text-align: center; border-top: 2px dashed var(--faint); background: transparent; }
   .tt-section { margin-bottom: 28px; }
   .tt-section:first-of-type { margin-top: 18px; }
   .tt-head { margin-bottom: 12px; }
@@ -12809,6 +12832,33 @@
     <div id="shBody"></div>
   </div>
 
+  <div data-view="margin">
+    <div class="page-title">
+      <h1>The Margin</h1>
+      <p>Wins above replacement. Every week a player plays, his score goes into an average starting lineup in place of a replacement-level starter at his position, and The Margin measures how much that moves the lineup's chance of winning the week against an average opponent. Add those weeks up and you get <b>WAR</b>. <b>WAR/G</b> divides by games played only. Replacement level and lineup size come from the chosen league's own roster settings and team count; The Desk Default uses 12 teams with 1 QB, 2 RB, 3 WR, 1 TE and 1 FLEX. Negative WAR means he was worse than a player you could have picked up.</p>
+    </div>
+
+    <div class="sh-toolbar">
+      <label class="sh-field"><span>Scoring</span><select id="mgScoring" aria-label="Scoring"></select></label>
+      <label class="sh-field"><span>Season</span><select id="mgSeason"></select></label>
+      <label class="sh-field"><span>Min games</span><input type="number" id="mgMinGp" min="0" max="18" step="1" inputmode="numeric" value="4"></label>
+      <div class="sh-search"><span>&#128269;</span><input type="text" id="mgSearch" placeholder="Find a player..."></div>
+    </div>
+
+    <div class="sh-pos-tabs" id="mgPosTabs">
+      <button type="button" data-pos="ALL" class="active">All</button>
+      <button type="button" data-pos="QB">QB</button>
+      <button type="button" data-pos="RB">RB</button>
+      <button type="button" data-pos="WR">WR</button>
+      <button type="button" data-pos="TE">TE</button>
+    </div>
+
+    <div class="sh-status" id="mgStatus"></div>
+    <div class="mg-repl" id="mgRepl" hidden></div>
+    <div class="mg-chart" id="mgChart" hidden></div>
+    <div id="mgBody"></div>
+  </div>
+
   <div data-view="rankings">
     <div class="page-title">
       <h1>The Board</h1>
@@ -13565,6 +13615,7 @@
       { view: 'tanking', label: 'Tanking Tracker' },
       { view: 'playoff', label: 'Playoff Picture' },
       { view: 'stathub', label: 'The Ledger' },
+      { view: 'margin', label: 'The Margin' },
     ] },
     { id: 'gameday', label: 'Game Day', pages: [
       { view: 'lineups', label: 'The Slate' },
@@ -35353,6 +35404,445 @@
     document.addEventListener('desk:view', (e) => {
       if (e.detail === 'stathub') refresh();
     });
+    fillSeasons();
+    fillScoringOptions();
+  })();
+
+  // ---- The Margin (wins above replacement) ----------------------------
+  // Fantasy WAR, worked out one week at a time. For every week a player
+  // plays, his score replaces an average starter at his position in an
+  // average lineup, and the question is how much that lineup's chance of
+  // beating an average opponent moves -- compared with the same swap made
+  // with a replacement-level player instead. Team scores are treated as
+  // normal, so the "simulation" has a closed form: the win chance is
+  // Phi(margin / (sigma * sqrt 2)), where sigma is a starting lineup's
+  // weekly spread. That curve is what makes a 40-point week worth less
+  // than two 20s: past a point the week is already won.
+  //
+  // Replacement level is set by the league's lineup: every dedicated slot
+  // times the number of teams is filled by the best season totals at that
+  // position, then the flex slots take the best of whoever is left. The
+  // next three players past the last starter define replacement. The Desk
+  // Default uses 12 teams of 1 QB / 2 RB / 3 WR / 1 TE / 1 FLEX.
+  const MG_POSITIONS = ['QB', 'RB', 'WR', 'TE'];
+  const MG_DEFAULT_LINEUP = { teams: 12, slots: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 } };
+  const MG_FLEX_ELIGIBLE = {
+    WRRB_FLEX: ['RB', 'WR'],
+    REC_FLEX: ['WR', 'TE'],
+    FLEX: ['RB', 'WR', 'TE'],
+    SUPER_FLEX: ['QB', 'RB', 'WR', 'TE'],
+  };
+
+  // Standard normal CDF (Abramowitz-Stegun 7.1.26, good to ~1e-7).
+  function mgPhi(z) {
+    const t = 1 / (1 + 0.3275911 * Math.abs(z) / Math.SQRT2);
+    const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t
+      * Math.exp(-z * z / 2);
+    return z >= 0 ? (1 + y) / 2 : (1 - y) / 2;
+  }
+
+  function mgLineupFor(league) {
+    if (!league || !Array.isArray(league.roster_positions)) return MG_DEFAULT_LINEUP;
+    const slots = {};
+    league.roster_positions.forEach(p => {
+      if (MG_POSITIONS.includes(p) || MG_FLEX_ELIGIBLE[p]) slots[p] = (slots[p] || 0) + 1;
+    });
+    return { teams: Number(league.total_rosters) || 12, slots };
+  }
+
+  // weeks: [{ id: { pts, pos } }] for the players who played that week.
+  // meta: { id: { name, team, pos } }. Pure -- no DOM, no fetches -- so it
+  // can be tested on its own.
+  function mgComputeWar(weeks, lineup) {
+    const players = {};
+    weeks.forEach((wk, wi) => {
+      Object.entries(wk).forEach(([id, g]) => {
+        const p = players[id] || (players[id] = { id, pos: g.pos, pts: 0, gp: 0, games: [] });
+        p.pts += g.pts; p.gp += 1; p.games.push({ week: wi + 1, pts: g.pts });
+      });
+    });
+    const all = Object.values(players);
+    const byPos = {};
+    MG_POSITIONS.forEach(pos => {
+      byPos[pos] = all.filter(p => p.pos === pos).sort((a, b) => b.pts - a.pts);
+    });
+
+    // How many of each position the league starts, across every team.
+    const teams = lineup.teams;
+    const starters = {};
+    MG_POSITIONS.forEach(pos => { starters[pos] = (lineup.slots[pos] || 0) * teams; });
+    // Narrowest flex first, so a superflex isn't spent on a back a plain
+    // FLEX would have taken anyway.
+    ['WRRB_FLEX', 'REC_FLEX', 'FLEX', 'SUPER_FLEX'].forEach(slot => {
+      for (let n = (lineup.slots[slot] || 0) * teams; n > 0; n--) {
+        let best = null;
+        MG_FLEX_ELIGIBLE[slot].forEach(pos => {
+          const cand = byPos[pos][starters[pos]];
+          if (cand && (!best || cand.pts > best.pts)) best = cand;
+        });
+        if (!best) break;
+        starters[best.pos] += 1;
+      }
+    });
+
+    const mean = (xs) => xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0;
+    const level = {};
+    let teamVar = 0;
+    MG_POSITIONS.forEach(pos => {
+      const n = starters[pos];
+      const list = byPos[pos];
+      const top = list.slice(0, n);
+      const scores = [];
+      top.forEach(p => p.games.forEach(g => scores.push(g.pts)));
+      const avg = mean(scores);
+      const variance = scores.length > 1 ? scores.reduce((s, x) => s + (x - avg) * (x - avg), 0) / (scores.length - 1) : 0;
+      const repl = list.slice(n, n + 3);
+      level[pos] = {
+        starters: n,
+        avg,
+        repl: repl.length ? mean(repl.map(p => p.pts / p.gp)) : 0,
+      };
+      // This position's share of one team's lineup.
+      teamVar += (n / teams) * variance;
+    });
+    const sigmaTeam = Math.sqrt(teamVar);
+    const sd = sigmaTeam * Math.SQRT2 || 1;
+
+    all.forEach(p => {
+      const lv = level[p.pos];
+      const base = mgPhi((lv.repl - lv.avg) / sd);
+      p.games.forEach(g => { g.war = mgPhi((g.pts - lv.avg) / sd) - base; });
+      p.war = p.games.reduce((s, g) => s + g.war, 0);
+      p.warg = p.war / p.gp;
+      p.ppg = p.pts / p.gp;
+      p.posRank = byPos[p.pos].indexOf(p) + 1;
+    });
+    return { players: all, level, sigmaTeam };
+  }
+  window.mgComputeWar = mgComputeWar;
+
+  (function initMargin() {
+    const scoringSel = document.getElementById('mgScoring');
+    const seasonSel = document.getElementById('mgSeason');
+    const minGpSel = document.getElementById('mgMinGp');
+    const searchInput = document.getElementById('mgSearch');
+    const posTabs = document.getElementById('mgPosTabs');
+    const statusEl = document.getElementById('mgStatus');
+    const replEl = document.getElementById('mgRepl');
+    const chartEl = document.getElementById('mgChart');
+    const bodyEl = document.getElementById('mgBody');
+    if (!scoringSel || !bodyEl) return;
+
+    const FIRST_SEASON = 2018;
+    const weekCache = {};
+    const state = { pos: 'ALL', sortKey: 'war', sortDir: -1, result: null, meta: {} };
+
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const num = (v) => Number(v) || 0;
+    const signed = (v, d) => (v > 0 ? '+' : v < 0 ? '&minus;' : '') + Math.abs(v).toFixed(d);
+
+    function leagueEntries() {
+      const seen = new Set();
+      return Object.values(window.sleeperLeagueData || {})
+        .filter(e => e && e.league && e.league.scoring_settings)
+        .filter(e => { const id = e.league.league_id; if (seen.has(id)) return false; seen.add(id); return true; })
+        .sort((a, b) => String(a.league.name).localeCompare(String(b.league.name)));
+    }
+    function currentScoring() {
+      const id = scoringSel.value;
+      if (id && id !== 'house') {
+        const e = leagueEntries().find(x => String(x.league.league_id) === id);
+        if (e) return { settings: e.league.scoring_settings, league: e.league };
+      }
+      return { settings: SB_HOUSE_SCORING, league: null };
+    }
+    function fillScoringOptions() {
+      const prev = scoringSel.value;
+      scoringSel.innerHTML = [`<option value="house">The Desk Default</option>`]
+        .concat(leagueEntries().map(e => `<option value="${esc(e.league.league_id)}">${esc(e.league.name)}</option>`)).join('');
+      if (prev && [...scoringSel.options].some(o => o.value === prev)) scoringSel.value = prev;
+    }
+    function fillSeasons() {
+      if (seasonSel.options.length) return;
+      const now = new Date();
+      const latest = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+      const top = Math.max(latest, Number(window.__sleeperLiveSeason) || latest);
+      let html = '';
+      for (let y = top; y >= FIRST_SEASON; y--) html += `<option value="${y}">${y}</option>`;
+      seasonSel.innerHTML = html;
+    }
+
+    // Same backfill the Ledger makes: a position reception bonus is its
+    // own key the raw stat line doesn't carry.
+    function score(stats, pos, settings) {
+      const bonusKey = 'bonus_rec_' + pos.toLowerCase();
+      const line = (settings[bonusKey] != null && stats[bonusKey] == null && stats.rec != null)
+        ? Object.assign({}, stats, { [bonusKey]: stats.rec }) : stats;
+      return sbCustomScoreFor(line, settings) || 0;
+    }
+
+    // One regular-season week, every QB/RB/WR/TE line. Finished seasons are
+    // kept for the session; the live one is refetched after ten minutes.
+    function loadWeek(season, week, live) {
+      const key = season + '_' + week;
+      const hit = weekCache[key];
+      if (hit && (!live || Date.now() - hit.at < 600000)) return hit.p;
+      const qs = MG_POSITIONS.map(x => 'position[]=' + x).join('&');
+      const p = fetch(`https://api.sleeper.app/stats/nfl/${season}/${week}?season_type=regular&${qs}`)
+        .then(res => { if (!res.ok) throw new Error('Sleeper API ' + res.status); return res.json(); });
+      weekCache[key] = { p, at: Date.now() };
+      p.catch(() => { delete weekCache[key]; });
+      return p;
+    }
+
+    function played(s) {
+      return num(s.gp) > 0 || num(s.gms_active) > 0 || num(s.off_snp) > 0;
+    }
+
+    // Raw week lists -> the shape mgComputeWar wants, plus names/teams.
+    function shapeWeeks(lists, settings) {
+      const dict = window.__sleeperPlayerDict || {};
+      const meta = {};
+      const weeks = lists.map(list => {
+        const wk = {};
+        (Array.isArray(list) ? list : Object.entries(list || {}).map(([player_id, stats]) => ({ player_id, stats })))
+          .forEach(item => {
+            if (!item || !item.player_id || !item.stats || !played(item.stats)) return;
+            const m = item.player || {};
+            const d = dict[item.player_id] || {};
+            const pos = (item.position || d.position || m.position || '').toUpperCase();
+            if (!MG_POSITIONS.includes(pos)) return;
+            wk[item.player_id] = { pos, pts: score(item.stats, pos, settings) };
+            meta[item.player_id] = {
+              name: d.full_name || [d.first_name || m.first_name, d.last_name || m.last_name].filter(Boolean).join(' ') || item.player_id,
+              team: item.team || d.team || m.team || 'FA',
+            };
+          });
+        return wk;
+      });
+      return { weeks, meta };
+    }
+
+    function setResult(lists, settings, league) {
+      const { weeks, meta } = shapeWeeks(lists, settings);
+      state.meta = meta;
+      state.result = mgComputeWar(weeks, mgLineupFor(league));
+      state.result.players.forEach(p => Object.assign(p, meta[p.id]));
+      applyDefaultMinGp();
+    }
+
+    function visibleRows() {
+      if (!state.result) return [];
+      const minGp = Math.max(0, Number(minGpSel.value) || 0);
+      const q = (searchInput.value || '').trim().toLowerCase();
+      const val = (r) => state.sortKey === 'name' ? r.name.toLowerCase() : state.sortKey === 'team' ? r.team : r[state.sortKey];
+      const cmp = (a, b) => { const x = val(a), y = val(b); return typeof x === 'string' ? x.localeCompare(y) : x - y; };
+      return state.result.players
+        .filter(r => (state.pos === 'ALL' || r.pos === state.pos) && r.gp >= minGp)
+        .filter(r => !q || r.name.toLowerCase().includes(q) || r.team.toLowerCase().includes(q))
+        .sort((a, b) => cmp(a, b) * state.sortDir || b.war - a.war);
+    }
+
+    function sortTh(key, label, extraCls) {
+      const active = state.sortKey === key;
+      return `<th class="rb-sort-th${active ? ' active' : ''}${extraCls ? ' ' + extraCls : ''}" data-sort="${key}">${label}${active ? (state.sortDir < 0 ? ' &#9660;' : ' &#9650;') : ''}</th>`;
+    }
+
+    function renderRepl() {
+      const r = state.result;
+      if (!r) { replEl.hidden = true; return; }
+      const lv = r.level;
+      replEl.hidden = false;
+      replEl.innerHTML = 'Replacement: ' + MG_POSITIONS.map(pos =>
+        `<b>${pos}${lv[pos].starters + 1}</b> ${lv[pos].repl.toFixed(1)} ppg`).join(' &middot; ')
+        + ` &middot; a starting lineup swings about <b>${r.sigmaTeam.toFixed(1)}</b> points week to week`;
+    }
+
+    // Small, stable per-player nudge so a column of 17-game players
+    // spreads out instead of stacking into one line.
+    function jitter(id) {
+      let h = 0;
+      for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) | 0;
+      return ((Math.abs(h) % 1000) / 1000 - 0.5) * 0.5;
+    }
+
+    function renderChart(rows) {
+      if (!rows.length) { chartEl.hidden = true; return; }
+      chartEl.hidden = false;
+      const W = 900, H = 320, m = { l: 50, r: 18, t: 14, b: 32 };
+      const maxGp = Math.max(17, ...rows.map(r => r.gp));
+      let lo = Math.min(0, ...rows.map(r => r.warg)), hi = Math.max(0, ...rows.map(r => r.warg));
+      const pad = (hi - lo) * 0.08 || 0.02;
+      lo -= pad; hi += pad;
+      const x = g => m.l + (g - 0.5) / maxGp * (W - m.l - m.r);
+      const y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
+      const step = [0.01, 0.02, 0.025, 0.05, 0.1, 0.2].find(s => (hi - lo) / s <= 8) || 0.5;
+      let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="WAR per game against games played">`;
+      for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+        const vv = Math.abs(v) < 1e-9 ? 0 : v;
+        svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(vv)}" y2="${y(vv)}" stroke="var(--border-soft)"/>`
+          + `<text x="${m.l - 6}" y="${y(vv) + 4}" font-size="11" text-anchor="end" fill="var(--muted)">${signed(vv, 3)}</text>`;
+      }
+      svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--faint)" stroke-dasharray="5 4"/>`
+        + `<text x="${W - m.r}" y="${y(0) - 5}" font-size="11" text-anchor="end" fill="var(--faint)">replacement</text>`;
+      for (let g = 2; g <= maxGp; g += 2) {
+        svg += `<text x="${x(g)}" y="${H - 10}" font-size="11" text-anchor="middle" fill="var(--muted)">${g}</text>`;
+      }
+      svg += `<text x="${m.l}" y="${H - 10}" font-size="11" fill="var(--faint)">GP</text>`;
+      const labelled = new Set(rows.slice().sort((a, b) => b.war - a.war).slice(0, 8).map(r => r.id));
+      // Draw the labelled ones last so they sit on top.
+      rows.slice().sort((a, b) => labelled.has(a.id) - labelled.has(b.id)).forEach(r => {
+        const cx = x(r.gp + jitter(r.id)), cy = y(r.warg);
+        const last = (r.name || '').split(' ').slice(-1)[0];
+        svg += `<g class="mg-dot ${r.pos}" data-player-id="${esc(r.id)}"><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="6"/>`
+          + (labelled.has(r.id) ? `<text x="${(cx + 9).toFixed(1)}" y="${(cy + 4).toFixed(1)}" font-size="11" font-weight="700" fill="var(--ink)">${esc(last)}</text>` : '')
+          + '</g>';
+      });
+      svg += '</svg>';
+      chartEl.innerHTML = svg
+        + `<div class="mg-legend">${MG_POSITIONS.map(p => `<span><i class="sh-pos-chip ${p}"></i>${p}</span>`).join('')}<span>WAR per game (up) against games played (across)</span></div>`
+        + '<div class="mg-tip" hidden></div>';
+    }
+
+    function renderTable(rows) {
+      const head = '<tr><th>#</th>' + sortTh('name', 'PLAYER', 'sh-th-player') + sortTh('team', 'TEAM', 'sh-th-player')
+        + sortTh('gp', 'GP') + sortTh('ppg', 'PPG') + sortTh('war', 'WAR') + sortTh('warg', 'WAR/G')
+        + '<th class="sh-th-player">VS REPLACEMENT</th></tr>';
+      const maxAbs = Math.max(0.01, ...rows.map(r => Math.abs(r.war)));
+      // Bar: zero sits 30% in, so the positive side gets the room.
+      const bar = (w) => {
+        const len = Math.abs(w) / maxAbs * (w < 0 ? 30 : 70);
+        return `<div class="mg-bar"><i style="left:${w < 0 ? 30 - len : 30}%;width:${len.toFixed(1)}%;background:var(${w < 0 ? '--red' : '--green'})"></i></div>`;
+      };
+      const divider = state.sortDir < 0 && (state.sortKey === 'war' || state.sortKey === 'warg');
+      let crossed = false;
+      const body = rows.map((r, i) => {
+        let pre = '';
+        if (divider && !crossed && r[state.sortKey] < 0) {
+          crossed = true;
+          if (i > 0) pre = '<tr class="mg-repl-row"><td colspan="8">replacement level</td></tr>';
+        }
+        const cls = r.war < 0 ? 'mg-neg' : 'mg-pos';
+        return pre + `<tr data-row-id="${esc(r.id)}"><td>${i + 1}</td>`
+          + `<td class="sh-player-cell" data-player-id="${esc(r.id)}"><span class="sh-pos-chip ${r.pos}">${r.pos}</span><b>${esc(r.name)}</b><small>${r.pos}${r.posRank}</small></td>`
+          + `<td class="sh-team-cell">${r.team && r.team !== 'FA' ? `<img class="sh-team-logo" src="${sbTeamLogoUrl(r.team)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${esc(r.team)}</td>`
+          + `<td>${r.gp}</td><td class="sh-ppg">${r.ppg.toFixed(1)}</td>`
+          + `<td class="mg-war ${cls}">${signed(r.war, 2)}</td><td class="${r.warg < 0 ? 'mg-neg' : ''}">${signed(r.warg, 3)}</td>`
+          + `<td class="sh-team-cell">${bar(r.war)}</td></tr>`;
+      }).join('');
+      bodyEl.innerHTML = `<div class="rb-table-wrap"><table class="rb-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+    }
+
+    function draw() {
+      posTabs.querySelectorAll('[data-pos]').forEach(b => b.classList.toggle('active', b.dataset.pos === state.pos));
+      renderRepl();
+      const rows = visibleRows();
+      renderChart(rows);
+      if (!rows.length) {
+        bodyEl.innerHTML = state.result && state.result.players.length ? '<p class="rb-empty">Nobody matches those filters.</p>' : '';
+        return;
+      }
+      renderTable(rows);
+    }
+
+    let minGpTouched = false;
+    function applyDefaultMinGp() {
+      if (minGpTouched || !state.result) return;
+      const maxGp = state.result.players.reduce((m, r) => Math.max(m, r.gp), 0);
+      minGpSel.value = maxGp ? Math.min(4, maxGp) : 4;
+    }
+
+    let loadToken = 0;
+    async function refresh() {
+      fillSeasons();
+      fillScoringOptions();
+      const season = Number(seasonSel.value);
+      const token = ++loadToken;
+      const nWeeks = season >= 2021 ? 18 : 17;
+      const live = season >= (Number(window.__sleeperLiveSeason) || 0);
+      statusEl.className = 'sh-status';
+      statusEl.textContent = `Loading ${season}, week by week…`;
+      try {
+        const weeks = [];
+        for (let w = 1; w <= nWeeks; w++) weeks.push(w);
+        const lists = await Promise.all(weeks.map(w => loadWeek(season, w, live)));
+        if (token !== loadToken) return;
+        const sc = currentScoring();
+        setResult(lists, sc.settings, sc.league);
+        statusEl.textContent = state.result.players.length ? '' : `No ${season} stats came back from Sleeper.`;
+      } catch (e) {
+        if (token !== loadToken) return;
+        state.result = null;
+        statusEl.className = 'sh-status err';
+        statusEl.textContent = `Couldn't load ${season} stats from Sleeper (${(e && e.message) || e}).`;
+      }
+      draw();
+    }
+
+    // Tests feed weekly lists straight in, skipping the network.
+    window.mgRenderFromWeeks = (lists) => {
+      fillSeasons(); fillScoringOptions();
+      const sc = currentScoring();
+      statusEl.textContent = '';
+      setResult(lists, sc.settings, sc.league);
+      draw();
+    };
+
+    // Hovering a dot lights its row and vice versa.
+    const tip = () => chartEl.querySelector('.mg-tip');
+    function setHot(id, on) {
+      const dot = chartEl.querySelector(`.mg-dot[data-player-id="${CSS.escape(id)}"]`);
+      const row = bodyEl.querySelector(`tr[data-row-id="${CSS.escape(id)}"]`);
+      if (dot) dot.classList.toggle('is-hot', on);
+      if (row) row.classList.toggle('is-hot', on);
+      const t = tip();
+      if (!t) return;
+      const r = on && state.result && state.result.players.find(p => String(p.id) === id);
+      if (!r || !dot) { t.hidden = true; return; }
+      const c = dot.querySelector('circle').getBoundingClientRect();
+      const box = chartEl.getBoundingClientRect();
+      t.innerHTML = `<b>${esc(r.name)}</b> ${r.pos} &middot; ${r.gp} GP &middot; ${signed(r.war, 2)} WAR &middot; ${signed(r.warg, 3)}/G`;
+      t.hidden = false;
+      // Kept inside the panel, so a dot at either edge doesn't push it off.
+      const half = t.offsetWidth / 2;
+      const cx = c.left + c.width / 2 - box.left + chartEl.scrollLeft;
+      t.style.left = Math.min(Math.max(cx, half + 4 + chartEl.scrollLeft), chartEl.scrollLeft + box.width - half - 4) + 'px';
+      t.style.top = (c.top - box.top) + 'px';
+    }
+    chartEl.addEventListener('mouseover', (e) => { const d = e.target.closest('.mg-dot'); if (d) setHot(d.dataset.playerId, true); });
+    chartEl.addEventListener('mouseout', (e) => { const d = e.target.closest('.mg-dot'); if (d) setHot(d.dataset.playerId, false); });
+    bodyEl.addEventListener('mouseover', (e) => { const tr = e.target.closest('tr[data-row-id]'); if (tr) setHot(tr.dataset.rowId, true); });
+    bodyEl.addEventListener('mouseout', (e) => { const tr = e.target.closest('tr[data-row-id]'); if (tr) setHot(tr.dataset.rowId, false); });
+
+    function openPlayer(id) {
+      const r = state.result && state.result.players.find(p => String(p.id) === id);
+      if (r && window.openPlayerModalForId) {
+        window.openPlayerModalForId(r.id, r.name, r.team, r.pos, { defaultTab: 'gamelog', gameLogSeason: Number(seasonSel.value) });
+      }
+    }
+    chartEl.addEventListener('click', (e) => { const d = e.target.closest('.mg-dot'); if (d) openPlayer(d.dataset.playerId); });
+    bodyEl.addEventListener('click', (e) => {
+      const cell = e.target.closest('.sh-player-cell[data-player-id]');
+      if (cell) { openPlayer(cell.dataset.playerId); return; }
+      const th = e.target.closest('th[data-sort]');
+      if (!th) return;
+      if (state.sortKey === th.dataset.sort) state.sortDir *= -1;
+      else { state.sortKey = th.dataset.sort; state.sortDir = ['name', 'team'].includes(th.dataset.sort) ? 1 : -1; }
+      draw();
+    });
+
+    scoringSel.addEventListener('change', refresh);
+    seasonSel.addEventListener('change', refresh);
+    minGpSel.addEventListener('input', () => { minGpTouched = true; draw(); });
+    searchInput.addEventListener('input', draw);
+    posTabs.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-pos]');
+      if (!b) return;
+      state.pos = b.dataset.pos;
+      draw();
+    });
+    document.addEventListener('desk:view', (e) => { if (e.detail === 'margin') refresh(); });
     fillSeasons();
     fillScoringOptions();
   })();
