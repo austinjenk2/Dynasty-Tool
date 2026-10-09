@@ -13943,7 +13943,9 @@
     const currentWeek = allEntries[0].week;
     const isCurrentWeek = week === currentWeek;
     const season = allEntries[0].league.season;
-    const cacheKey = `${season}_${week}`;
+    // The week being played moves with lineups and projections, so it
+    // turns over on the shared half-hour clock; other weeks are fixed.
+    const cacheKey = `${season}_${week}` + (isCurrentWeek && window.ppDataBucket ? '_' + window.ppDataBucket() : '');
     if (window.__rgWeekRowsCache[cacheKey]) return window.__rgWeekRowsCache[cacheKey];
 
     const promise = (async () => {
@@ -18094,10 +18096,12 @@
       // first time this player's data has loaded and the game's already
       // underway), fall back to freezing on this first live read rather
       // than leaving it blank forever.
-      if (bucket[key] == null) {
-        bucket[key] = liveValue;
-        saveOrigProjStore(store);
-      }
+      // Nothing was captured before kickoff in this browser. Freezing on
+      // this first read made the "started at" number depend on WHEN each
+      // person first opened the page -- two people on the same link got
+      // different live projections and different win odds. Sleeper's own
+      // number is the same for everyone, so it is used as-is, unstored.
+      if (bucket[key] == null) return liveValue;
       return bucket[key];
     }
     bucket[key] = liveValue;
@@ -21185,7 +21189,14 @@
     // player looked up in a session.
     window.__sleeperSeasonProjCache = window.__sleeperSeasonProjCache || {};
     async function getSeasonProjections(season) {
-      if (window.__sleeperSeasonProjCache[season]) return window.__sleeperSeasonProjCache[season];
+      // On the same half-hour clock as the week projections, so it is the
+      // same payload for everyone looking at the same time.
+      const bucket = window.ppDataBucket ? window.ppDataBucket() : Math.floor(Date.now() / 1800000);
+      const cacheKey = season + '_' + bucket;
+      if (window.__sleeperSeasonProjCache[cacheKey]) return window.__sleeperSeasonProjCache[cacheKey];
+      Object.keys(window.__sleeperSeasonProjCache).forEach(k => {
+        if (k.indexOf(season + '_') === 0) delete window.__sleeperSeasonProjCache[k];
+      });
       const promise = (async () => {
         try {
           const list = await sleeperFetchRoot(
@@ -21199,10 +21210,12 @@
           });
           return map;
         } catch (e) {
+          // Not remembered: the next ask tries again.
+          delete window.__sleeperSeasonProjCache[cacheKey];
           return {};
         }
       })();
-      window.__sleeperSeasonProjCache[season] = promise;
+      window.__sleeperSeasonProjCache[cacheKey] = promise;
       return promise;
     }
 
@@ -24933,13 +24946,20 @@
   }
 
   window.__sleeperWeekMatchupsCache = window.__sleeperWeekMatchupsCache || {};
+  // Finished weeks are kept for the session: their results do not change.
+  // The week being played and anything after it are not, and a failed
+  // fetch is never kept at all -- an empty list remembered as "week 6"
+  // made the playoff model treat a played week as unplayed for the rest of
+  // the session, which is one way two people on the same link saw
+  // different odds.
   async function sleeperGetWeekMatchups(leagueId, week) {
     const cacheKey = `${leagueId}_${week}`;
     if (window.__sleeperWeekMatchupsCache[cacheKey]) return window.__sleeperWeekMatchupsCache[cacheKey];
-    let data = [];
-    try { data = await window.sleeperFetch(`/league/${leagueId}/matchups/${week}`); } catch (err) {}
-    window.__sleeperWeekMatchupsCache[cacheKey] = data;
-    return data;
+    let data = [], ok = false;
+    try { data = await window.sleeperFetch(`/league/${leagueId}/matchups/${week}`); ok = Array.isArray(data); } catch (err) {}
+    const live = Number(window.__sleeperLiveWeek) || 0;
+    if (ok && (!live || Number(week) < live)) window.__sleeperWeekMatchupsCache[cacheKey] = data;
+    return ok ? data : [];
   }
 
   // Refetches real matchups + that week's projections for every connected
@@ -29438,6 +29458,7 @@
   function deskResyncEverything() {
     try {
       window.__sleeperSeasonMatchupsCache = {};
+      window.__sleeperWeekMatchupsCache = {};
       window.__sleeperBracketCache = {};
       window.__rgWeekRowsCache = {};
       window.__sleeperStatsFetchedAt = {};
