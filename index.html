@@ -33049,9 +33049,14 @@
     const currentWinsValue = document.getElementById('sbStatCurrentWinsValue');
     if (currentWinsValue) currentWinsValue.textContent = `${currentlyWinningCount} of ${withMatchup}`;
     // Live week only: a past or future week shown through the selector has
-    // no performance in it to measure.
-    const perfWins = (!override && perfEntries.length)
-      ? sbPerfWins((sbPerfNets(sbEspnGameData, sbDict, () => 'all', perfEntries).get('all')) || new Map())
+    // no performance in it to measure. The week picker can also be sitting
+    // ON the live week -- that is still the live week, and it was reading
+    // "no games started" because any override at all switched this off.
+    const liveWeekNum = Number(window.__sleeperLiveWeek || sbWeek);
+    const shownLive = !override || Number(override.week) === liveWeekNum;
+    const perfEspn = override ? (override.espnGameData || sbEspnGameData) : sbEspnGameData;
+    const perfWins = (shownLive && perfEntries.length)
+      ? sbPerfWins((sbPerfNets(perfEspn, sbDict, () => 'all', perfEntries).get('all')) || new Map())
       : null;
     sbSetWeekSwing(perfWins, { live: projWinSum, expected: perfWins != null ? projWinSum - perfWins : null });
     sbSetScheduleLuck(luckEarned, luckActual, luckCount);
