@@ -29541,6 +29541,11 @@
             period: play.period ? play.period.number : null,
             clock: play.clock ? play.clock.displayValue : null,
             downDistance: play.start ? play.start.downDistanceText : null,
+            // Who had the ball. Two players in one game can share the
+            // name ESPN prints ("J.Williams" for Dallas and for Tampa), and
+            // the offense is what tells them apart.
+            offense: (drive.team && drive.team.abbreviation)
+              || (play.start && play.start.team && play.start.team.abbreviation) || null,
             awayScore: play.awayScore != null ? play.awayScore : null,
             homeScore: play.homeScore != null ? play.homeScore : null,
           });
@@ -31592,8 +31597,12 @@
           // Both shapes the play text can use, under a key that ignores
           // punctuation and case -- "J.Burrow", "J. Burrow" and "Joe
           // Burrow" all have to find the same player.
-          names.byKey[gcNameKey(sbEspnShortName(full))] = id;
-          names.byKey[gcNameKey(full)] = id;
+          // A list, not one id: two players in the same game can share a
+          // short name, and the last one written used to win outright.
+          [gcNameKey(sbEspnShortName(full)), gcNameKey(full)].forEach(k => {
+            const list = names.byKey[k] || (names.byKey[k] = []);
+            if (!list.includes(id)) list.push(id);
+          });
           // And by surname, with the first name kept, for the case below.
           const parts = String(full).trim().split(/\s+/).filter(Boolean);
           if (parts.length > 1) {
@@ -31615,15 +31624,25 @@
       // whoever's first name starts with the letters given. Two candidates
       // still matching means the text was not disambiguating after all, and
       // guessing between them would be worse than the miss.
-      const resolvePid = (rawName) => {
+      // Two players behind one name: the one on the team with the ball.
+      // Every fantasy event the parser reads (carry, catch, throw, fumble)
+      // belongs to the offense; with no offense to go on, guessing would
+      // put a touchdown on the wrong man, so it is left unmatched.
+      const pickByOffense = (ids, offense) => {
+        if (ids.length === 1) return ids[0];
+        const off = gcTeamKey(offense);
+        const mine = off ? ids.filter(id => gcTeamKey((dict[id] || {}).team) === off) : [];
+        return mine.length === 1 ? mine[0] : null;
+      };
+      const resolvePid = (rawName, offense) => {
         const exact = names.byKey[gcNameKey(rawName)];
-        if (exact) return exact;
+        if (exact && exact.length) return pickByOffense(exact, offense);
         const m = String(rawName || '').match(/^([A-Za-z'\u2019-]+)\.\s?(.+)$/);
         if (!m) return null;
         const prefix = gcNameKey(m[1]);
         if (!prefix) return null;
         const hits = (names.byLast[gcNameKey(m[2])] || []).filter(c => c.first.indexOf(prefix) === 0);
-        return hits.length === 1 ? hits[0].id : null;
+        return hits.length ? pickByOffense(hits.map(c => c.id), offense) : null;
       };
       // Every play in the game, parsed once.
       //
@@ -31655,7 +31674,7 @@
       const playersOn = (play) => {
         const players = [];
         sbParsePlayEvents(play.text).forEach(ev => {
-          const pid = resolvePid(ev.name);
+          const pid = resolvePid(ev.name, play.offense);
           if (!pid) return;
           // The fumble the parser could not finish. It is only LOST if the
           // recovery went to the other team in this game, which is a
