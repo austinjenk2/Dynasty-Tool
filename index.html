@@ -13943,7 +13943,9 @@
     const currentWeek = allEntries[0].week;
     const isCurrentWeek = week === currentWeek;
     const season = allEntries[0].league.season;
-    const cacheKey = `${season}_${week}`;
+    // The week being played moves with lineups and projections, so it
+    // turns over on the shared half-hour clock; other weeks are fixed.
+    const cacheKey = `${season}_${week}` + (isCurrentWeek && window.ppDataBucket ? '_' + window.ppDataBucket() : '');
     if (window.__rgWeekRowsCache[cacheKey]) return window.__rgWeekRowsCache[cacheKey];
 
     const promise = (async () => {
@@ -18094,10 +18096,12 @@
       // first time this player's data has loaded and the game's already
       // underway), fall back to freezing on this first live read rather
       // than leaving it blank forever.
-      if (bucket[key] == null) {
-        bucket[key] = liveValue;
-        saveOrigProjStore(store);
-      }
+      // Nothing was captured before kickoff in this browser. Freezing on
+      // this first read made the "started at" number depend on WHEN each
+      // person first opened the page -- two people on the same link got
+      // different live projections and different win odds. Sleeper's own
+      // number is the same for everyone, so it is used as-is, unstored.
+      if (bucket[key] == null) return liveValue;
       return bucket[key];
     }
     bucket[key] = liveValue;
@@ -21076,8 +21080,20 @@
     // as inactives are announced, and it is the live path's own store
     // (window.__sleeperProjections, refreshed each sync) that owns them.
     window.__sleeperWeekProjCache = window.__sleeperWeekProjCache || {};
+    // Future weeks' projections were cached for as long as the tab stayed
+    // open, so a tab opened Tuesday priced the rest of the season off
+    // Tuesday's projections while a friend loading the same page on Sunday
+    // got Sunday's -- same link, different playoff odds. Everything the
+    // season model reads now refreshes on one shared half-hour clock, so
+    // anyone looking in the same half hour sees the same numbers.
+    window.__sleeperWeekProjBucket = window.__sleeperWeekProjBucket || 0;
     async function getWeekProjections(season, week, isLiveWeek) {
       const cacheKey = `${season}_${week}`;
+      const bucket = window.ppDataBucket ? window.ppDataBucket() : Math.floor(Date.now() / 1800000);
+      if (window.__sleeperWeekProjBucket !== bucket) {
+        window.__sleeperWeekProjCache = {};
+        window.__sleeperWeekProjBucket = bucket;
+      }
       if (!isLiveWeek && window.__sleeperWeekProjCache[cacheKey]) {
         return window.__sleeperWeekProjCache[cacheKey];
       }
@@ -21173,7 +21189,14 @@
     // player looked up in a session.
     window.__sleeperSeasonProjCache = window.__sleeperSeasonProjCache || {};
     async function getSeasonProjections(season) {
-      if (window.__sleeperSeasonProjCache[season]) return window.__sleeperSeasonProjCache[season];
+      // On the same half-hour clock as the week projections, so it is the
+      // same payload for everyone looking at the same time.
+      const bucket = window.ppDataBucket ? window.ppDataBucket() : Math.floor(Date.now() / 1800000);
+      const cacheKey = season + '_' + bucket;
+      if (window.__sleeperSeasonProjCache[cacheKey]) return window.__sleeperSeasonProjCache[cacheKey];
+      Object.keys(window.__sleeperSeasonProjCache).forEach(k => {
+        if (k.indexOf(season + '_') === 0) delete window.__sleeperSeasonProjCache[k];
+      });
       const promise = (async () => {
         try {
           const list = await sleeperFetchRoot(
@@ -21187,10 +21210,12 @@
           });
           return map;
         } catch (e) {
+          // Not remembered: the next ask tries again.
+          delete window.__sleeperSeasonProjCache[cacheKey];
           return {};
         }
       })();
-      window.__sleeperSeasonProjCache[season] = promise;
+      window.__sleeperSeasonProjCache[cacheKey] = promise;
       return promise;
     }
 
@@ -21643,7 +21668,10 @@
 
     const PLAYER_CACHE_KEY = 'dynastyToolSleeperPlayers';
     const PLAYER_CACHE_AT_KEY = 'dynastyToolSleeperPlayersAt';
-    const PLAYER_CACHE_TTL = 24 * 60 * 60 * 1000;
+    // Injury tags live in this dictionary and the playoff model prices
+    // them, so a day-old copy meant a day-old injury report. Two hours,
+    // and a tab that stays open longer than that fetches a fresh one.
+    const PLAYER_CACHE_TTL = 2 * 60 * 60 * 1000;
     let playerDictPromise = null;
 
     // Sleeper's whole player dictionary, and the single biggest thing this
@@ -21725,8 +21753,25 @@
     }
 
     function getPlayerDict() {
-      if (window.__sleeperPlayerDict) return Promise.resolve(window.__sleeperPlayerDict);
-      if (playerDictPromise) return playerDictPromise;
+      const fresh = Date.now() - (window.__sleeperPlayerDictAt || 0) < PLAYER_CACHE_TTL;
+      if (window.__sleeperPlayerDict && fresh) return Promise.resolve(window.__sleeperPlayerDict);
+      if (playerDictPromise && fresh) return playerDictPromise;
+      // Stale in memory: fetch straight from Sleeper, keep serving the old
+      // one to anything that reads it directly until the new one lands.
+      if (window.__sleeperPlayerDict && !fresh) {
+        if (!playerDictPromise || playerDictPromise.__stale !== true) {
+          playerDictPromise = (async () => {
+            const dict = applyPlayerPositionFixes(await sleeperFetch('/players/nfl'));
+            window.__sleeperPlayerDict = dict;
+            window.__sleeperPlayerDictAt = Date.now();
+            playerDbPut(dict).catch(() => {});
+            return dict;
+          })();
+          playerDictPromise.__stale = true;
+          playerDictPromise.catch(() => { playerDictPromise = null; });
+        }
+        return playerDictPromise.catch(() => window.__sleeperPlayerDict);
+      }
       playerDictPromise = (async () => {
         // One-time cleanup: the old key never held a full dictionary, but a
         // partial write from a smaller season is still dead weight in a
@@ -21741,6 +21786,7 @@
             // Applied on the way out of the cache too: a dictionary cached
             // before this fix existed is still the unfixed one on disk.
             window.__sleeperPlayerDict = applyPlayerPositionFixes(hit.dict);
+            window.__sleeperPlayerDictAt = hit.at || 0;
             return window.__sleeperPlayerDict;
           }
         } catch (e) {
@@ -21748,6 +21794,7 @@
         }
         const dict = applyPlayerPositionFixes(await sleeperFetch('/players/nfl'));
         window.__sleeperPlayerDict = dict;
+        window.__sleeperPlayerDictAt = Date.now();
         // Don't make the first render wait on the write.
         playerDbPut(dict).catch(() => {});
         return dict;
@@ -24899,13 +24946,20 @@
   }
 
   window.__sleeperWeekMatchupsCache = window.__sleeperWeekMatchupsCache || {};
+  // Finished weeks are kept for the session: their results do not change.
+  // The week being played and anything after it are not, and a failed
+  // fetch is never kept at all -- an empty list remembered as "week 6"
+  // made the playoff model treat a played week as unplayed for the rest of
+  // the session, which is one way two people on the same link saw
+  // different odds.
   async function sleeperGetWeekMatchups(leagueId, week) {
     const cacheKey = `${leagueId}_${week}`;
     if (window.__sleeperWeekMatchupsCache[cacheKey]) return window.__sleeperWeekMatchupsCache[cacheKey];
-    let data = [];
-    try { data = await window.sleeperFetch(`/league/${leagueId}/matchups/${week}`); } catch (err) {}
-    window.__sleeperWeekMatchupsCache[cacheKey] = data;
-    return data;
+    let data = [], ok = false;
+    try { data = await window.sleeperFetch(`/league/${leagueId}/matchups/${week}`); ok = Array.isArray(data); } catch (err) {}
+    const live = Number(window.__sleeperLiveWeek) || 0;
+    if (ok && (!live || Number(week) < live)) window.__sleeperWeekMatchupsCache[cacheKey] = data;
+    return ok ? data : [];
   }
 
   // Refetches real matchups + that week's projections for every connected
@@ -28136,6 +28190,11 @@
   // of players on every roster (so a trade or a waiver claim updates it
   // immediately, without waiting for the week to end).
   window.__ppPickModelSig = window.__ppPickModelSig || {};
+  // The shared clock the season model's inputs refresh on: one value per
+  // half hour of wall time, the same for everyone.
+  function ppDataBucket() { return Math.floor(Date.now() / (30 * 60 * 1000)); }
+  window.ppDataBucket = ppDataBucket;
+
   function ppModelSignature(entry) {
     const league = entry.league;
     // Rosters AND results. It used to be rosters alone, which meant that
@@ -28167,7 +28226,10 @@
       h ^= rosterPart.charCodeAt(i);
       h = Math.imul(h, 0x01000193);
     }
-    return [league.league_id, league.season, entry.week || 0, (h >>> 0).toString(36)].join('|');
+    // Plus the shared half-hour clock: projections and injury tags move
+    // without anyone's roster or record moving, and a model that never
+    // re-ran on them was why two people on the same link saw 72% and 65%.
+    return [league.league_id, league.season, entry.week || 0, (h >>> 0).toString(36), ppDataBucket()].join('|');
   }
 
   // Exposed so the rebuild gate can be checked without a live Sunday.
@@ -29396,6 +29458,7 @@
   function deskResyncEverything() {
     try {
       window.__sleeperSeasonMatchupsCache = {};
+      window.__sleeperWeekMatchupsCache = {};
       window.__sleeperBracketCache = {};
       window.__rgWeekRowsCache = {};
       window.__sleeperStatsFetchedAt = {};
