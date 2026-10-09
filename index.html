@@ -29541,6 +29541,11 @@
             period: play.period ? play.period.number : null,
             clock: play.clock ? play.clock.displayValue : null,
             downDistance: play.start ? play.start.downDistanceText : null,
+            // Who had the ball. Two players in one game can share the
+            // name ESPN prints ("J.Williams" for Dallas and for Tampa), and
+            // the offense is what tells them apart.
+            offense: (drive.team && drive.team.abbreviation)
+              || (play.start && play.start.team && play.start.team.abbreviation) || null,
             awayScore: play.awayScore != null ? play.awayScore : null,
             homeScore: play.homeScore != null ? play.homeScore : null,
           });
@@ -30111,32 +30116,19 @@
   // player in nine of your leagues was being re-scored nine times.
   //
   // Returns a Map of eventId -> wins. Empty when there is nothing to say.
-  function gcWinsByEvent(games, dict) {
+  // Over-expected, per league, bucketed however the caller asks. Each of
+  // your starters in a game that has kicked off: his live projection
+  // against his pregame one; same for whoever starts against you; the
+  // sum is how far performance has moved that league's margin. The press
+  // box buckets it by game, the top bar takes it whole -- one function,
+  // so the two can never tell different stories.
+  function sbPerfNets(espnGameData, dict, bucketOf, entries) {
     const out = new Map();
-    // Live week only. A past week's chip would need that week's lineups
-    // and that week's matchup for every league, which is a fetch per
-    // league per week -- the thing that made this page slow in the first
-    // place. The week being played is the only one where the question
-    // "how is this going" is even being asked.
-    if (window.__gcIsLiveWeek === false) return out;
     const d = dict || window.__sleeperPlayerDict || {};
-    const espnGameData = window.__gcEspnGameData || null;
     if (!espnGameData) return out;
-    const index = (typeof sbExposureIndex === 'function') ? sbExposureIndex() : null;
+    const index = (typeof sbExposureIndex === 'function') ? sbExposureIndex(espnGameData) : null;
     if (!index || !index.size) return out;
-
-    // team abbreviation -> the event it is playing in.
-    const eventOfTeam = new Map();
-    (games || []).forEach(g => {
-      if (!g || !g.eventId) return;
-      if (g.away && g.away.abbr) eventOfTeam.set(g.away.abbr, g.eventId);
-      if (g.home && g.home.abbr) eventOfTeam.set(g.home.abbr, g.eventId);
-    });
-    if (!eventOfTeam.size) return out;
-
-    // eventId -> leagueId -> { state, net }
-    const byEvent = new Map();
-    // Per-team game state, resolved once rather than per player.
+    const only = entries ? new Set(entries.map(e => e.league.league_id)) : null;
     const teamState = new Map();
     const stateOf = (team) => {
       let st = teamState.get(team);
@@ -30157,18 +30149,18 @@
       if (v === undefined) { v = sbProjectionFor(pid, null, league); projCache.set(k, v); }
       return v;
     };
-
     index.forEach((rows, pid) => {
       const p = d[pid];
       if (!p || !p.team) return;
-      const eventId = eventOfTeam.get(p.team);
-      if (!eventId) return;
+      const bucket = bucketOf(p.team);
+      if (bucket == null) return;
       const st = stateOf(p.team);
       if (!st.started) return;
       const inactive = sbCountAsInactive(p, espnGameData);
       rows.forEach((row) => {
         const e = row.entry;
         if (!e || !e.myMatchup || !e.oppMatchup) return;
+        if (only && !only.has(e.league.league_id)) return;
         const origProj = projOf(pid, e.league);
         if (origProj == null) return;
         const pointsMap = (row.onMySide ? e.myMatchup.players_points : e.oppMatchup.players_points) || {};
@@ -30179,23 +30171,47 @@
         if (liveProj == null) return;
         const delta = liveProj - origProj;
         if (!Number.isFinite(delta) || delta === 0) return;
-        let leagues = byEvent.get(eventId);
-        if (!leagues) { leagues = new Map(); byEvent.set(eventId, leagues); }
+        let leagues = out.get(bucket);
+        if (!leagues) { leagues = new Map(); out.set(bucket, leagues); }
         const key = e.league.league_id;
         const cur = leagues.get(key) || { state: row.state, net: 0 };
         cur.net += row.onMySide ? delta : -delta;
         leagues.set(key, cur);
       });
     });
-
-    byEvent.forEach((leagues, eventId) => {
-      let wins = 0;
-      leagues.forEach(({ state, net }) => {
-        if (!state || !(Number(state.sigma) > 0)) return;
-        wins += sbSwingFor(state, net, true) / 100;
-      });
-      out.set(eventId, wins);
+    return out;
+  }
+  // What a net of performance is worth in wins: the matchup as it stands
+  // against the same matchup with that performance taken back out.
+  function sbPerfWins(leagues) {
+    let wins = 0;
+    leagues.forEach(({ state, net }) => {
+      if (!state || !(Number(state.sigma) > 0)) return;
+      const m = Number(state.margin) || 0;
+      wins += (sbWinProbRaw(m, 0, state.sigma) - sbWinProbRaw(m - net, 0, state.sigma)) / 100;
     });
+    return wins;
+  }
+  window.sbPerfNets = sbPerfNets;
+  window.sbPerfWins = sbPerfWins;
+
+  function gcWinsByEvent(games, dict) {
+    const out = new Map();
+    // Live week only. A past week's chip would need that week's lineups
+    // and that week's matchup for every league, which is a fetch per
+    // league per week -- the thing that made this page slow in the first
+    // place. The week being played is the only one where the question
+    // "how is this going" is even being asked.
+    if (window.__gcIsLiveWeek === false) return out;
+    const eventOfTeam = new Map();
+    (games || []).forEach(g => {
+      if (!g || !g.eventId) return;
+      if (g.away && g.away.abbr) eventOfTeam.set(g.away.abbr, g.eventId);
+      if (g.home && g.home.abbr) eventOfTeam.set(g.home.abbr, g.eventId);
+    });
+    if (!eventOfTeam.size) return out;
+    const byEvent = sbPerfNets(window.__gcEspnGameData || null, dict, (team) => eventOfTeam.get(team) || null);
+    byEvent.forEach((leagues, eventId) => out.set(eventId, sbPerfWins(leagues)));
     return out;
   }
   window.gcWinsByEvent = gcWinsByEvent;
@@ -31186,14 +31202,13 @@
   function sbSetWeekSwing(total, parts) {
     const p = parts || {};
     sbSetSignedWinStat('sbStatSwingValue', 'sbStatSwing', 'sbStatSwingLabel', 'WEEK VS EXPECTED', total,
-      'Your projected record right now, minus what the same lineups were worth before anybody played.\n\n'
+      'What performance has done to your projected record so far, across every league: each of your '
+      + 'starters whose game has kicked off, against what he was projected to have by now, less the same '
+      + 'for whoever is starting against you.\n\n'
       + (p.live != null && p.expected != null
-          ? `Now ${p.live.toFixed(2)} wins, expected ${p.expected.toFixed(2)}.\n\n` : '')
-      + 'The baseline reads your lineups as they stand, so setting or changing a lineup moves it; '
-      + 'it reads projections and never actual points, so a Thursday night player going off does not. '
-      + 'What is left is performance alone.\n\n'
-      + 'Zero means the week is going exactly as the lineups said it would, however many matchups you '
-      + 'happen to be leading. Being up in four games you were always going to win is not a good Sunday.');
+          ? `Now ${p.live.toFixed(2)} wins; ${p.expected.toFixed(2)} with that performance taken back out.\n\n` : '')
+      + 'The same arithmetic as the per-game wins on the Slate and Press Box, so the games add up to this. '
+      + 'Setting or changing a lineup does not move it -- only how the games are going.');
   }
   window.sbSetWeekSwing = sbSetWeekSwing;
 
@@ -31210,11 +31225,11 @@
     sbSetSignedWinStat('sbStatLuckValue', 'sbStatLuck', 'sbStatLuckLabel', 'SCHEDULE LUCK',
       idle ? null : actual - earned,
       idle ? ''
-        : `Your scores have earned ${earned.toFixed(2)} wins against the field this week; `
-          + `the matchups you drew are giving you ${actual.toFixed(2)}.\n\n`
-          + 'Positive means the schedule has been kind -- wins your scores did not really earn. '
-          + 'Negative means you keep running into whoever is having the big week.\n\n'
-          + `Across ${count} league${count === 1 ? '' : 's'}, on points scored so far.`);
+        : `Against every team in each league, your teams are worth ${earned.toFixed(2)} wins this week; `
+          + `against the opponents you actually drew, ${actual.toFixed(2)}.\n\n`
+          + 'Positive means you drew easier matchups than the field -- wins your team would not get against an average opponent. '
+          + 'Negative means you drew the hard ones.\n\n'
+          + `Across ${count} league${count === 1 ? '' : 's'}, on live projections: points so far plus what is left to play.`);
   }
   window.sbSetScheduleLuck = sbSetScheduleLuck;
 
@@ -31592,8 +31607,12 @@
           // Both shapes the play text can use, under a key that ignores
           // punctuation and case -- "J.Burrow", "J. Burrow" and "Joe
           // Burrow" all have to find the same player.
-          names.byKey[gcNameKey(sbEspnShortName(full))] = id;
-          names.byKey[gcNameKey(full)] = id;
+          // A list, not one id: two players in the same game can share a
+          // short name, and the last one written used to win outright.
+          [gcNameKey(sbEspnShortName(full)), gcNameKey(full)].forEach(k => {
+            const list = names.byKey[k] || (names.byKey[k] = []);
+            if (!list.includes(id)) list.push(id);
+          });
           // And by surname, with the first name kept, for the case below.
           const parts = String(full).trim().split(/\s+/).filter(Boolean);
           if (parts.length > 1) {
@@ -31615,15 +31634,25 @@
       // whoever's first name starts with the letters given. Two candidates
       // still matching means the text was not disambiguating after all, and
       // guessing between them would be worse than the miss.
-      const resolvePid = (rawName) => {
+      // Two players behind one name: the one on the team with the ball.
+      // Every fantasy event the parser reads (carry, catch, throw, fumble)
+      // belongs to the offense; with no offense to go on, guessing would
+      // put a touchdown on the wrong man, so it is left unmatched.
+      const pickByOffense = (ids, offense) => {
+        if (ids.length === 1) return ids[0];
+        const off = gcTeamKey(offense);
+        const mine = off ? ids.filter(id => gcTeamKey((dict[id] || {}).team) === off) : [];
+        return mine.length === 1 ? mine[0] : null;
+      };
+      const resolvePid = (rawName, offense) => {
         const exact = names.byKey[gcNameKey(rawName)];
-        if (exact) return exact;
+        if (exact && exact.length) return pickByOffense(exact, offense);
         const m = String(rawName || '').match(/^([A-Za-z'\u2019-]+)\.\s?(.+)$/);
         if (!m) return null;
         const prefix = gcNameKey(m[1]);
         if (!prefix) return null;
         const hits = (names.byLast[gcNameKey(m[2])] || []).filter(c => c.first.indexOf(prefix) === 0);
-        return hits.length === 1 ? hits[0].id : null;
+        return hits.length ? pickByOffense(hits.map(c => c.id), offense) : null;
       };
       // Every play in the game, parsed once.
       //
@@ -31655,7 +31684,7 @@
       const playersOn = (play) => {
         const players = [];
         sbParsePlayEvents(play.text).forEach(ev => {
-          const pid = resolvePid(ev.name);
+          const pid = resolvePid(ev.name, play.offense);
           if (!pid) return;
           // The fumble the parser could not finish. It is only LOST if the
           // recovery went to the other team in this game, which is a
@@ -32783,55 +32812,31 @@
   // happened so far, and a projection cannot be lucky. Before anyone has
   // scored there is no result to be lucky about, so it stays blank rather
   // than reporting a league-wide tie.
-  function sbWeeklyLuck(entry, myPts, oppPts) {
+  // Your live projected total -- points so far plus what's left -- against
+  // every other team's, each on its own win probability. Averaged, that
+  // is the share of the league you'd beat this week; your actual matchup
+  // is the one you drew. Projections rather than points so far: on a
+  // Thursday night, points so far are mostly zeros, and a 0-0 "tie"
+  // against half the league read as luck.
+  function sbProjectedLuck(entry, myMatchup, myProj, oppProj, projMap, espnGameData, week) {
     const all = (entry && entry.allMatchups) || [];
-    const myRosterId = entry && entry.roster ? entry.roster.roster_id : null;
-    if (!all.length || myRosterId == null) return null;
-    const others = all.filter(m => m && m.roster_id != null && m.roster_id !== myRosterId);
+    if (!myMatchup || !Number.isFinite(myProj) || !Number.isFinite(oppProj)) return null;
+    const others = all.filter(m => m && m.roster_id != null && m.roster_id !== myMatchup.roster_id);
     if (others.length < 2) return null;
-    if (!all.some(m => Number(m.points) > 0)) return null;
-    let beat = 0, tied = 0;
+    let earned = 0, n = 0;
     others.forEach(m => {
-      const p = Number(m.points) || 0;
-      if (myPts > p) beat++; else if (myPts === p) tied++;
+      const t = sbMatchupProjectedTotal(m, projMap, entry.league, espnGameData, week);
+      if (!Number.isFinite(t)) return;
+      const sig = sbMatchupSigma(myMatchup, m, projMap, entry.league, espnGameData, week);
+      earned += sbWinProbRaw(myProj, t, sig) / 100;
+      n++;
     });
-    const earned = (beat + tied * 0.5) / others.length;
-    const actual = myPts > oppPts ? 1 : (myPts < oppPts ? 0 : 0.5);
-    return { luck: actual - earned, earned, actual, beat, of: others.length, winning: myPts > oppPts };
+    if (n < 2) return null;
+    const actualSig = sbMatchupSigma(myMatchup, all.find(m => m && m.matchup_id === myMatchup.matchup_id && m.roster_id !== myMatchup.roster_id) || null,
+      projMap, entry.league, espnGameData, week);
+    return { earned: earned / n, actual: sbWinProbRaw(myProj, oppProj, actualSig) / 100 };
   }
-
-  // The same matchup priced as though no game had been played: every
-  // player on both sides at his own projection, nobody's actual score
-  // counted, full pre-kickoff uncertainty.
-  //
-  // This is the baseline "week vs expected" is measured against, and the
-  // point of it is WHICH things move it. It reads the lineups as they
-  // stand right now, so a lineup set or changed on Sunday morning moves
-  // it. It reads projections, never actual points, so a Thursday night
-  // player going off does not. That is the split you asked for: if your
-  // number goes from 9 to 10 and 0.3 of that was people setting lineups,
-  // the baseline becomes 9.3 on its own and only the 0.7 that was
-  // performance is left showing as the week beating expectation.
-  //
-  // Passing no espnGameData is what does it -- sbEffectivePoints only
-  // reaches for live scores when it has game state to read, so without it
-  // every player falls through to his projection.
-  function sbMatchupExpectedWinPct(myMatchup, oppMatchup, league, projMap, week) {
-    if (!myMatchup || !oppMatchup || !league) return null;
-    const unplayed = (m) => Object.assign({}, m, { players_points: {} });
-    const my = unplayed(myMatchup);
-    const opp = unplayed(oppMatchup);
-    const myProj = sbMatchupProjectedTotal(my, projMap, league, null, week);
-    const oppProj = sbMatchupProjectedTotal(opp, projMap, league, null, week);
-    if (!Number.isFinite(myProj) || !Number.isFinite(oppProj)) return null;
-    return sbWinProbability(myProj, oppProj, sbMatchupSigma(my, opp, projMap, league, null, week));
-  }
-
-  // Sleeper is unreachable from the sandbox this is developed in, so the
-  // luck arithmetic is checked by handing these hand-built leagues in a
-  // browser rather than by waiting for a Sunday.
-  window.__sbWeeklyLuck = sbWeeklyLuck;
-  window.__sbMatchupExpectedWinPct = sbMatchupExpectedWinPct;
+  window.sbProjectedLuck = sbProjectedLuck;
 
   async function renderRealScoreboard() {
     const sbGrid = document.getElementById('sbGrid');
@@ -32886,7 +32891,7 @@
     // The week measured against itself: what the lineups as they stand
     // were worth before a ball was kicked, and what the schedule has made
     // of the scores so far.
-    let expectedWinSum = 0, expectedCount = 0;
+    const perfEntries = [];
     let luckEarned = 0, luckActual = 0, luckCount = 0;
     // Which players are in each league's matchup (both sides, starters
     // and bench), so the player search below can narrow the list to the
@@ -32956,11 +32961,13 @@
           // distribution, and a sum cannot answer "what are the odds I go
           // 10 of 14". See sbMatchupsWonOdds.
           weekWinProbs.push(winPct / 100);
-          // The same matchup with nothing played, for WEEK VS EXPECTED.
-          const expPct = sbMatchupExpectedWinPct(myMatchup, oppMatchup, entry.league, projMap, cardWeek);
-          if (expPct != null) { expectedWinSum += expPct / 100; expectedCount++; }
-          // And how the schedule is treating the score you actually have.
-          const cardLuck = sbWeeklyLuck(entry, myPts, oppPts);
+          // WEEK VS EXPECTED is worked out after the loop, over every league
+          // counted here at once -- the same per-player arithmetic the
+          // press box's per-game chips use.
+          perfEntries.push(entry);
+          // SCHEDULE LUCK: your live projected total against every other
+          // team in the league, not just the one you drew.
+          const cardLuck = sbProjectedLuck(entry, myMatchup, myProj, oppProj, projMap, cardEspnGameData, cardWeek);
           if (cardLuck) { luckEarned += cardLuck.earned; luckActual += cardLuck.actual; luckCount++; }
           // Strict coin-flip split for the badge's color -- >=50% green,
           // <50% red -- rather than a three-way good/close/bad read, since
@@ -33041,8 +33048,17 @@
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
     const currentWinsValue = document.getElementById('sbStatCurrentWinsValue');
     if (currentWinsValue) currentWinsValue.textContent = `${currentlyWinningCount} of ${withMatchup}`;
-    sbSetWeekSwing(expectedCount ? projWinSum - expectedWinSum : null,
-      { live: projWinSum, expected: expectedWinSum });
+    // Live week only: a past or future week shown through the selector has
+    // no performance in it to measure. The week picker can also be sitting
+    // ON the live week -- that is still the live week, and it was reading
+    // "no games started" because any override at all switched this off.
+    const liveWeekNum = Number(window.__sleeperLiveWeek || sbWeek);
+    const shownLive = !override || Number(override.week) === liveWeekNum;
+    const perfEspn = override ? (override.espnGameData || sbEspnGameData) : sbEspnGameData;
+    const perfWins = (shownLive && perfEntries.length)
+      ? sbPerfWins((sbPerfNets(perfEspn, sbDict, () => 'all', perfEntries).get('all')) || new Map())
+      : null;
+    sbSetWeekSwing(perfWins, { live: projWinSum, expected: perfWins != null ? projWinSum - perfWins : null });
     sbSetScheduleLuck(luckEarned, luckActual, luckCount);
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
     const sbWeekLabel = document.getElementById('sbWeekLabel');
