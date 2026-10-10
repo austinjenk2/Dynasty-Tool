@@ -5122,6 +5122,40 @@
     .rg-row:hover, .ww-row:hover, .league-row:hover { transform: none; }
   }
 
+
+  /* ---- The Advisor: floating button + chat drawer ---- */
+  .adv-fab {
+    position: fixed; right: 16px; bottom: 16px; z-index: 900;
+    font: 700 14px 'Source Sans 3', sans-serif; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--surface); background: var(--red);
+    border: 2px solid var(--ink); border-radius: 999px; padding: 10px 18px;
+    box-shadow: 3px 3px 0 var(--ink); cursor: pointer;
+  }
+  .adv-fab:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+  .adv-panel {
+    position: fixed; right: 16px; bottom: 68px; z-index: 901;
+    width: min(400px, calc(100vw - 32px)); height: min(560px, calc(100vh - 100px));
+    display: flex; flex-direction: column;
+    background: var(--surface); color: var(--ink);
+    border: 2px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--ink);
+    overflow: hidden;
+  }
+  .adv-panel[hidden] { display: none; }
+  .adv-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 2px solid var(--ink); background: var(--bg); }
+  .adv-title { font: 400 20px 'Anton', sans-serif; letter-spacing: .03em; text-transform: uppercase; }
+  .adv-mode { font: 700 11px 'Source Sans 3', sans-serif; letter-spacing: .08em; color: var(--gold); }
+  .adv-close { margin-left: auto; background: none; border: 0; font-size: 24px; line-height: 1; color: var(--ink); cursor: pointer; }
+  .adv-league { margin: 8px 12px 0; padding: 6px 8px; font: 14px 'Source Sans 3', sans-serif; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+  .adv-log { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .adv-msg { max-width: 88%; padding: 8px 11px; border-radius: 10px; font: 14px/1.45 'Source Sans 3', sans-serif; overflow-wrap: anywhere; }
+  .adv-msg.is-bot { align-self: flex-start; background: var(--bg); border: 1px solid var(--border); }
+  .adv-msg.is-me { align-self: flex-end; background: var(--ink); color: var(--surface); }
+  .adv-msg.is-note { align-self: center; font-size: 12px; color: var(--muted); padding: 2px; }
+  .adv-msg.is-pending { color: var(--muted); font-style: italic; }
+  .adv-msg.is-error { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+  .adv-form { display: flex; gap: 8px; padding: 10px 12px; border-top: 2px solid var(--ink); }
+  .adv-input { flex: 1; min-width: 0; padding: 8px 10px; font: 14px 'Source Sans 3', sans-serif; color: var(--ink); background: #fff; border: 1px solid var(--border); border-radius: 8px; }
+  .adv-send { padding: 8px 14px; font: 700 13px 'Source Sans 3', sans-serif; text-transform: uppercase; color: var(--surface); background: var(--navy); border: 2px solid var(--ink); border-radius: 8px; cursor: pointer; }
 </style>
 <!-- Rasterizes a trade card to a canvas for the "export as image" feature
      (Trade History's camera icon) -- real, widely-used library, no key. -->
@@ -37437,6 +37471,383 @@
     });
   })();
 
+
+
+  // ---- The Advisor ----------------------------------------------------
+  // A chat drawer that answers team-specific questions. Claude does the
+  // reasoning; every number comes from tools that run here on the page,
+  // against the same rankings and season simulation the rest of the Desk
+  // shows. api/agent.js only forwards one turn at a time with the key.
+  //
+  // When that endpoint has no API key it answers {mode: 'demo'}, and the
+  // drawer falls back to an offline advisor: it reads "trade A for B" out
+  // of the message, runs the same evaluate_trade tool and writes the
+  // numbers up from a template. That costs nothing and exercises every
+  // tool, so the whole feature can be tried before paying for a model.
+  (function () {
+    const AGENT_MAX_STEPS = 8;
+    let agentLeagueId = null;
+    let agentHistory = [];   // Messages API turns, sent back verbatim
+    let agentBusy = false;
+
+    function agentEntries() {
+      return Object.values(window.sleeperLeagueData || {}).filter(e => e && e.league && e.roster);
+    }
+    function agentEntry(leagueId) {
+      const all = agentEntries();
+      return all.find(e => e.league.league_id === (leagueId || agentLeagueId)) || all[0] || null;
+    }
+    function agentTeamName(entry, rosterId) {
+      const r = (entry.allRosters || []).find(x => x.roster_id === rosterId);
+      const u = r && (entry.users || []).find(x => x.user_id === r.owner_id);
+      if (!u) return 'Roster ' + rosterId;
+      return (u.metadata && u.metadata.team_name) || u.display_name || ('Roster ' + rosterId);
+    }
+    function agentPlayerName(p) {
+      return p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : '';
+    }
+    function agentValue(id, dict) {
+      const v = typeof ppValueForPlayerId === 'function' ? ppValueForPlayerId(id, dict) : null;
+      return v == null ? 0 : Math.round(v * 100) / 100;
+    }
+    const agentPct = (x) => x == null ? null : Math.round(x * 1000) / 10;
+    function agentOddsOf(res, id) {
+      if (!res || !res.playoffProb || res.playoffProb[id] == null) return null;
+      return {
+        playoff_pct: agentPct(res.playoffProb[id]),
+        bye_pct: res.byeProb && res.byeProb[id] != null ? agentPct(res.byeProb[id]) : null,
+        title_pct: res.titleProb && res.titleProb[id] != null ? agentPct(res.titleProb[id]) : null,
+        proj_wins: res.projWins && res.projWins[id] != null ? Math.round(res.projWins[id] * 10) / 10 : null,
+      };
+    }
+
+    // ---- Tools ----------------------------------------------------------
+    async function toolTeamContext(input) {
+      const entry = agentEntry(input.league_id);
+      if (!entry) return { error: 'No Sleeper league loaded. Connect a Sleeper account first.' };
+      const dict = await window.sleeperGetPlayerDict();
+      const me = entry.roster.roster_id;
+      const s = entry.league.settings || {};
+      const rosterOf = (r) => (r.players || []).filter(id => id && id !== '0').map(id => {
+        const p = dict[id] || {};
+        return { id, name: agentPlayerName(p), pos: p.position || null, nfl: p.team || null, age: p.age || null, value: agentValue(id, dict) };
+      }).sort((a, b) => b.value - a.value);
+      const teamLine = (r) => {
+        const st = r.settings || {};
+        const odds = window.ppTeamOdds ? window.ppTeamOdds(entry, r.roster_id) : null;
+        return {
+          roster_id: r.roster_id,
+          name: agentTeamName(entry, r.roster_id),
+          record: `${st.wins || 0}-${st.losses || 0}${st.ties ? '-' + st.ties : ''}`,
+          dynasty_value: Math.round((ppRosterValue(r, dict) || 0) * 100) / 100,
+          playoff_pct: odds ? agentPct(odds.playoff) : null,
+          bye_pct: odds && odds.bye != null ? agentPct(odds.bye) : null,
+        };
+      };
+      const mine = (entry.allRosters || []).find(r => r.roster_id === me) || entry.roster;
+      return {
+        league: {
+          id: entry.league.league_id, name: entry.league.name, season: entry.league.season,
+          teams: (entry.allRosters || []).length,
+          playoff_teams: s.playoff_teams || null,
+          bye_slots: typeof ppByeCountFor === 'function' ? ppByeCountFor(s.playoff_teams) : null,
+          current_week: entry.week || null,
+          roster_positions: entry.league.roster_positions || [],
+        },
+        my_team: Object.assign(teamLine(mine), { roster: rosterOf(mine) }),
+        other_teams: (entry.allRosters || []).filter(r => r.roster_id !== me).map(teamLine),
+        notes: 'Dynasty value: 1.00 is a base 1st-round pick. Odds are percentages from the season simulation.',
+      };
+    }
+
+    async function toolSearchPlayers(input) {
+      const entry = agentEntry(input.league_id);
+      const dict = await window.sleeperGetPlayerDict();
+      const q = String(input.query || '').toLowerCase().replace(/[^a-z ]/g, '').trim();
+      if (!q) return { players: [] };
+      const ownerOf = {};
+      if (entry) (entry.allRosters || []).forEach(r => (r.players || []).forEach(id => { ownerOf[id] = r.roster_id; }));
+      const hits = [];
+      Object.keys(dict).forEach(id => {
+        const p = dict[id];
+        if (!p || !['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].includes(p.position)) return;
+        const n = agentPlayerName(p).toLowerCase().replace(/[^a-z ]/g, '');
+        if (!n.includes(q)) return;
+        hits.push({
+          id, name: agentPlayerName(p), pos: p.position, nfl: p.team || null, value: agentValue(id, dict),
+          owner_roster_id: ownerOf[id] != null ? ownerOf[id] : null,
+          owner: ownerOf[id] != null && entry ? agentTeamName(entry, ownerOf[id]) : 'free agent',
+          mine: !!(entry && ownerOf[id] === entry.roster.roster_id),
+        });
+      });
+      // Rostered first, then by value, so "Allen" finds the one that matters.
+      hits.sort((a, b) => (b.owner_roster_id != null) - (a.owner_roster_id != null) || b.value - a.value);
+      return { players: hits.slice(0, 8) };
+    }
+
+    // The trade, applied to copies of both rosters, then the whole season
+    // simulated again. Both runs are fresh and share the simulation's fixed
+    // seed, so the before/after gap is the trade and not run-to-run noise.
+    async function toolEvaluateTrade(input) {
+      const entry = agentEntry(input.league_id);
+      if (!entry) return { error: 'No Sleeper league loaded.' };
+      if (typeof window.__ppSimulateSeason !== 'function') return { error: 'Season simulation unavailable.' };
+      const dict = await window.sleeperGetPlayerDict();
+      const give = (input.give || []).map(String), get = (input.get || []).map(String);
+      if (!give.length && !get.length) return { error: 'Empty trade.' };
+      const rosters = entry.allRosters || [];
+      const me = entry.roster.roster_id;
+      const mine = rosters.find(r => r.roster_id === me);
+      if (!mine) return { error: 'Your roster is not loaded.' };
+      const notMine = give.filter(id => !(mine.players || []).includes(id));
+      if (notMine.length) return { error: 'Not on your roster: ' + notMine.map(id => agentPlayerName(dict[id]) || id).join(', ') };
+      const partner = get.length
+        ? rosters.find(r => r.roster_id !== me && get.every(id => (r.players || []).includes(id)))
+        : null;
+      if (get.length && !partner) return { error: 'The players you would receive are not all on one other roster.' };
+
+      const moved = new Set(give.concat(get));
+      const strip = (list) => (list || []).filter(id => !moved.has(id));
+      const after = rosters.map(r => {
+        if (r === mine) return Object.assign({}, r, { players: strip(r.players).concat(get), starters: strip(r.starters), reserve: strip(r.reserve), taxi: strip(r.taxi) });
+        if (partner && r === partner) return Object.assign({}, r, { players: strip(r.players).concat(give), starters: strip(r.starters), reserve: strip(r.reserve), taxi: strip(r.taxi) });
+        return r;
+      });
+      const before = await window.__ppSimulateSeason(entry, dict);
+      const sim = await window.__ppSimulateSeason(Object.assign({}, entry, { allRosters: after }), dict);
+      if (!before || !sim) return { error: 'The season simulation has no data to run on yet (no games played, or projections unavailable).' };
+
+      const side = (ids) => ids.map(id => ({ id, name: agentPlayerName(dict[id]), pos: (dict[id] || {}).position || null, value: agentValue(id, dict) }));
+      const sum = (list) => Math.round(list.reduce((a, p) => a + p.value, 0) * 100) / 100;
+      const gave = side(give), got = side(get);
+      const out = {
+        you_give: gave, you_get: got,
+        value_given: sum(gave), value_received: sum(got),
+        value_net: Math.round((sum(got) - sum(gave)) * 100) / 100,
+        you: { before: agentOddsOf(before, me), after: agentOddsOf(sim, me) },
+      };
+      if (partner) {
+        out.partner = {
+          name: agentTeamName(entry, partner.roster_id),
+          before: agentOddsOf(before, partner.roster_id),
+          after: agentOddsOf(sim, partner.roster_id),
+        };
+      }
+      return out;
+    }
+
+    const AGENT_TOOLS = {
+      get_team_context: toolTeamContext,
+      search_players: toolSearchPlayers,
+      evaluate_trade: toolEvaluateTrade,
+    };
+    async function agentRunTool(name, input) {
+      const fn = AGENT_TOOLS[name];
+      if (!fn) return { error: 'Unknown tool ' + name };
+      try { return await fn(input || {}); } catch (e) { return { error: String(e && e.message || e) }; }
+    }
+    window.__deskAgentTools = AGENT_TOOLS;
+
+    // ---- Offline advisor ------------------------------------------------
+    // No model: split "trade A and B for C" into names, resolve them, run
+    // the trade, describe the numbers. Anything else gets the team summary.
+    async function agentResolve(names, leagueId) {
+      const ids = [], missing = [];
+      for (const n of names) {
+        const r = await toolSearchPlayers({ query: n, league_id: leagueId });
+        if (r.players && r.players.length) ids.push(r.players[0].id); else missing.push(n);
+      }
+      return { ids, missing };
+    }
+    function agentSplitNames(text) {
+      return text.split(/,|\band\b|\+|&/i).map(s => s.replace(/\b(my|his|their|the|a|an)\b/gi, '').trim()).filter(s => s.length > 1);
+    }
+    const agentFmtPct = (v) => v == null ? '—' : v.toFixed(1) + '%';
+    const agentFmtDelta = (a, b) => (a == null || b == null) ? '' : ` (${b - a >= 0 ? '+' : ''}${(b - a).toFixed(1)})`;
+
+    async function agentOfflineReply(text) {
+      const m = text.match(/(?:trade|trading|give|giving|send|sending)?\s*(.+?)\s+for\s+(.+?)[?.!]*$/i);
+      if (m) {
+        const give = await agentResolve(agentSplitNames(m[1].replace(/^(should i|would you|is it smart to)\s+/i, '').replace(/^(trade|give|send)\s+/i, '')), agentLeagueId);
+        const get = await agentResolve(agentSplitNames(m[2]), agentLeagueId);
+        const missing = give.missing.concat(get.missing);
+        if (missing.length) return `I couldn't find: ${missing.join(', ')}. Try full player names.`;
+        const r = await toolEvaluateTrade({ give: give.ids, get: get.ids, league_id: agentLeagueId });
+        if (r.error) return r.error;
+        const b = r.you.before || {}, a = r.you.after || {};
+        const contender = (b.playoff_pct || 0) >= 50;
+        const titleGain = (a.title_pct || 0) - (b.title_pct || 0);
+        const byeGain = (a.bye_pct || 0) - (b.bye_pct || 0);
+        const lossShare = r.value_given > 0 ? -r.value_net / r.value_given : 0;
+        let verdict;
+        if (r.value_net >= 0 && (titleGain >= -1)) verdict = 'Looks good: you win on value and it doesn\'t cost you this season.';
+        else if (contender && (titleGain >= 2 || byeGain >= 5) && lossShare <= 0.2) verdict = 'Worth considering for a contender: a small value loss that buys real odds this year.';
+        else if (!contender && r.value_net < 0) verdict = 'Probably not: you\'re not a strong contender, so giving up long-term value is hard to justify.';
+        else verdict = 'Leaning no: the odds gain is too small for the value you give up.';
+        const lines = [
+          `**${verdict}**`,
+          '',
+          `You give ${r.you_give.map(p => p.name).join(', ')} (${r.value_given.toFixed(2)}), get ${r.you_get.map(p => p.name).join(', ')} (${r.value_received.toFixed(2)}). Net value ${r.value_net >= 0 ? '+' : ''}${r.value_net.toFixed(2)}.`,
+          `Playoffs ${agentFmtPct(b.playoff_pct)} → ${agentFmtPct(a.playoff_pct)}${agentFmtDelta(b.playoff_pct, a.playoff_pct)}`,
+          `Bye ${agentFmtPct(b.bye_pct)} → ${agentFmtPct(a.bye_pct)}${agentFmtDelta(b.bye_pct, a.bye_pct)}`,
+          `Title ${agentFmtPct(b.title_pct)} → ${agentFmtPct(a.title_pct)}${agentFmtDelta(b.title_pct, a.title_pct)}`,
+        ];
+        if (r.partner && r.partner.before && r.partner.after) {
+          lines.push(`${r.partner.name}: playoffs ${agentFmtPct(r.partner.before.playoff_pct)} → ${agentFmtPct(r.partner.after.playoff_pct)}`);
+        }
+        return lines.join('\n');
+      }
+      const ctx = await toolTeamContext({ league_id: agentLeagueId });
+      if (ctx.error) return ctx.error;
+      const t = ctx.my_team;
+      return [
+        `**${t.name}** · ${t.record} · playoffs ${agentFmtPct(t.playoff_pct)}, bye ${agentFmtPct(t.bye_pct)} · roster value ${t.dynasty_value.toFixed(2)}`,
+        `Top assets: ${t.roster.slice(0, 5).map(p => `${p.name} (${p.value.toFixed(2)})`).join(', ')}.`,
+        '',
+        'Offline mode can evaluate a trade. Try “Trade Player A and Player B for Player C”.',
+      ].join('\n');
+    }
+
+    // ---- Talking to the model -------------------------------------------
+    async function agentPost(messages) {
+      const headers = { 'Content-Type': 'application/json' };
+      let code = null;
+      try { code = localStorage.getItem('deskAdvisorAccess'); } catch (e) {}
+      if (code) headers['x-desk-access'] = code;
+      const resp = await fetch('/api/agent', { method: 'POST', headers, body: JSON.stringify({ messages }) });
+      if (resp.status === 401) return { mode: 'locked' };
+      // No serverless function at all (plain `vite` dev server): offline.
+      if (resp.status === 404) return { mode: 'demo' };
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.error || ('Advisor error ' + resp.status));
+      return data;
+    }
+
+    async function agentAsk(text, onStep) {
+      const history = agentHistory.concat([{ role: 'user', content: text }]);
+      for (let step = 0; step < AGENT_MAX_STEPS; step++) {
+        const data = await agentPost(history);
+        if (data.mode === 'demo') return { mode: 'demo', text: await agentOfflineReply(text) };
+        if (data.mode === 'locked') return { mode: 'locked', text: 'The advisor is a premium feature. Enter your access code to unlock it.' };
+        history.push({ role: 'assistant', content: data.content });
+        const calls = (data.content || []).filter(b => b.type === 'tool_use');
+        if (data.stop_reason !== 'tool_use' || !calls.length) {
+          agentHistory = history;
+          const said = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+          return { mode: 'live', text: said || (data.stop_reason === 'refusal' ? 'The advisor declined that one.' : '(no answer)') };
+        }
+        // Every result goes back in one message, in the order asked.
+        const results = [];
+        for (const c of calls) {
+          onStep && onStep(c.name);
+          const out = await agentRunTool(c.name, c.input);
+          results.push({ type: 'tool_result', tool_use_id: c.id, content: JSON.stringify(out), is_error: !!out.error });
+        }
+        history.push({ role: 'user', content: results });
+      }
+      return { mode: 'live', text: 'That took too many steps. Try a narrower question.' };
+    }
+
+    // ---- Drawer ---------------------------------------------------------
+    const AGENT_STEP_LABEL = {
+      get_team_context: 'Reading your team…',
+      search_players: 'Looking up players…',
+      evaluate_trade: 'Simulating the season with the trade…',
+    };
+    function agentEsc(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function agentFormat(text) {
+      return agentEsc(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+    }
+
+    function agentMount() {
+      if (document.getElementById('deskAdvisor')) return;
+      const fab = document.createElement('button');
+      fab.id = 'deskAdvisorFab';
+      fab.className = 'adv-fab';
+      fab.type = 'button';
+      fab.textContent = 'Ask the Desk';
+      const panel = document.createElement('aside');
+      panel.id = 'deskAdvisor';
+      panel.className = 'adv-panel';
+      panel.hidden = true;
+      panel.innerHTML = `
+        <div class="adv-head">
+          <span class="adv-title">The Advisor</span>
+          <span class="adv-mode" id="advMode"></span>
+          <button type="button" class="adv-close" aria-label="Close">&times;</button>
+        </div>
+        <select class="adv-league" id="advLeague" aria-label="League"></select>
+        <div class="adv-log" id="advLog" aria-live="polite">
+          <div class="adv-msg is-bot">Ask about your team or a trade, e.g. “Should I trade Player A for Player B?”</div>
+        </div>
+        <form class="adv-form" id="advForm">
+          <input class="adv-input" id="advInput" autocomplete="off" placeholder="Ask about a trade…" />
+          <button class="adv-send" type="submit">Send</button>
+        </form>`;
+      document.body.appendChild(fab);
+      document.body.appendChild(panel);
+
+      const log = panel.querySelector('#advLog');
+      const input = panel.querySelector('#advInput');
+      const leagueSel = panel.querySelector('#advLeague');
+      const modeEl = panel.querySelector('#advMode');
+      const add = (cls, html) => {
+        const d = document.createElement('div');
+        d.className = 'adv-msg ' + cls;
+        d.innerHTML = html;
+        log.appendChild(d);
+        log.scrollTop = log.scrollHeight;
+        return d;
+      };
+      const fillLeagues = () => {
+        const all = agentEntries();
+        leagueSel.innerHTML = all.length
+          ? all.map(e => `<option value="${agentEsc(e.league.league_id)}">${agentEsc(e.league.name)}</option>`).join('')
+          : '<option value="">Connect Sleeper to load leagues</option>';
+        if (!agentLeagueId || !all.some(e => e.league.league_id === agentLeagueId)) agentLeagueId = all[0] ? all[0].league.league_id : null;
+        if (agentLeagueId) leagueSel.value = agentLeagueId;
+      };
+      leagueSel.addEventListener('change', () => {
+        agentLeagueId = leagueSel.value;
+        agentHistory = [];
+        add('is-note', 'Switched league — new conversation.');
+      });
+      fab.addEventListener('click', () => {
+        panel.hidden = !panel.hidden;
+        if (!panel.hidden) { fillLeagues(); input.focus(); }
+      });
+      panel.querySelector('.adv-close').addEventListener('click', () => { panel.hidden = true; });
+      panel.querySelector('#advForm').addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const text = input.value.trim();
+        if (!text || agentBusy) return;
+        input.value = '';
+        add('is-me', agentEsc(text));
+        const pending = add('is-bot is-pending', 'Thinking…');
+        agentBusy = true;
+        try {
+          const r = await agentAsk(text, (name) => { pending.textContent = AGENT_STEP_LABEL[name] || 'Working…'; });
+          pending.classList.remove('is-pending');
+          pending.innerHTML = agentFormat(r.text);
+          modeEl.textContent = r.mode === 'demo' ? 'OFFLINE' : r.mode === 'live' ? 'LIVE' : '';
+          if (r.mode === 'locked') {
+            const code = window.prompt('Advisor access code');
+            if (code) { try { localStorage.setItem('deskAdvisorAccess', code); } catch (e) {} }
+          }
+        } catch (e) {
+          pending.classList.remove('is-pending');
+          pending.classList.add('is-error');
+          pending.textContent = String(e && e.message || e);
+        } finally {
+          agentBusy = false;
+        }
+      });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', agentMount);
+    else agentMount();
+  })();
 
 </script>
 
