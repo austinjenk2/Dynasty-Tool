@@ -21306,8 +21306,21 @@
       const pbp = window.__gcPbpStats;
       if (!pbp || !Object.keys(pbp).length) return statsMap;
       if (window.__gcPbpWeek != null && Number(window.__gcPbpWeek) !== Number(week)) return statsMap;
+      // Only for games still being played. Once a game is final, Sleeper's
+      // stat line is the official one and the play-by-play reading must not
+      // hold anything above it -- a play the text described and the league
+      // later wiped (a penalty, a review) would otherwise stay counted.
+      const espn = window.__gcEspnGameData || {};
+      const dict = window.__sleeperPlayerDict || {};
+      const liveOnly = {};
+      Object.keys(pbp).forEach(pid => {
+        const team = dict[pid] && dict[pid].team;
+        const g = team && espn[team];
+        if (g && g.state === 'post') return;
+        liveOnly[pid] = pbp[pid];
+      });
       return (typeof window.sbMergeLiveStats === 'function')
-        ? window.sbMergeLiveStats(statsMap, pbp) : statsMap;
+        ? window.sbMergeLiveStats(statsMap, liveOnly) : statsMap;
     }
     async function fetchWeekStats(season, week, cacheKey) {
       try {
@@ -28727,21 +28740,23 @@
     // Recomputing it independently is what let the two pages disagree
     // whenever a league was excluded from one page's list (Scoreboard's
     // tanking-teams toggle) but not the other's (co-managed toggle).
-    let projWinSum = 0, projLossSum = 0;
-    if (window.__sbProjectedRecord) {
-      projWinSum = window.__sbProjectedRecord.winSum;
-      projLossSum = window.__sbProjectedRecord.lossSum;
-    } else {
-      entries.forEach(e => {
-        if (!e.myMatchup || !e.oppMatchup) return;
-        if (!sbMatchupHasData(e.myMatchup, null, e.league) && !sbMatchupHasData(e.oppMatchup, null, e.league)) return;
-        const myTotal = sbMatchupProjectedTotal(e.myMatchup, null, e.league);
-        const oppTotal = sbMatchupProjectedTotal(e.oppMatchup, null, e.league);
-        const pct = sbWinProbability(myTotal, oppTotal);
-        projWinSum += pct / 100;
-        projLossSum += 1 - pct / 100;
+    // The Slate's number is the only one. The Slate only draws when it is
+    // open, so opening on the Front Desk used to fall back to a rougher
+    // sum of its own -- no live game state, no tanking filter -- and show
+    // 10.75 where the Slate said 10.99 until somebody visited the Slate.
+    // Now the Front Desk asks the Slate to work it out (it draws into its
+    // own hidden grid) and shows a placeholder until it lands, and asks
+    // again whenever the Slate's figure is more than a minute old.
+    const rec = window.__sbProjectedRecord;
+    const recFresh = rec && Date.now() - (rec.at || 0) < 60000;
+    if ((!rec || !recFresh) && window.renderRealScoreboard && !window.__sbRecordRefreshing) {
+      window.__sbRecordRefreshing = true;
+      Promise.resolve(window.renderRealScoreboard()).catch(() => {}).finally(() => {
+        window.__sbRecordRefreshing = false;
+        if (window.__sbProjectedRecord && window.__sbProjectedRecord !== rec && window.renderRealDashboard) window.renderRealDashboard();
       });
     }
+    const projWinSum = rec ? rec.winSum : null, projLossSum = rec ? rec.lossSum : null;
 
     const recordValues = document.querySelectorAll('.record-row .record-value');
     if (recordValues[0]) {
@@ -28755,7 +28770,8 @@
       recordSubEl.textContent = 'Total record among leagues not marked as tanking';
     }
     if (recordValues[1]) {
-      recordValues[1].innerHTML = `<span class="win">${projWinSum.toFixed(2)}</span><span class="sep">-</span><span class="loss">${projLossSum.toFixed(2)}</span>`;
+      recordValues[1].innerHTML = projWinSum == null ? '<span class="sep">&hellip;</span>'
+        : `<span class="win">${projWinSum.toFixed(2)}</span><span class="sep">-</span><span class="loss">${projLossSum.toFixed(2)}</span>`;
     }
 
     // Roster Value: real dynasty asset value (Pure Potential's list) rank
@@ -29740,7 +29756,17 @@
     // "(Shotgun)", "(T.Watt)". A defender's name in there is not the name
     // any of these patterns wants, and leaving it in is how a tackler ends
     // up credited with the carry he just stopped.
-    const clean = raw.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+    let clean = raw.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+    // A play wiped out by an accepted penalty never happened: "Z.Flowers
+    // pass ... to Z.Flowers for 29 yards. PENALTY on BAL-..., Offensive
+    // Pass Interference, 10 yards, enforced at BAL 40 - No Play." was being
+    // scored as a 29-yard catch. ESPN marks every one of them "No Play"; a
+    // declined penalty does not carry it and the play stands.
+    if (/\bno play\b/i.test(clean) && !/declined/i.test(clean.replace(/.*PENALTY/i, ''))) return [];
+    // A play overturned on review is described twice -- what was called on
+    // the field, then what replay decided. Only the second one happened.
+    const reversedAt = clean.search(/REVERSED\./);
+    if (reversedAt >= 0) clean = clean.slice(reversedAt + 'REVERSED.'.length).trim();
     // A touchdown only belongs to the carrier or the catch when it comes
     // BEFORE any fumble in the text. "M.Andrews ... for 12 yards. M.Andrews
     // FUMBLES ... RECOVERED by CIN-X ... for 40 yards, TOUCHDOWN" is the
@@ -30360,7 +30386,19 @@
         - sbMatchupProjectedTotal(opp, null, entry.league, null, week);
       const sk = sbMatchupSigma(my, opp, null, entry.league, null, week);
       if (!Number.isFinite(mk)) return;
-      const pKick = sbWinPctExact(mk, sk);
+      // The real kickoff: this league's own margin and spread as they read
+      // right up until its first player took the field, saved per week. A
+      // baseline rebuilt from projections later in the day drifts with
+      // them, which is why a week that went from 9 to 11 read +0.67. Only
+      // when this browser never saw the league before kickoff does it fall
+      // back to the rebuilt one.
+      const kickKey = String((entry.league && entry.league.season) || '') + '_' + String(window.__sleeperLiveWeek || entry.week || '');
+      const id0 = entry.league.league_id;
+      let startedHere = false;
+      nets.forEach(leagues => { if (leagues.has(id0)) startedHere = true; });
+      const saved = sbKickoffStore(kickKey, id0, startedHere ? null : { m: state.margin, s: state.sigma });
+      const useM = saved ? saved.m : mk, useS = saved ? saved.s : sk;
+      const pKick = sbWinPctExact(useM, useS);
       nowSum += pNow / 100; kickSum += pKick / 100;
       const id = entry.league.league_id;
       const games = [];
@@ -30369,9 +30407,9 @@
       games.sort((a, b) => startOf(a.ev) - startOf(b.ev) || String(a.ev).localeCompare(String(b.ev)));
       const massSum = games.reduce((t, g) => t + g.mass, 0);
       const w = games.map(g => massSum > 0 ? g.mass / massSum : 1 / games.length);
-      const leftover = (state.margin - mk) - games.reduce((t, g) => t + g.net, 0);
-      const varK = (Number(sk) > 0 ? sk * sk : 0), varN = (Number(state.sigma) > 0 ? state.sigma * state.sigma : 0);
-      let m = mk, cw = 0, prev = pKick;
+      const leftover = (state.margin - useM) - games.reduce((t, g) => t + g.net, 0);
+      const varK = (Number(useS) > 0 ? useS * useS : 0), varN = (Number(state.sigma) > 0 ? state.sigma * state.sigma : 0);
+      let m = useM, cw = 0, prev = pKick;
       games.forEach((g, i) => {
         m += g.net + leftover * w[i];
         cw += w[i];
@@ -30385,6 +30423,27 @@
     return { byEvent, nowSum, kickSum, total: nowSum - kickSum };
   }
   window.sbWeekAttribution = sbWeekAttribution;
+
+  // Each league's state at kickoff, per week. Written on every read while
+  // nobody in that league has played (lineups and news still move it, and
+  // should), frozen from the first snap on. Two weeks kept.
+  const SB_KICKOFF_KEY = 'dynastyToolKickoffState';
+  function sbKickoffStore(weekKey, leagueId, writeValue) {
+    let store = {};
+    try { store = JSON.parse(localStorage.getItem(SB_KICKOFF_KEY) || '{}') || {}; } catch (e) { store = {}; }
+    const wk = store[weekKey] || (store[weekKey] = {});
+    if (writeValue && Number.isFinite(writeValue.m) && writeValue.s != null) {
+      const prev = wk[leagueId];
+      if (!prev || prev.m !== writeValue.m || prev.s !== writeValue.s) {
+        wk[leagueId] = { m: writeValue.m, s: writeValue.s };
+        const num = (k) => k.split('_').map(Number).reduce((a, b) => a * 100 + (b || 0), 0);
+        const keys = Object.keys(store).sort((a, b) => num(a) - num(b));
+        while (keys.length > 2) delete store[keys.shift()];
+        try { localStorage.setItem(SB_KICKOFF_KEY, JSON.stringify(store)); } catch (e) {}
+      }
+    }
+    return wk[leagueId] || null;
+  }
   window.sbPerfWins = sbPerfWins;
 
   function gcWinsByEvent(games, dict) {
@@ -33252,7 +33311,7 @@
     // Only written for a real, non-override render: previewing a past/
     // future week here (via the week selector) must never leak into what
     // the Dashboard shows as "this week's" projected record.
-    if (!override) window.__sbProjectedRecord = { winSum: projWinSum, lossSum: projLossSum };
+    if (!override) window.__sbProjectedRecord = { winSum: projWinSum, lossSum: projLossSum, at: Date.now() };
     sbRenderMatchupsWon(weekWinProbs);
     if (winsValue) winsValue.textContent = `${favoredCount} of ${withMatchup}`;
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
