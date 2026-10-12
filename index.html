@@ -25128,7 +25128,9 @@
           : null;
         const oppRoster = oppMatchup ? (entry.allRosters || []).find(r => r.roster_id === oppMatchup.roster_id) : null;
         const oppUser = oppRoster ? (entry.users || []).find(u => u.user_id === oppRoster.owner_id) : null;
-        return { leagueId: entry.league.league_id, myMatchup, oppMatchup, oppUser };
+        // Every team's matchup that week, not just yours: Schedule Luck
+        // measures your score against the whole league for the same week.
+        return { leagueId: entry.league.league_id, myMatchup, oppMatchup, oppUser, allMatchups: matchups };
       } catch (err) {
         return { leagueId: entry.league.league_id, myMatchup: null, oppMatchup: null, oppUser: null };
       }
@@ -30438,7 +30440,9 @@
         wk[leagueId] = { m: writeValue.m, s: writeValue.s };
         const num = (k) => k.split('_').map(Number).reduce((a, b) => a * 100 + (b || 0), 0);
         const keys = Object.keys(store).sort((a, b) => num(a) - num(b));
-        while (keys.length > 2) delete store[keys.shift()];
+        // A season and change: past weeks on the Slate are measured
+        // against these, and they are a few hundred bytes a week.
+        while (keys.length > 24) delete store[keys.shift()];
         try { localStorage.setItem(SB_KICKOFF_KEY, JSON.stringify(store)); } catch (e) {}
       }
     }
@@ -31427,16 +31431,16 @@
   // stories. Shown even before kickoff, reading zero: a number that simply
   // is not there on a Wednesday is indistinguishable from a broken one.
   // Shared shape for the two "signed number of wins" stats in the top bar.
-  function sbSetSignedWinStat(valueId, wrapId, labelId, label, total, title) {
+  function sbSetSignedWinStat(valueId, wrapId, labelId, label, total, title, idleLabel, idleText) {
     const el = document.getElementById(valueId);
     if (!el) return;
     const idle = total == null || !Number.isFinite(total);
     el.className = 'sb-stat-value' + (idle ? '' : (total > 0.005 ? ' sb-green' : (total < -0.005 ? ' sb-red' : '')));
     el.innerHTML = idle
-      ? '&plusmn;0.00'
+      ? (idleText || '&plusmn;0.00')
       : (total > 0.005 ? '+' : (total < -0.005 ? '\u2212' : '\u00b1')) + Math.abs(total).toFixed(2);
     const lab = document.getElementById(labelId);
-    if (lab) lab.textContent = idle ? 'NO GAMES STARTED' : label;
+    if (lab) lab.textContent = idle ? (idleLabel || 'NO GAMES STARTED') : label;
     const wrap = document.getElementById(wrapId);
     if (wrap) wrap.title = title;
   }
@@ -31461,7 +31465,8 @@
           ? `Games played so far: ${p.games >= 0 ? '+' : '\u2212'}${Math.abs(p.games).toFixed(2)} -- the per-game wins on the Slate and Press Box add up to this.`
             + (Math.abs(p.other) >= 0.005
               ? `\nLineup and projection changes in leagues where nobody has played yet: ${p.other >= 0 ? '+' : '\u2212'}${Math.abs(p.other).toFixed(2)}.` : '')
-          : 'The per-game wins on the Slate and Press Box show which games moved it.'));
+          : 'The per-game wins on the Slate and Press Box show which games moved it.'),
+      p.idleLabel, p.idleText);
   }
   window.sbSetWeekSwing = sbSetWeekSwing;
 
@@ -33081,13 +33086,13 @@
       const t = sbMatchupProjectedTotal(m, projMap, entry.league, espnGameData, week);
       if (!Number.isFinite(t)) return;
       const sig = sbMatchupSigma(myMatchup, m, projMap, entry.league, espnGameData, week);
-      earned += sbWinProbRaw(myProj, t, sig) / 100;
+      earned += sbWinPctExact(myProj - t, sig) / 100;
       n++;
     });
     if (n < 2) return null;
     const actualSig = sbMatchupSigma(myMatchup, all.find(m => m && m.matchup_id === myMatchup.matchup_id && m.roster_id !== myMatchup.roster_id) || null,
       projMap, entry.league, espnGameData, week);
-    return { earned: earned / n, actual: sbWinProbRaw(myProj, oppProj, actualSig) / 100 };
+    return { earned: earned / n, actual: sbWinPctExact(myProj - oppProj, actualSig) / 100 };
   }
   window.sbProjectedLuck = sbProjectedLuck;
 
@@ -33160,6 +33165,7 @@
     // were worth before a ball was kicked, and what the schedule has made
     // of the scores so far.
     let kickoffWinSum = 0, kickoffCount = 0;
+    let pastSwing = 0, pastSaved = 0;
     let luckEarned = 0, luckActual = 0, luckCount = 0;
     // Which players are in each league's matchup (both sides, starters
     // and bench), so the player search below can narrow the list to the
@@ -33216,8 +33222,19 @@
           const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, entry.league, cardEspnGameData, cardWeek);
           headlineMine = myProj;
           headlineTheirs = oppProj;
-          const winPct = sbWinProbability(myProj, oppProj,
-            sbMatchupSigma(myMatchup, oppMatchup, projMap, entry.league, cardEspnGameData, cardWeek));
+          const cardSigma = sbMatchupSigma(myMatchup, oppMatchup, projMap, entry.league, cardEspnGameData, cardWeek);
+          const winPct = sbWinProbability(myProj, oppProj, cardSigma);
+          // A week picked from the dropdown is measured against the kickoff
+          // this browser saved for it, league by league -- Sleeper's
+          // projections for a finished week are not its pregame ones, so a
+          // baseline rebuilt from them came out wrong.
+          if (override) {
+            const saved = sbKickoffStore(String(entry.league.season) + '_' + String(cardWeek), entry.league.league_id, null);
+            if (saved) {
+              pastSwing += (sbWinPctExact(myProj - oppProj, cardSigma) - sbWinPctExact(saved.m, saved.s)) / 100;
+              pastSaved++;
+            }
+          }
           winPctForSort = winPct;
           // Same favorite/underdog split used everywhere else (Dashboard's
           // Projected Weekly Record included) -- no separate "close game"
@@ -33236,7 +33253,13 @@
           if (kickPct != null) { kickoffWinSum += kickPct / 100; kickoffCount++; }
           // SCHEDULE LUCK: your live projected total against every other
           // team in the league, not just the one you drew.
-          const cardLuck = sbProjectedLuck(entry, myMatchup, myProj, oppProj, projMap, cardEspnGameData, cardWeek);
+          // For a week picked from the dropdown, that week's league, not
+          // this week's -- it used to measure a past week's score against
+          // the teams playing now.
+          const luckEntry = override
+            ? Object.assign({}, entry, { allMatchups: ((override.byLeague || {})[entry.league.league_id] || {}).allMatchups || [] })
+            : entry;
+          const cardLuck = sbProjectedLuck(luckEntry, myMatchup, myProj, oppProj, projMap, cardEspnGameData, cardWeek);
           if (cardLuck) { luckEarned += cardLuck.earned; luckActual += cardLuck.actual; luckCount++; }
           // Strict coin-flip split for the badge's color -- >=50% green,
           // <50% red -- rather than a three-way good/close/bad read, since
@@ -33323,8 +33346,11 @@
     // shown through the picker falls back to its whole now-vs-kickoff.
     const liveWeekNum = Number(window.__sleeperLiveWeek || sbWeek);
     const shownLive = !override || Number(override.week) === liveWeekNum;
-    let swing = kickoffCount ? projWinSum - kickoffWinSum : null;
-    let swingParts = { live: projWinSum, expected: kickoffWinSum };
+    // Another week: only what was saved at its kickoff can be trusted.
+    let swing = pastSaved ? pastSwing : null;
+    let swingParts = pastSaved
+      ? { live: null, expected: null }
+      : { idleLabel: 'NOT RECORDED', idleText: '&mdash;' };
     if (shownLive && typeof sbWeekAttribution === 'function') {
       const att = sbWeekAttribution(gcVisibleLeagueEntries(), sbEspnGameData, null, null, sbDict);
       let sum = 0;
