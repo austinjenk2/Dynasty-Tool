@@ -29741,7 +29741,24 @@
     // any of these patterns wants, and leaving it in is how a tackler ends
     // up credited with the carry he just stopped.
     const clean = raw.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
-    const isTd = /touchdown/i.test(clean);
+    // A touchdown only belongs to the carrier or the catch when it comes
+    // BEFORE any fumble in the text. "M.Andrews ... for 12 yards. M.Andrews
+    // FUMBLES ... RECOVERED by CIN-X ... for 40 yards, TOUCHDOWN" is the
+    // defence scoring, and reading the TOUCHDOWN on its own handed a
+    // receiving TD to the man who fumbled and a passing TD to his
+    // quarterback.
+    const tdAt = clean.search(/touchdown/i);
+    const fumbleAt = clean.search(/FUMBLES/);
+    const isTd = tdAt >= 0 && (fumbleAt < 0 || tdAt < fumbleAt);
+    // The fumble on a catch or a carry still has to reach the caller, who
+    // decides whether it was lost; those branches return early, so it is
+    // read here and appended to whatever they produce.
+    const fumbleEvent = () => {
+      const fm = clean.match(new RegExp(`(${SB_PLAYER_NAME_RE}) FUMBLES`));
+      if (!fm) return [];
+      const rec = clean.match(/RECOVERED by ([A-Z]{2,3})-/);
+      return [{ name: fm[1], desc: 'fumble', stats: {}, fumbleRecoveredBy: rec ? rec[1] : null }];
+    };
     const is2pt = /two-point conversion/i.test(raw) && /succeeds|is good|is complete/i.test(raw);
     const yardsFromWord = (s) => {
       if (/no gain/i.test(s)) return 0;
@@ -29788,7 +29805,7 @@
           stats: { rec: 1, rec_yd: yards, rec_td: isTd && !is2pt ? 1 : 0, rec_2pt: is2pt ? 1 : 0 } },
         { name: m[1], desc: `${yards}-yd pass${tag}`,
           stats: { pass_att: 1, pass_cmp: 1, pass_yd: yards, pass_td: isTd && !is2pt ? 1 : 0, pass_2pt: is2pt ? 1 : 0 } },
-      ];
+      ].concat(fumbleEvent());
     }
 
     // An incompletion. No points anywhere, but it is the other half of a
@@ -29816,7 +29833,8 @@
       const yards = yardsFromWord(m[2]);
       const tag = is2pt ? ', 2PT' : (isTd ? ', TD' : '');
       return [{ name: m[1], desc: `${yards}-yd rush${tag}`,
-        stats: { rush_att: 1, rush_yd: yards, rush_td: isTd && !is2pt ? 1 : 0, rush_2pt: is2pt ? 1 : 0 } }];
+        stats: { rush_att: 1, rush_yd: yards, rush_td: isTd && !is2pt ? 1 : 0, rush_2pt: is2pt ? 1 : 0 } }]
+        .concat(fumbleEvent());
     }
 
     // A sack costs no fantasy points on the house line -- sack yardage is
