@@ -30285,12 +30285,16 @@
           { position: p.position, team: p.team, espnGameData });
         if (liveProj == null) return;
         const delta = liveProj - origProj;
-        if (!Number.isFinite(delta) || delta === 0) return;
+        if (!Number.isFinite(delta)) return;
         let leagues = out.get(bucket);
         if (!leagues) { leagues = new Map(); out.set(bucket, leagues); }
         const key = e.league.league_id;
-        const cur = leagues.get(key) || { state: row.state, net: 0 };
+        const cur = leagues.get(key) || { state: row.state, net: 0, mass: 0 };
         cur.net += row.onMySide ? delta : -delta;
+        // How much of the matchup's uncertainty this game has used up: the
+        // points riding on it, times how far through it is. Splits the
+        // narrowing of the spread between games in sbWeekAttribution.
+        cur.mass += Math.max(0, origProj) * (st.finished ? 1 : Math.max(0, Math.min(1, st.elapsed || 0)));
         leagues.set(key, cur);
       });
     });
@@ -30308,6 +30312,79 @@
     return wins;
   }
   window.sbPerfNets = sbPerfNets;
+
+  // Win probability on the same footing as the cards, without the rounding,
+  // so many leagues add up to the projected record to the hundredth.
+  function sbWinPctExact(margin, sigma) {
+    if (sigma === 0) return margin > 0 ? 100 : (margin < 0 ? 0 : 50);
+    return Math.min(99, Math.max(1, sbWinProbRaw(margin, 0, sigma)));
+  }
+
+  // ---- Where the week has gone, game by game ---------------------------
+  // Each league's change since kickoff -- win probability now minus win
+  // probability with every player at his pregame projection -- is walked
+  // from kickoff to now one game at a time, in the order they kicked off.
+  // Each step adds that game's points over expected to the margin and
+  // takes its share of the uncertainty off the spread; the game is
+  // credited with exactly how far that step moved the odds. Because every
+  // step starts where the last one stopped, the games add up to the whole
+  // change exactly: kickoff 9.04, now 10.99, the games sum to +1.95.
+  //
+  // Anything that moved the margin and is not a started game's
+  // performance (a projection updated for a player yet to play) is spread
+  // over the games in proportion to how much of the matchup each one
+  // settled, so it is not lost from the total.
+  function sbWeekAttribution(entries, espnGameData, week, eventOfTeam, dict) {
+    const byEvent = new Map();
+    let nowSum = 0, kickSum = 0;
+    // Team -> game and game -> kickoff, straight off the ESPN state, so the
+    // Slate, the Press Box and the top bar all bucket a player identically.
+    const evOf = new Map(eventOfTeam || []);
+    const kickoffOf = new Map();
+    Object.keys(espnGameData || {}).forEach(team => {
+      const g = espnGameData[team];
+      if (!g || !g.eventId) return;
+      if (!evOf.has(team)) evOf.set(team, g.eventId);
+      if (g.when && !kickoffOf.has(g.eventId)) kickoffOf.set(g.eventId, new Date(g.when).getTime());
+    });
+    const startOf = (eventId) => kickoffOf.get(eventId) || 0;
+    const nets = sbPerfNets(espnGameData, dict, (team) => evOf.get(team) || null, entries);
+    (entries || []).forEach(entry => {
+      if (!entry || !entry.myMatchup || !entry.oppMatchup) return;
+      const state = sbLiveStateFor(entry, espnGameData, week);
+      if (!state || state.sigma == null) return;
+      const pNow = sbWinPctExact(state.margin, state.sigma);
+      const unplayed = (m) => Object.assign({}, m, { players_points: {} });
+      const my = unplayed(entry.myMatchup), opp = unplayed(entry.oppMatchup);
+      const mk = sbMatchupProjectedTotal(my, null, entry.league, null, week)
+        - sbMatchupProjectedTotal(opp, null, entry.league, null, week);
+      const sk = sbMatchupSigma(my, opp, null, entry.league, null, week);
+      if (!Number.isFinite(mk)) return;
+      const pKick = sbWinPctExact(mk, sk);
+      nowSum += pNow / 100; kickSum += pKick / 100;
+      const id = entry.league.league_id;
+      const games = [];
+      nets.forEach((leagues, ev) => { const r = leagues.get(id); if (r) games.push({ ev, net: r.net, mass: r.mass }); });
+      if (!games.length) return;
+      games.sort((a, b) => startOf(a.ev) - startOf(b.ev) || String(a.ev).localeCompare(String(b.ev)));
+      const massSum = games.reduce((t, g) => t + g.mass, 0);
+      const w = games.map(g => massSum > 0 ? g.mass / massSum : 1 / games.length);
+      const leftover = (state.margin - mk) - games.reduce((t, g) => t + g.net, 0);
+      const varK = (Number(sk) > 0 ? sk * sk : 0), varN = (Number(state.sigma) > 0 ? state.sigma * state.sigma : 0);
+      let m = mk, cw = 0, prev = pKick;
+      games.forEach((g, i) => {
+        m += g.net + leftover * w[i];
+        cw += w[i];
+        const last = i === games.length - 1;
+        const v = last ? varN : Math.max(0, varK - (varK - varN) * cw);
+        const p = last ? pNow : sbWinPctExact(m, v > 0 ? Math.sqrt(v) : 0);
+        byEvent.set(g.ev, (byEvent.get(g.ev) || 0) + (p - prev) / 100);
+        prev = p;
+      });
+    });
+    return { byEvent, nowSum, kickSum, total: nowSum - kickSum };
+  }
+  window.sbWeekAttribution = sbWeekAttribution;
   window.sbPerfWins = sbPerfWins;
 
   function gcWinsByEvent(games, dict) {
@@ -30325,8 +30402,8 @@
       if (g.home && g.home.abbr) eventOfTeam.set(g.home.abbr, g.eventId);
     });
     if (!eventOfTeam.size) return out;
-    const byEvent = sbPerfNets(window.__gcEspnGameData || null, dict, (team) => eventOfTeam.get(team) || null);
-    byEvent.forEach((leagues, eventId) => out.set(eventId, sbPerfWins(leagues)));
+    const att = sbWeekAttribution(gcVisibleLeagueEntries(), window.__gcEspnGameData || null, null, eventOfTeam, dict);
+    att.byEvent.forEach((wins, eventId) => out.set(eventId, wins));
     return out;
   }
   window.gcWinsByEvent = gcWinsByEvent;
@@ -31321,7 +31398,11 @@
       + 'player at his pregame projection and nothing played.\n\n'
       + (p.live != null && p.expected != null
           ? `Now ${p.live.toFixed(2)} wins; at kickoff ${p.expected.toFixed(2)}.\n\n` : '')
-      + 'The per-game wins on the Slate and Press Box show which games moved it.');
+      + (p.games != null
+          ? `Games played so far: ${p.games >= 0 ? '+' : '\u2212'}${Math.abs(p.games).toFixed(2)} -- the per-game wins on the Slate and Press Box add up to this.`
+            + (Math.abs(p.other) >= 0.005
+              ? `\nLineup and projection changes in leagues where nobody has played yet: ${p.other >= 0 ? '+' : '\u2212'}${Math.abs(p.other).toFixed(2)}.` : '')
+          : 'The per-game wins on the Slate and Press Box show which games moved it.'));
   }
   window.sbSetWeekSwing = sbSetWeekSwing;
 
@@ -33177,12 +33258,22 @@
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
     const currentWinsValue = document.getElementById('sbStatCurrentWinsValue');
     if (currentWinsValue) currentWinsValue.textContent = `${currentlyWinningCount} of ${withMatchup}`;
-    // Where you are now against where you started: the same lineups, priced
-    // before a ball was kicked. Went 9 wins at kickoff to 11 now, this
-    // reads +2.00.
-    // Any week: a finished week reads how far it ended from where it began.
-    sbSetWeekSwing(kickoffCount ? projWinSum - kickoffWinSum : null,
-      { live: projWinSum, expected: kickoffWinSum });
+    // Where you are now against where you started, split game by game the
+    // same way the Slate and Press Box chips are -- one function, so the
+    // chips add up to this to the hundredth. The live week only; a week
+    // shown through the picker falls back to its whole now-vs-kickoff.
+    const liveWeekNum = Number(window.__sleeperLiveWeek || sbWeek);
+    const shownLive = !override || Number(override.week) === liveWeekNum;
+    let swing = kickoffCount ? projWinSum - kickoffWinSum : null;
+    let swingParts = { live: projWinSum, expected: kickoffWinSum };
+    if (shownLive && typeof sbWeekAttribution === 'function') {
+      const att = sbWeekAttribution(gcVisibleLeagueEntries(), sbEspnGameData, null, null, sbDict);
+      let sum = 0;
+      att.byEvent.forEach(v => { sum += v; });
+      swing = att.nowSum - att.kickSum;
+      swingParts = { live: att.nowSum, expected: att.kickSum, games: sum, other: swing - sum };
+    }
+    sbSetWeekSwing(swing, swingParts);
     sbSetScheduleLuck(luckEarned, luckActual, luckCount);
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
     const sbWeekLabel = document.getElementById('sbWeekLabel');
