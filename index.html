@@ -1981,6 +1981,19 @@
      tier bands across the full width, and the big drops between players
      called out where they happen instead of left for you to spot in the
      value column. */
+  .mv-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 4px 0 16px; }
+  .mv-tile { background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; box-shadow: 3px 3px 0 var(--ink); padding: 10px 12px; }
+  .mv-tile .k { font-size: 10px; font-weight: 800; letter-spacing: 0.4px; color: var(--faint); text-transform: uppercase; }
+  .mv-tile .v { font-family: 'Anton', sans-serif; font-size: 22px; color: var(--ink); line-height: 1.15; }
+  .mv-tile .s { font-size: 11.5px; color: var(--muted); }
+  .mv-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  .mv-cols > div { min-width: 0; }
+  @media (max-width: 900px) { .mv-cols { grid-template-columns: minmax(0, 1fr); } }
+  .mv-h { font-family: 'Source Serif 4', serif; font-size: 16px; margin: 0 0 6px; }
+  .mv-up, .mv-tile .v.mv-up { color: var(--green); } .mv-down, .mv-tile .v.mv-down { color: var(--red); }
+  .rb-table td.mv-pos { color: var(--green); font-weight: 800; } .rb-table td.mv-neg { color: var(--red); font-weight: 800; }
+  .rb-table td.mv-player { text-align: left; cursor: pointer; } .rb-table th.mv-th-player { text-align: left; }
+  .mv-player small { color: var(--faint); margin-left: 6px; font-weight: 600; }
   .rk-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
   .rk-search {
     flex: 1;
@@ -12936,6 +12949,32 @@
     <div id="mgBody"></div>
   </div>
 
+  <div data-view="movers">
+    <div class="page-title">
+      <h1>Movers</h1>
+      <p>Whose value moved between two updates of The Board, weighted by how much of him you own. A player in four of your leagues who gains +0.20 moves your portfolio +0.80. Values are in Base 1s, the same unit as The Board.</p>
+    </div>
+    <div class="sh-toolbar">
+      <label class="sh-field"><span>Compared with</span><select id="mvSince"></select></label>
+      <label class="sh-field"><span>Rank by</span><select id="mvRankBy">
+        <option value="total" selected>Portfolio change</option>
+        <option value="each">Change per share</option>
+      </select></label>
+    </div>
+    <div class="sh-pos-tabs" id="mvPosTabs">
+      <button type="button" data-pos="ALL" class="active">All</button>
+      <button type="button" data-pos="QB">QB</button>
+      <button type="button" data-pos="RB">RB</button>
+      <button type="button" data-pos="WR">WR</button>
+      <button type="button" data-pos="TE">TE</button>
+    </div>
+    <div class="mv-summary" id="mvSummary"></div>
+    <div class="mv-cols">
+      <div><h2 class="mv-h mv-up">Biggest gainers</h2><div class="rb-table-wrap"><table class="rb-table"><thead id="mvUpHead"></thead><tbody id="mvUpBody"></tbody></table></div></div>
+      <div><h2 class="mv-h mv-down">Biggest fallers</h2><div class="rb-table-wrap"><table class="rb-table"><thead id="mvDownHead"></thead><tbody id="mvDownBody"></tbody></table></div></div>
+    </div>
+  </div>
+
   <div data-view="rankings">
     <div class="page-title">
       <h1>The Board</h1>
@@ -13701,6 +13740,7 @@
     ] },
     { id: 'values', label: 'Price Guide', pages: [
       { view: 'rankings', label: 'The Board' },
+      { view: 'movers', label: 'Movers' },
       { view: 'calculator', label: 'Trade Desk' },
     ] },
     { id: 'settings', label: 'Settings', pages: [
@@ -36561,6 +36601,105 @@
     document.addEventListener('desk:view', (e) => { if (e.detail === 'margin') refresh(); });
     fillSeasons();
     fillScoringOptions();
+  })();
+
+  // ---- Movers: value change across your portfolio ---------------------
+  // Each player you own, his value now against his value in an earlier
+  // update of The Board, times how many of your leagues he is in. A
+  // player new to the list counts from zero and one who fell off it counts
+  // to zero -- both are real moves in what your rosters are worth.
+  (function initMovers() {
+    const sinceSel = document.getElementById('mvSince');
+    const rankSel = document.getElementById('mvRankBy');
+    const posTabs = document.getElementById('mvPosTabs');
+    const summaryEl = document.getElementById('mvSummary');
+    if (!sinceSel || !summaryEl) return;
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const signed = (v) => (v > 0.0005 ? '+' : v < -0.0005 ? '&minus;' : '&plusmn;') + Math.abs(v).toFixed(2);
+    let pos = 'ALL';
+    const fmtDate = (iso) => { const d = new Date(iso + 'T12:00:00'); return isNaN(d) ? iso : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
+
+    function fillSince() {
+      if (sinceSel.options.length) return;
+      // Newest first: the update just before this one is the default.
+      sinceSel.innerHTML = PP_VALUE_HISTORY.slice().reverse()
+        .map(h => `<option value="${h.asOf}">${fmtDate(h.asOf)} update</option>`).join('');
+    }
+    const lookup = (table, name) => {
+      const n = ppNormalizeName(name);
+      if (table[n] != null) return table[n];
+      const st = n.replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
+      return table[st] != null ? table[st] : null;
+    };
+
+    function rows() {
+      const dict = window.__sleeperPlayerDict || {};
+      const hist = PP_VALUE_HISTORY.find(h => h.asOf === sinceSel.value) || PP_VALUE_HISTORY[PP_VALUE_HISTORY.length - 1];
+      const shares = {};
+      Object.values(window.sleeperLeagueData || {})
+        .filter(e => e.roster && (isCoManagedIncluded() || !e.isCoOwned))
+        .forEach(e => (e.roster.players || []).forEach(id => {
+          if (id && id !== '0') shares[id] = (shares[id] || 0) + 1;
+        }));
+      return Object.keys(shares).map(id => {
+        const p = dict[id];
+        if (!p || !PP_RANKED_POSITIONS.includes(p.position)) return null;
+        const name = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+        const now = lookup(PP_PLAYER_VALUES, name), was = lookup(hist.values, name);
+        if (now == null && was == null) return null;
+        const each = (now || 0) - (was || 0);
+        return { id, name, pos: p.position, team: p.team || 'FA', shares: shares[id], was, now, each, total: each * shares[id] };
+      }).filter(Boolean);
+    }
+
+    function table(headEl, bodyEl, list) {
+      headEl.innerHTML = '<tr><th class="mv-th-player">PLAYER</th><th>SHARES</th><th>WAS</th><th>NOW</th><th>EACH</th><th>TOTAL</th></tr>';
+      bodyEl.innerHTML = list.length ? list.map(r => `<tr>`
+        + `<td class="mv-player" data-player-id="${esc(r.id)}"><span class="sh-pos-chip ${r.pos}">${r.pos}</span><b>${esc(r.name)}</b><small>${esc(r.team)}</small></td>`
+        + `<td>${r.shares}</td><td>${r.was == null ? 'new' : r.was.toFixed(2)}</td><td>${r.now == null ? 'off' : r.now.toFixed(2)}</td>`
+        + `<td class="${r.each >= 0 ? 'mv-pos' : 'mv-neg'}">${signed(r.each)}</td>`
+        + `<td class="${r.total >= 0 ? 'mv-pos' : 'mv-neg'}">${signed(r.total)}</td></tr>`).join('')
+        : '<tr><td colspan="6" class="rb-empty">Nobody here.</td></tr>';
+    }
+
+    function render() {
+      fillSince();
+      posTabs.querySelectorAll('[data-pos]').forEach(b => b.classList.toggle('active', b.dataset.pos === pos));
+      const all = rows();
+      if (!all.length) {
+        summaryEl.innerHTML = '<p class="rb-empty">Connect a Sleeper account in Settings to see your movers.</p>';
+        table(document.getElementById('mvUpHead'), document.getElementById('mvUpBody'), []);
+        table(document.getElementById('mvDownHead'), document.getElementById('mvDownBody'), []);
+        return;
+      }
+      const list = all.filter(r => pos === 'ALL' || r.pos === pos);
+      const key = rankSel.value === 'each' ? 'each' : 'total';
+      const up = list.filter(r => r[key] > 0.0005).sort((a, b) => b[key] - a[key] || b.total - a.total).slice(0, 25);
+      const down = list.filter(r => r[key] < -0.0005).sort((a, b) => a[key] - b[key] || a.total - b.total).slice(0, 25);
+      const net = list.reduce((t, r) => t + r.total, 0);
+      const gain = list.reduce((t, r) => t + Math.max(0, r.total), 0), loss = list.reduce((t, r) => t + Math.min(0, r.total), 0);
+      const best = up[0], worst = down[0];
+      const tile = (k, v, cls, sub) => `<div class="mv-tile"><div class="k">${k}</div><div class="v ${cls || ''}">${v}</div><div class="s">${sub || ''}</div></div>`;
+      summaryEl.innerHTML =
+        tile('Portfolio change', signed(net), net >= 0 ? 'mv-up' : 'mv-down', `since the ${esc(fmtDate(sinceSel.value))} update`)
+        + tile('Gained', signed(gain), 'mv-up', `${list.filter(r => r.total > 0.0005).length} players up`)
+        + tile('Lost', signed(loss), 'mv-down', `${list.filter(r => r.total < -0.0005).length} players down`)
+        + (best ? tile('Top gainer', esc(best.name), '', `${signed(best.total)} (${best.shares} &times; ${signed(best.each)})`) : '')
+        + (worst ? tile('Top faller', esc(worst.name), '', `${signed(worst.total)} (${worst.shares} &times; ${signed(worst.each)})`) : '');
+      table(document.getElementById('mvUpHead'), document.getElementById('mvUpBody'), up);
+      table(document.getElementById('mvDownHead'), document.getElementById('mvDownBody'), down);
+    }
+
+    sinceSel.addEventListener('change', render);
+    rankSel.addEventListener('change', render);
+    posTabs.addEventListener('click', (e) => { const b = e.target.closest('[data-pos]'); if (b) { pos = b.dataset.pos; render(); } });
+    document.querySelector('[data-view="movers"]').addEventListener('click', (e) => {
+      const c = e.target.closest('.mv-player[data-player-id]');
+      const p = c && (window.__sleeperPlayerDict || {})[c.dataset.playerId];
+      if (p && window.openPlayerModalForId) window.openPlayerModalForId(c.dataset.playerId, p.full_name, p.team, p.position);
+    });
+    document.addEventListener('desk:view', (e) => { if (e.detail === 'movers') render(); });
+    window.renderMovers = render;
   })();
 
   // ---- Rankings -------------------------------------------------------
