@@ -6247,11 +6247,6 @@
             <div class="sb-stat-value" id="sbStatCurrentWinsValue">0 of 0</div>
             <div class="sb-stat-label">CURRENTLY WINNING</div>
           </div>
-          <div class="sb-stat-divider" id="sbStatSwingDivider"></div>
-          <div class="sb-stat" id="sbStatSwing">
-            <div class="sb-stat-value" id="sbStatSwingValue">&plusmn;0.00</div>
-            <div class="sb-stat-label" id="sbStatSwingLabel">WEEK VS EXPECTED</div>
-          </div>
           <div class="sb-stat-divider" id="sbStatLuckDivider"></div>
           <div class="sb-stat" id="sbStatLuck">
             <div class="sb-stat-value" id="sbStatLuckValue">&plusmn;0.00</div>
@@ -17660,6 +17655,7 @@
     // Building the lineup rather than summing per-player upsides also keeps
     // a slot from being sold twice: two backs each projected 10 behind the
     // same 8.0 starter are worth 2.1 between them, not 2.1 each.
+    if (sbSlateAllFinal(espnGameData)) return sbMatchupLivePoints(matchup, league, projMap, espnGameData, week);
     const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week, 'proj');
     const pointsMap = matchup.players_points || {};
     return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week), 0);
@@ -17970,6 +17966,7 @@
   // Spread of the final margin: both sides' remaining players added in
   // quadrature, since their games are essentially independent of each other.
   function sbMatchupSigma(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
+    if (sbSlateAllFinal(espnGameData)) return 0;
     // No early return for missing game state: sbStartersRemainingVar handles
     // that by assuming nothing has been played, which keeps a real spread
     // (and so an honest, un-confident number) instead of collapsing to the
@@ -18147,7 +18144,30 @@
   // sleeperGetEspnGameData) -- 'in' or 'post' means that team's game has
   // actually kicked off, which is the real moment a "started at"
   // projection should freeze.
+  // A player with no game this week -- a free agent sitting in a lineup, a
+  // team on bye -- has nothing left to play for. He used to read as "not
+  // started" forever, which kept his projection and his share of the
+  // spread alive after every real game had finished: a best ball matchup
+  // stayed at 46% after Monday night because of two free agents projected
+  // for nothing. Only when there is a real slate to look at; an empty one
+  // (a failed fetch) proves nothing.
+  function sbHasNoGameThisWeek(team, espnGameData) {
+    if (!espnGameData) return false;
+    if (!Object.keys(espnGameData).length) return false;
+    return !team || team === 'FA' || !espnGameData[team];
+  }
+  window.sbHasNoGameThisWeek = sbHasNoGameThisWeek;
+  // Every game on the slate is final: the week is over, and every
+  // matchup in it is decided by the points on the board, whatever any
+  // projection or lineup quirk says. The backstop under all of the above.
+  function sbSlateAllFinal(espnGameData) {
+    if (!espnGameData) return false;
+    const teams = Object.keys(espnGameData);
+    return teams.length > 0 && teams.every(t => espnGameData[t] && espnGameData[t].state === 'post');
+  }
+  window.sbSlateAllFinal = sbSlateAllFinal;
   function sbGameStartedForTeam(team, espnGameData) {
+    if (sbHasNoGameThisWeek(team, espnGameData)) return true;
     if (!team || !espnGameData) return false;
     const info = espnGameData[team];
     return !!info && (info.state === 'in' || info.state === 'post');
@@ -18159,6 +18179,7 @@
   // stale number even on a finished game. Anywhere a final/live score is
   // available, a finished game's Proj should just be his real final score.
   function sbGameFinishedForTeam(team, espnGameData) {
+    if (sbHasNoGameThisWeek(team, espnGameData)) return true;
     if (!team || !espnGameData) return false;
     const info = espnGameData[team];
     return !!info && info.state === 'post';
@@ -18186,6 +18207,7 @@
     return Math.max(0, Math.min(1, elapsedSec / (4 * QUARTER_SEC)));
   }
   function sbGameElapsedFraction(team, espnGameData) {
+    if (sbHasNoGameThisWeek(team, espnGameData)) return 1;
     if (!team || !espnGameData) return 0;
     const info = espnGameData[team];
     if (!info) return 0;
@@ -33164,8 +33186,6 @@
     // The week measured against itself: what the lineups as they stand
     // were worth before a ball was kicked, and what the schedule has made
     // of the scores so far.
-    let kickoffWinSum = 0, kickoffCount = 0;
-    let pastSwing = 0, pastSaved = 0;
     let luckEarned = 0, luckActual = 0, luckCount = 0;
     // Which players are in each league's matchup (both sides, starters
     // and bench), so the player search below can narrow the list to the
@@ -33224,17 +33244,6 @@
           headlineTheirs = oppProj;
           const cardSigma = sbMatchupSigma(myMatchup, oppMatchup, projMap, entry.league, cardEspnGameData, cardWeek);
           const winPct = sbWinProbability(myProj, oppProj, cardSigma);
-          // A week picked from the dropdown is measured against the kickoff
-          // this browser saved for it, league by league -- Sleeper's
-          // projections for a finished week are not its pregame ones, so a
-          // baseline rebuilt from them came out wrong.
-          if (override) {
-            const saved = sbKickoffStore(String(entry.league.season) + '_' + String(cardWeek), entry.league.league_id, null);
-            if (saved) {
-              pastSwing += (sbWinPctExact(myProj - oppProj, cardSigma) - sbWinPctExact(saved.m, saved.s)) / 100;
-              pastSaved++;
-            }
-          }
           winPctForSort = winPct;
           // Same favorite/underdog split used everywhere else (Dashboard's
           // Projected Weekly Record included) -- no separate "close game"
@@ -33249,8 +33258,6 @@
           // WEEK VS EXPECTED is worked out after the loop, over every league
           // counted here at once -- the same per-player arithmetic the
           // press box's per-game chips use.
-          const kickPct = sbMatchupKickoffWinPct(myMatchup, oppMatchup, entry.league, projMap, cardWeek);
-          if (kickPct != null) { kickoffWinSum += kickPct / 100; kickoffCount++; }
           // SCHEDULE LUCK: your live projected total against every other
           // team in the league, not just the one you drew.
           // For a week picked from the dropdown, that week's league, not
@@ -33340,25 +33347,7 @@
     if (winsLabel) winsLabel.textContent = 'FAVORED TO WIN';
     const currentWinsValue = document.getElementById('sbStatCurrentWinsValue');
     if (currentWinsValue) currentWinsValue.textContent = `${currentlyWinningCount} of ${withMatchup}`;
-    // Where you are now against where you started, split game by game the
-    // same way the Slate and Press Box chips are -- one function, so the
-    // chips add up to this to the hundredth. The live week only; a week
-    // shown through the picker falls back to its whole now-vs-kickoff.
-    const liveWeekNum = Number(window.__sleeperLiveWeek || sbWeek);
-    const shownLive = !override || Number(override.week) === liveWeekNum;
-    // Another week: only what was saved at its kickoff can be trusted.
-    let swing = pastSaved ? pastSwing : null;
-    let swingParts = pastSaved
-      ? { live: null, expected: null }
-      : { idleLabel: 'NOT RECORDED', idleText: '&mdash;' };
-    if (shownLive && typeof sbWeekAttribution === 'function') {
-      const att = sbWeekAttribution(gcVisibleLeagueEntries(), sbEspnGameData, null, null, sbDict);
-      let sum = 0;
-      att.byEvent.forEach(v => { sum += v; });
-      swing = att.nowSum - att.kickSum;
-      swingParts = { live: att.nowSum, expected: att.kickSum, games: sum, other: swing - sum };
-    }
-    sbSetWeekSwing(swing, swingParts);
+
     sbSetScheduleLuck(luckEarned, luckActual, luckCount);
     document.querySelectorAll('.sb-week-num').forEach(el => { el.textContent = week; });
     const sbWeekLabel = document.getElementById('sbWeekLabel');
