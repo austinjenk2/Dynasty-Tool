@@ -49,7 +49,7 @@ row beneath it.
 | **Front Office** | Leagues · The Wire · On the Clock · Trade Desk |
 | **The Book** | My Guys · The Receipts · Record · Tanking Tracker · Playoff Picture · The Ledger · The Margin |
 | **Game Day** | The Slate · Press Box · Weekly Sweats |
-| **Price Guide** | The Board · Trade Desk |
+| **Price Guide** | The Board · Movers · Trade Desk |
 | **Settings** | Settings |
 
 Trade Desk is filed under two sections deliberately — it's the tool you reach for
