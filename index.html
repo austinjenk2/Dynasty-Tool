@@ -26827,9 +26827,17 @@
     // simulated, which is exactly where the remaining-schedule loop below
     // already puts it.
     const liveWeek = Number(entry.week) || 0;
+    // The week being played counts as played the moment its LAST game is
+    // final. Sleeper does not roll the week over until Wednesday, and until
+    // then this simulated a week whose every result was already in from
+    // pregame projections -- so after a win on Monday night, the odds sat
+    // between "if you win" and "if you lose" for two days instead of
+    // being the "if you win" number.
+    const liveWeekFinal = !!(liveWeek && window.__ppLiveWeekFinal
+      && window.__ppLiveWeekFinal[league.season + '_' + liveWeek]);
     const played = weeks.map((ms, i) =>
       Array.isArray(ms) && ms.some(m => (Number(m.points) || 0) > 0)
-      && (liveWeek ? (i + 1) < liveWeek : true));
+      && (liveWeek ? ((i + 1) < liveWeek || (liveWeekFinal && (i + 1) === liveWeek)) : true));
 
     const scoresById = {};
     rosters.forEach(r => { scoresById[r.roster_id] = []; });
@@ -26858,6 +26866,33 @@
         else if (pb > pa) h2hById[pair[1].roster_id] += 1;
         else { h2hById[pair[0].roster_id] += 0.5; h2hById[pair[1].roster_id] += 0.5; }
       });
+    });
+
+    // The record, rebuilt from the results themselves: head-to-head plus,
+    // in a median league, the game against that week's median. Sleeper's
+    // stored record is not updated until the week rolls over midweek, so
+    // reading it meant a game won on Monday night was missing from the
+    // Playoff Picture's records and odds until Wednesday.
+    const leagueHasMedian = !!(league.settings && league.settings.league_average_match);
+    const recordById = {};
+    rosters.forEach(r => { recordById[r.roster_id] = { w: 0, l: 0, t: 0 }; });
+    weeks.forEach((ms, i) => {
+      if (!played[i] || !Array.isArray(ms)) return;
+      const byM = {};
+      ms.forEach(m => { if (m.matchup_id != null) (byM[m.matchup_id] = byM[m.matchup_id] || []).push(m); });
+      Object.values(byM).forEach(pair => {
+        if (pair.length !== 2) return;
+        const ra = recordById[pair[0].roster_id], rb = recordById[pair[1].roster_id];
+        if (!ra || !rb) return;
+        const pa = Number(pair[0].points) || 0, pb = Number(pair[1].points) || 0;
+        if (pa > pb) { ra.w++; rb.l++; } else if (pb > pa) { rb.w++; ra.l++; } else { ra.t++; rb.t++; }
+      });
+      if (leagueHasMedian) {
+        const pts = ms.filter(m => recordById[m.roster_id]).map(m => ({ id: m.roster_id, p: Number(m.points) || 0 }))
+          .sort((a, b) => b.p - a.p);
+        const half = Math.floor(pts.length / 2);
+        pts.forEach((x, k) => { if (k < half) recordById[x.id].w++; else recordById[x.id].l++; });
+      }
     });
 
     const allScores = Object.values(scoresById).flat();
@@ -27313,7 +27348,16 @@
         weekDelta,
         sd, tau,
         weeksPlayed: n,
-        wins: (st.wins || 0) + (st.ties || 0) * 0.5,
+        // Off the results when they cover at least as many games as
+        // Sleeper's stored record does; a week that failed to load must
+        // not cost a team the wins it banked.
+        wins: (() => {
+          const rr = recordById[r.roster_id];
+          const storedGames = (st.wins || 0) + (st.losses || 0) + (st.ties || 0);
+          return rr && (rr.w + rr.l + rr.t) >= storedGames
+            ? rr.w + rr.t * 0.5 : (st.wins || 0) + (st.ties || 0) * 0.5;
+        })(),
+        record: recordById[r.roster_id] || null,
         h2hWins: h2hById[r.roster_id] != null ? h2hById[r.roster_id] : null,
         pf, ppts,
         // How a week's points become potential points. Under the optimal
@@ -28300,7 +28344,10 @@
     // Plus the shared half-hour clock: projections and injury tags move
     // without anyone's roster or record moving, and a model that never
     // re-ran on them was why two people on the same link saw 72% and 65%.
-    return [league.league_id, league.season, entry.week || 0, (h >>> 0).toString(36), ppDataBucket()].join('|');
+    // And whether the week being played has finished, so the last whistle
+    // re-runs the odds at once rather than at the next half hour.
+    const fin = window.__ppLiveWeekFinal && window.__ppLiveWeekFinal[league.season + '_' + (entry.week || 0)] ? 'F' : '';
+    return [league.league_id, league.season, entry.week || 0, (h >>> 0).toString(36), ppDataBucket(), fin].join('|');
   }
 
   // Exposed so the rebuild gate can be checked without a live Sunday.
@@ -28311,6 +28358,18 @@
     let dict = null;
     try { dict = await window.sleeperGetPlayerDict(); } catch (e) { return; }
     const entries = Object.values(window.sleeperLeagueData || {}).filter(e => e.roster && e.league);
+    // Is the week being played over? Read once, off ESPN's slate, before
+    // any league is simulated -- see liveWeekFinal in ppSimulateSeason.
+    window.__ppLiveWeekFinal = window.__ppLiveWeekFinal || {};
+    if (entries.length && window.sleeperGetEspnGameData && window.sbSlateAllFinal) {
+      const wk = Number(entries[0].week) || 0, season = entries[0].league.season;
+      if (wk) {
+        try {
+          const g = await window.sleeperGetEspnGameData(wk, season);
+          window.__ppLiveWeekFinal[season + '_' + wk] = window.sbSlateAllFinal(g);
+        } catch (e) { /* unknown: leave it as it was */ }
+      }
+    }
     for (const entry of entries) {
       if (run !== ppPickModelRun) return;
       const sig = ppModelSignature(entry);
@@ -37044,7 +37103,14 @@
 
       const teams = rosters.map(r => {
         const odds = window.ppTeamOdds ? window.ppTeamOdds(entry, r.roster_id) : null;
-        const st = r.settings || {};
+        const st0 = r.settings || {};
+        // The record the odds were built from, when the season model has
+        // it: it counts a week the moment its last game ends, where
+        // Sleeper's stored record waits for the midweek rollover.
+        const mm = cur && cur.model ? cur.model[r.roster_id] : null;
+        const rr = mm && mm.record;
+        const st = rr && (rr.w + rr.l + rr.t) >= ((st0.wins || 0) + (st0.losses || 0) + (st0.ties || 0))
+          ? Object.assign({}, st0, { wins: rr.w, losses: rr.l, ties: rr.t }) : st0;
         const mine = scores[r.roster_id] || [];
         const ap = ppAllPlay(scores, r.roster_id);
         const ppg = mine.length ? mine.reduce((a, b) => a + b, 0) / mine.length : null;
