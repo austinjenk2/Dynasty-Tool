@@ -15690,12 +15690,21 @@
         : ({ '1M': 'last month', '3M': 'last 3 months', '6M': 'last 6 months', '1Y': 'last year', 'ALL': 'all time' }[tradeRange] || 'all time');
       let got = 0, gave = 0, valued = 0;
       const leagues = new Set();
-      let label = tradeManager ? (tradeManagerInput ? tradeManagerInput.value.trim() : '') : 'Your trades';
+      // Your own Sleeper name when it is your ledger. The lookup below only
+      // runs under a manager filter: with no filter, "includes('')" matched
+      // every name and the box was headed by whoever was first on the last
+      // card -- another manager in one of your leagues.
+      let label = tradeManager ? (tradeManagerInput ? tradeManagerInput.value.trim() : '') : (() => {
+        try {
+          const u = JSON.parse(localStorage.getItem('dynastyToolSleeperUser') || 'null');
+          return (u && (u.display_name || u.username)) || 'Your trades';
+        } catch (e) { return 'Your trades'; }
+      })();
       visibleCards.forEach(card => {
         leagues.add(card.dataset.league);
         // Name them the way their league does, whatever was typed to find
         // them -- "coguy" typed in shows the ledger headed "CoGuy".
-        const hit = (card.dataset.managerNames || '').split('|')
+        const hit = tradeManager && (card.dataset.managerNames || '').split('|')
           .find(n => n && n.toLowerCase().includes(tradeManager));
         if (hit) label = hit;
         if (card.dataset.hasValue !== '1') return;
@@ -15717,8 +15726,7 @@
         `<div class="trade-ledger-who">${sbFieldEsc(label)}<span>${visibleCards.length} trade${visibleCards.length === 1 ? '' : 's'} across ${leagues.size} league${leagues.size === 1 ? '' : 's'} &middot; ${rangeText}</span></div>` +
         `<div class="trade-ledger-stat"><div class="trade-ledger-label">VALUE WON</div><div class="trade-ledger-value plus">${got.toFixed(2)}</div></div>` +
         `<div class="trade-ledger-stat"><div class="trade-ledger-label">VALUE LOST</div><div class="trade-ledger-value minus">${gave.toFixed(2)}</div></div>` +
-        `<div class="trade-ledger-stat"><div class="trade-ledger-label">NET</div><div class="trade-ledger-value ${sign(net)}">${net >= 0 ? '+' : ''}${net.toFixed(2)}</div></div>` +
-        `<div class="trade-ledger-note">${valued} of ${visibleCards.length} carry dynasty values; picks already drafted are valued at the player taken with them.</div>`;
+        `<div class="trade-ledger-stat"><div class="trade-ledger-label">NET</div><div class="trade-ledger-value ${sign(net)}">${net >= 0 ? '+' : ''}${net.toFixed(2)}</div></div>`;
     }
 
     applyTradeFilters();
