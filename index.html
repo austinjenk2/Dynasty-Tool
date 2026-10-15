@@ -5168,6 +5168,9 @@
   .adv-msg.is-error { background: var(--red-bg); border-color: var(--red); color: var(--red); }
   .adv-form { display: flex; gap: 8px; padding: 10px 12px; border-top: 2px solid var(--ink); }
   .adv-input { flex: 1; min-width: 0; padding: 8px 10px; font: 14px 'Source Sans 3', sans-serif; color: var(--ink); background: #fff; border: 1px solid var(--border); border-radius: 8px; }
+  .scout-banner { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 14px; padding: 8px 16px; background: var(--gold); color: #fff; font-size: 13px; font-weight: 600; text-align: center; }
+  .scout-banner b { font-weight: 800; }
+  .scout-banner button { font: inherit; font-size: 12px; font-weight: 800; color: var(--ink); background: var(--surface); border: 2px solid var(--ink); border-radius: 999px; padding: 3px 12px; cursor: pointer; }
   .adv-send { padding: 8px 14px; font: 700 13px 'Source Sans 3', sans-serif; text-transform: uppercase; color: var(--surface); background: var(--navy); border: 2px solid var(--ink); border-radius: 8px; cursor: pointer; }
 </style>
 <!-- Rasterizes a trade card to a canvas for the "export as image" feature
@@ -5181,6 +5184,10 @@
   <div class="section-tabs" id="sectionNav"></div>
 </nav>
 <div class="subsection-bar" id="subsectionNav" hidden></div>
+<div class="scout-banner" id="scoutBanner" hidden>
+  <span>&#128269; Scouting <b id="scoutBannerName"></b> &mdash; you are seeing the site as they would. Your own account is still connected.</span>
+  <button type="button" id="scoutBannerExit">Back to my account</button>
+</div>
 
 <div class="mode-chooser" id="modeChooser" hidden>
   <div class="mc-eyebrow">FANTASY DESK</div>
@@ -13085,6 +13092,16 @@
       </div>
     </div>
 
+    <div class="settings-panel" id="scoutPanel">
+      <div class="settings-label">Scout a Manager</div>
+      <div class="settings-sub">See the whole site the way another Sleeper user would -- their leagues, rosters, trades, odds and values -- without disconnecting your own account. Lasts until you go back to your account or close the tab.</div>
+      <div class="settings-account-row" style="margin-top:10px">
+        <input type="text" id="scoutUsernameInput" placeholder="Their Sleeper username">
+        <button id="scoutBtn">Scout</button>
+      </div>
+      <div class="sleeper-connect-status" id="scoutStatus"></div>
+    </div>
+
     <div class="settings-panel">
       <div class="settings-label">Site Mode</div>
       <div class="settings-sub">Which leagues show by default across the whole app -- classified from each league's own real Sleeper settings (keeper/dynasty leagues vs. season-only redraft leagues). Use the "Show All Leagues" button on the Dashboard any time you want to temporarily see everything regardless of mode.</div>
@@ -13536,6 +13553,31 @@
 
 
 <script>
+
+  // ---- Scouting leaves your own settings alone -------------------------
+  // While another manager is being scouted, pages still tidy their saved
+  // preferences against the leagues on screen -- the tanking list drops
+  // names it cannot find, and so on. Those leagues are theirs, so a write
+  // would quietly wipe yours. Every write to this site's own keys is
+  // dropped for the scouting tab; reads still work, and everything is
+  // exactly as you left it when you go back to your account.
+  (function guardStorageWhileScouting() {
+    let scouting = false;
+    try { scouting = !!sessionStorage.getItem('dynastyToolScoutUser'); } catch (e) {}
+    if (!scouting) return;
+    try {
+      const proto = Object.getPrototypeOf(localStorage);
+      const set = proto.setItem, remove = proto.removeItem;
+      proto.setItem = function (k, v) {
+        if (this === localStorage && /^dynastyTool/.test(String(k))) return;
+        return set.call(this, k, v);
+      };
+      proto.removeItem = function (k) {
+        if (this === localStorage && /^dynastyTool/.test(String(k))) return;
+        return remove.call(this, k);
+      };
+    } catch (e) {}
+  })();
 
   // ---- The post-sync repaint queue --------------------------------------
   // A sync lands every 60 seconds, and it used to be followed by a straight
@@ -14875,7 +14917,8 @@
 
   function sbSavedUserId() {
     try {
-      const saved = JSON.parse(localStorage.getItem('dynastyToolSleeperUser') || 'null');
+      const saved = window.deskCurrentUser ? window.deskCurrentUser()
+        : JSON.parse(localStorage.getItem('dynastyToolSleeperUser') || 'null');
       return (saved && saved.userId) || null;
     } catch (e) { return null; }
   }
@@ -15696,7 +15739,8 @@
       // card -- another manager in one of your leagues.
       let label = tradeManager ? (tradeManagerInput ? tradeManagerInput.value.trim() : '') : (() => {
         try {
-          const u = JSON.parse(localStorage.getItem('dynastyToolSleeperUser') || 'null');
+          const u = window.deskCurrentUser ? window.deskCurrentUser()
+            : JSON.parse(localStorage.getItem('dynastyToolSleeperUser') || 'null');
           return (u && (u.display_name || u.username)) || 'Your trades';
         } catch (e) { return 'Your trades'; }
       })();
@@ -20911,9 +20955,22 @@
       return res.json();
     }
 
-    function getSavedUser() {
+    // Scouting: another manager's account stands in for yours for this
+    // tab only (sessionStorage), and everything that loads data asks this
+    // function, so the whole site follows. Your own saved account in
+    // localStorage is never touched.
+    const SCOUT_KEY = 'dynastyToolScoutUser';
+    function getScoutUser() {
+      try { return JSON.parse(sessionStorage.getItem(SCOUT_KEY) || 'null'); } catch (e) { return null; }
+    }
+    function getOwnUser() {
       try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (e) { return null; }
     }
+    function getSavedUser() {
+      return getScoutUser() || getOwnUser();
+    }
+    window.deskCurrentUser = getSavedUser;
+    window.deskIsScouting = () => !!getScoutUser();
     function saveUser(user) {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(user)); } catch (e) {}
     }
@@ -20969,6 +21026,8 @@
         const user = await sleeperFetch('/user/' + encodeURIComponent(username));
         if (!user || !user.user_id) throw new Error('not found');
         saveUser({ username: user.display_name || user.username || username, userId: user.user_id });
+        // Connecting an account of your own ends any scouting session.
+        try { sessionStorage.removeItem(SCOUT_KEY); } catch (e) {}
         userChip.textContent = user.display_name || user.username || username;
         connectStatus.textContent = '';
         usernameInput.value = '';
@@ -24962,9 +25021,53 @@
     }
 
 
+    // ---- Scout a manager ----
+    const scoutInput = document.getElementById('scoutUsernameInput');
+    const scoutBtn = document.getElementById('scoutBtn');
+    const scoutStatus = document.getElementById('scoutStatus');
+    const scoutBanner = document.getElementById('scoutBanner');
+    async function startScouting(username) {
+      if (!username || !scoutBtn) return;
+      scoutBtn.disabled = true;
+      scoutStatus.classList.remove('is-error');
+      scoutStatus.textContent = 'Looking them up…';
+      try {
+        const user = await sleeperFetch('/user/' + encodeURIComponent(username));
+        if (!user || !user.user_id) throw new Error('not found');
+        sessionStorage.setItem(SCOUT_KEY, JSON.stringify({ username: user.display_name || user.username || username, userId: user.user_id }));
+        // A clean load: every cache on the page belongs to the account it
+        // was built for, and a reload is the one way to drop all of them.
+        location.reload();
+      } catch (err) {
+        scoutStatus.classList.add('is-error');
+        scoutStatus.textContent = /not found/.test(err.message) ? "Couldn't find that Sleeper username." : "Couldn't reach Sleeper right now.";
+        scoutBtn.disabled = false;
+      }
+    }
+    function stopScouting() {
+      try { sessionStorage.removeItem(SCOUT_KEY); } catch (e) {}
+      location.reload();
+    }
+    if (scoutBtn) scoutBtn.addEventListener('click', () => startScouting(scoutInput.value.trim()));
+    if (scoutInput) scoutInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') startScouting(scoutInput.value.trim()); });
+    const scoutExit = document.getElementById('scoutBannerExit');
+    if (scoutExit) scoutExit.addEventListener('click', stopScouting);
+    const scouting = getScoutUser();
+    if (scoutBanner) {
+      scoutBanner.hidden = !scouting;
+      if (scouting) document.getElementById('scoutBannerName').textContent = scouting.username;
+    }
+    if (scouting && scoutStatus) {
+      scoutStatus.innerHTML = `Scouting <b>${sbFieldEsc(scouting.username)}</b>. <a href="#" id="scoutStopLink">Back to my account</a>`;
+      const stopLink = document.getElementById('scoutStopLink');
+      if (stopLink) stopLink.addEventListener('click', (e) => { e.preventDefault(); stopScouting(); });
+    }
+
     const saved = getSavedUser();
     if (saved) {
-      userChip.textContent = saved.username;
+      // The chip names the account you own; the banner says who is being scouted.
+      const own = getOwnUser();
+      userChip.textContent = own ? own.username : saved.username;
       loadSleeperData();
       startPolling();
     } else {
