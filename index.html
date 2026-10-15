@@ -12420,9 +12420,11 @@
         <div class="trade-range-btn" data-trade-sort="WORST">Worst</div>
       </div>
       <div class="trade-range-toggle">
-        <div class="trade-range-btn" data-trade-range="1M">1M</div>
+        <div class="trade-range-btn active" data-trade-range="1M">1M</div>
         <div class="trade-range-btn" data-trade-range="3M">3M</div>
-        <div class="trade-range-btn active" data-trade-range="ALL">All</div>
+        <div class="trade-range-btn" data-trade-range="6M">6M</div>
+        <div class="trade-range-btn" data-trade-range="1Y">1Y</div>
+        <div class="trade-range-btn" data-trade-range="ALL">All</div>
       </div>
       <div class="chip trade-daterange">&#128197; Date Range</div>
       <div class="chip trade-clear-btn" id="tradeClearBtn" title="Clear every filter on this page" hidden>&#10005; Clear</div>
@@ -15024,7 +15026,10 @@
     const tradeCountEl = document.getElementById('tradeCount');
     const tradeNow = new Date();
     let tradeLeague = 'ALL';
-    let tradeRange = 'ALL';
+    // A month by default: the ledger above the trades reads as "how your
+    // trading has gone lately", and All is one click away.
+    const TRADE_DEFAULT_RANGE = '1M';
+    let tradeRange = TRADE_DEFAULT_RANGE;
     let tradeSort = 'NEW';
     // Whether trades from leagues no longer on the account count. Kept in
     // localStorage: this is a standing preference about what your own
@@ -15236,7 +15241,7 @@
     }
 
     function tradeFiltersActive() {
-      return !!tradeQuery || !!tradeManager || tradeLeague !== 'ALL' || tradeRange !== 'ALL';
+      return !!tradeQuery || !!tradeManager || tradeLeague !== 'ALL' || tradeRange !== TRADE_DEFAULT_RANGE;
     }
     function updateTradeClear() {
       const btn = document.getElementById('tradeClearBtn');
@@ -15246,11 +15251,11 @@
       tradeQuery = '';
       tradeManager = '';
       tradeLeague = 'ALL';
-      tradeRange = 'ALL';
+      tradeRange = TRADE_DEFAULT_RANGE;
       if (tradeSearchInput) tradeSearchInput.value = '';
       if (tradeManagerInput) tradeManagerInput.value = '';
       document.querySelectorAll('.trade-range-btn[data-trade-range]').forEach(b =>
-        b.classList.toggle('active', b.dataset.tradeRange === 'ALL'));
+        b.classList.toggle('active', b.dataset.tradeRange === TRADE_DEFAULT_RANGE));
       buildTradeLeagueMenu();
       applyTradeFilters();
     }
@@ -15275,7 +15280,7 @@
 
     function withinRange(dateStr) {
       if (tradeRange === 'ALL') return true;
-      const months = tradeRange === '1M' ? 1 : 3;
+      const months = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 }[tradeRange] || 1;
       const cutoff = new Date(tradeNow);
       cutoff.setMonth(cutoff.getMonth() - months);
       return new Date(dateStr + 'T00:00:00') >= cutoff;
@@ -15678,10 +15683,14 @@
     // league has no value line to add -- and the note says how many did.
     function renderTradeLedger(visibleCards) {
       if (!tradeLedgerEl) return;
-      if (!tradeManager) { tradeLedgerEl.hidden = true; return; }
+      // Without a manager filter it is your own ledger over the window the
+      // range buttons pick -- your net value from trading in the last month
+      // by default. With one, it is your trades with that manager, all time.
+      const rangeText = tradeManager ? 'all time'
+        : ({ '1M': 'last month', '3M': 'last 3 months', '6M': 'last 6 months', '1Y': 'last year', 'ALL': 'all time' }[tradeRange] || 'all time');
       let got = 0, gave = 0, valued = 0;
       const leagues = new Set();
-      let label = tradeManagerInput ? tradeManagerInput.value.trim() : '';
+      let label = tradeManager ? (tradeManagerInput ? tradeManagerInput.value.trim() : '') : 'Your trades';
       visibleCards.forEach(card => {
         leagues.add(card.dataset.league);
         // Name them the way their league does, whatever was typed to find
@@ -15698,12 +15707,14 @@
       const sign = (n) => (n > 0.004 ? 'plus' : (n < -0.004 ? 'minus' : ''));
       if (!visibleCards.length) {
         tradeLedgerEl.hidden = false;
-        tradeLedgerEl.innerHTML = `<div class="trade-ledger-who">No trades with &ldquo;${sbFieldEsc(label)}&rdquo;<span>Check the spelling, or clear the league filter.</span></div>`;
+        tradeLedgerEl.innerHTML = tradeManager
+          ? `<div class="trade-ledger-who">No trades with &ldquo;${sbFieldEsc(label)}&rdquo;<span>Check the spelling, or clear the league filter.</span></div>`
+          : `<div class="trade-ledger-who">No trades in the ${rangeText}<span>Pick a longer window to see your net.</span></div>`;
         return;
       }
       tradeLedgerEl.hidden = false;
       tradeLedgerEl.innerHTML =
-        `<div class="trade-ledger-who">${sbFieldEsc(label)}<span>${visibleCards.length} trade${visibleCards.length === 1 ? '' : 's'} across ${leagues.size} league${leagues.size === 1 ? '' : 's'} &middot; all time</span></div>` +
+        `<div class="trade-ledger-who">${sbFieldEsc(label)}<span>${visibleCards.length} trade${visibleCards.length === 1 ? '' : 's'} across ${leagues.size} league${leagues.size === 1 ? '' : 's'} &middot; ${rangeText}</span></div>` +
         `<div class="trade-ledger-stat"><div class="trade-ledger-label">VALUE WON</div><div class="trade-ledger-value plus">${got.toFixed(2)}</div></div>` +
         `<div class="trade-ledger-stat"><div class="trade-ledger-label">VALUE LOST</div><div class="trade-ledger-value minus">${gave.toFixed(2)}</div></div>` +
         `<div class="trade-ledger-stat"><div class="trade-ledger-label">NET</div><div class="trade-ledger-value ${sign(net)}">${net >= 0 ? '+' : ''}${net.toFixed(2)}</div></div>` +
