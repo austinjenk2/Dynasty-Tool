@@ -1994,6 +1994,27 @@
   .rb-table td.mv-pos { color: var(--green); font-weight: 800; } .rb-table td.mv-neg { color: var(--red); font-weight: 800; }
   .rb-table td.mv-player { text-align: left; cursor: pointer; } .rb-table th.mv-th-player { text-align: left; }
   .mv-player small { color: var(--faint); margin-left: 6px; font-weight: 600; }
+  .ti-sec { margin-bottom: 22px; }
+  .ti-league { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 8px; }
+  .ti-league h2 { margin: 0; font-family: 'Source Serif 4', serif; font-size: 18px; color: var(--ink); }
+  .ti-mode { font-size: 10.5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; color: #fff; background: var(--green); }
+  .ti-mode.rebuild { background: var(--gold); }
+  .ti-open { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--navy); }
+  .ti-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .ti-card { background: var(--surface); border: 2px solid var(--ink); border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); padding: 12px 14px; }
+  .ti-who { font-size: 13px; color: var(--ink); margin-bottom: 8px; }
+  .ti-tag { display: inline-block; margin-left: 6px; font-size: 10.5px; font-weight: 700; color: var(--muted); }
+  .ti-tag.contender { color: var(--green); } .ti-tag.rebuilder { color: var(--gold); }
+  .ti-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ti-k { font-size: 10px; font-weight: 800; letter-spacing: 0.4px; color: var(--faint); text-transform: uppercase; margin-bottom: 4px; }
+  .ti-sides ul { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+  .ti-sides li { display: flex; justify-content: space-between; gap: 6px; padding: 2px 0; border-bottom: 1px solid var(--border-soft); }
+  .ti-sides li small { color: var(--faint); }
+  .ti-tot { text-align: right; font-weight: 800; font-size: 13px; color: var(--ink); margin-top: 3px; }
+  .ti-net { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 6px; font-size: 12.5px; color: var(--muted); }
+  .ti-sim { margin-left: auto; font: inherit; font-size: 11.5px; font-weight: 700; border: 1.5px solid var(--ink); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
+  .ti-why { margin: 0; padding-left: 18px; font-size: 12px; color: var(--muted); }
+  .ti-simout { font-size: 12px; color: var(--ink); margin-top: 6px; }
   .rk-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
   .rk-search {
     flex: 1;
@@ -12788,6 +12809,16 @@
     </div>
     <div id="rbBody"><div class="rb-empty">Connect your Sleeper account to see your results.</div></div>
   </div>
+  <div data-view="ideas">
+    <div class="page-title">
+      <h1>Trade Ideas</h1>
+      <p>Offers worth sending, up to three per league. Contending leagues get targets that improve your starting lineup, paid for with bench depth and picks; leagues on your Tanking Teams list (on the Slate) sell veterans to contenders for youth and picks. Every offer stays close enough to even to have a real chance: you never lose more than 0.10, and the most you can win grows with the size of the deal. Nothing is sent from here -- open the league in Sleeper and make the offer yourself.</p>
+    </div>
+    <div class="sh-toolbar"><label class="sh-field"><span>League</span><select id="tiLeague"></select></label></div>
+    <div class="sh-status" id="tiStatus"></div>
+    <div id="tiList"></div>
+  </div>
+
   <div data-view="calculator">
     <div class="page-title">
       <h1>Trade Desk</h1>
@@ -13767,6 +13798,7 @@
       { view: 'waiver', label: 'The Wire' },
       { view: 'draft', label: 'On the Clock' },
       { view: 'calculator', label: 'Trade Desk' },
+      { view: 'ideas', label: 'Trade Ideas' },
     ] },
     { id: 'season', label: 'The Book', pages: [
       { view: 'exposures', label: 'My Guys' },
@@ -36723,6 +36755,298 @@
     document.addEventListener('desk:view', (e) => { if (e.detail === 'margin') refresh(); });
     fillSeasons();
     fillScoringOptions();
+  })();
+
+  // ---- Trade Ideas ------------------------------------------------------
+  // Offers worth sending, league by league. Nothing is sent from here: each
+  // idea opens the league in Sleeper and you make the offer yourself.
+  //
+  // The rules, as asked for:
+  //   * Value close enough to be accepted. You may lose a little (at most
+  //     0.10, and never more than 10% of what you send) and win only by a
+  //     margin that grows with the size of the deal: about 0.1 on a 0.2
+  //     deal, 0.2 on 0.5, 0.3 on 1, 0.4 on 2, up to a full Base 1 on 6.
+  //   * Your plan per league comes from the Tanking Teams list on the
+  //     Slate: a league on it is a rebuild, every other league contends.
+  //   * Contending: only targets that put points in your starting lineup,
+  //     paid for with what does not start for you -- bench depth and
+  //     picks. Stars are consolidated from surplus.
+  //   * Rebuilding: sell veterans who start for a contender, for youth and
+  //     picks.
+  //   * The other side has to make sense too. A contender is not asked for
+  //     a player in its own lineup; a rebuilding team is the place to buy
+  //     a producer, and one that owns its own 1st is the most motivated,
+  //     since losing pays it. A bad team without its 1st has less reason
+  //     to sell. A rebuilding team is not handed veterans.
+  (function initTradeIdeas() {
+    const root = document.querySelector('[data-view="ideas"]');
+    if (!root) return;
+    const leagueSel = document.getElementById('tiLeague');
+    const listEl = document.getElementById('tiList');
+    const statusEl = document.getElementById('tiStatus');
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const sgn = (v) => (v > 0.004 ? '+' : v < -0.004 ? '&minus;' : '&plusmn;') + Math.abs(v).toFixed(2);
+    const ord = (n) => n + (['th', 'st', 'nd', 'rd'][((n % 100) - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th');
+
+    // How far ahead an offer may come out for you, by the size of what you
+    // send: the points you gave, joined with straight lines.
+    const WIN_CAP = [[0, 0], [0.2, 0.1], [0.5, 0.2], [1, 0.3], [2, 0.4], [6, 1.0]];
+    function winCap(size) {
+      for (let i = 1; i < WIN_CAP.length; i++) {
+        const [x0, y0] = WIN_CAP[i - 1], [x1, y1] = WIN_CAP[i];
+        if (size <= x1) return y0 + (y1 - y0) * (size - x0) / (x1 - x0);
+      }
+      return 1.0 + 0.15 * (size - 6);
+    }
+    const lossCap = (size) => Math.min(0.1, 0.1 * size);
+    window.__tiWindow = (size) => ({ win: winCap(size), loss: lossCap(size) });
+
+    const VET_AGE = { QB: 31, RB: 27, WR: 29, TE: 30 };
+    const YOUNG_AGE = { QB: 26, RB: 24, WR: 25, TE: 26 };
+
+    function entries() {
+      return Object.values(window.sleeperLeagueData || {})
+        .filter(e => e && e.league && e.roster && e.allRosters && e.allRosters.length > 1
+          && (typeof isCoManagedIncluded !== 'function' || isCoManagedIncluded() || !e.isCoOwned))
+        .sort((a, b) => String(a.league.name).localeCompare(String(b.league.name)));
+    }
+    function teamName(entry, rid) {
+      const r = entry.allRosters.find(x => x.roster_id === rid);
+      const u = r && (entry.users || []).find(x => x.user_id === r.owner_id);
+      return u ? ((u.metadata && u.metadata.team_name) || u.display_name || 'Roster ' + rid) : 'Roster ' + rid;
+    }
+
+    // A team's posture: its playoff odds when the season model has them,
+    // otherwise its record. Plus whether it owns its own next 1st.
+    function posture(entry, r) {
+      const odds = window.ppTeamOdds ? window.ppTeamOdds(entry, r.roster_id) : null;
+      const st = r.settings || {};
+      const g = (st.wins || 0) + (st.losses || 0) + (st.ties || 0);
+      const pct = odds && odds.playoff != null ? odds.playoff : (g ? (st.wins + (st.ties || 0) / 2) / g : 0.5);
+      const next = (Number(entry.league.season) || new Date().getFullYear()) + 1;
+      const ownFirst = (typeof ppPicksOwnedBy === 'function' ? ppPicksOwnedBy(entry, r.roster_id) : [])
+        .some(p => p.season === next && p.round === 1 && p.fromRosterId === r.roster_id);
+      const kind = pct >= 0.5 ? 'contender' : pct < 0.3 ? 'rebuilder' : 'middle';
+      return { pct, kind, ownFirst, record: `${st.wins || 0}-${st.losses || 0}${st.ties ? '-' + st.ties : ''}` };
+    }
+
+    function buildIdeas(entry, dict, ppg, tankList) {
+      const me = entry.roster.roster_id;
+      const league = entry.league;
+      const myMode = tankList.has(league.name) ? 'rebuild' : 'contend';
+      const slots = (league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+      const eligible = typeof SB_SLOT_ELIGIBLE !== 'undefined' ? SB_SLOT_ELIGIBLE : {};
+      // Best lineup on rest-of-season points per game, narrowest slot first.
+      const lineup = (ids) => {
+        const used = new Set(); let total = 0; const chosen = [];
+        const order = slots.slice().sort((a, b) => (eligible[a] || []).length - (eligible[b] || []).length);
+        order.forEach(slot => {
+          const ok = eligible[slot]; if (!ok) return;
+          let best = null, bv = -1;
+          ids.forEach(id => { if (used.has(id)) return; const p = dict[id]; if (!p || !ok.includes(p.position)) return; const v = ppg(id); if (v > bv) { bv = v; best = id; } });
+          if (best) { used.add(best); chosen.push(best); total += Math.max(0, bv); }
+        });
+        return { total, ids: new Set(chosen) };
+      };
+      const valueOf = (id) => (typeof ppValueForPlayerId === 'function' ? ppValueForPlayerId(id, dict) : null) || 0;
+      const nextSeason = (Number(league.season) || new Date().getFullYear()) + 1;
+      const assetsOf = (r) => {
+        const players = sbStartablePlayers(r).map(id => ({ kind: 'player', id, value: valueOf(id), p: dict[id] || {} }))
+          .filter(a => a.value >= 0.03 && a.p.position && VET_AGE[a.p.position]);
+        const picks = (typeof ppPicksOwnedBy === 'function' ? ppPicksOwnedBy(entry, r.roster_id) : []).map(pk => ({
+          kind: 'pick', pick: pk, value: ppPickValueFuture(entry, pk),
+          // Whose pick it originally was: "your" for your own, the team's
+          // name otherwise -- a contender's 1st and a rebuilder's are not
+          // the same asset.
+          label: `${pk.season} ${ord(pk.round)} (${pk.fromRosterId === entry.roster.roster_id ? 'yours' : teamName(entry, pk.fromRosterId)})`,
+        })).filter(a => a.value >= 0.03);
+        return { players, picks };
+      };
+      const name = (a) => a.kind === 'pick' ? a.label : (a.p.full_name || [a.p.first_name, a.p.last_name].filter(Boolean).join(' '));
+      const age = (a) => a.kind === 'pick' ? 0 : Number(a.p.age) || 0;
+      const isVet = (a) => a.kind === 'player' && age(a) >= (VET_AGE[a.p.position] || 99);
+      const isYoung = (a) => a.kind === 'pick' || (age(a) && age(a) <= (YOUNG_AGE[a.p.position] || 0));
+
+      const myRoster = entry.allRosters.find(r => r.roster_id === me);
+      const myIds = sbStartablePlayers(myRoster);
+      const myLine = lineup(myIds);
+      const mine = assetsOf(myRoster);
+      const ideas = [];
+
+      // Every combination of up to three from a list, kept small.
+      const combos = (list, max) => {
+        const out = [];
+        const rec = (start, pick) => {
+          if (pick.length) out.push(pick.slice());
+          if (pick.length === max) return;
+          for (let i = start; i < list.length; i++) { pick.push(list[i]); rec(i + 1, pick); pick.pop(); }
+        };
+        rec(0, []);
+        return out;
+      };
+      const sum = (arr) => arr.reduce((t, a) => t + a.value, 0);
+      // Of the packages whose value lands in the window around a target,
+      // the one that comes out closest to even -- the likeliest yes -- and
+      // with the fewest pieces.
+      const bestPackage = (pool, targetValue, filter) => {
+        let best = null;
+        combos(pool, 3).forEach(pkg => {
+          if (filter && !filter(pkg)) return;
+          const give = sum(pkg), net = targetValue - give;
+          if (net > winCap(give) || net < -lossCap(give)) return;
+          const score = Math.abs(net) + pkg.length * 0.02;
+          if (!best || score < best.score) best = { pkg, give, net, score };
+        });
+        return best;
+      };
+
+      entry.allRosters.forEach(r => {
+        if (r.roster_id === me) return;
+        const them = posture(entry, r);
+        const theirIds = sbStartablePlayers(r);
+        const theirLine = lineup(theirIds);
+        const theirs = assetsOf(r);
+
+        if (myMode === 'contend') {
+          // Surplus: whoever does not start for you, and your picks.
+          const surplus = mine.players.filter(a => !myLine.ids.has(a.id)).concat(mine.picks)
+            .sort((a, b) => b.value - a.value).slice(0, 12);
+          theirs.players.forEach(t => {
+            if (t.value < 0.1) return;
+            const startsForThem = theirLine.ids.has(t.id);
+            // A contender does not move a player it is starting.
+            if (them.kind === 'contender' && startsForThem) return;
+            const gain = lineup(myIds.concat([t.id])).total - myLine.total;
+            if (gain < 0.8) return;
+            const deal = bestPackage(surplus, t.value, (pkg) =>
+              // A rebuilding team wants youth and picks, not your veterans.
+              !(them.kind === 'rebuilder' && pkg.some(isVet)));
+            if (!deal) return;
+            const after = myIds.filter(id => !deal.pkg.some(a => a.id === id)).concat([t.id]);
+            const myGain = lineup(after).total - myLine.total;
+            if (myGain < 0.8) return;
+            const theirAfter = theirIds.filter(id => id !== t.id).concat(deal.pkg.filter(a => a.kind === 'player').map(a => a.id));
+            const theirDelta = lineup(theirAfter).total - theirLine.total;
+            let fit = 0;
+            const why = [`+${myGain.toFixed(1)} pts/wk to your starting lineup`];
+            if (them.kind === 'rebuilder') {
+              fit += them.ownFirst ? 3 : 1;
+              why.push(them.ownFirst ? `${teamName(entry, r.roster_id)} is ${them.record} and owns its 1st -- losing pays them, so selling makes sense`
+                : `${teamName(entry, r.roster_id)} is ${them.record} but does not own its 1st, so less reason to sell`);
+            } else if (them.kind === 'contender') {
+              fit += theirDelta >= 0 ? 2 : -1;
+              why.push(theirDelta >= 0 ? `helps their lineup too (+${theirDelta.toFixed(1)}): ${esc(name(t))} sits on their bench` : `${esc(name(t))} is a bench piece for them`);
+            }
+            if (deal.pkg.some(a => a.kind === 'pick')) why.push('paid in picks and players who do not start for you');
+            else why.push('paid with players who do not start for you');
+            ideas.push({ entry, partner: r, them, give: deal.pkg, get: [t], giveV: deal.give, getV: t.value, net: deal.net, myGain, theirDelta, why,
+              score: myGain * 1.0 + fit * 1.5 + deal.net * 4 - deal.pkg.length * 0.3 });
+          });
+        } else {
+          // Rebuilding: your veterans who would start for a contender, for
+          // their youth and picks.
+          if (them.kind === 'rebuilder') return;
+          const vets = mine.players.filter(a => isVet(a) && a.value >= 0.08);
+          const pool = theirs.players.filter(a => isYoung(a) && !theirLine.ids.has(a.id)).concat(theirs.picks)
+            .sort((a, b) => b.value - a.value).slice(0, 12);
+          vets.forEach(v => {
+            const theirGain = lineup(theirIds.concat([v.id])).total - theirLine.total;
+            if (theirGain < 1) return;
+            // Here the value window is read from your side: what you get
+            // back may beat what you send by the same margins.
+            let best = null;
+            combos(pool, 3).forEach(pkg => {
+              const got = sum(pkg), net = got - v.value;
+              if (net > winCap(v.value) || net < -lossCap(v.value)) return;
+              const score = Math.abs(net) + pkg.length * 0.02;
+              if (!best || score < best.score) best = { pkg, got, net, score };
+            });
+            if (!best) return;
+            const why = [`${esc(name(v))} is a veteran on a rebuilding roster; he adds +${theirGain.toFixed(1)} pts/wk to their lineup`,
+              them.kind === 'contender' ? `${teamName(entry, r.roster_id)} is contending (${them.record})` : `${teamName(entry, r.roster_id)} is on the bubble (${them.record})`,
+              'you get youth and picks back'];
+            ideas.push({ entry, partner: r, them, give: [v], get: best.pkg, giveV: v.value, getV: best.got, net: best.net, myGain: 0, theirDelta: theirGain, why,
+              score: theirGain * 0.8 + (them.kind === 'contender' ? 2 : 0) + best.net * 4 + v.value });
+          });
+        }
+      });
+
+      // The best three, no two with the same team.
+      ideas.sort((a, b) => b.score - a.score);
+      const out = [], seen = new Set();
+      for (const i of ideas) {
+        if (seen.has(i.partner.roster_id)) continue;
+        seen.add(i.partner.roster_id); out.push(i);
+        if (out.length === 3) break;
+      }
+      return { mode: myMode, ideas: out, name, myLineTotal: myLine.total };
+    }
+
+    let lastResults = [];
+    async function render() {
+      const all = entries();
+      if (!all.length) { statusEl.textContent = 'Connect a Sleeper account in Settings to get trade ideas.'; listEl.innerHTML = ''; return; }
+      if (leagueSel.options.length !== all.length + 1) {
+        const prev = leagueSel.value;
+        leagueSel.innerHTML = '<option value="ALL">All leagues</option>' + all.map(e => `<option value="${esc(e.league.league_id)}">${esc(e.league.name)}</option>`).join('');
+        if (prev) leagueSel.value = prev;
+      }
+      statusEl.textContent = 'Working out offers…';
+      const dict = await window.sleeperGetPlayerDict().catch(() => null);
+      if (!dict) { statusEl.textContent = 'Player list unavailable.'; return; }
+      const season = all[0].league.season;
+      const seasonProj = window.sleeperGetSeasonProjections ? await window.sleeperGetSeasonProjections(season).catch(() => ({})) : {};
+      // Rest-of-season strength: Sleeper's season projection per game,
+      // falling back to this week's projection when a player has none.
+      const ppg = (id) => {
+        const s = seasonProj && seasonProj[id];
+        if (s && s.pts && (s.gp || 17)) return s.pts / (s.gp || 17);
+        let w = null;
+        try { w = typeof sbProjectionFor === 'function' ? sbProjectionFor(id, null, null) : null; } catch (e) { w = null; }
+        return Number(w) || 0;
+      };
+      const tankList = typeof sbGetTankList === 'function' ? sbGetTankList() : new Set();
+      const which = leagueSel.value === 'ALL' ? all : all.filter(e => e.league.league_id === leagueSel.value);
+      lastResults = which.map(e => ({ entry: e, res: buildIdeas(e, dict, ppg, tankList) }));
+      statusEl.textContent = '';
+      listEl.innerHTML = lastResults.map(({ entry, res }, li) => {
+        const head = `<div class="ti-league"><h2>${esc(entry.league.name)}</h2><span class="ti-mode ${res.mode}">${res.mode === 'rebuild' ? 'Rebuilding' : 'Contending'}</span>`
+          + `<a class="ti-open" href="https://sleeper.com/leagues/${esc(entry.league.league_id)}" target="_blank" rel="noopener">Open in Sleeper &#8599;</a></div>`;
+        if (!res.ideas.length) return `<section class="ti-sec">${head}<p class="rb-empty">Nothing that fits: no offer here lands inside the value window while ${res.mode === 'rebuild' ? 'selling a veteran to a team that would start him' : 'adding to your starting lineup'}.</p></section>`;
+        return `<section class="ti-sec">${head}<div class="ti-cards">` + res.ideas.map((i, k) => {
+          const side = (arr) => arr.map(a => `<li><span>${esc(res.name(a))}${a.kind === 'player' ? ` <small>${esc(a.p.position || '')}${a.p.age ? ' &middot; ' + Math.round(a.p.age) : ''}</small>` : ''}</span><b>${a.value.toFixed(2)}</b></li>`).join('');
+          return `<div class="ti-card"><div class="ti-who">With <b>${esc(teamName(entry, i.partner.roster_id))}</b> <span class="ti-tag ${i.them.kind}">${i.them.kind === 'contender' ? 'Contender' : i.them.kind === 'rebuilder' ? 'Rebuilder' : 'Bubble'} &middot; ${esc(i.them.record)}${i.them.ownFirst ? ' &middot; owns 1st' : ''}</span></div>`
+            + `<div class="ti-sides"><div><div class="ti-k">You give</div><ul>${side(i.give)}</ul><div class="ti-tot">${i.giveV.toFixed(2)}</div></div>`
+            + `<div><div class="ti-k">You get</div><ul>${side(i.get)}</ul><div class="ti-tot">${i.getV.toFixed(2)}</div></div></div>`
+            + `<div class="ti-net"><span>Value <b class="${i.net >= 0 ? 'mv-up' : 'mv-down'}">${sgn(i.net)}</b></span>${i.myGain ? `<span>Lineup <b class="mv-up">+${i.myGain.toFixed(1)}/wk</b></span>` : ''}`
+            + `<button type="button" class="ti-sim" data-l="${li}" data-k="${k}">Playoff odds</button></div>`
+            + `<ul class="ti-why">${i.why.map(w => `<li>${w}</li>`).join('')}</ul><div class="ti-simout" id="tiSim${li}_${k}"></div></div>`;
+        }).join('') + '</div></section>';
+      }).join('');
+    }
+
+    // The season simulation with the trade applied: before and after for
+    // both teams. Picks are left out of the simulation (they do not play),
+    // so a trade with picks is simulated on its players alone.
+    listEl.addEventListener('click', async (e) => {
+      const b = e.target.closest('.ti-sim');
+      if (!b) return;
+      const r = lastResults[Number(b.dataset.l)];
+      const idea = r && r.res.ideas[Number(b.dataset.k)];
+      const out = document.getElementById(`tiSim${b.dataset.l}_${b.dataset.k}`);
+      const tools = window.__deskAgentTools;
+      if (!idea || !out || !tools || !tools.evaluate_trade) return;
+      out.textContent = 'Simulating the season with this trade…';
+      const ids = (arr) => arr.filter(a => a.kind === 'player').map(a => a.id);
+      const res = await tools.evaluate_trade({ league_id: r.entry.league.league_id, give: ids(idea.give), get: ids(idea.get) });
+      if (!res || res.error) { out.textContent = (res && res.error) || 'Could not simulate.'; return; }
+      const f = (o, k) => o && o[k] != null ? o[k].toFixed(1) + '%' : '—';
+      out.innerHTML = `You: playoffs ${f(res.you.before, 'playoff_pct')} &rarr; <b>${f(res.you.after, 'playoff_pct')}</b>, title ${f(res.you.before, 'title_pct')} &rarr; <b>${f(res.you.after, 'title_pct')}</b>`
+        + (res.partner ? `<br>${esc(res.partner.name)}: playoffs ${f(res.partner.before, 'playoff_pct')} &rarr; <b>${f(res.partner.after, 'playoff_pct')}</b>` : '');
+    });
+    leagueSel.addEventListener('change', render);
+    document.addEventListener('desk:view', (e) => { if (e.detail === 'ideas') render(); });
+    window.renderTradeIdeas = render;
   })();
 
   // ---- Movers: value change across your portfolio ---------------------
