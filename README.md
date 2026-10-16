@@ -47,7 +47,7 @@ row beneath it.
 |---|---|
 | **Front Desk** | Front Desk (the landing view) |
 | **Front Office** | Leagues · The Wire · On the Clock · Trade Desk · Trade Ideas |
-| **The Book** | My Guys · The Receipts · Record · Tanking Tracker · Playoff Picture · The Ledger · The Margin |
+| **The Book** | My Guys · The Receipts · Record · Tanking Tracker · Playoff Picture · Trade Builder · The Ledger · The Margin |
 | **Game Day** | The Slate · Press Box · Weekly Sweats |
 | **Price Guide** | The Board · Movers · Trade Desk |
 | **Settings** | Settings |

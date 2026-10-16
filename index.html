@@ -1994,6 +1994,73 @@
   .rb-table td.mv-pos { color: var(--green); font-weight: 800; } .rb-table td.mv-neg { color: var(--red); font-weight: 800; }
   .rb-table td.mv-player { text-align: left; cursor: pointer; } .rb-table th.mv-th-player { text-align: left; }
   .mv-player small { color: var(--faint); margin-left: 6px; font-weight: 600; }
+  .tb-k { font-size: 10.5px; font-weight: 800; letter-spacing: 0.5px; color: var(--faint); text-transform: uppercase; margin-bottom: 6px; }
+  .tb-k b { color: var(--ink); float: right; }
+  .tb-search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; padding: 8px 12px; }
+  .tb-search input { flex: 1; border: 0; background: transparent; font: inherit; font-size: 14px; color: var(--ink); outline: none; }
+  .tb-hit { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
+  .tb-hit span:first-child { flex: 1; }
+  .tb-val { font-weight: 800; color: var(--ink); }
+  .tb-leagues { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .tb-lg { display: flex; align-items: center; gap: 10px; text-align: left; font: inherit; background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; box-shadow: 2px 2px 0 var(--ink); padding: 10px 12px; cursor: pointer; }
+  .tb-lg b { display: block; color: var(--ink); font-size: 14px; } .tb-lg small { color: var(--muted); font-size: 11.5px; }
+  .tb-lg-logo { position: relative; flex: 0 0 36px; height: 36px; border-radius: 8px; overflow: hidden; background: var(--navy); color: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .tb-lg-logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .tb-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .tb-head h2 { margin: 0; font-family: 'Source Serif 4', serif; font-size: 20px; color: var(--ink); } .tb-head small { color: var(--muted); font-size: 12px; }
+  .tb-back { font: inherit; font-size: 16px; width: 34px; height: 34px; border-radius: 8px; border: 2px solid var(--ink); background: var(--surface); cursor: pointer; }
+  .tb-mgr { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px 16px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
+  .tb-mgr.is-me { border: 2px solid var(--green); }
+  .tb-mgr-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .tb-av { position: relative; flex: 0 0 36px; height: 36px; border-radius: 50%; overflow: hidden; background: var(--border-soft); }
+  .tb-av img { width: 100%; height: 100%; object-fit: cover; }
+  .tb-mgr-name { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 15px; color: var(--ink); }
+  .tb-you { font-size: 10px; font-weight: 800; background: var(--gold); color: #fff; border-radius: 4px; padding: 1px 6px; }
+  .tb-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; border-radius: 999px; padding: 1px 8px; border: 1.5px solid; }
+  .tb-label.FAVORITE { color: var(--green); } .tb-label.UPSIDE { color: var(--blue); } .tb-label.FRAGILE { color: var(--gold); } .tb-label.REBUILD { color: var(--red); }
+  .tb-mgr-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .tb-pill { display: inline-block; font-size: 10.5px; font-weight: 700; border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; margin-left: 4px; color: var(--faint); }
+  .tb-pill b { color: var(--ink); }
+  .tb-mgr-needs { font-size: 12px; color: var(--muted); text-align: right; display: grid; gap: 3px; }
+  .tb-pos-chip { display: inline-block; font-size: 10px; font-weight: 800; color: #fff; border-radius: 4px; padding: 1px 5px; margin-left: 3px; background: var(--muted); }
+  .tb-pos-chip.QB { background: var(--red); } .tb-pos-chip.RB { background: var(--green); } .tb-pos-chip.WR { background: var(--blue); } .tb-pos-chip.TE { background: var(--gold); }
+  .tb-mgr-act { display: flex; gap: 6px; }
+  .tb-btn { font: inherit; font-size: 12px; font-weight: 800; color: var(--surface); background: var(--ink); border: 2px solid var(--ink); border-radius: 8px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+  .tb-btn.ghost { background: var(--surface); color: var(--ink); }
+  .tb-roster { grid-column: 1 / -1; font-size: 12px; color: var(--ink); display: grid; gap: 4px; border-top: 1px solid var(--border-soft); padding-top: 8px; }
+  .tb-roster small { color: var(--faint); }
+  @media (max-width: 760px) { .tb-mgr { grid-template-columns: 1fr; } .tb-mgr-needs { text-align: left; } }
+  .tb-build { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(280px, 340px); gap: 14px; align-items: start; }
+  @media (max-width: 1000px) { .tb-build { grid-template-columns: minmax(0, 1fr); } }
+  .tb-col { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+  .tb-col-head { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--ink); margin-bottom: 8px; }
+  .tb-grp { font-size: 10.5px; font-weight: 800; letter-spacing: 0.6px; border-radius: 6px; padding: 4px 8px; margin: 10px 0 4px; color: #fff; background: var(--muted); }
+  .tb-grp.QB { background: var(--red); } .tb-grp.RB { background: var(--green); } .tb-grp.WR { background: var(--blue); } .tb-grp.TE { background: var(--gold); } .tb-grp.PK { background: var(--navy); }
+  .tb-asset { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; width: 100%; text-align: left; font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 0; border-bottom: 1px solid var(--border-soft); padding: 5px 4px; cursor: pointer; }
+  .tb-asset:hover { background: var(--bg); }
+  .tb-asset.on { background: var(--ink); color: var(--surface); }
+  .tb-asset.on small { color: var(--border); }
+  .tb-an { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tb-an small { color: var(--faint); }
+  .tb-side { display: grid; gap: 10px; }
+  .tb-card { background: var(--surface); border: 2px solid var(--ink); border-radius: 10px; box-shadow: 2px 2px 0 var(--ink); padding: 10px 12px; }
+  .tb-li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; font-size: 13px; padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+  .tb-li.empty { display: block; color: var(--faint); font-size: 12px; }
+  .tb-li button { border: 0; background: none; font-size: 16px; color: var(--muted); cursor: pointer; }
+  .tb-vtext { font-family: 'Anton', sans-serif; font-size: 24px; text-align: center; color: var(--ink); }
+  .tb-vtext.up { color: var(--green); } .tb-vtext.down { color: var(--red); }
+  .tb-bar { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13px; margin-top: 6px; }
+  .tb-bar i { flex: 1; height: 8px; background: var(--border-soft); border-radius: 4px; overflow: hidden; } .tb-bar em { display: block; height: 100%; background: var(--green); }
+  .tb-bar-k { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); }
+  .tb-open { display: block; text-align: center; margin-top: 8px; font-size: 12.5px; font-weight: 700; color: var(--navy); }
+  .tb-imp-row { display: grid; grid-template-columns: 70px 1fr 1fr; gap: 6px; font-size: 12.5px; padding: 3px 0; color: var(--muted); }
+  .tb-imp-row.head { font-size: 11px; font-weight: 800; color: var(--faint); }
+  .tb-imp-row b { color: var(--ink); }
+  .tb-impact-body { font-size: 12.5px; color: var(--muted); }
+  .tb-sug { border-top: 1px solid var(--border-soft); padding: 8px 0; font-size: 12.5px; color: var(--ink); }
+  .tb-sug small { color: var(--faint); }
+  .tb-sk { font-size: 10px; font-weight: 800; color: var(--faint); text-transform: uppercase; margin-right: 4px; }
+  .tb-sug-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; color: var(--muted); }
+  .tb-sug-why { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
   .ti-sec { margin-bottom: 22px; }
   .ti-league { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 8px; }
   .ti-league h2 { margin: 0; font-family: 'Source Serif 4', serif; font-size: 18px; color: var(--ink); }
@@ -12809,6 +12876,31 @@
     </div>
     <div id="rbBody"><div class="rb-empty">Connect your Sleeper account to see your results.</div></div>
   </div>
+  <div data-view="builder">
+    <div id="tbPick">
+      <div class="page-title">
+        <h1>Trade Builder</h1>
+        <p>Pick a league to see its managers and build a trade with one of them, or search a player to see every league where someone else owns him. The builder shows the value on both sides, what the trade does to every team's playoff odds, and three suggested offers. Nothing is sent from here.</p>
+      </div>
+      <div class="tb-search"><span>&#128269;</span><input type="text" id="tbPlayerSearch" list="tbPlayerList" placeholder="Search a player to trade for, across all your leagues..." autocomplete="off"><datalist id="tbPlayerList"></datalist></div>
+      <div id="tbPlayerHits"></div>
+      <div class="tb-k" style="margin-top:14px">Your leagues</div>
+      <div class="tb-leagues" id="tbLeagueList"></div>
+    </div>
+    <div id="tbLeague" hidden>
+      <div class="tb-head" id="tbLeagueHead"></div>
+      <div id="tbManagers"></div>
+    </div>
+    <div id="tbBuild" hidden>
+      <div class="tb-head" id="tbBuildHead"></div>
+      <div class="tb-build">
+        <div id="tbMine"></div>
+        <div id="tbTheirs"></div>
+        <div class="tb-side"><div id="tbCalc"></div><div class="tb-card" id="tbSuggest"></div></div>
+      </div>
+    </div>
+  </div>
+
   <div data-view="ideas">
     <div class="page-title">
       <h1>Trade Ideas</h1>
@@ -13806,6 +13898,7 @@
       { view: 'records', label: 'Record' },
       { view: 'tanking', label: 'Tanking Tracker' },
       { view: 'playoff', label: 'Playoff Picture' },
+      { view: 'builder', label: 'Trade Builder' },
       { view: 'stathub', label: 'The Ledger' },
       { view: 'margin', label: 'The Margin' },
     ] },
@@ -36830,7 +36923,12 @@
       return { pct, kind, ownFirst, record: `${st.wins || 0}-${st.losses || 0}${st.ties ? '-' + st.ties : ''}` };
     }
 
-    function buildIdeas(entry, dict, ppg, tankList) {
+    // opts.partnerId: ideas with that one team only (the Trade Builder).
+    // opts.targetId: ideas that bring back that one player -- bought
+    // whatever your plan in the league, since you asked for him.
+    function buildIdeas(entry, dict, ppg, tankList, opts) {
+      opts = opts || {};
+      const perTarget = opts.partnerId ? 3 : 1;
       const me = entry.roster.roster_id;
       const league = entry.league;
       const myMode = tankList.has(league.name) ? 'rebuild' : 'contend';
@@ -36888,47 +36986,53 @@
       // Of the packages whose value lands in the window around a target,
       // the one that comes out closest to even -- the likeliest yes -- and
       // with the fewest pieces.
-      const bestPackage = (pool, targetValue, filter) => {
-        let best = null;
+      const bestPackages = (pool, targetValue, filter, n) => {
+        const all = [];
         combos(pool, 3).forEach(pkg => {
           if (filter && !filter(pkg)) return;
           const give = sum(pkg), net = targetValue - give;
           if (net > winCap(give) || net < -lossCap(give)) return;
-          const score = Math.abs(net) + pkg.length * 0.02;
-          if (!best || score < best.score) best = { pkg, give, net, score };
+          all.push({ pkg, give, net, score: Math.abs(net) + pkg.length * 0.02 });
         });
-        return best;
+        return all.sort((a, b) => a.score - b.score).slice(0, n || 1);
       };
 
       entry.allRosters.forEach(r => {
         if (r.roster_id === me) return;
+        if (opts.partnerId != null && r.roster_id !== opts.partnerId) return;
         const them = posture(entry, r);
         const theirIds = sbStartablePlayers(r);
         const theirLine = lineup(theirIds);
         const theirs = assetsOf(r);
 
-        if (myMode === 'contend') {
+        if (myMode === 'contend' || opts.targetId) {
           // Surplus: whoever does not start for you, and your picks.
           const surplus = mine.players.filter(a => !myLine.ids.has(a.id)).concat(mine.picks)
             .sort((a, b) => b.value - a.value).slice(0, 12);
+          const asked = !!opts.targetId;
           theirs.players.forEach(t => {
-            if (t.value < 0.1) return;
+            if (asked ? t.id !== opts.targetId : t.value < 0.1) return;
             const startsForThem = theirLine.ids.has(t.id);
-            // A contender does not move a player it is starting.
-            if (them.kind === 'contender' && startsForThem) return;
+            // A contender does not move a player it is starting -- unless
+            // you have named him, in which case it is your call.
+            if (!asked && them.kind === 'contender' && startsForThem) return;
             const gain = lineup(myIds.concat([t.id])).total - myLine.total;
-            if (gain < 0.8) return;
-            const deal = bestPackage(surplus, t.value, (pkg) =>
+            if (!asked && gain < 0.8) return;
+            // A named player can be paid for with anything; otherwise only
+            // with what does not start for you.
+            const pool = asked
+              ? mine.players.concat(mine.picks).sort((a, b) => b.value - a.value).slice(0, 22)
+              : surplus;
+            bestPackages(pool, t.value, (pkg) =>
               // A rebuilding team wants youth and picks, not your veterans.
-              !(them.kind === 'rebuilder' && pkg.some(isVet)));
-            if (!deal) return;
+              !(them.kind === 'rebuilder' && pkg.some(isVet)), perTarget).forEach(deal => {
             const after = myIds.filter(id => !deal.pkg.some(a => a.id === id)).concat([t.id]);
             const myGain = lineup(after).total - myLine.total;
-            if (myGain < 0.8) return;
+            if (!asked && myGain < 0.8) return;
             const theirAfter = theirIds.filter(id => id !== t.id).concat(deal.pkg.filter(a => a.kind === 'player').map(a => a.id));
             const theirDelta = lineup(theirAfter).total - theirLine.total;
             let fit = 0;
-            const why = [`+${myGain.toFixed(1)} pts/wk to your starting lineup`];
+            const why = [myGain >= 0 ? `+${myGain.toFixed(1)} pts/wk to your starting lineup` : `${myGain.toFixed(1)} pts/wk to your starting lineup -- a value move, not a lineup one`];
             if (them.kind === 'rebuilder') {
               fit += them.ownFirst ? 3 : 1;
               why.push(them.ownFirst ? `${teamName(entry, r.roster_id)} is ${them.record} and owns its 1st -- losing pays them, so selling makes sense`
@@ -36941,6 +37045,7 @@
             else why.push('paid with players who do not start for you');
             ideas.push({ entry, partner: r, them, give: deal.pkg, get: [t], giveV: deal.give, getV: t.value, net: deal.net, myGain, theirDelta, why,
               score: myGain * 1.0 + fit * 1.5 + deal.net * 4 - deal.pkg.length * 0.3 });
+            });
           });
         } else {
           // Rebuilding: your veterans who would start for a contender, for
@@ -36954,33 +37059,57 @@
             if (theirGain < 1) return;
             // Here the value window is read from your side: what you get
             // back may beat what you send by the same margins.
-            let best = null;
+            const found = [];
             combos(pool, 3).forEach(pkg => {
               const got = sum(pkg), net = got - v.value;
               if (net > winCap(v.value) || net < -lossCap(v.value)) return;
-              const score = Math.abs(net) + pkg.length * 0.02;
-              if (!best || score < best.score) best = { pkg, got, net, score };
+              found.push({ pkg, got, net, score: Math.abs(net) + pkg.length * 0.02 });
             });
-            if (!best) return;
+            found.sort((a, b) => a.score - b.score).slice(0, perTarget).forEach(best => {
             const why = [`${esc(name(v))} is a veteran on a rebuilding roster; he adds +${theirGain.toFixed(1)} pts/wk to their lineup`,
               them.kind === 'contender' ? `${teamName(entry, r.roster_id)} is contending (${them.record})` : `${teamName(entry, r.roster_id)} is on the bubble (${them.record})`,
               'you get youth and picks back'];
             ideas.push({ entry, partner: r, them, give: [v], get: best.pkg, giveV: v.value, getV: best.got, net: best.net, myGain: 0, theirDelta: theirGain, why,
               score: theirGain * 0.8 + (them.kind === 'contender' ? 2 : 0) + best.net * 4 + v.value });
+            });
           });
         }
       });
 
-      // The best three, no two with the same team.
+      // The best three: across the league no two with the same team; with
+      // one team, no two that send the same package.
       ideas.sort((a, b) => b.score - a.score);
       const out = [], seen = new Set();
       for (const i of ideas) {
-        if (seen.has(i.partner.roster_id)) continue;
-        seen.add(i.partner.roster_id); out.push(i);
+        // A 2027 2nd and a 2028 2nd are the same offer for this purpose:
+        // picks count by round, so the three shown are really different.
+        const k = (a) => a.kind === 'pick' ? 'R' + a.pick.round : a.id;
+        const key = opts.partnerId != null
+          ? i.give.map(k).sort().join('|') + '>' + i.get.map(k).sort().join('|')
+          : i.partner.roster_id;
+        if (seen.has(key)) continue;
+        seen.add(key); out.push(i);
         if (out.length === 3) break;
       }
       return { mode: myMode, ideas: out, name, myLineTotal: myLine.total };
     }
+
+    // Rest-of-season points per game: Sleeper's season projection, falling
+    // back to this week's projection when a player has none.
+    async function ppgFor(season) {
+      const seasonProj = window.sleeperGetSeasonProjections ? await window.sleeperGetSeasonProjections(season).catch(() => ({})) : {};
+      return (id) => {
+        const s = seasonProj && seasonProj[id];
+        if (s && s.pts && (s.gp || 17)) return s.pts / (s.gp || 17);
+        let w = null;
+        try { w = typeof sbProjectionFor === 'function' ? sbProjectionFor(id, null, null) : null; } catch (e) { w = null; }
+        return Number(w) || 0;
+      };
+    }
+    window.tiPpgFor = ppgFor;
+    window.tiBuildIdeas = buildIdeas;
+    window.tiPosture = posture;
+    window.tiTeamName = teamName;
 
     let lastResults = [];
     async function render() {
@@ -37047,6 +37176,344 @@
     leagueSel.addEventListener('change', render);
     document.addEventListener('desk:view', (e) => { if (e.detail === 'ideas') render(); });
     window.renderTradeIdeas = render;
+  })();
+
+  // ---- Trade Builder ----------------------------------------------------
+  // Three screens on one page: pick a league (or search a player across
+  // every league), see the league's managers at a glance, then build a
+  // trade with one of them -- both rosters, the value calculator, what the
+  // trade does to everybody's playoff odds, and three suggested offers
+  // that follow the same rules as Trade Ideas.
+  (function initTradeBuilder() {
+    const root = document.querySelector('[data-view="builder"]');
+    if (!root) return;
+    const $ = (id) => document.getElementById(id);
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const ordinal = (n) => { const v = n % 100; return n + (['th', 'st', 'nd', 'rd'][(v - 20) % 10] || ['th', 'st', 'nd', 'rd'][v] || 'th'); };
+    const POS = ['QB', 'RB', 'WR', 'TE'];
+    const st = { leagueId: null, partnerId: null, targetId: null, send: new Set(), get: new Set(), simToken: 0 };
+    let dict = null, ppg = null;
+
+    function entries() {
+      return Object.values(window.sleeperLeagueData || {})
+        .filter(e => e && e.league && e.roster && e.allRosters && e.allRosters.length > 1
+          && (typeof isCoManagedIncluded !== 'function' || isCoManagedIncluded() || !e.isCoOwned))
+        .sort((a, b) => String(a.league.name).localeCompare(String(b.league.name)));
+    }
+    const entryOf = (id) => entries().find(e => e.league.league_id === id) || null;
+    const pname = (p) => p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')) : '';
+    const vOf = (id) => (typeof ppValueForPlayerId === 'function' ? ppValueForPlayerId(id, dict) : null) || 0;
+    const nameOf = (e, rid) => window.tiTeamName ? window.tiTeamName(e, rid) : 'Roster ' + rid;
+    function avatarOf(e, rid) {
+      const r = e.allRosters.find(x => x.roster_id === rid);
+      const u = r && (e.users || []).find(x => x.user_id === r.owner_id);
+      return u && u.avatar ? `https://sleepercdn.com/avatars/thumbs/${u.avatar}` : '';
+    }
+    // Picks as tradeable assets, keyed so the two sides can hold them.
+    function picksOf(e, rid) {
+      return (typeof ppPicksOwnedBy === 'function' ? ppPicksOwnedBy(e, rid) : []).map(pk => ({
+        key: `pk:${pk.season}:${pk.round}:${pk.fromRosterId}`, pick: pk,
+        value: typeof ppPickValueFuture === 'function' ? ppPickValueFuture(e, pk) : 0,
+        label: `${pk.season} ${ordinal(pk.round)} (${pk.fromRosterId === e.roster.roster_id ? 'yours' : nameOf(e, pk.fromRosterId)})`,
+      })).sort((a, b) => b.value - a.value);
+    }
+    function lineScoring(e) {
+      const s = e.league.scoring_settings || {}, rp = e.league.roster_positions || [];
+      const starters = rp.filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI').length;
+      const sf = rp.includes('SUPER_FLEX') || rp.filter(p => p === 'QB').length > 1;
+      const rec = s.rec == null ? 0 : s.rec;
+      return [`${e.allRosters.length} Teams`, `Start ${starters}`, sf ? 'Superflex' : '1QB',
+        `${s.pass_td || 4}pt Pass TD`, rec >= 1 ? 'Full PPR' : rec >= 0.5 ? 'Half PPR' : 'Standard',
+        s.bonus_rec_te ? `${s.bonus_rec_te} TEP` : null].filter(Boolean).join(' &middot; ');
+    }
+
+    // ---- Team reads for the overview ----
+    // Value and contender ranks, the four-way label off those two, the
+    // playoff picture in words, and the positions where a team's lineup or
+    // bench is thin against the rest of the league.
+    function leagueReads(e) {
+      const rosters = e.allRosters;
+      const slots = (e.league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+      const need = {}; POS.forEach(p => { need[p] = slots.filter(s => s === p).length; });
+      const value = rosters.map(r => ({ id: r.roster_id, v: (ppRosterValue(r, dict) || 0) + picksOf(e, r.roster_id).reduce((t, p) => t + p.value, 0) }));
+      const valRank = {}; value.slice().sort((a, b) => b.v - a.v).forEach((x, i) => { valRank[x.id] = i + 1; });
+      let con = typeof sbLeagueContendingRanks === 'function' ? sbLeagueContendingRanks(e) : null;
+      // Before the season model has run, rank on the best lineup by
+      // rest-of-season points per game instead of reading every team 1st.
+      const conVals = con && con.ranks ? Object.values(con.ranks) : [];
+      if (!con || !conVals.length || conVals.every(v => v === conVals[0])) {
+        const slotsAll = (e.league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+        const elig = typeof SB_SLOT_ELIGIBLE !== 'undefined' ? SB_SLOT_ELIGIBLE : {};
+        const level = (r) => {
+          const used = new Set(); let t = 0;
+          slotsAll.slice().sort((a, b) => (elig[a] || []).length - (elig[b] || []).length).forEach(slot => {
+            let best = null, bv = -1;
+            sbStartablePlayers(r).forEach(id => { if (used.has(id)) return; const p = dict[id]; if (!p || !(elig[slot] || []).includes(p.position)) return; const v = ppg(id); if (v > bv) { bv = v; best = id; } });
+            if (best) { used.add(best); t += bv; }
+          });
+          return t;
+        };
+        const ranks = {};
+        rosters.map(r => ({ id: r.roster_id, t: level(r) })).sort((a, b) => b.t - a.t).forEach((x, i) => { ranks[x.id] = i + 1; });
+        con = { ranks };
+      }
+      const pf = rosters.map(r => ({ id: r.roster_id, pf: ((r.settings || {}).fpts || 0) + ((r.settings || {}).fpts_decimal || 0) / 100 }));
+      const pfRank = {}; pf.slice().sort((a, b) => b.pf - a.pf).forEach((x, i) => { pfRank[x.id] = i + 1; });
+      // Per position: the team's starters' points per game, ranked across
+      // the league, and how many startable bodies it has beyond them.
+      const posStrength = {};
+      POS.forEach(pos => {
+        const n = Math.max(1, need[pos]);
+        const rows = rosters.map(r => {
+          const ids = sbStartablePlayers(r).filter(id => (dict[id] || {}).position === pos).sort((a, b) => ppg(b) - ppg(a));
+          return { id: r.roster_id, top: ids.slice(0, n).reduce((t, x) => t + ppg(x), 0), depth: ids.slice(n).filter(x => ppg(x) >= 8).length };
+        });
+        const sorted = rows.slice().sort((a, b) => b.top - a.top);
+        rows.forEach(x => { (posStrength[x.id] = posStrength[x.id] || {})[pos] = { rank: sorted.indexOf(x) + 1, depth: x.depth }; });
+      });
+      const third = Math.ceil(rosters.length * 2 / 3);
+      return rosters.map(r => {
+        const id = r.roster_id;
+        const odds = window.ppTeamOdds ? window.ppTeamOdds(e, id) : null;
+        const s = r.settings || {};
+        const vr = valRank[id], cr = con && con.ranks ? con.ranks[id] : null, half = rosters.length / 2;
+        const label = cr == null ? '' : (cr <= half ? (vr <= half ? 'FAVORITE' : 'FRAGILE') : (vr <= half ? 'UPSIDE' : 'REBUILD'));
+        const p = odds && odds.playoff != null ? odds.playoff : null;
+        const outlook = p == null ? '' : p >= 0.8 ? 'Playoff Team' : p >= 0.45 ? 'Playoff Bubble' : p >= 0.15 ? 'Struggling' : 'Buried';
+        const ps = posStrength[id] || {};
+        const upgrade = POS.filter(pos => ps[pos] && ps[pos].rank > third);
+        const depth = POS.filter(pos => ps[pos] && ps[pos].depth === 0);
+        return { id, label, record: `${s.wins || 0}-${s.losses || 0}${s.ties ? '-' + s.ties : ''}`,
+          seed: odds && odds.likelySeed ? odds.likelySeed : null, pfRank: pfRank[id], valRank: vr, conRank: cr,
+          outlook, upgrade, depth, isMe: id === e.roster.roster_id };
+      });
+    }
+
+    function show(screen) {
+      ['tbPick', 'tbLeague', 'tbBuild'].forEach(id => { $(id).hidden = id !== screen; });
+      window.scrollTo(0, 0);
+    }
+    const posChips = (list) => list.map(p => `<span class="tb-pos-chip ${p}">${p}</span>`).join('');
+
+    // ---- Screen 1: pick a league, or search a player ----
+    function renderPick() {
+      const all = entries();
+      $('tbLeagueList').innerHTML = all.length ? all.map(e => `<button type="button" class="tb-lg" data-league="${esc(e.league.league_id)}">`
+        + `<span class="tb-lg-logo">${typeof sbLeagueLogoImgHtml === 'function' ? sbLeagueLogoImgHtml(e.league) : ''}</span>`
+        + `<span><b>${esc(e.league.name)}</b><small>${lineScoring(e)}</small></span></button>`).join('')
+        : '<p class="rb-empty">Connect a Sleeper account in Settings to build trades.</p>';
+      // Every player on somebody else's roster, for the search box.
+      const seen = new Set(), opts = [];
+      all.forEach(e => e.allRosters.forEach(r => {
+        if (r.roster_id === e.roster.roster_id) return;
+        (r.players || []).forEach(id => {
+          const p = dict[id]; if (!p || seen.has(id) || !POS.includes(p.position)) return;
+          seen.add(id); opts.push(`<option value="${esc(pname(p))}"></option>`);
+        });
+      }));
+      $('tbPlayerList').innerHTML = opts.join('');
+      show('tbPick');
+    }
+    function searchPlayer(q) {
+      const out = $('tbPlayerHits');
+      const name = String(q || '').trim().toLowerCase();
+      if (!name) { out.innerHTML = ''; return; }
+      const hits = [];
+      entries().forEach(e => e.allRosters.forEach(r => {
+        if (r.roster_id === e.roster.roster_id) return;
+        (r.players || []).forEach(id => { if (pname(dict[id]).toLowerCase() === name) hits.push({ e, r, id }); });
+      }));
+      out.innerHTML = hits.length ? hits.map(h => `<div class="tb-hit"><span><b>${esc(h.e.league.name)}</b> &middot; owned by ${esc(nameOf(h.e, h.r.roster_id))}</span>`
+        + `<span class="tb-val">${vOf(h.id).toFixed(2)}</span><button type="button" class="tb-btn" data-build="${esc(h.e.league.league_id)}|${h.r.roster_id}|${esc(h.id)}">Build Trade</button></div>`).join('')
+        : `<p class="rb-empty">Nobody else owns a player by that name in your leagues.</p>`;
+    }
+
+    // ---- Screen 2: the league's managers ----
+    function renderLeague() {
+      const e = entryOf(st.leagueId); if (!e) return renderPick();
+      const reads = leagueReads(e);
+      const order = reads.slice().sort((a, b) => (b.isMe - a.isMe) || ((a.conRank || 99) - (b.conRank || 99)));
+      $('tbLeagueHead').innerHTML = `<button type="button" class="tb-back" data-back="pick">&larr;</button><div><h2>${esc(e.league.name)}</h2><small>${lineScoring(e)}</small></div>`;
+      $('tbManagers').innerHTML = order.map(t => {
+        const av = avatarOf(e, t.id);
+        const r = e.allRosters.find(x => x.roster_id === t.id);
+        const rosterHtml = POS.map(pos => {
+          const ids = (r.players || []).filter(id => (dict[id] || {}).position === pos).sort((a, b) => vOf(b) - vOf(a));
+          return ids.length ? `<div><b class="tb-pos-chip ${pos}">${pos}</b> ${ids.map(id => `${esc(pname(dict[id]))} <small>${vOf(id).toFixed(2)}</small>`).join(', ')}</div>` : '';
+        }).join('');
+        return `<div class="tb-mgr${t.isMe ? ' is-me' : ''}">`
+          + `<div class="tb-mgr-main"><span class="tb-av">${av ? `<img src="${av}" alt="" onerror="this.remove()">` : ''}</span>`
+          + `<div><div class="tb-mgr-name"><b>${esc(nameOf(e, t.id))}</b>${t.isMe ? '<span class="tb-you">YOU</span>' : ''}${t.label ? `<span class="tb-label ${t.label}">${t.label}</span>` : ''}</div>`
+          + `<div class="tb-mgr-sub">${esc(t.record)}${t.seed ? ` &middot; ${ordinal(t.seed)} Seed` : ''} &middot; PF ${ordinal(t.pfRank)}${t.outlook ? ' &middot; ' + t.outlook : ''}`
+          + ` <span class="tb-pill">VAL <b>${ordinal(t.valRank)}</b></span>${t.conRank ? ` <span class="tb-pill">CON <b>${ordinal(t.conRank)}</b></span>` : ''}</div></div></div>`
+          + `<div class="tb-mgr-needs">${t.upgrade.length ? `<div>Needs upgrade ${posChips(t.upgrade)}</div>` : ''}${t.depth.length ? `<div>Needs depth ${posChips(t.depth)}</div>` : ''}</div>`
+          + `<div class="tb-mgr-act"><button type="button" class="tb-btn ghost" data-roster="${t.id}">Roster &#9662;</button>`
+          + (t.isMe ? '' : `<button type="button" class="tb-btn" data-build="${esc(e.league.league_id)}|${t.id}|">Build Trade</button>`) + `</div>`
+          + `<div class="tb-roster" id="tbRoster${t.id}" hidden>${rosterHtml}</div></div>`;
+      }).join('');
+      show('tbLeague');
+    }
+
+    // ---- Screen 3: build the trade ----
+    function rosterCol(e, rid, sideSet, sideName) {
+      const r = e.allRosters.find(x => x.roster_id === rid);
+      const groups = POS.map(pos => {
+        const ids = (r.players || []).filter(id => (dict[id] || {}).position === pos).sort((a, b) => vOf(b) - vOf(a));
+        if (!ids.length) return '';
+        return `<div class="tb-grp ${pos}">${({ QB: 'QUARTERBACKS', RB: 'RUNNING BACKS', WR: 'WIDE RECEIVERS', TE: 'TIGHT ENDS' })[pos]}</div>`
+          + ids.map(id => `<button type="button" class="tb-asset${sideSet.has(id) ? ' on' : ''}" data-side="${sideName}" data-key="${esc(id)}">`
+            + `<span class="tb-pos-chip ${pos}">${pos}</span><span class="tb-an">${esc(pname(dict[id]))} <small>${esc(dict[id].team || 'FA')}</small></span><b>${vOf(id) ? vOf(id).toFixed(2) : ''}</b></button>`).join('');
+      }).join('');
+      const picks = picksOf(e, rid);
+      const pickHtml = picks.length ? `<div class="tb-grp PK">PICKS</div>` + picks.map(pk => `<button type="button" class="tb-asset${sideSet.has(pk.key) ? ' on' : ''}" data-side="${sideName}" data-key="${esc(pk.key)}">`
+        + `<span class="tb-pos-chip PK">PK</span><span class="tb-an">${esc(pk.label)}</span><b>${pk.value.toFixed(2)}</b></button>`).join('') : '';
+      const av = avatarOf(e, rid);
+      return `<div class="tb-col"><div class="tb-col-head"><span class="tb-av">${av ? `<img src="${av}" alt="" onerror="this.remove()">` : ''}</span><b>${esc(nameOf(e, rid))}</b></div>${groups}${pickHtml}</div>`;
+    }
+    const assetValue = (e, key) => key.startsWith('pk:') ? ((picksOf(e, Number(key.split(':')[3])).find(p => p.key === key) || {}).value || 0) : vOf(key);
+    function assetLabel(e, rid, key) {
+      if (!key.startsWith('pk:')) return pname(dict[key]);
+      const [, season, round, from] = key.split(':');
+      return `${season} ${ordinal(Number(round))} (${Number(from) === e.roster.roster_id ? 'yours' : nameOf(e, Number(from))})`;
+    }
+    function renderCalc(e) {
+      const me = e.roster.roster_id, them = st.partnerId;
+      const sendV = [...st.send].reduce((t, k) => t + assetValue(e, k), 0);
+      const getV = [...st.get].reduce((t, k) => t + assetValue(e, k), 0);
+      const diff = getV - sendV;
+      const list = (set, rid, side) => [...set].map(k => `<div class="tb-li"><span>${esc(assetLabel(e, rid, k))}</span><b>${assetValue(e, k).toFixed(2)}</b><button type="button" data-side="${side}" data-key="${esc(k)}" title="Remove">&times;</button></div>`).join('') || '<div class="tb-li empty">Click players or picks to add them</div>';
+      const verdict = !st.send.size && !st.get.size ? 'Add players to start'
+        : Math.abs(diff) < 0.005 ? 'Even trade' : diff > 0 ? `You win by ${diff.toFixed(2)}` : `${esc(nameOf(e, them))} wins by ${(-diff).toFixed(2)}`;
+      const total = sendV + getV;
+      const share = total ? Math.max(0, Math.min(100, (getV / total) * 100)) : 50;
+      $('tbCalc').innerHTML = `<div class="tb-card"><div class="tb-k">You send <b>${sendV.toFixed(2)}</b></div>${list(st.send, me, 'send')}</div>`
+        + `<div class="tb-card"><div class="tb-k">${esc(nameOf(e, them))} sends <b>${getV.toFixed(2)}</b></div>${list(st.get, them, 'get')}</div>`
+        + `<div class="tb-card tb-verdict"><div class="tb-vtext ${diff > 0.005 ? 'up' : diff < -0.005 ? 'down' : ''}">${verdict}</div>`
+        + `<div class="tb-bar"><span>${getV.toFixed(2)}</span><i><em style="width:${share.toFixed(1)}%"></em></i><span>${sendV.toFixed(2)}</span></div>`
+        + `<div class="tb-bar-k"><span>You get</span><span>${esc(nameOf(e, them))} gets</span></div>`
+        + `<a class="tb-open" href="https://sleeper.com/leagues/${esc(e.league.league_id)}" target="_blank" rel="noopener">Open in Sleeper to send it &#8599;</a></div>`
+        + `<div class="tb-card" id="tbImpact"><div class="tb-k">Trade impact</div><div class="tb-impact-body">Add players to see what it does to everyone's odds.</div></div>`;
+    }
+    // Both runs of the season simulation are seeded the same, so the gap
+    // between them is the trade. Picks do not play, so they are left out.
+    async function runImpact(e) {
+      const body = document.querySelector('#tbImpact .tb-impact-body');
+      if (!body) return;
+      const playersIn = (set) => [...set].filter(k => !k.startsWith('pk:'));
+      const give = playersIn(st.send), get = playersIn(st.get);
+      if (!give.length && !get.length) { body.textContent = st.send.size || st.get.size ? 'Picks only: no change to this season.' : 'Add players to see what it does to everyone’s odds.'; return; }
+      if (typeof window.__ppSimulateSeason !== 'function') { body.textContent = 'Season simulation unavailable.'; return; }
+      const token = ++st.simToken;
+      body.textContent = 'Simulating the season with this trade…';
+      const me = e.roster.roster_id, them = st.partnerId, moved = new Set(give.concat(get));
+      const strip = (l) => (l || []).filter(id => !moved.has(id));
+      const after = e.allRosters.map(r => r.roster_id === me ? Object.assign({}, r, { players: strip(r.players).concat(get), starters: strip(r.starters), reserve: strip(r.reserve), taxi: strip(r.taxi) })
+        : r.roster_id === them ? Object.assign({}, r, { players: strip(r.players).concat(give), starters: strip(r.starters), reserve: strip(r.reserve), taxi: strip(r.taxi) }) : r);
+      let a, b;
+      try {
+        a = await window.__ppSimulateSeason(e, dict);
+        b = await window.__ppSimulateSeason(Object.assign({}, e, { allRosters: after }), dict);
+      } catch (err) { a = b = null; }
+      if (token !== st.simToken) return;
+      if (!a || !b) { body.textContent = 'Not enough of the season to simulate yet.'; return; }
+      const pct = (o, id) => o && o[id] != null ? Math.round(o[id] * 100) + '%' : '—';
+      const rec = (r, id) => {
+        if (!r.projWins || r.projWins[id] == null) return '—';
+        const g = r.regularGames || r.regularWeeks || 0, w = r.projWins[id];
+        return `${Math.round(w)}-${Math.max(0, Math.round(g - w))}`;
+      };
+      const cell = (fn, x, y) => { const s = fn(a, x, y), t = fn(b, x, y); return `${s} &rarr; <b>${t}</b>`; };
+      const head = `<div class="tb-imp-row head"><span></span><span>You</span><span>${esc(nameOf(e, them))}</span></div>`;
+      const rows = [['Playoffs', (r, id) => pct(r.playoffProb, id)], ['Bye', (r, id) => pct(r.byeProb, id)], ['Title', (r, id) => pct(r.titleProb, id)], ['Proj W/L', rec]]
+        .map(([k, fn]) => `<div class="tb-imp-row"><span>${k}</span><span>${cell(fn, me)}</span><span>${cell(fn, them)}</span></div>`).join('');
+      // Everybody else whose playoff odds the trade moves by a point or more.
+      const others = e.allRosters.filter(r => r.roster_id !== me && r.roster_id !== them)
+        .map(r => ({ id: r.roster_id, d: (b.playoffProb[r.roster_id] || 0) - (a.playoffProb[r.roster_id] || 0) }))
+        .filter(x => Math.abs(x.d) >= 0.01).sort((x, y) => Math.abs(y.d) - Math.abs(x.d));
+      body.innerHTML = head + rows + (others.length ? `<div class="tb-k" style="margin-top:10px">Also moves</div>`
+        + others.map(x => `<div class="tb-imp-row"><span>${esc(nameOf(e, x.id))}</span><span></span><span>${pct(a.playoffProb, x.id)} &rarr; <b class="${x.d > 0 ? 'mv-up' : 'mv-down'}">${pct(b.playoffProb, x.id)}</b></span></div>`).join('') : '');
+    }
+    let impactTimer = null;
+    const scheduleImpact = (e) => { clearTimeout(impactTimer); impactTimer = setTimeout(() => runImpact(e), 350); };
+
+    function renderSuggestions(e) {
+      const el = $('tbSuggest');
+      if (!window.tiBuildIdeas) { el.innerHTML = ''; return; }
+      const tank = typeof sbGetTankList === 'function' ? sbGetTankList() : new Set();
+      const res = window.tiBuildIdeas(e, dict, ppg, tank, { partnerId: st.partnerId, targetId: st.targetId || null });
+      const target = st.targetId ? pname(dict[st.targetId]) : null;
+      st.ideas = res.ideas;
+      el.innerHTML = `<div class="tb-k">Suggested trades${target ? ` for ${esc(target)}` : ''}</div>` + (res.ideas.length ? res.ideas.map((i, k) => {
+        const side = (arr) => arr.map(x => `${esc(res.name(x))} <small>${x.value.toFixed(2)}</small>`).join(', ');
+        return `<div class="tb-sug"><div><span class="tb-sk">Give</span> ${side(i.give)}</div><div><span class="tb-sk">Get</span> ${side(i.get)}</div>`
+          + `<div class="tb-sug-foot"><span>Value <b class="${i.net >= 0 ? 'mv-up' : 'mv-down'}">${i.net >= 0 ? '+' : '&minus;'}${Math.abs(i.net).toFixed(2)}</b>${i.myGain ? ` &middot; Lineup <b>${i.myGain >= 0 ? '+' : ''}${i.myGain.toFixed(1)}/wk</b>` : ''}</span>`
+          + `<button type="button" class="tb-btn" data-load="${k}">Load</button></div><div class="tb-sug-why">${i.why[i.why.length > 1 ? 1 : 0] || ''}</div></div>`;
+      }).join('') : `<p class="rb-empty">No offer${target ? ` for ${esc(target)}` : ''} with this team lands inside the value window.</p>`);
+    }
+
+    function renderBuild() {
+      const e = entryOf(st.leagueId); if (!e || st.partnerId == null) return renderLeague();
+      $('tbBuildHead').innerHTML = `<button type="button" class="tb-back" data-back="league">&larr;</button><div><h2>${esc(e.league.name)}</h2><small>${lineScoring(e)}</small></div>`;
+      $('tbMine').innerHTML = rosterCol(e, e.roster.roster_id, st.send, 'send');
+      $('tbTheirs').innerHTML = rosterCol(e, st.partnerId, st.get, 'get');
+      renderCalc(e);
+      renderSuggestions(e);
+      show('tbBuild');
+      scheduleImpact(e);
+    }
+    function refreshBuild() {
+      const e = entryOf(st.leagueId); if (!e) return;
+      $('tbMine').innerHTML = rosterCol(e, e.roster.roster_id, st.send, 'send');
+      $('tbTheirs').innerHTML = rosterCol(e, st.partnerId, st.get, 'get');
+      renderCalc(e); scheduleImpact(e);
+    }
+
+    async function ensureData() {
+      dict = await window.sleeperGetPlayerDict().catch(() => null);
+      const all = entries();
+      if (!dict || !all.length) return false;
+      if (!ppg && window.tiPpgFor) ppg = await window.tiPpgFor(all[0].league.season);
+      if (!ppg) ppg = () => 0;
+      return true;
+    }
+    async function open() {
+      if (!(await ensureData())) { $('tbLeagueList').innerHTML = '<p class="rb-empty">Connect a Sleeper account in Settings to build trades.</p>'; show('tbPick'); return; }
+      if (st.partnerId != null) renderBuild(); else if (st.leagueId) renderLeague(); else renderPick();
+    }
+
+    root.addEventListener('click', (ev) => {
+      const t = ev.target;
+      const lg = t.closest('[data-league]');
+      if (lg) { st.leagueId = lg.dataset.league; st.partnerId = null; st.targetId = null; renderLeague(); return; }
+      const back = t.closest('[data-back]');
+      if (back) { if (back.dataset.back === 'pick') { st.leagueId = null; renderPick(); } else { st.partnerId = null; st.targetId = null; renderLeague(); } return; }
+      const ros = t.closest('[data-roster]');
+      if (ros) { const el = $('tbRoster' + ros.dataset.roster); if (el) el.hidden = !el.hidden; return; }
+      const b = t.closest('[data-build]');
+      if (b) {
+        const [lid, rid, pid] = b.dataset.build.split('|');
+        st.leagueId = lid; st.partnerId = Number(rid); st.targetId = pid || null;
+        st.send = new Set(); st.get = new Set(pid ? [pid] : []);
+        renderBuild(); return;
+      }
+      const asset = t.closest('[data-side][data-key]');
+      if (asset) {
+        const set = asset.dataset.side === 'send' ? st.send : st.get;
+        const k = asset.dataset.key;
+        if (set.has(k)) set.delete(k); else set.add(k);
+        refreshBuild(); return;
+      }
+      const load = t.closest('[data-load]');
+      if (load && st.ideas) {
+        const i = st.ideas[Number(load.dataset.load)];
+        const key = (a) => a.kind === 'pick' ? `pk:${a.pick.season}:${a.pick.round}:${a.pick.fromRosterId}` : a.id;
+        st.send = new Set(i.give.map(key)); st.get = new Set(i.get.map(key));
+        refreshBuild();
+      }
+    });
+    $('tbPlayerSearch').addEventListener('input', (ev) => searchPlayer(ev.target.value));
+    document.addEventListener('desk:view', (ev) => { if (ev.detail === 'builder') open(); });
+    window.renderTradeBuilder = open;
   })();
 
   // ---- Movers: value change across your portfolio ---------------------
