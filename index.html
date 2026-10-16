@@ -2016,8 +2016,6 @@
   .tb-av img { width: 100%; height: 100%; object-fit: cover; }
   .tb-mgr-name { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 15px; color: var(--ink); }
   .tb-you { font-size: 10px; font-weight: 800; background: var(--gold); color: #fff; border-radius: 4px; padding: 1px 6px; }
-  .tb-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; border-radius: 999px; padding: 1px 8px; border: 1.5px solid; }
-  .tb-label.FAVORITE { color: var(--green); } .tb-label.UPSIDE { color: var(--blue); } .tb-label.FRAGILE { color: var(--gold); } .tb-label.REBUILD { color: var(--red); }
   .tb-mgr-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
   .tb-pill { display: inline-block; font-size: 10.5px; font-weight: 700; border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; margin-left: 4px; color: var(--faint); }
   .tb-pill b { color: var(--ink); }
@@ -2056,6 +2054,8 @@
   .tb-imp-row.head { font-size: 11px; font-weight: 800; color: var(--faint); }
   .tb-imp-row b { color: var(--ink); }
   .tb-impact-body { font-size: 12.5px; color: var(--muted); }
+  .tb-src-name { font-weight: 800; color: var(--ink); font-size: 14px; }
+  .tb-src-sub { font-size: 11.5px; color: var(--muted); }
   .tb-sug { border-top: 1px solid var(--border-soft); padding: 8px 0; font-size: 12.5px; color: var(--ink); }
   .tb-sug small { color: var(--faint); }
   .tb-sk { font-size: 10px; font-weight: 800; color: var(--faint); text-transform: uppercase; margin-right: 4px; }
@@ -21505,7 +21505,9 @@
           (list || []).forEach(p => {
             if (!p || !p.player_id || !p.stats) return;
             const pts = p.stats.pts_ppr ?? p.stats.pts_half_ppr ?? p.stats.pts_std;
-            if (pts != null) map[p.player_id] = { pts: Number(pts), gp: p.stats.gp || null };
+            // The raw stat line rides along so a league can score it its
+            // own way (6pt passing TDs, TE premium, half PPR...).
+            if (pts != null) map[p.player_id] = { pts: Number(pts), gp: p.stats.gp || null, stats: p.stats };
           });
           return map;
         } catch (e) {
@@ -37096,11 +37098,23 @@
 
     // Rest-of-season points per game: Sleeper's season projection, falling
     // back to this week's projection when a player has none.
+    // Scored with the league's own settings when Sleeper's projection has
+    // the stat line: a QB in a 6pt passing TD league, a TE with premium.
+    // Returns a maker: ppgFor(season) -> (league) -> (id) -> points/game.
     async function ppgFor(season) {
       const seasonProj = window.sleeperGetSeasonProjections ? await window.sleeperGetSeasonProjections(season).catch(() => ({})) : {};
-      return (id) => {
+      return (league) => (id) => {
         const s = seasonProj && seasonProj[id];
-        if (s && s.pts && (s.gp || 17)) return s.pts / (s.gp || 17);
+        const gp = s && (s.gp || 17);
+        if (s && s.stats && league && league.scoring_settings && typeof sbCustomScoreFor === 'function') {
+          const p = (window.__sleeperPlayerDict || {})[id];
+          const bonusKey = p && p.position ? 'bonus_rec_' + p.position.toLowerCase() : null;
+          const line = (bonusKey && league.scoring_settings[bonusKey] != null && s.stats[bonusKey] == null && s.stats.rec != null)
+            ? Object.assign({}, s.stats, { [bonusKey]: s.stats.rec }) : s.stats;
+          const pts = sbCustomScoreFor(line, league.scoring_settings);
+          if (pts != null && gp) return pts / gp;
+        }
+        if (s && s.pts && gp) return s.pts / gp;
         let w = null;
         try { w = typeof sbProjectionFor === 'function' ? sbProjectionFor(id, null, null) : null; } catch (e) { w = null; }
         return Number(w) || 0;
@@ -37123,20 +37137,11 @@
       statusEl.textContent = 'Working out offers…';
       const dict = await window.sleeperGetPlayerDict().catch(() => null);
       if (!dict) { statusEl.textContent = 'Player list unavailable.'; return; }
-      const season = all[0].league.season;
-      const seasonProj = window.sleeperGetSeasonProjections ? await window.sleeperGetSeasonProjections(season).catch(() => ({})) : {};
-      // Rest-of-season strength: Sleeper's season projection per game,
-      // falling back to this week's projection when a player has none.
-      const ppg = (id) => {
-        const s = seasonProj && seasonProj[id];
-        if (s && s.pts && (s.gp || 17)) return s.pts / (s.gp || 17);
-        let w = null;
-        try { w = typeof sbProjectionFor === 'function' ? sbProjectionFor(id, null, null) : null; } catch (e) { w = null; }
-        return Number(w) || 0;
-      };
+      // Points per game scored the way each league scores.
+      const ppgMaker = await ppgFor(all[0].league.season);
       const tankList = typeof sbGetTankList === 'function' ? sbGetTankList() : new Set();
       const which = leagueSel.value === 'ALL' ? all : all.filter(e => e.league.league_id === leagueSel.value);
-      lastResults = which.map(e => ({ entry: e, res: buildIdeas(e, dict, ppg, tankList) }));
+      lastResults = which.map(e => ({ entry: e, res: buildIdeas(e, dict, ppgMaker(e.league), tankList) }));
       statusEl.textContent = '';
       listEl.innerHTML = lastResults.map(({ entry, res }, li) => {
         const head = `<div class="ti-league"><h2>${esc(entry.league.name)}</h2><span class="ti-mode ${res.mode}">${res.mode === 'rebuild' ? 'Rebuilding' : 'Contending'}</span>`
@@ -37192,7 +37197,10 @@
     const ordinal = (n) => { const v = n % 100; return n + (['th', 'st', 'nd', 'rd'][(v - 20) % 10] || ['th', 'st', 'nd', 'rd'][v] || 'th'); };
     const POS = ['QB', 'RB', 'WR', 'TE'];
     const st = { leagueId: null, partnerId: null, targetId: null, send: new Set(), get: new Set(), simToken: 0 };
-    let dict = null, ppg = null;
+    // ppg is the league on screen's points per game, in its own scoring;
+    // it is re-made whenever the league changes.
+    let dict = null, ppg = () => 0, ppgMaker = null;
+    const usePpgFor = (e) => { ppg = ppgMaker && e ? ppgMaker(e.league) : () => 0; };
 
     function entries() {
       return Object.values(window.sleeperLeagueData || {})
@@ -37276,14 +37284,13 @@
         const id = r.roster_id;
         const odds = window.ppTeamOdds ? window.ppTeamOdds(e, id) : null;
         const s = r.settings || {};
-        const vr = valRank[id], cr = con && con.ranks ? con.ranks[id] : null, half = rosters.length / 2;
-        const label = cr == null ? '' : (cr <= half ? (vr <= half ? 'FAVORITE' : 'FRAGILE') : (vr <= half ? 'UPSIDE' : 'REBUILD'));
+        const vr = valRank[id], cr = con && con.ranks ? con.ranks[id] : null;
         const p = odds && odds.playoff != null ? odds.playoff : null;
         const outlook = p == null ? '' : p >= 0.8 ? 'Playoff Team' : p >= 0.45 ? 'Playoff Bubble' : p >= 0.15 ? 'Struggling' : 'Buried';
         const ps = posStrength[id] || {};
         const upgrade = POS.filter(pos => ps[pos] && ps[pos].rank > third);
         const depth = POS.filter(pos => ps[pos] && ps[pos].depth === 0);
-        return { id, label, record: `${s.wins || 0}-${s.losses || 0}${s.ties ? '-' + s.ties : ''}`,
+        return { id, record: `${s.wins || 0}-${s.losses || 0}${s.ties ? '-' + s.ties : ''}`,
           seed: odds && odds.likelySeed ? odds.likelySeed : null, pfRank: pfRank[id], valRank: vr, conRank: cr,
           outlook, upgrade, depth, isMe: id === e.roster.roster_id };
       });
@@ -37331,6 +37338,7 @@
     // ---- Screen 2: the league's managers ----
     function renderLeague() {
       const e = entryOf(st.leagueId); if (!e) return renderPick();
+      usePpgFor(e);
       const reads = leagueReads(e);
       const order = reads.slice().sort((a, b) => (b.isMe - a.isMe) || ((a.conRank || 99) - (b.conRank || 99)));
       $('tbLeagueHead').innerHTML = `<button type="button" class="tb-back" data-back="pick">&larr;</button><div><h2>${esc(e.league.name)}</h2><small>${lineScoring(e)}</small></div>`;
@@ -37343,7 +37351,7 @@
         }).join('');
         return `<div class="tb-mgr${t.isMe ? ' is-me' : ''}">`
           + `<div class="tb-mgr-main"><span class="tb-av">${av ? `<img src="${av}" alt="" onerror="this.remove()">` : ''}</span>`
-          + `<div><div class="tb-mgr-name"><b>${esc(nameOf(e, t.id))}</b>${t.isMe ? '<span class="tb-you">YOU</span>' : ''}${t.label ? `<span class="tb-label ${t.label}">${t.label}</span>` : ''}</div>`
+          + `<div><div class="tb-mgr-name"><b>${esc(nameOf(e, t.id))}</b>${t.isMe ? '<span class="tb-you">YOU</span>' : ''}</div>`
           + `<div class="tb-mgr-sub">${esc(t.record)}${t.seed ? ` &middot; ${ordinal(t.seed)} Seed` : ''} &middot; PF ${ordinal(t.pfRank)}${t.outlook ? ' &middot; ' + t.outlook : ''}`
           + ` <span class="tb-pill">VAL <b>${ordinal(t.valRank)}</b></span>${t.conRank ? ` <span class="tb-pill">CON <b>${ordinal(t.conRank)}</b></span>` : ''}</div></div></div>`
           + `<div class="tb-mgr-needs">${t.upgrade.length ? `<div>Needs upgrade ${posChips(t.upgrade)}</div>` : ''}${t.depth.length ? `<div>Needs depth ${posChips(t.depth)}</div>` : ''}</div>`
@@ -37386,7 +37394,8 @@
         : Math.abs(diff) < 0.005 ? 'Even trade' : diff > 0 ? `You win by ${diff.toFixed(2)}` : `${esc(nameOf(e, them))} wins by ${(-diff).toFixed(2)}`;
       const total = sendV + getV;
       const share = total ? Math.max(0, Math.min(100, (getV / total) * 100)) : 50;
-      $('tbCalc').innerHTML = `<div class="tb-card"><div class="tb-k">You send <b>${sendV.toFixed(2)}</b></div>${list(st.send, me, 'send')}</div>`
+      $('tbCalc').innerHTML = `<div class="tb-card tb-src"><div class="tb-k">Trade calculator</div><div class="tb-src-name">Austin's Ranks</div><div class="tb-src-sub">Values in Base 1s; lineup points use this league's scoring</div></div>`
+        + `<div class="tb-card"><div class="tb-k">You send <b>${sendV.toFixed(2)}</b></div>${list(st.send, me, 'send')}</div>`
         + `<div class="tb-card"><div class="tb-k">${esc(nameOf(e, them))} sends <b>${getV.toFixed(2)}</b></div>${list(st.get, them, 'get')}</div>`
         + `<div class="tb-card tb-verdict"><div class="tb-vtext ${diff > 0.005 ? 'up' : diff < -0.005 ? 'down' : ''}">${verdict}</div>`
         + `<div class="tb-bar"><span>${getV.toFixed(2)}</span><i><em style="width:${share.toFixed(1)}%"></em></i><span>${sendV.toFixed(2)}</span></div>`
@@ -37453,6 +37462,7 @@
 
     function renderBuild() {
       const e = entryOf(st.leagueId); if (!e || st.partnerId == null) return renderLeague();
+      usePpgFor(e);
       $('tbBuildHead').innerHTML = `<button type="button" class="tb-back" data-back="league">&larr;</button><div><h2>${esc(e.league.name)}</h2><small>${lineScoring(e)}</small></div>`;
       $('tbMine').innerHTML = rosterCol(e, e.roster.roster_id, st.send, 'send');
       $('tbTheirs').innerHTML = rosterCol(e, st.partnerId, st.get, 'get');
@@ -37472,8 +37482,7 @@
       dict = await window.sleeperGetPlayerDict().catch(() => null);
       const all = entries();
       if (!dict || !all.length) return false;
-      if (!ppg && window.tiPpgFor) ppg = await window.tiPpgFor(all[0].league.season);
-      if (!ppg) ppg = () => 0;
+      if (!ppgMaker && window.tiPpgFor) ppgMaker = await window.tiPpgFor(all[0].league.season);
       return true;
     }
     async function open() {
