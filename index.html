@@ -6902,16 +6902,16 @@
             <ol class="rg-key-steps">
               <li><b>In each matchup, how far does a point move you?</b> Slide your projected total by one point and watch your win odds. A coin flip moves a lot; a game you are 95% to win barely moves; a settled one does not move at all.</li>
               <li><b>Weight each league.</b> Half its share of your buy-ins, half an equal share per league &mdash; so a $100 league outweighs a $50 one without two $50 leagues losing to a single $100.</li>
-              <li><b>Add them up.</b> That sum is the number. It is a rate, not a total, so it measures how exposed you are to him rather than how good he is: two players in the same leagues and the same matchups read the same, whatever either is projected for.</li>
+              <li><b>Add them up.</b> That sum, in percent, is the number: how much your matchups move combined if he scores one more point. It is a rate, not a total, so it measures how exposed you are to him rather than how good he is: two players in the same leagues and the same matchups read the same, whatever either is projected for.</li>
             </ol>
             <p class="rg-key-line">It moves all afternoon, and in both directions. A matchup tightening
               steepens it. So does the clock &mdash; as starters finish there is less left to wash a point
               out, so the same 50/50 is worth about three times more at four o&rsquo;clock than it was at
-              one. It reads 0.00 once he cannot add to his day. Open any player to see the sum.</p>
+              one. It reads 0.00% once he cannot add to his day. Open any player to see the sum.</p>
             <div class="rg-key-scale">
-              <span class="rg-key-chip rg-key-zero">0.00</span><span class="rg-key-cap">played out, out, or nothing riding on him</span>
-              <span class="rg-key-chip rg-key-pos">1.00</span><span class="rg-key-cap">about one close matchup</span>
-              <span class="rg-key-chip rg-key-pos">3.00+</span><span class="rg-key-cap">he moves your whole week</span>
+              <span class="rg-key-chip rg-key-zero">0.00%</span><span class="rg-key-cap">played out, out, or nothing riding on him</span>
+              <span class="rg-key-chip rg-key-pos">1.6%</span><span class="rg-key-cap">about one coin-flip matchup before kickoff</span>
+              <span class="rg-key-chip rg-key-pos">5%+</span><span class="rg-key-cap">he moves your whole week</span>
             </div>
           </div>
         </div>
@@ -14157,7 +14157,7 @@
     // Sign it here rather than there: every other caller of that formatter
     // wants the unsigned zero.
     if (mode === 'score' && m.noProj && !m.settled) {
-      return m.lean > 0 ? '+0.00' : (m.lean < 0 ? '\u22120.00' : '0.00');
+      return m.lean > 0 ? '+0.00%' : (m.lean < 0 ? '\u22120.00%' : '0.00%');
     }
     if (mode === 'score') return sbWinsAtStakeText(m.delta);
     if (mode === 'swing') return `${m.delta > 0 ? '+' : '\u2212'}${Math.abs(m.delta).toFixed(2)}%`;
@@ -19737,7 +19737,7 @@
         return `<div class="rg-lev-row">` +
           `<span class="rg-lev-name">${sbFieldEsc(d.n)}</span>` +
           `<span class="rg-lev-state">${d.w}% to win &middot; ${d.s ? 'for you' : 'against you'}</span>` +
-          `<span class="rg-lev-v ${cls}">${sign}${Math.abs(d.p).toFixed(2)}</span></div>`;
+          `<span class="rg-lev-v ${cls}">${sign}${Math.abs(d.p).toFixed(2)}%</span></div>`;
       }).join('');
     const totCls = score > 0 ? 'rg-lev-pos' : (score < 0 ? 'rg-lev-neg' : '');
     return `<div class="rg-lev">` +
@@ -31112,7 +31112,7 @@
         const tip = (typeof sbRootingMeaning === 'function')
           ? sbRootingMeaning(stake, remaining) : '';
         rootBits.push(`<span class="${cls}" title="${sbFieldEsc(tip)}">`
-          + `${sbWinsAtStakeText(stake)} at stake`
+          + `${sbWinsAtStakeText(stake)} per point`
           + `</span><span class="gc-stat-root-n">${lev.leagues.length} league${lev.leagues.length === 1 ? '' : 's'}</span>`);
       }
       const line = gcStatLine(r.s);
@@ -31588,10 +31588,15 @@
     return sbWinsAtStakeFrom(lev.leagues, weights, sbRemainingSwing(playerId, opts));
   }
 
+  // The Rooting Score as written: the combined win-probability change, in
+  // percent, across all your matchups if he scores one more point, each
+  // league weighted by its buy-in (the weights average 1, so with equal
+  // buy-ins it is the plain sum). One coin-flip matchup early on a Sunday
+  // is about +1.6%.
   function sbWinsAtStakeText(wins) {
     const w = Number(wins) || 0;
-    if (Math.abs(w) < 0.005) return '0.00';
-    return (w > 0 ? '+' : '\u2212') + Math.abs(w).toFixed(2);
+    if (Math.abs(w) < 0.005) return '0.00%';
+    return (w > 0 ? '+' : '\u2212') + Math.abs(w).toFixed(2) + '%';
   }
 
   // The sentence under the number, in the same unit.
@@ -31739,9 +31744,9 @@
     // A rate, not a total: the number is what a fixed ten points over his
     // projection is worth, so it does not grow just because he is
     // projected for more.
-    return `Every point he scores moves you about ${Math.abs(w).toFixed(2)} `
-      + `${dir === 'win' ? 'toward' : 'away from'} a win, added up across your leagues. `
-      + `Ten points would be ten times that.`;
+    return `Every point he scores moves your matchups a combined ${Math.abs(w).toFixed(2)}% `
+      + `${dir === 'win' ? 'toward' : 'away from'} winning, each league weighted by its buy-in. `
+      + `Ten points would be roughly ten times that.`;
   }
 
   window.sbRemainingPoints = sbRemainingPoints;
@@ -31756,7 +31761,7 @@
   // league is weighted, and the two steps from there to the number.
   function sbRootingScoreExplain(name, levLeagues, weights, stake, remaining) {
     const lines = [];
-    lines.push(`${name || 'This player'} — ${sbWinsAtStakeText(stake)} matchups still at stake`);
+    lines.push(`${name || 'This player'} — ${sbWinsAtStakeText(stake)} win probability per point, across your matchups`);
     lines.push(stake > 0 ? 'Root FOR him.' : (stake < 0 ? 'Root AGAINST him.' : 'Neutral — nothing to gain either way.'));
     lines.push('');
     // The one line that makes the number mean something, before any of the
