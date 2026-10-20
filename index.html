@@ -27577,8 +27577,12 @@
       const lineupScale = (PP_ASSUME_OPTIMAL_LINEUPS && realismFactor) ? 1 / realismFactor : 1;
       projectedMean *= lineupScale;
       sd *= lineupScale;
-      const pf = (st.fpts || 0) + (st.fpts_decimal || 0) / 100;
-      const ppts = (st.ppts || 0) + (st.ppts_decimal || 0) / 100;
+      // Points and max points with a just-finished week added, so the
+      // draft order the simulation starts from is today's, not Sleeper's
+      // from before the rollover.
+      const fresh = ppFreshSettings(entry, r);
+      const pf = (fresh.fpts || 0) + (fresh.fpts_decimal || 0) / 100;
+      const ppts = (fresh.ppts || 0) + (fresh.ppts_decimal || 0) / 100;
       // How wrong the projected level itself could be. Without this the
       // simulation treats a team's weekly mean as a known fact and only
       // rolls the dice on each week around it -- and over five or six
@@ -28264,6 +28268,84 @@
   // Exposed so the playoff model can be calibrated against synthetic
   // leagues without waiting for a real season.
   window.__ppSimulateSeason = ppSimulateSeason;
+
+  // ---- A finished week, counted before Sleeper counts it ----------------
+  // Sleeper's stored wins, losses, points for and max points for (ppts)
+  // only move when the week rolls over midweek. Until then a team that
+  // won on Monday night still reads a game behind on every page built on
+  // those numbers -- which is why the Tanking Tracker showed a 1.01 chance
+  // of 28% for a roster that had dropped to about 1%. The Record page reads
+  // the results directly and was already right.
+  //
+  // So: once every game of the week being played is final, and a roster's
+  // stored record has not yet counted that week, the week's result is
+  // added -- head-to-head, the median game in a median league, its points,
+  // and its best possible lineup from the points its players scored.
+  // Returns a settings-shaped object; the stored one when nothing needs
+  // adding.
+  window.__ppFreshCache = window.__ppFreshCache || new WeakMap();
+  function ppFreshSettings(entry, roster) {
+    const st = (roster && roster.settings) || {};
+    if (!entry || !entry.league || !roster) return st;
+    const week = Number(entry.week) || 0;
+    const final = window.__ppLiveWeekFinal && window.__ppLiveWeekFinal[entry.league.season + '_' + week];
+    const all = entry.allMatchups || [];
+    if (!week || !final || !all.length) return st;
+    const hasMedian = !!(entry.league.settings && entry.league.settings.league_average_match);
+    const perWeek = hasMedian ? 2 : 1;
+    const games = (st.wins || 0) + (st.losses || 0) + (st.ties || 0);
+    if (games >= week * perWeek) return st;           // Sleeper has it already
+    const cached = window.__ppFreshCache.get(roster);
+    if (cached && cached.at === all) return cached.st;
+    const mine = all.find(m => m.roster_id === roster.roster_id);
+    if (!mine) return st;
+    const pts = Number(mine.points) || 0;
+    const opp = all.find(m => m.matchup_id != null && m.matchup_id === mine.matchup_id && m.roster_id !== mine.roster_id);
+    let w = 0, l = 0, t = 0;
+    if (opp) { const o = Number(opp.points) || 0; if (pts > o) w++; else if (pts < o) l++; else t++; }
+    if (hasMedian) {
+      const sorted = all.map(m => Number(m.points) || 0).sort((a, b) => b - a);
+      const rank = sorted.filter(x => x > pts).length;
+      if (rank < Math.floor(all.length / 2)) w++; else l++;
+    }
+    // Best possible lineup from what every rostered player scored.
+    const dict = window.__sleeperPlayerDict || {};
+    const pp = mine.players_points || {};
+    const slots = (entry.league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+    const elig = typeof SB_SLOT_ELIGIBLE !== 'undefined' ? SB_SLOT_ELIGIBLE : {};
+    const used = new Set(); let best = 0;
+    slots.slice().sort((a, b) => (elig[a] || []).length - (elig[b] || []).length).forEach(slot => {
+      let pick = null, pv = -Infinity;
+      (mine.players || []).forEach(id => {
+        if (used.has(id)) return;
+        const p = dict[id];
+        if (!p || !(elig[slot] || []).includes(p.position)) return;
+        const v = Number(pp[id]) || 0;
+        if (v > pv) { pv = v; pick = id; }
+      });
+      if (pick) { used.add(pick); best += Math.max(0, pv); }
+    });
+    const add = (whole, dec, extra) => {
+      const v = (whole || 0) + (dec || 0) / 100 + extra;
+      return { whole: Math.floor(v), dec: Math.round((v - Math.floor(v)) * 100) };
+    };
+    const f = add(st.fpts, st.fpts_decimal, pts), pt = add(st.ppts, st.ppts_decimal, Math.max(best, pts));
+    const out = Object.assign({}, st, {
+      wins: (st.wins || 0) + w, losses: (st.losses || 0) + l, ties: (st.ties || 0) + t,
+      fpts: f.whole, fpts_decimal: f.dec, ppts: pt.whole, ppts_decimal: pt.dec,
+    });
+    window.__ppFreshCache.set(roster, { at: all, st: out });
+    return out;
+  }
+  window.ppFreshSettings = ppFreshSettings;
+  // The same, for code that only has the roster in hand.
+  function ppFreshSettingsOf(roster) {
+    if (!roster) return {};
+    const entry = Object.values(window.sleeperLeagueData || {})
+      .find(e => e && (e.allRosters || []).includes(roster));
+    return entry ? ppFreshSettings(entry, roster) : (roster.settings || {});
+  }
+  window.ppFreshSettingsOf = ppFreshSettingsOf;
 
   function ppTeamOdds(entry, rosterId) {
     if (!entry || !entry.league || rosterId == null) return null;
@@ -35430,9 +35512,13 @@
     const picksBody = document.getElementById('ttPicksBody');
     if (!raceBody || !picksBody) return;
 
-    const pfOf = (r) => { const s = (r && r.settings) || {}; return (s.fpts || 0) + (s.fpts_decimal || 0) / 100; };
-    const pptsOf = (r) => { const s = (r && r.settings) || {}; return (s.ppts || 0) + (s.ppts_decimal || 0) / 100; };
-    const winsOf = (r) => ((r && r.settings && r.settings.wins) || 0);
+    // With a just-finished week added before Sleeper's rollover -- see
+    // ppFreshSettings -- so this page moves the moment the last game ends,
+    // the same as the Record page.
+    const freshOf = (r) => (typeof ppFreshSettingsOf === 'function' ? ppFreshSettingsOf(r) : ((r && r.settings) || {}));
+    const pfOf = (r) => { const s = freshOf(r); return (s.fpts || 0) + (s.fpts_decimal || 0) / 100; };
+    const pptsOf = (r) => { const s = freshOf(r); return (s.ppts || 0) + (s.ppts_decimal || 0) / 100; };
+    const winsOf = (r) => (freshOf(r).wins || 0);
     const num = (v) => Number(v || 0).toFixed(1);
 
     // 1 = most in the league, ties sharing a rank, the same way the Leagues
@@ -35457,7 +35543,7 @@
     }
 
     function recordOf(r) {
-      const s = (r && r.settings) || {};
+      const s = freshOf(r);
       const w = s.wins || 0, l = s.losses || 0, t = s.ties || 0;
       return `${w}-${l}${t ? '-' + t : ''}`;
     }
@@ -35650,7 +35736,7 @@
       return o.playoff != null ? o.playoff : TT_MISSING;
     };
     const ttWinPct = (r) => {
-      const st = (r && r.settings) || {};
+      const st = freshOf(r);
       const games = (st.wins || 0) + (st.losses || 0) + (st.ties || 0);
       return games ? ((st.wins || 0) + (st.ties || 0) * 0.5) / games : TT_MISSING;
     };
