@@ -32404,12 +32404,21 @@
       impacts.forEach(i => {
         found++;
         if (i.onMySide) anyFor = true; else anyAgainst = true;
-        net += i.swing;
         signedByLeague[i.leagueId] = (signedByLeague[i.leagueId] || 0) + (i.onMySide ? i.pts : -i.pts);
         // Kept so the footer can show its own arithmetic. A total that
         // looks wrong is only arguable if you can see which league made it.
-        byLeague.push({ name: i.name, onMySide: i.onMySide, pts: i.pts, swing: i.swing });
+        byLeague.push({ name: i.name, onMySide: i.onMySide, pts: i.pts, raw: i.swing });
       });
+    });
+    // Weighted by buy-in the same way the Rooting Score is (half the
+    // league's share of the money, half an equal share; the weights average
+    // 1 across the leagues the play touched), so the two numbers agree.
+    const weights = (typeof sbLeagueWeights === 'function')
+      ? sbLeagueWeights(Array.from(new Set(byLeague.map(l => l.name)))) : {};
+    byLeague.forEach(l => {
+      l.weight = weights[l.name] != null ? weights[l.name] : 1;
+      l.swing = l.raw * l.weight;
+      net += l.swing;
     });
     byLeague.sort((a, b) => Math.abs(b.swing) - Math.abs(a.swing));
     const res = { net, anyFor, anyAgainst, byPlayer, signedByLeague, byLeague };
@@ -32599,8 +32608,11 @@
   function gcFeedSwingTitle(netSwing, byLeague) {
     const lines = (byLeague || []).filter(l => Math.abs(l.swing) >= 0.05).map(l =>
       `${l.name}: ${l.swing > 0 ? '+' : '\u2212'}${Math.abs(l.swing).toFixed(1)}`
-      + ` (${l.onMySide ? 'yours' : 'against you'}, ${l.pts.toFixed(1)} pts)`);
-    return 'What this play did to your win probability in each league it touched, added up.'
+      + ` (${l.onMySide ? 'yours' : 'against you'}, ${l.pts.toFixed(1)} pts`
+      + (l.raw != null && Math.abs((l.weight || 1) - 1) > 0.005
+        ? `; ${l.raw > 0 ? '+' : '\u2212'}${Math.abs(l.raw).toFixed(1)} \u00d7 ${l.weight.toFixed(2)} buy-in weight` : '')
+      + ')');
+    return 'What this play did to your win probability in each league it touched, weighted by buy-in and added up.'
       + (lines.length ? `\n\n${lines.join('\n')}` : '')
       + `\n\nTotal: ${netSwing >= 0 ? '+' : '\u2212'}${Math.abs(Number(netSwing) || 0).toFixed(1)} points of win probability.`
       + '\n\nPriced against the matchups as they stood WHEN THE PLAY HAPPENED, not as they stand now. '
