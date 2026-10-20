@@ -18210,7 +18210,16 @@
     if (v <= 0) {
       const settled = sbSideAllFinished(myMatchup, league, projMap, espnGameData, week)
                    && sbSideAllFinished(oppMatchup, league, projMap, espnGameData, week);
-      return settled ? 0 : SB_SIGMA_FALLBACK;
+      if (settled) return 0;
+      // Nothing left to score but someone is still technically on the
+      // field -- a starter ruled out mid-game with a few minutes to play.
+      // That is a near-settled game, not a pregame one: falling back to the
+      // full-slate spread priced a 40-point deficit at 28%.
+      const dict = window.__sleeperPlayerDict || {};
+      const ids = (m) => sbEffectiveStarters(m, league, projMap, espnGameData, week, 'proj');
+      const underway = !!dict && (sbAnyStarterGameStarted(ids(myMatchup), dict, espnGameData)
+                               || sbAnyStarterGameStarted(ids(oppMatchup), dict, espnGameData));
+      return underway ? SB_SIGMA_FLOOR : SB_SIGMA_FALLBACK;
     }
     return Math.max(SB_SIGMA_FLOOR, Math.sqrt(v));
   }
@@ -24424,8 +24433,8 @@
         }
         const oppRoster = rosters.find(r => r.roster_id === opp.roster_id) || null;
 
-        const myPts = Number(mine.points) || 0;
-        const oppPts = Number(opp.points) || 0;
+        const myPts = ppMatchupPoints(league, mine);
+        const oppPts = ppMatchupPoints(league, opp);
         const isFinal = played[i] && week < liveWeek;
         const isLive = week === liveWeek && played[i];
 
@@ -27126,7 +27135,7 @@
     const liveWeekFinal = !!(liveWeek && window.__ppLiveWeekFinal
       && window.__ppLiveWeekFinal[league.season + '_' + liveWeek]);
     const played = weeks.map((ms, i) =>
-      Array.isArray(ms) && ms.some(m => (Number(m.points) || 0) > 0)
+      Array.isArray(ms) && ms.some(m => (ppMatchupPoints(league, m)) > 0)
       && (liveWeek ? ((i + 1) < liveWeek || (liveWeekFinal && (i + 1) === liveWeek)) : true));
 
     const scoresById = {};
@@ -27134,7 +27143,7 @@
     weeks.forEach((ms, i) => {
       if (!played[i] || !Array.isArray(ms)) return;
       ms.forEach(m => {
-        if (scoresById[m.roster_id]) scoresById[m.roster_id].push(Number(m.points) || 0);
+        if (scoresById[m.roster_id]) scoresById[m.roster_id].push(ppMatchupPoints(league, m));
       });
     });
 
@@ -27150,7 +27159,7 @@
       Object.keys(byM).forEach(k => {
         const pair = byM[k];
         if (pair.length !== 2) return;
-        const pa = Number(pair[0].points) || 0, pb = Number(pair[1].points) || 0;
+        const pa = ppMatchupPoints(league, pair[0]), pb = ppMatchupPoints(league, pair[1]);
         if (h2hById[pair[0].roster_id] == null || h2hById[pair[1].roster_id] == null) return;
         if (pa > pb) h2hById[pair[0].roster_id] += 1;
         else if (pb > pa) h2hById[pair[1].roster_id] += 1;
@@ -27174,11 +27183,11 @@
         if (pair.length !== 2) return;
         const ra = recordById[pair[0].roster_id], rb = recordById[pair[1].roster_id];
         if (!ra || !rb) return;
-        const pa = Number(pair[0].points) || 0, pb = Number(pair[1].points) || 0;
+        const pa = ppMatchupPoints(league, pair[0]), pb = ppMatchupPoints(league, pair[1]);
         if (pa > pb) { ra.w++; rb.l++; } else if (pb > pa) { rb.w++; ra.l++; } else { ra.t++; rb.t++; }
       });
       if (leagueHasMedian) {
-        const pts = ms.filter(m => recordById[m.roster_id]).map(m => ({ id: m.roster_id, p: Number(m.points) || 0 }))
+        const pts = ms.filter(m => recordById[m.roster_id]).map(m => ({ id: m.roster_id, p: ppMatchupPoints(league, m) }))
           .sort((a, b) => b.p - a.p);
         const half = Math.floor(pts.length / 2);
         pts.forEach((x, k) => { if (k < half) recordById[x.id].w++; else recordById[x.id].l++; });
@@ -28283,6 +28292,39 @@
   // and its best possible lineup from the points its players scored.
   // Returns a settings-shaped object; the stored one when nothing needs
   // adding.
+  // A matchup's real score. Best ball has no set lineup: Sleeper only
+  // resolves the best lineup after the week rolls over midweek, and until
+  // then matchup.points is whatever sits in the placeholder starters -- so a
+  // best ball loss on Monday night could read as a win. Score it as the
+  // best possible lineup from what every rostered player actually scored.
+  function ppOptimalPoints(league, m) {
+    const dict = window.__sleeperPlayerDict || {};
+    const pp = (m && m.players_points) || {};
+    const slots = ((league && league.roster_positions) || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
+    const elig = typeof SB_SLOT_ELIGIBLE !== 'undefined' ? SB_SLOT_ELIGIBLE : {};
+    const used = new Set(); let best = 0;
+    slots.slice().sort((a, b) => (elig[a] || []).length - (elig[b] || []).length).forEach(slot => {
+      let pick = null, pv = -Infinity;
+      ((m && m.players) || []).forEach(id => {
+        if (used.has(id)) return;
+        const p = dict[id];
+        if (!p || !(elig[slot] || []).includes(p.position)) return;
+        const v = Number(pp[id]) || 0;
+        if (v > pv) { pv = v; pick = id; }
+      });
+      if (pick) { used.add(pick); best += Math.max(0, pv); }
+    });
+    return best;
+  }
+  function ppMatchupPoints(league, m) {
+    const raw = Number(m && m.points) || 0;
+    if (!(league && league.settings && league.settings.best_ball)) return raw;
+    if (!m || !m.players_points || !Object.keys(m.players_points).length) return raw;
+    const best = ppOptimalPoints(league, m);
+    return best > 0 ? Math.round(best * 100) / 100 : raw;
+  }
+  window.ppMatchupPoints = ppMatchupPoints;
+
   window.__ppFreshCache = window.__ppFreshCache || new WeakMap();
   function ppFreshSettings(entry, roster) {
     const st = (roster && roster.settings) || {};
@@ -28299,32 +28341,16 @@
     if (cached && cached.at === all) return cached.st;
     const mine = all.find(m => m.roster_id === roster.roster_id);
     if (!mine) return st;
-    const pts = Number(mine.points) || 0;
+    const L = entry.league, pts = ppMatchupPoints(L, mine);
     const opp = all.find(m => m.matchup_id != null && m.matchup_id === mine.matchup_id && m.roster_id !== mine.roster_id);
     let w = 0, l = 0, t = 0;
-    if (opp) { const o = Number(opp.points) || 0; if (pts > o) w++; else if (pts < o) l++; else t++; }
+    if (opp) { const o = ppMatchupPoints(L, opp); if (pts > o) w++; else if (pts < o) l++; else t++; }
     if (hasMedian) {
-      const sorted = all.map(m => Number(m.points) || 0).sort((a, b) => b - a);
+      const sorted = all.map(m => ppMatchupPoints(L, m)).sort((a, b) => b - a);
       const rank = sorted.filter(x => x > pts).length;
       if (rank < Math.floor(all.length / 2)) w++; else l++;
     }
-    // Best possible lineup from what every rostered player scored.
-    const dict = window.__sleeperPlayerDict || {};
-    const pp = mine.players_points || {};
-    const slots = (entry.league.roster_positions || []).filter(p => p !== 'BN' && p !== 'IR' && p !== 'TAXI');
-    const elig = typeof SB_SLOT_ELIGIBLE !== 'undefined' ? SB_SLOT_ELIGIBLE : {};
-    const used = new Set(); let best = 0;
-    slots.slice().sort((a, b) => (elig[a] || []).length - (elig[b] || []).length).forEach(slot => {
-      let pick = null, pv = -Infinity;
-      (mine.players || []).forEach(id => {
-        if (used.has(id)) return;
-        const p = dict[id];
-        if (!p || !(elig[slot] || []).includes(p.position)) return;
-        const v = Number(pp[id]) || 0;
-        if (v > pv) { pv = v; pick = id; }
-      });
-      if (pick) { used.add(pick); best += Math.max(0, pv); }
-    });
+    const best = ppOptimalPoints(L, mine);
     const add = (whole, dec, extra) => {
       const v = (whole || 0) + (dec || 0) / 100 + extra;
       return { whole: Math.floor(v), dec: Math.round((v - Math.floor(v)) * 100) };
