@@ -30163,9 +30163,13 @@
   // The apostrophe class covers both the typewriter and the curly one --
   // Ja'Marr and Ja’Marr are the same player and only one of them was
   // matching.
-  const SB_NAME_ABBR = "[A-Z][\\w'’-]*\\.\\s?[A-Z][\\w'’-]+";
+  const SB_NAME_ABBR = "[A-Z][\\w'’-]*\\.\\s?(?:St\\.\\s?)?[A-Z][\\w'’-]+";
   const SB_NAME_FULL = "[A-Z][\\w'’-]+ [A-Z][\\w'’-]+";
-  const SB_PLAYER_NAME_RE = `(?:${SB_NAME_ABBR}|${SB_NAME_FULL})`;
+  // A generational suffix rides along -- "L.Burden III", "K.Walker III",
+  // "M.Harrison Jr." -- or the name stopped matching right where the
+  // play's "for 12 yards" was expected and the player never showed up.
+  const SB_NAME_SUFFIX = "(?:,? (?:Jr|Sr)\\.?|,? (?:II|III|IV|V)\\b)?";
+  const SB_PLAYER_NAME_RE = `(?:(?:${SB_NAME_ABBR}|${SB_NAME_FULL})${SB_NAME_SUFFIX})`;
 
   // Where the ball ended up, written between the player and the yardage:
   // "to G.Bernard TO CLV 39 for 6 yards", "to D.Metcalf RAN OB AT CLV 12
@@ -32266,7 +32270,10 @@
   // so "J.Burrow", "J. Burrow" and "Joe Burrow" collapse to comparable
   // strings. Short and full forms still differ, which is why a player is
   // indexed under both rather than normalised to one.
-  const gcNameKey = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+  // Suffixes are dropped before keying: Sleeper and ESPN do not agree on
+  // whether Luther Burden is "III", and the surname must not become "III".
+  const gcStripSuffix = (s) => String(s || '').replace(/,?\s+(?:jr|sr|ii|iii|iv|v)\.?\s*$/i, '').trim();
+  const gcNameKey = (s) => gcStripSuffix(s).toLowerCase().replace(/[^a-z]/g, '');
 
   // ESPN's play text and its own scoreboard do not agree on team codes --
   // a game card reads CLE while the plays inside it say CLV. Only the
@@ -32346,13 +32353,16 @@
           const p = dict[id];
           if (!p || !GC_FANTASY_POS.includes(p.position)) return;
           if (p.team !== game.away.abbr && p.team !== game.home.abbr) return;
-          const full = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ');
+          const full = gcStripSuffix(p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' '));
           // Both shapes the play text can use, under a key that ignores
           // punctuation and case -- "J.Burrow", "J. Burrow" and "Joe
           // Burrow" all have to find the same player.
           // A list, not one id: two players in the same game can share a
           // short name, and the last one written used to win outright.
-          [gcNameKey(sbEspnShortName(full)), gcNameKey(full)].forEach(k => {
+          // "A.St. Brown": a two-word surname keeps both words after the initial.
+          const words = String(full).trim().split(/\s+/);
+          const longShort = words.length > 2 ? words[0][0] + words.slice(1).join('') : '';
+          [gcNameKey(sbEspnShortName(full)), gcNameKey(full), gcNameKey(longShort)].filter(Boolean).forEach(k => {
             const list = names.byKey[k] || (names.byKey[k] = []);
             if (!list.includes(id)) list.push(id);
           });
@@ -32390,7 +32400,7 @@
       const resolvePid = (rawName, offense) => {
         const exact = names.byKey[gcNameKey(rawName)];
         if (exact && exact.length) return pickByOffense(exact, offense);
-        const m = String(rawName || '').match(/^([A-Za-z'\u2019-]+)\.\s?(.+)$/);
+        const m = gcStripSuffix(rawName).match(/^([A-Za-z'\u2019-]+)\.\s?(.+)$/);
         if (!m) return null;
         const prefix = gcNameKey(m[1]);
         if (!prefix) return null;
