@@ -32047,7 +32047,20 @@
       // back negative without anything here flipping him. A settled
       // matchup has a sigma of zero, cannot move, and contributes nothing
       // -- which is the whole point of measuring it this way.
-      const lev = sbSwingFor(state, SB_LEVERAGE_STEP, onMySide);
+      // Priced over what he is still expected to score, not over one
+      // point: the real swing of his remaining points from here, divided by
+      // those points. Exact win probability throughout -- a 90% game that
+      // his five points push to 93% is +0.6 a point, where the one-point
+      // slope read it as if every point moved it as much as the first.
+      const m = onMySide ? e.myMatchup : e.oppMatchup;
+      const pp = (m && m.players_points) || {};
+      let rem = 0;
+      try {
+        const live = sbEffectivePoints(playerId, pp, null, e.league, espnGameData, week);
+        rem = Math.max(0, (Number(live) || 0) - (Number(pp[playerId]) || 0));
+      } catch (err) { rem = 0; }
+      const step = Math.max(SB_LEVERAGE_STEP, rem);
+      const lev = sbSwingFor(state, step, onMySide) / step;
       leagues.push({
         name: e.league.name,
         leagueId: e.league.league_id,
