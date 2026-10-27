@@ -31489,6 +31489,27 @@
     return after - now;
   }
 
+  // The rooting score's own slope: what one point is worth, scored on a
+  // fat-tailed curve (Student t, 4 degrees of freedom, matched to the same
+  // spread) instead of the normal the displayed win % uses.
+  //
+  // Fantasy weeks boom: a back who runs one in from 60 doesn't care about a
+  // bell curve. Thin normal tails make a 90% game look more fragile to each
+  // point than it is -- the lead is mostly safe against ordinary scoring,
+  // and only the rare blowup threatens it. The t curve puts that weight
+  // where it belongs: a true coin flip counts for about a third MORE per
+  // point, an 80% game about the same, a 90% game a third less and a 95%
+  // game about 40% less. Win %
+  // itself is untouched; this only decides how much to care.
+  function sbRootingSwing(state, points, onMySide) {
+    const sigma = Number(state && state.sigma);
+    if (!(sigma > 0)) return 0;
+    const scale = sigma / Math.SQRT2;                 // t4 has variance 2
+    const x = (Number(state.margin) + (onMySide ? 1 : -1) * points / 2) / scale;
+    const pdf = 0.375 * Math.pow(1 + x * x / 4, -2.5);
+    return (onMySide ? 1 : -1) * 100 * pdf * points / scale;
+  }
+
   // ---- What each league is worth to you --------------------------------
   // Money alone gets this wrong, and so does league count. Two examples,
   // both from how anyone actually feels about it:
@@ -32047,7 +32068,7 @@
       // back negative without anything here flipping him. A settled
       // matchup has a sigma of zero, cannot move, and contributes nothing
       // -- which is the whole point of measuring it this way.
-      const lev = sbSwingFor(state, SB_LEVERAGE_STEP, onMySide);
+      const lev = sbRootingSwing(state, SB_LEVERAGE_STEP, onMySide);
       leagues.push({
         name: e.league.name,
         leagueId: e.league.league_id,
