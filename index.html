@@ -36,6 +36,46 @@
     --blue: #31648f;
     --red-bg: #f7e6dd;
   }
+
+  /* ---------- Brand palette preview (test only) ----------
+     Three candidate brand palettes, swapped in by the switcher at the
+     bottom right. Only the colour tokens change. Brand colours that are
+     too light to read as text (Championship Gold, Gold) sit in fills such
+     as the brand mark; their text versions are darkened to stay legible. */
+  html[data-theme="navy"] {
+    --bg: #eef0f4; --surface: #ffffff; --border: #d3d7de; --border-soft: #e4e7ec;
+    --ink: #13294B; --muted: #4a5873; --faint: #6e7380;
+    --red: #b3261e; --navy: #13294B; --blue: #2b4f86;
+    --green: #2f7d4f; --green-bg: #e6f0e8; --gold: #a87400; --red-bg: #f8e6e4;
+    --brand-mark: #FFB81C;
+  }
+  html[data-theme="turf"] {
+    --bg: #F5F5F0; --surface: #ffffff; --border: #d6d9cf; --border-soft: #e6e8e0;
+    --ink: #1D252D; --muted: #4a5560; --faint: #6c747c;
+    --red: #b3261e; --navy: #154734; --blue: #1f5a6e;
+    --green: #154734; --green-bg: #e2ece5; --gold: #9a7a00; --red-bg: #f6e4e1;
+    --brand-mark: #F1C400;
+  }
+  html[data-theme="primetime"] {
+    --bg: #f2f2f2; --surface: #ffffff; --border: #d0d0d0; --border-soft: #e4e4e4;
+    --ink: #2D2926; --muted: #55504c; --faint: #75716d;
+    --red: #C8102E; --navy: #C8102E; --blue: #3a3a3a;
+    --green: #237a45; --green-bg: #e4efe8; --gold: #9c6f00; --red-bg: #f9e3e6;
+    --brand-mark: #C8102E;
+  }
+  html[data-theme] .brand-mark { background: var(--brand-mark); }
+  .theme-preview {
+    position: fixed; left: 16px; bottom: 16px; z-index: 9999;
+    display: flex; gap: 4px; padding: 4px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    box-shadow: 0 4px 14px rgba(0,0,0,.12); font-size: 12px;
+  }
+  .theme-preview button {
+    border: 0; background: transparent; color: var(--muted);
+    padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px;
+  }
+  .theme-preview button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+  .theme-preview i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
@@ -39327,5 +39367,22 @@
 
 </script>
 
+<div class="theme-preview" role="group" aria-label="Brand palette preview">
+  <button data-t=""><i style="background:#f2e9d5;border:1px solid #1d3557"></i>Current</button>
+  <button data-t="navy"><i style="background:#13294B;box-shadow:inset -4px 0 #FFB81C"></i>Navy &amp; Gold</button>
+  <button data-t="turf"><i style="background:#154734;box-shadow:inset -4px 0 #F1C400"></i>Turf &amp; Ledger</button>
+  <button data-t="primetime"><i style="background:#2D2926;box-shadow:inset -4px 0 #C8102E"></i>Primetime</button>
+</div>
+<script>
+(function(){
+  var KEY='deskThemePreview', root=document.documentElement, box=document.querySelector('.theme-preview');
+  function set(t){ if(t) root.setAttribute('data-theme',t); else root.removeAttribute('data-theme');
+    box.querySelectorAll('button').forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.t===t)); });
+    try{ sessionStorage.setItem(KEY,t); }catch(e){} }
+  var saved=''; try{ saved=sessionStorage.getItem(KEY)||''; }catch(e){}
+  box.addEventListener('click',function(e){ var b=e.target.closest('button'); if(b) set(b.dataset.t); });
+  set(saved);
+})();
+</script>
 </body>
 </html>
