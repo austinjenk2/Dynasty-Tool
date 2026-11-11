@@ -69,13 +69,18 @@
   html[data-theme="storm"] .sub-tab.active { background: var(--frame-nav); color: var(--frame-ink); }
   /* Every page sits in .content, so that one wrapper becomes the light
      panel; whatever a page draws inside it keeps the ordinary tokens. */
+  /* The panel keeps the same 18px of frame on every side at any width.
+     The page inside it still centres at its usual 1352px: the side padding
+     grows to absorb the extra room instead of the frame growing. */
   html[data-theme="storm"] .content {
     background: var(--bg); border-radius: 10px;
-    margin-top: 18px; margin-bottom: 28px;
+    max-width: none; margin: 18px;
+    padding-left: max(24px, calc((100% - 1352px) / 2));
+    padding-right: max(24px, calc((100% - 1352px) / 2));
     box-shadow: 0 1px 3px rgba(10, 20, 35, .12);
   }
   @media (max-width: 760px) {
-    html[data-theme="storm"] .content { margin-top: 0; border-radius: 0; }
+    html[data-theme="storm"] .content { margin: 10px; padding-left: 14px; padding-right: 14px; }
   }
   html[data-theme="mist"] {
     --bg: #c9d3e6; --surface: #e2e8f3; --border: #a9b6cf; --border-soft: #bcc7db;
