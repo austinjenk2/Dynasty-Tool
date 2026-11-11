@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="mist">
+<html lang="en" data-theme="storm">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -38,10 +38,43 @@
   }
 
   /* ---------- Brand palettes ----------
-     Royal Mist is the live palette (data-theme="mist" on <html>). The
+     Blue Gray Storm is the live palette (data-theme="storm" on <html>); Royal Mist was the one before it. The
      others are kept so we can switch back by changing that attribute. Only the colour tokens change. Brand colours that are
      too light to read as text (Championship Gold, Gold) sit in fills such
      as the brand mark; their text versions are darkened to stay legible. */
+  /* Blue Gray Storm: a dark blue-gray frame (page, nav, section bar,
+     page titles) around light cards. The ordinary tokens describe the
+     inside of a card; the --frame-* tokens describe the outside. */
+  html[data-theme="storm"] {
+    --bg: #e6eaef; --surface: #F6F7F9; --border: #C8D0DA; --border-soft: #dce2e9;
+    --ink: #1D2630; --muted: #47586B; --faint: #66768a;
+    --red: #b3261e; --navy: #355E8D; --blue: #355E8D;
+    --green: #22703d; --green-bg: #dcebe1; --gold: #8a5d00; --red-bg: #f1dcdc;
+    --brand-mark: #94B5DB;
+    --frame: #4E6074; --frame-nav: #3D4B5C; --frame-ink: #F3F5F7;
+    --frame-muted: #C2CBD6; --frame-accent: #94B5DB; --frame-line: rgba(255,255,255,.12);
+  }
+  html[data-theme="storm"] body { background: var(--frame); }
+  html[data-theme="storm"] .site-nav { background: var(--frame-nav); border-bottom-color: var(--frame-line); }
+  html[data-theme="storm"] .brand-name { color: var(--frame-ink); }
+  html[data-theme="storm"] .section-tab { color: var(--frame-muted); }
+  html[data-theme="storm"] .section-tab:hover:not(.active) { color: var(--frame-ink); background: var(--frame-line); border-bottom-color: transparent; }
+  html[data-theme="storm"] .section-tab.active { color: var(--frame-ink); border-bottom-color: var(--frame-accent); }
+  html[data-theme="storm"] .subsection-bar { background: var(--frame); border-bottom-color: var(--frame-line); }
+  html[data-theme="storm"] .sub-crumb { color: var(--frame-muted); }
+  html[data-theme="storm"] .sub-tab { color: var(--frame-muted); }
+  html[data-theme="storm"] .sub-tab:hover:not(.active) { color: var(--frame-ink); background: var(--frame-line); border-color: transparent; }
+  html[data-theme="storm"] .sub-tab.active { background: var(--frame-ink); color: var(--frame-nav); }
+  /* Every page sits in .content, so that one wrapper becomes the light
+     panel; whatever a page draws inside it keeps the ordinary tokens. */
+  html[data-theme="storm"] .content {
+    background: var(--bg); border-radius: 10px;
+    margin-top: 18px; margin-bottom: 28px;
+    box-shadow: 0 6px 24px rgba(10, 20, 35, .28);
+  }
+  @media (max-width: 760px) {
+    html[data-theme="storm"] .content { margin-top: 0; border-radius: 0; }
+  }
   html[data-theme="mist"] {
     --bg: #c9d3e6; --surface: #e2e8f3; --border: #a9b6cf; --border-soft: #bcc7db;
     --ink: #0b1f4d; --muted: #3d4d70; --faint: #55658a;
@@ -39374,7 +39407,7 @@
 
 </script>
 
-<!-- Royal Mist is the only palette in use. The others stay defined in the
+<!-- Blue Gray Storm is the only palette in use. The others (Royal Mist included) stay defined in the
      CSS (html[data-theme="navy" | "turf" | "primetime"], and :root for the
      original Cardstock): change data-theme on <html> to switch back. -->
 </body>
