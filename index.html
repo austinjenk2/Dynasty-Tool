@@ -74,6 +74,9 @@
      grows to absorb the extra room instead of the frame growing. */
   html[data-theme="storm"] .content {
     background: var(--bg); border-radius: 10px;
+    /* flow-root keeps a first child's top margin inside the panel rather
+       than letting it push the whole panel down. */
+    display: flow-root;
     max-width: none; margin: 18px;
     padding-left: max(24px, calc((100% - 1352px) / 2));
     padding-right: max(24px, calc((100% - 1352px) / 2));
@@ -82,6 +85,10 @@
   @media (max-width: 760px) {
     html[data-theme="storm"] .content { margin: 10px; padding-left: 14px; padding-right: 14px; }
   }
+  /* With a section bar showing, the bar's own padding is the gap: its
+     labels sit midway between the nav above and the panel below. */
+  html[data-theme="storm"] .subsection-bar { padding-top: 9px; padding-bottom: 9px; }
+  html[data-theme="storm"] .subsection-bar:not([hidden]) ~ .content { margin-top: 0; }
   html[data-theme="mist"] {
     --bg: #c9d3e6; --surface: #e2e8f3; --border: #a9b6cf; --border-soft: #bcc7db;
     --ink: #0b1f4d; --muted: #3d4d70; --faint: #55658a;
