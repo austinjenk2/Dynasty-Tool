@@ -17982,6 +17982,10 @@
     // a slot from being sold twice: two backs each projected 10 behind the
     // same 8.0 starter are worth 2.1 between them, not 2.1 each.
     if (sbSlateAllFinal(espnGameData)) return sbMatchupLivePoints(matchup, league, projMap, espnGameData, week);
+    // Best ball under way: the expected finish from the simulation, which
+    // credits a bench player only for what he can add (see sbBestBallSimulate).
+    const bb = sbBestBallSimulate(matchup, league, projMap, espnGameData, week);
+    if (bb) return bb.mean;
     const starters = sbEffectiveStarters(matchup, league, projMap, espnGameData, week, 'proj');
     const pointsMap = matchup.players_points || {};
     return starters.reduce((sum, id) => sum + sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week), 0);
@@ -18226,6 +18230,150 @@
     return out;
   }
 
+  // ---- Best ball once the week is under way: simulate, don't assume ----
+  // The projected total and spread above treat the lineup as fixed and the
+  // football left as symmetric noise around it. Best ball breaks both. A
+  // bench player still to play does not add his score, he adds only what he
+  // beats the weakest starter he could replace by -- so he can lift his side
+  // and can never lower it. Put into a fixed lineup with his full spread
+  // (which the projection lineup did whenever he out-projected a starter
+  // whose game was over), he was counted as a risk to his own side.
+  //
+  // The case that exposed it: Monday night, everything final but one game.
+  // Up about 3. The opponent's only player left projects half a point and
+  // has to beat a 10-point starter by 3 to matter; two of mine could still
+  // get in, which only helps me. The app said 68%. The truth is close to
+  // certain, because the only way to lose is a long shot from a man
+  // projected for half a point.
+  //
+  // So once anyone has kicked off, each side's finish is simulated: every
+  // player still to play is drawn from his range (never below what he has
+  // already scored), the best lineup is re-picked for that draw, and the
+  // total is whatever that lineup scores. Mean, spread and the head-to-head
+  // chance all come from the same draws, so they cannot disagree.
+  //
+  // Before kickoff nothing is locked and the existing model stands.
+  const SB_BB_DRAWS = 4000;
+  const sbBestBallSimCache = new Map();
+
+  function sbBestBallPool(matchup, league, projMap, espnGameData, week) {
+    if (!matchup || !league || !league.settings || !league.settings.best_ball) return null;
+    if (!espnGameData || week == null || !league.roster_positions) return null;
+    const dict = window.__sleeperPlayerDict;
+    if (!dict) return null;
+    const ids = (matchup.players || []).filter(id => id && id !== '0' && dict[id] && dict[id].position);
+    if (!ids.length) return null;
+    if (!ids.some(id => sbGameStartedForTeam(dict[id].team, espnGameData))) return null;
+    const pointsMap = matchup.players_points || {};
+    return ids.map(id => {
+      const p = dict[id];
+      const v = sbEffectivePoints(id, pointsMap, projMap, league, espnGameData, week);
+      const mu = Number.isFinite(v) ? v : 0;
+      const rec = Number(pointsMap[id]);
+      const scored = Number.isFinite(rec) ? rec : 0;
+      const done = sbGameFinishedForTeam(p.team, espnGameData) || sbCountAsInactive(p, espnGameData);
+      if (done) return { id, pos: p.position, fixed: done ? (Number.isFinite(rec) ? rec : mu) : mu };
+      const k = SB_SIGMA_K[p.position] != null ? SB_SIGMA_K[p.position] : SB_SIGMA_K.DEFAULT;
+      const big = SB_BIGPLAY_SD[p.position] != null ? SB_BIGPLAY_SD[p.position] : SB_BIGPLAY_SD.DEFAULT;
+      // Never narrower than "one big play might still happen": a player
+      // projected for half a point is not certain to score half a point.
+      const sd = Math.max(k * Math.max(0, mu - scored), big);
+      return { id, pos: p.position, mu, sd, floor: Math.max(0, scored) };
+    });
+  }
+
+  // Seeded, so the same game state always prints the same percentage.
+  function sbBestBallRng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function sbBestBallSimulate(matchup, league, projMap, espnGameData, week) {
+    const pool = sbBestBallPool(matchup, league, projMap, espnGameData, week);
+    if (!pool) return null;
+    const slots = league.roster_positions.filter(s => s !== 'BN' && s !== 'IR' && s !== 'TAXI')
+      .map(s => SB_SLOT_ELIGIBLE[s]).filter(Boolean);
+    const key = [league.league_id, week, matchup.roster_id,
+      pool.map(x => x.id + ':' + (x.fixed != null ? 'f' + x.fixed.toFixed(2) : x.mu.toFixed(2) + '/' + x.sd.toFixed(2) + '/' + x.floor.toFixed(2))).join(',')].join('|');
+    if (sbBestBallSimCache.has(key)) return sbBestBallSimCache.get(key);
+    const random = pool.filter(x => x.fixed == null);
+    const rng = sbBestBallRng(Number(matchup.roster_id || 1) * 2654435761 + Number(week || 0));
+    const totals = new Float64Array(SB_BB_DRAWS);
+    const vals = new Float64Array(pool.length);
+    const used = new Uint8Array(pool.length);
+    let sum = 0;
+    for (let d = 0; d < SB_BB_DRAWS; d++) {
+      for (let i = 0; i < pool.length; i++) {
+        const x = pool[i];
+        if (x.fixed != null) { vals[i] = x.fixed; continue; }
+        // Box-Muller; one normal per player per draw.
+        const u = Math.max(rng(), 1e-12), w = rng();
+        const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * w);
+        vals[i] = Math.max(x.floor, x.mu + x.sd * z);
+      }
+      used.fill(0);
+      let t = 0;
+      // The same greedy slot fill the app's lineups use.
+      for (const elig of slots) {
+        let best = -1, bestV = -Infinity;
+        for (let i = 0; i < pool.length; i++) {
+          if (used[i] || !elig.includes(pool[i].pos)) continue;
+          if (vals[i] > bestV) { bestV = vals[i]; best = i; }
+        }
+        if (best >= 0) { used[best] = 1; t += bestV; }
+      }
+      totals[d] = t; sum += t;
+    }
+    const out = { mean: sum / SB_BB_DRAWS, totals, live: random.length > 0 };
+    if (sbBestBallSimCache.size > 300) sbBestBallSimCache.clear();
+    sbBestBallSimCache.set(key, out);
+    return out;
+  }
+
+  // Acklam's inverse normal, for turning the simulated chance back into the
+  // spread every other caller works in.
+  function sbNormalInv(p) {
+    const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269, -30.66479806614716, 2.506628277459239];
+    const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
+    const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+    const dd = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+    const pl = 0.02425;
+    if (p < pl) { const q = Math.sqrt(-2 * Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((dd[0]*q+dd[1])*q+dd[2])*q+dd[3])*q+1); }
+    if (p > 1 - pl) { const q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((dd[0]*q+dd[1])*q+dd[2])*q+dd[3])*q+1); }
+    const q = p - 0.5, r = q * q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+  }
+
+  // Both sides simulated: the margin of their means, and the spread that
+  // makes the usual normal formula return exactly the simulated chance.
+  // Every caller keeps working in (margin, sigma) and gets the right answer.
+  // null when either side is pregame, not best ball, or nothing is left.
+  function sbBestBallMatchupSigma(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
+    const me = sbBestBallSimulate(myMatchup, league, projMap, espnGameData, week);
+    const op = sbBestBallSimulate(oppMatchup, league, projMap, espnGameData, week);
+    if (!me || !op || (!me.live && !op.live)) return null;
+    let wins = 0, s = 0, s2 = 0;
+    for (let d = 0; d < SB_BB_DRAWS; d++) {
+      const m = me.totals[d] - op.totals[d];
+      wins += m > 0 ? 1 : (m === 0 ? 0.5 : 0);
+      s += m; s2 += m * m;
+    }
+    const margin = me.mean - op.mean;
+    const sdMargin = Math.sqrt(Math.max(0, s2 / SB_BB_DRAWS - (s / SB_BB_DRAWS) ** 2));
+    const pr = Math.min(1 - 1 / (2 * SB_BB_DRAWS), Math.max(1 / (2 * SB_BB_DRAWS), wins / SB_BB_DRAWS));
+    const z = sbNormalInv(pr);
+    // A skewed margin can put the mean and the likely result on different
+    // sides of zero; there no spread reproduces it, so use the plain one.
+    if (Math.abs(z) < 0.02 || Math.sign(z) !== Math.sign(margin)) return Math.max(SB_SIGMA_FLOOR, sdMargin);
+    return Math.max(0.01, margin / z);
+  }
+
   // Variance still to come from one side's starters. A player who has
   // finished contributes nothing: his points are on the board and can no
   // longer swing anything.
@@ -18293,6 +18441,8 @@
   // quadrature, since their games are essentially independent of each other.
   function sbMatchupSigma(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
     if (sbSlateAllFinal(espnGameData)) return 0;
+    const bbSigma = sbBestBallMatchupSigma(myMatchup, oppMatchup, projMap, league, espnGameData, week);
+    if (bbSigma != null) return bbSigma;
     // No early return for missing game state: sbStartersRemainingVar handles
     // that by assuming nothing has been played, which keeps a real spread
     // (and so an honest, un-confident number) instead of collapsing to the
