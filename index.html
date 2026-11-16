@@ -18001,6 +18001,10 @@
   // what every live view wants; only a week-override passes its own.
   function sbMatchupWinPct(myMatchup, oppMatchup, league, projMap, espnGameData, week) {
     if (!myMatchup || !oppMatchup || !league) return null;
+    if (!sbSlateAllFinal(espnGameData)) {
+      const bb = sbBestBallWinPct(myMatchup, oppMatchup, projMap, league, espnGameData, week);
+      if (bb != null) return bb;
+    }
     const myProj = sbMatchupProjectedTotal(myMatchup, projMap, league, espnGameData, week);
     const oppProj = sbMatchupProjectedTotal(oppMatchup, projMap, league, espnGameData, week);
     if (!Number.isFinite(myProj) || !Number.isFinite(oppProj)) return null;
@@ -18294,6 +18298,23 @@
     };
   }
 
+  // Marsaglia-Tsang gamma draw (mean = shape, scale 1), off a seeded rng.
+  function sbGammaDraw(shape, rng) {
+    if (shape < 1) return sbGammaDraw(shape + 1, rng) * Math.pow(Math.max(rng(), 1e-12), 1 / shape);
+    const d = shape - 1 / 3, c = 1 / Math.sqrt(9 * d);
+    for (;;) {
+      let x, v;
+      do {
+        const u1 = Math.max(rng(), 1e-12), u2 = rng();
+        x = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+        v = 1 + c * x;
+      } while (v <= 0);
+      v = v * v * v;
+      const u = Math.max(rng(), 1e-12);
+      if (u < 1 - 0.0331 * x * x * x * x || Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+    }
+  }
+
   function sbBestBallSimulate(matchup, league, projMap, espnGameData, week) {
     const pool = sbBestBallPool(matchup, league, projMap, espnGameData, week);
     if (!pool) return null;
@@ -18312,10 +18333,15 @@
       for (let i = 0; i < pool.length; i++) {
         const x = pool[i];
         if (x.fixed != null) { vals[i] = x.fixed; continue; }
-        // Box-Muller; one normal per player per draw.
-        const u = Math.max(rng(), 1e-12), w = rng();
-        const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * w);
-        vals[i] = Math.max(x.floor, x.mu + x.sd * z);
+        // What he still has to score is drawn skewed, not as a bell curve:
+        // most weeks a little under the projection, now and then a long
+        // touchdown. A bell curve this wide reaches below zero, and cutting
+        // that off pushed every player's average ABOVE his projection -- a
+        // back projected 8 averaged 8.7 -- which overstated what a bench
+        // player adds. A gamma with the same mean and spread keeps him at 8.
+        const rem = Math.max(0.05, x.mu - x.floor);
+        const shape = (rem / x.sd) * (rem / x.sd);
+        vals[i] = x.floor + sbGammaDraw(shape, rng) * (x.sd * x.sd / rem);
       }
       used.fill(0);
       let t = 0;
@@ -18354,7 +18380,7 @@
   // makes the usual normal formula return exactly the simulated chance.
   // Every caller keeps working in (margin, sigma) and gets the right answer.
   // null when either side is pregame, not best ball, or nothing is left.
-  function sbBestBallMatchupSigma(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
+  function sbBestBallMatchupStats(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
     const me = sbBestBallSimulate(myMatchup, league, projMap, espnGameData, week);
     const op = sbBestBallSimulate(oppMatchup, league, projMap, espnGameData, week);
     if (!me || !op || (!me.live && !op.live)) return null;
@@ -18364,9 +18390,29 @@
       wins += m > 0 ? 1 : (m === 0 ? 0.5 : 0);
       s += m; s2 += m * m;
     }
-    const margin = me.mean - op.mean;
-    const sdMargin = Math.sqrt(Math.max(0, s2 / SB_BB_DRAWS - (s / SB_BB_DRAWS) ** 2));
-    const pr = Math.min(1 - 1 / (2 * SB_BB_DRAWS), Math.max(1 / (2 * SB_BB_DRAWS), wins / SB_BB_DRAWS));
+    return {
+      winShare: wins / SB_BB_DRAWS,
+      margin: me.mean - op.mean,
+      sdMargin: Math.sqrt(Math.max(0, s2 / SB_BB_DRAWS - (s / SB_BB_DRAWS) ** 2)),
+    };
+  }
+
+  // The headline percentage for a best ball matchup under way, straight from
+  // the draws. It has to come from here rather than from margin and spread:
+  // a long-shot 30-point night can lift a side's AVERAGE above the other's
+  // while it still loses most of the time, and no spread turns a negative
+  // margin into a better-than-even chance.
+  function sbBestBallWinPct(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
+    const st = sbBestBallMatchupStats(myMatchup, oppMatchup, projMap, league, espnGameData, week);
+    if (!st) return null;
+    return Math.min(99, Math.max(1, st.winShare * 100));
+  }
+
+  function sbBestBallMatchupSigma(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
+    const st = sbBestBallMatchupStats(myMatchup, oppMatchup, projMap, league, espnGameData, week);
+    if (!st) return null;
+    const { margin, sdMargin } = st;
+    const pr = Math.min(1 - 1 / (2 * SB_BB_DRAWS), Math.max(1 / (2 * SB_BB_DRAWS), st.winShare));
     const z = sbNormalInv(pr);
     // A skewed margin can put the mean and the likely result on different
     // sides of zero; there no spread reproduces it, so use the plain one.
@@ -23198,8 +23244,8 @@
           const opp = weekMatchups.find(m => m.matchup_id === mine.matchup_id && m.roster_id !== myRoster.roster_id);
           const myLiveProj = sbMatchupProjectedTotal(mine, null, league, currentWeekEspnGameData, week);
           const oppLiveProj = opp ? sbMatchupProjectedTotal(opp, null, league, currentWeekEspnGameData, week) : null;
-          const winPct = oppLiveProj != null ? sbWinProbability(myLiveProj, oppLiveProj,
-            sbMatchupSigma(mine, opp, null, league, currentWeekEspnGameData, week)) : null;
+          const winPct = oppLiveProj != null
+            ? sbMatchupWinPct(mine, opp, league, null, currentWeekEspnGameData, week) : null;
           weekResults.push(winPct == null ? null : (winPct >= 90 ? 'W' : (winPct <= 10 ? 'L' : null)));
           // A week still being played is never a settled result, however
           // lopsided it looks -- and its median cell stays empty so the
@@ -33992,7 +34038,10 @@
           headlineMine = myProj;
           headlineTheirs = oppProj;
           const cardSigma = sbMatchupSigma(myMatchup, oppMatchup, projMap, entry.league, cardEspnGameData, cardWeek);
-          const winPct = sbWinProbability(myProj, oppProj, cardSigma);
+          // Through the one shared function, so a best ball game under way
+          // gets its simulated chance here too.
+          const cardPct = sbMatchupWinPct(myMatchup, oppMatchup, entry.league, projMap, cardEspnGameData, cardWeek);
+          const winPct = cardPct != null ? cardPct : sbWinProbability(myProj, oppProj, cardSigma);
           winPctForSort = winPct;
           // Same favorite/underdog split used everywhere else (Dashboard's
           // Projected Weekly Record included) -- no separate "close game"
