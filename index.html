@@ -18257,7 +18257,10 @@
   // chance all come from the same draws, so they cannot disagree.
   //
   // Before kickoff nothing is locked and the existing model stands.
-  const SB_BB_DRAWS = 4000;
+  // 2000 draws puts a percentage within about a point of the exact answer
+  // (worst case, at 50%), which is finer than the whole numbers shown. A
+  // fresh run happens whenever a live score changes, so every draw counts.
+  const SB_BB_DRAWS = 2000;
   const sbBestBallSimCache = new Map();
 
   function sbBestBallPool(matchup, league, projMap, espnGameData, week) {
@@ -18324,6 +18327,7 @@
       pool.map(x => x.id + ':' + (x.fixed != null ? 'f' + x.fixed.toFixed(2) : x.mu.toFixed(2) + '/' + x.sd.toFixed(2) + '/' + x.floor.toFixed(2))).join(',')].join('|');
     if (sbBestBallSimCache.has(key)) return sbBestBallSimCache.get(key);
     const random = pool.filter(x => x.fixed == null);
+    const eligible = slots.map(elig => Uint8Array.from(pool, x => elig.includes(x.pos) ? 1 : 0));
     const rng = sbBestBallRng(Number(matchup.roster_id || 1) * 2654435761 + Number(week || 0));
     const totals = new Float64Array(SB_BB_DRAWS);
     const vals = new Float64Array(pool.length);
@@ -18345,11 +18349,13 @@
       }
       used.fill(0);
       let t = 0;
-      // The same greedy slot fill the app's lineups use.
-      for (const elig of slots) {
+      // The same greedy slot fill the app's lineups use, over eligibility
+      // worked out once rather than looked up per player per draw.
+      for (let s = 0; s < slots.length; s++) {
+        const ok = eligible[s];
         let best = -1, bestV = -Infinity;
         for (let i = 0; i < pool.length; i++) {
-          if (used[i] || !elig.includes(pool[i].pos)) continue;
+          if (used[i] || !ok[i]) continue;
           if (vals[i] > bestV) { bestV = vals[i]; best = i; }
         }
         if (best >= 0) { used[best] = 1; t += bestV; }
