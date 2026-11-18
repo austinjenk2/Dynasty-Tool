@@ -18411,7 +18411,8 @@
   function sbBestBallWinPct(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
     const st = sbBestBallMatchupStats(myMatchup, oppMatchup, projMap, league, espnGameData, week);
     if (!st) return null;
-    return Math.min(99, Math.max(1, st.winShare * 100));
+    // Whole numbers, 1-99, exactly as sbWinProbability rounds every other league.
+    return Math.round(Math.min(99, Math.max(1, st.winShare * 100)));
   }
 
   function sbBestBallMatchupSigma(myMatchup, oppMatchup, projMap, league, espnGameData, week) {
@@ -27249,11 +27250,14 @@
   // linearly in the per-player scale, so a handful of proportional passes
   // converges; it is capped because a league whose measured variance is
   // tiny should not drive the per-player spread to zero.
-  function ppBestBallScale(rosters, league, projMap, targetSd) {
+  async function ppBestBallScale(rosters, league, projMap, targetSd) {
     if (!(targetSd > 0)) return null;
     let scale = 0.6;
     for (let pass = 0; pass < PP_BB_FIT_PASSES; pass++) {
       let sum = 0, count = 0;
+      // A pass is about 11,000 simulated lineups; let the page breathe
+      // between them rather than freezing through all eight.
+      if (pass) await ppYield();
       for (const r of rosters) {
         const res = ppBestBallWeek(sbStartablePlayers(r), league, projMap, scale, PP_BB_FIT_RUNS);
         if (res && res.sd > 0) { sum += res.sd; count++; }
@@ -27579,8 +27583,9 @@
     let bbScale = null;
     const bbById = {};
     if (isBestBall && window.sbTeamOptimalProjection) {
-      bbScale = ppBestBallScale(rosters, league, bbWeekMap, leagueSd);
+      bbScale = await ppBestBallScale(rosters, league, bbWeekMap, leagueSd);
       if (bbScale != null) {
+        await ppYield();
         rosters.forEach(r => {
           const res = ppBestBallWeek(sbStartablePlayers(r), league, bbWeekMap, bbScale);
           if (res && res.mean > 0) bbById[r.roster_id] = res;
@@ -28046,7 +28051,7 @@
       seed: 'season|' + leagueId + '|' + league.season + '|' + (entry.week || 0),
     };
 
-    const out = ppRunSims(ctx, null);
+    const out = await ppRunSimsAsync(ctx, null);
     out.ctx = ctx;
     out.leagueMean = leagueMean;
     out.model = byId;
@@ -28084,7 +28089,49 @@
   // is worth. Overriding the result alone is the counterfactual the page
   // is actually asking about, and it is the same one the swings in Games
   // That Matter are measured with -- so the two now agree exactly.
+  // The season simulation, as a generator that pauses every
+  // PP_SIM_YIELD_EVERY seasons. Ten thousand seasons per league in one
+  // unbroken block froze the page for seconds at a time while the playoff
+  // odds rebuilt -- 6s at worst on a real account with many leagues, which
+  // is most of what "the site is laggy" was. ppRunSims drives it straight
+  // through for callers that need the answer now (What If); the background
+  // rebuild drives it with ppRunSimsAsync, which hands the browser back
+  // between batches. Same seasons, same order, same numbers either way.
+  const PP_SIM_YIELD_EVERY = 500;
+  // Hands the browser back for a moment, keeping this run's place in the
+  // shared random stream so nothing that rolls dice meanwhile changes it.
+  async function ppYield() {
+    const mine = [ppRandState, ppSpareNormal];
+    await new Promise(r => setTimeout(r, 0));
+    ppRandState = mine[0]; ppSpareNormal = mine[1];
+  }
   function ppRunSims(ctx, forced) {
+    const it = ppRunSimsGen(ctx, forced);
+    let step = it.next();
+    while (!step.done) step = it.next();
+    return step.value;
+  }
+  async function ppRunSimsAsync(ctx, forced) {
+    const it = ppRunSimsGen(ctx, forced);
+    let step = it.next();
+    // The random stream is shared module state. This run keeps its own
+    // place in it across every pause, and whatever rolls dice during a
+    // pause keeps its own, so neither can change the other's results.
+    let mine = [ppRandState, ppSpareNormal];
+    while (!step.done) {
+      await new Promise(r => setTimeout(r, 0));
+      const theirs = [ppRandState, ppSpareNormal];
+      ppRandState = mine[0]; ppSpareNormal = mine[1];
+      step = it.next();
+      mine = [ppRandState, ppSpareNormal];
+      ppRandState = theirs[0]; ppSpareNormal = theirs[1];
+    }
+    // Finish where an unbroken run would have, for anything after it.
+    ppRandState = mine[0]; ppSpareNormal = mine[1];
+    return step.value;
+  }
+  window.__ppRunSimsAsync = ppRunSimsAsync;
+  function* ppRunSimsGen(ctx, forced) {
     const model = ctx.model;
     const teamCount = ctx.teamCount, playoffTeams = ctx.playoffTeams;
     const byeSlots = ctx.byeSlots, divisionOf = ctx.divisionOf;
@@ -28186,6 +28233,7 @@
     }));
 
     for (let sim = 0; sim < PP_SIM_RUNS; sim++) {
+      if (sim && sim % PP_SIM_YIELD_EVERY === 0) yield sim;
       for (let i = 0; i < n; i++) {
         const m = model[i], t = scratch[i];
         t.wins = m.wins; t.pf = m.pf; t.ppts = m.ppts;
@@ -29083,6 +29131,7 @@
         && window.__ppPickModel[entry.league.league_id]) continue;
       let current = null;
       try {
+        await new Promise(r => setTimeout(r, 0));
         const __simT0 = performance.now();
         current = await ppSimulateSeason(entry, dict);
         if (typeof deskMark === 'function') deskMark('sim:season', performance.now() - __simT0);
